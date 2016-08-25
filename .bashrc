@@ -1,7 +1,8 @@
 
 
 
-
+# Import variable settings bound to each computer machine
+source ~/.per_computer_settings.sh
 
 
 # Prefix a command with start to run it detached from the terminal.
