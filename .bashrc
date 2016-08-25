@@ -1,9 +1,11 @@
 
-
+PER_COMPUTER_SETTINGS=~/.per_computer_settings.sh
 
 # Import variable settings bound to each computer machine
-source ~/.per_computer_settings.sh
-
+if [ -f $PER_COMPUTER_SETTINGS ]
+then
+    source $PER_COMPUTER_SETTINGS
+fi
 
 # Prefix a command with start to run it detached from the terminal.
 function run_disowned() {
@@ -345,11 +347,6 @@ fi
 
 
 #PATH=/usr/bin:$PATH
-
-
-
-
-
 
 
 
