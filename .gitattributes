@@ -1,0 +1,33 @@
+# Autodetect text files
+* text=lf
+
+# Force the following filetypes to have unix eols, so Windows does not break them
+*.* text eol=lf
+
+# Custom for Visual Studio
+*.cs diff=csharp
+
+# Definitively text files 
+*.txt text
+*.c text
+*.h text
+
+# Sources
+*.C text
+*.cc text
+*.cxx text
+*.cpp text
+*.c++ text
+*.hpp text
+*.h text
+*.h++ text
+*.hh text
+
+# Ensure those won't be messed up with
+*.jpg binary
+*.data binary
+
+# Compiled Object files
+*.o binary
+*.obj binary
+

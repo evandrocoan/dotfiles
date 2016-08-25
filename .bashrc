@@ -22,8 +22,8 @@ function start() {
 
 PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
-alias clc='clear;clear;reset'
-
+alias clc='reset;clear;clear;'
+alias where='locate -b'
 
 
 #export CYGWIN="$CYGWIN error_start=dumper -d %1 %2"
