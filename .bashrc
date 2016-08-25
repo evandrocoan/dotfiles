@@ -308,10 +308,84 @@ fi
 
 #alias ls='ls -a -A --color=auto' # --group-directories-first'
 #alias ll='ls -lh'
-#LS_COLORS='no=00:di=33;01:tw=33;01:ow=33;01'
-#LS_COLORS=$LS_COLORS':fi=00:ln=00:pi=00:so=00:bd=00:cd=00:or=00:mi=00:ex=00'
-#LS_COLORS=$LS_COLORS':*.sh=31:*.sh=31:*.exe=31:*.bat=31:*.com=31'
-#export LS_COLORS
+
+# The *.rpm=90 parameter at the end tells ls to display any files ending in .rpm in
+# the specified colour, in this case colour 90 (dark grey). This can be applied to any
+# types of files (eg. you could use '*.png=35' to make jpeg files appear purple.) As many
+# or as few parameters as you like can go into the LS_COLORS variable, as long as the
+# parameters are separated by colons.
+# Using trial and error (and a little bash script I wrote... my first one ever! :) I
+# worked out all the colour codes, at least my interpretation of them -
+#
+#0   = default colour
+#1   = bold
+#4   = underlined
+#5   = flashing text
+#7   = reverse field
+#31  = red
+#32  = green
+#33  = orange
+#34  = blue
+#35  = purple
+#36  = cyan
+#37  = grey
+#40  = black background
+#41  = red background
+#42  = green background
+#43  = orange background
+#44  = blue background
+#45  = purple background
+#46  = cyan background
+#47  = grey background
+#90  = dark grey
+#91  = light red
+#92  = light green
+#93  = yellow
+#94  = light blue
+#95  = light purple
+#96  = turquoise
+#100 = dark grey background
+#101 = light red background
+#102 = light green background
+#103 = yellow background
+#104 = light blue background
+#105 = light purple background
+#106 = turquoise background
+
+#These can even be combined, so that a parameter like:
+#di=1;4;31;42
+
+LS_COLORS=$LS_COLORS':no=00'
+LS_COLORS=$LS_COLORS':di=36;01'
+LS_COLORS=$LS_COLORS':tw=33;01'
+LS_COLORS=$LS_COLORS':ow=33;01'
+LS_COLORS=$LS_COLORS':fi=93'
+LS_COLORS=$LS_COLORS':ln=00'
+LS_COLORS=$LS_COLORS':pi=00'
+LS_COLORS=$LS_COLORS':so=00'
+LS_COLORS=$LS_COLORS':ex=00'
+LS_COLORS=$LS_COLORS':bd=00'
+LS_COLORS=$LS_COLORS':cd=00'
+LS_COLORS=$LS_COLORS':or=00'
+LS_COLORS=$LS_COLORS':mi=00'
+LS_COLORS=$LS_COLORS':*.sh=31'
+LS_COLORS=$LS_COLORS':*.sh=31'
+LS_COLORS=$LS_COLORS':*.exe=31'
+LS_COLORS=$LS_COLORS':*.bat=31'
+LS_COLORS=$LS_COLORS':*.com=31'
+export LS_COLORS
+
+# See colors on http://linux-sxs.org/housekeeping/lscolors.html
+# di = directory
+# fi = file
+# ln = symbolic link
+# pi = fifo file
+# so = socket file
+# bd = block (buffered) special file
+# cd = character (unbuffered) special file
+# or = symbolic link pointing to a non-existent file (orphan)
+# mi = non-existent file pointed to by a symbolic link (visible when you type ls -l)
+# ex = file which is executable (ie. has 'x' set in permissions).
 
 # some more ls aliases
 alias ll='ls -alF'

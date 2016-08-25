@@ -1,6 +1,9 @@
-﻿My linux configurations used on Mint XFCE 17.3
+﻿My linux configurations used on Mint XFCE 17.3, Ubuntu and Cygwin
 ===============
 Bash, ... vim.
+
+
+
 
 ### To install them
 
