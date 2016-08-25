@@ -10,8 +10,10 @@ git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downl
 ```
 And move them to your main's user folder replacing your own settings:
 ```
-mv -v ~/Downloads/MyLinuxSettings ~
+shopt -s dotglob; mv -v ~/Downloads/MyLinuxSettings/* ~
 ```
+The `dotglob` option forces the bash to include filenames beginning with a '.' in the results of
+pathname expansion. Hence, allowing us to move hidden files with `mv`.
 
 
 

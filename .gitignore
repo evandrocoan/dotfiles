@@ -1,0 +1,19 @@
+
+
+
+
+
+# Ignore all files
+*
+
+# Ignore except
+
+!.gitmodules
+!.gitignore
+!.gitattributes
+!.bashrc
+!.inputrc
+!.vimrc
+!README.md
+
+
