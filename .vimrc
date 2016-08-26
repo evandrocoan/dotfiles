@@ -3,14 +3,8 @@ nnoremap mk :m .-2<CR>==
 
 :colorscheme elflord
 
-set history=1000         " remember more commands and search history
-set undolevels=1000      " use many muchos levels of undo
-
-"makes the cursor bigger while navigating  
-let &t_ti.="\e[1 q"
-let &t_SI.="\e[5 q"
-let &t_EI.="\e[1 q"
-let &t_te.="\e[0 q"
+set history=10000         " remember more commands and search history
+set undolevels=10000      " use many muchos levels of undo
 
 map <C-a> <esc>ggVG<CR>
 set clipboard=unnamedplus
