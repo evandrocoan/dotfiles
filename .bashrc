@@ -30,9 +30,6 @@ alias where='locate -b'
 
 #export CYGWIN="$CYGWIN error_start=dumper -d %1 %2"
 
-#alias bfg='java -jar D:\\Evandro\\Documentos\\Cygwin64\\bin\\bfg-1.11.8.jar'
-#alias ~~='cd /cygdrive/d/Evandro/Archives'
-
 # To the extent possible under law, the author(s) have dedicated all 
 # copyright and related and neighboring rights to this software to the 
 # public domain worldwide. This software is distributed without any warranty. 
@@ -130,25 +127,11 @@ shopt -s histappend
 # alias rm='rm -i'
 # alias cp='cp -i'
 # alias mv='mv -i'
-#
-# Default to human readable figures
-# alias df='df -h'
-# alias du='du -h'
-#
-# Misc :)
-# alias less='less -r'                          # raw control characters
-# alias whence='type -a'                        # where, of a sort
-# alias grep='grep --color'                     # show differences in colour
-# alias egrep='egrep --color=auto'              # show differences in colour
-# alias fgrep='fgrep --color=auto'              # show differences in colour
-#
-# Some shortcuts for different directory listings
-# alias ls='ls -hF --color=tty'                 # classify files in colour
-# alias dir='ls --color=auto --format=vertical'
-# alias vdir='ls --color=auto --format=long'
-# alias ll='ls -l'                              # long list
-# alias la='ls -A'                              # all but . and ..
-# alias l='ls -CF'                              #
+
+# Verbose operation...
+# alias rm='rm -v'
+# alias cp='cp -v'
+# alias mv='mv -v'
 
 # Umask
 #
@@ -294,6 +277,30 @@ xterm*|rxvt*)
     ;;
 esac
 
+
+# Default to human readable figures
+# alias df='df -h'
+# alias du='du -h'
+#
+# Misc :)
+# alias less='less -r'                          # raw control characters
+# alias whence='type -a'                        # where, of a sort
+# alias grep='grep --color'                     # show differences in colour
+# alias egrep='egrep --color=auto'              # show differences in colour
+# alias fgrep='fgrep --color=auto'              # show differences in colour
+#
+# Some shortcuts for different directory listings
+# alias ls='ls -hF --color=tty'                 # classify files in colour
+# alias dir='ls --color=auto --format=vertical'
+# alias vdir='ls --color=auto --format=long'
+# alias ll='ls -l'                              # long list
+# alias la='ls -A'                              # all but . and ..
+# alias l='ls -CF'                              #
+
+#alias ls='ls -a -A --color=auto' # --group-directories-first'
+#alias ll='ls -lh'
+
+
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
     test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
@@ -306,8 +313,6 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
-#alias ls='ls -a -A --color=auto' # --group-directories-first'
-#alias ll='ls -lh'
 
 # The *.rpm=90 parameter at the end tells ls to display any files ending in .rpm in
 # the specified colour, in this case colour 90 (dark grey). This can be applied to any
