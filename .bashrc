@@ -419,8 +419,8 @@ fi
 
 
 
-
-#PATH=/usr/bin:$PATH
+# Add the current tools to the bash path when running on portable mode.
+PATH=/usr/bin:$PATH
 
 
 
