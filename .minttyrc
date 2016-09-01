@@ -18,3 +18,7 @@ PgUpDnScroll=yes
 SwitchShortcuts=yes
 ScrollMod=ctrl
 Font=Lucida Sans Typewriter
+BackspaceSendsBS=yes
+DeleteSendsDEL=yes
+CtrlAltIsAltGr=yes
+MiddleClickAction=paste

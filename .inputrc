@@ -29,6 +29,12 @@
 "\e[1~": beginning-of-line
 "\e[4~": end-of-line
 
+
+# Make ctrl-arrow keys move forward/backward a word at a time
+"\e[1;5C": forward-word   # ctrl + right
+"\e[1;5D": backward-word  # ctrl + left 
+
+
 # kvt
 "\e[H": beginning-of-line
 "\e[F": end-of-line
