@@ -20,6 +20,8 @@ function start() {
 
 
 
+# Invoke octave from command line, add the option -q to run without the intro.
+alias octave='octave --no-gui'
 
 
 PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
