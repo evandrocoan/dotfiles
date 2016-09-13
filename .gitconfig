@@ -1,6 +1,3 @@
-[user]
-	name = 
-	email = 
 [core]
 	autocrlf = false
 [branch]
