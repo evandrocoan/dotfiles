@@ -427,6 +427,7 @@ fi
 
 
 # Add the current tools to the bash path when running on portable mode.
+# /cygdrive/d/User/Documents/SmartGit/git/bin:
 PATH=/usr/bin:$PATH
 
 
