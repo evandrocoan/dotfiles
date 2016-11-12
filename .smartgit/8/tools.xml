@@ -2,9 +2,24 @@
 <obj key="Tools" type="@Tools" id="_ID_1">
 	<collection key="tools" type="Object">
 		<obj key="" type="@Editor" id="_ID_2">
-			<prop key="name" value="Open in Terminal" type="String"/>
+			<prop key="name" value="Open with Text Editor (xed)" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
 			<obj key="fileStarter" type="@FileStarter" id="_ID_3">
+				<prop key="command" value="xed" type="String"/>
+				<prop key="parameters" value="${filePath}" type="String"/>
+			</obj>
+			<prop key="useForOpen" value="true" type="boolean"/>
+			<prop key="waitUntilFinished" value="false" type="boolean"/>
+			<prop key="filePattern" value="*" type="String"/>
+			<prop key="forFilesNotDirectories" value="true" type="boolean"/>
+			<prop key="forRefsNotShas" value="" type="_NULL_"/>
+			<prop key="requiresConfirmation" value="false" type="boolean"/>
+			<prop key="confirmationMessage" value="" type="_NULL_"/>
+		</obj>
+		<obj key="" type="@Editor" id="_ID_4">
+			<prop key="name" value="Open in Terminal" type="String"/>
+			<prop key="keystroke" value="" type="_NULL_"/>
+			<obj key="fileStarter" type="@FileStarter" id="_ID_5">
 				<prop key="command" value="xfce4-terminal" type="String"/>
 				<prop key="parameters" value="--default-working-directory ${filePath}" type="String"/>
 			</obj>
@@ -16,25 +31,25 @@
 			<prop key="requiresConfirmation" value="false" type="boolean"/>
 			<prop key="confirmationMessage" value="" type="_NULL_"/>
 		</obj>
-		<obj key="" type="@Editor" id="_ID_4">
+		<obj key="" type="@Editor" id="_ID_6">
 			<prop key="name" value="Open with File Manager (thunar)" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
-			<obj key="fileStarter" type="@FileStarter" id="_ID_5">
+			<obj key="fileStarter" type="@FileStarter" id="_ID_7">
 				<prop key="command" value="thunar" type="String"/>
 				<prop key="parameters" value="${filePath}" type="String"/>
 			</obj>
 			<prop key="useForOpen" value="false" type="boolean"/>
 			<prop key="waitUntilFinished" value="false" type="boolean"/>
 			<prop key="filePattern" value="*" type="String"/>
-			<prop key="forFilesNotDirectories" value="" type="_NULL_"/>
+			<prop key="forFilesNotDirectories" value="false" type="boolean"/>
 			<prop key="forRefsNotShas" value="" type="_NULL_"/>
 			<prop key="requiresConfirmation" value="false" type="boolean"/>
 			<prop key="confirmationMessage" value="" type="_NULL_"/>
 		</obj>
-		<obj key="" type="@Editor" id="_ID_6">
+		<obj key="" type="@Editor" id="_ID_8">
 			<prop key="name" value="Open File" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
-			<obj key="fileStarter" type="@FileStarter" id="_ID_7">
+			<obj key="fileStarter" type="@FileStarter" id="_ID_9">
 				<prop key="command" value="xdg-open" type="String"/>
 				<prop key="parameters" value="${filePath}" type="String"/>
 			</obj>
@@ -46,10 +61,10 @@
 			<prop key="requiresConfirmation" value="false" type="boolean"/>
 			<prop key="confirmationMessage" value="" type="_NULL_"/>
 		</obj>
-		<obj key="" type="@Editor" id="_ID_8">
+		<obj key="" type="@Editor" id="_ID_10">
 			<prop key="name" value="Format Patch" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
-			<obj key="fileStarter" type="@FileStarter" id="_ID_9">
+			<obj key="fileStarter" type="@FileStarter" id="_ID_11">
 				<prop key="command" value="${smartGitDir}/lib/format-patch.sh" type="String"/>
 				<prop key="parameters" value="${dirSelect} ${commit} ${commit2}" type="String"/>
 			</obj>
@@ -61,10 +76,10 @@
 			<prop key="requiresConfirmation" value="false" type="boolean"/>
 			<prop key="confirmationMessage" value="" type="_NULL_"/>
 		</obj>
-		<obj key="" type="@Editor" id="_ID_10">
+		<obj key="" type="@Editor" id="_ID_12">
 			<prop key="name" value="Apply Patch" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
-			<obj key="fileStarter" type="@FileStarter" id="_ID_11">
+			<obj key="fileStarter" type="@FileStarter" id="_ID_13">
 				<prop key="command" value="${git}" type="String"/>
 				<prop key="parameters" value="apply ${fileOpen}" type="String"/>
 			</obj>
@@ -76,10 +91,10 @@
 			<prop key="requiresConfirmation" value="false" type="boolean"/>
 			<prop key="confirmationMessage" value="" type="_NULL_"/>
 		</obj>
-		<obj key="" type="@Editor" id="_ID_12">
+		<obj key="" type="@Editor" id="_ID_14">
 			<prop key="name" value="Fast-Forward Merge" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
-			<obj key="fileStarter" type="@FileStarter" id="_ID_13">
+			<obj key="fileStarter" type="@FileStarter" id="_ID_15">
 				<prop key="command" value="${smartGitDir}/lib/ff-merge.sh" type="String"/>
 				<prop key="parameters" value="${commit}" type="String"/>
 			</obj>
@@ -91,10 +106,10 @@
 			<prop key="requiresConfirmation" value="false" type="boolean"/>
 			<prop key="confirmationMessage" value="Do you want to fast forward &apos;${commit}&apos; to its tracking branch?" type="String"/>
 		</obj>
-		<obj key="" type="@Editor" id="_ID_14">
+		<obj key="" type="@Editor" id="_ID_16">
 			<prop key="name" value="Merge Directly To" type="String"/>
 			<prop key="keystroke" value="" type="_NULL_"/>
-			<obj key="fileStarter" type="@FileStarter" id="_ID_15">
+			<obj key="fileStarter" type="@FileStarter" id="_ID_17">
 				<prop key="command" value="/usr/bin/python3" type="String"/>
 				<prop key="parameters" value="&quot;${smartGitDir}/lib/git-forward-merge.sh&quot; ${commit} ${commit2}" type="String"/>
 			</obj>

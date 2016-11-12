@@ -23,3 +23,6 @@
   added = yellow
   changed = green
   untracked = cyan
+[user]
+	email = you@example.com
+	name = Your Name
