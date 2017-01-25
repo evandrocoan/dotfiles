@@ -364,3 +364,12 @@ if filereadable(expand("~/.vimrc.local"))
 endif
 
 set clipboard=unnamedplus
+
+
+set wrap
+set formatoptions-=t
+
+
+
+
+
