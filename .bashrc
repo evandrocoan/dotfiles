@@ -20,6 +20,10 @@ function start() {
 
 
 
+
+export HISTCONTROL=ignoredups
+
+
 # Invoke octave from command line, add the option -q to run without the intro.
 alias octave='octave --no-gui -i'
 
