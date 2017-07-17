@@ -20,8 +20,19 @@ function start() {
 
 
 
-
+# http://www.linuxjournal.com/content/using-bash-history-more-efficiently-histcontrol
+#
+# Another alternative is to tell bash not to store duplicates. This is done with the HISTCONTROL
+# variable. HISTCONTROL controls how bash stores command history. Currently there are two possible
+# flags: ignorespace and ignoredups. The ignorespace flag tells bash to ignore commands that start
+# with spaces. The other flag, ignoredups, tells bash to ignore duplicates. You can concatenate and
+# separate the values with a colon, ignorespace:ignoredups, if you wish to specify both values, or
+# you can just specify ignoreboth.
 export HISTCONTROL=ignoredups
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=10000
+HISTFILESIZE=20000
 
 
 # Invoke octave from command line, add the option -q to run without the intro.
@@ -66,6 +77,10 @@ alias clc='reset;clear;clear;'
 # User dependent .bashrc file
 
 # If not running interactively, don't do anything
+# case $- in
+#     *i*) ;;
+#       *) return;;
+# esac
 [[ "$-" != *i* ]] && return
 
 # Shell Options
@@ -257,12 +272,12 @@ force_color_prompt=yes
 
 if [ -n "$force_color_prompt" ]; then
     if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
-	# We have color support; assume it's compliant with Ecma-48
-	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
-	# a case would tend to support setf rather than setaf.)
-	color_prompt=yes
+        # We have color support; assume it's compliant with Ecma-48
+        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+        # a case would tend to support setf rather than setaf.)
+        color_prompt=yes
     else
-	color_prompt=
+        color_prompt=
     fi
 fi
 
@@ -275,6 +290,7 @@ if [ "$color_prompt" = yes ]; then
 
 else
     PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+
 fi
 unset color_prompt force_color_prompt
 
@@ -322,6 +338,9 @@ if [ -x /usr/bin/dircolors ]; then
     alias fgrep='fgrep --color=auto'
     alias egrep='egrep --color=auto'
 fi
+
+# colored GCC warnings and errors
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 
 # The *.rpm=90 parameter at the end tells ls to display any files ending in .rpm in
