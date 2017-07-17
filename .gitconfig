@@ -1,3 +1,6 @@
+[credential]
+	helper = wincred
+[user]
 [core]
 	autocrlf = false
 [branch]
@@ -24,6 +27,6 @@
 	changed = green
 	untracked = cyan
 [user]
-	email = you@example.com
-	name = Your Name
+	email = github.com/evandrocoan
+	name = evandrocoan
 
