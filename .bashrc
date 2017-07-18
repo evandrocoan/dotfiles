@@ -389,6 +389,45 @@ LS_COLORS=$LS_COLORS':*.bat=00;31'
 LS_COLORS=$LS_COLORS':*.com=00;31'
 export LS_COLORS
 
+# Using trial and error (and a little bash script I wrote... my first one ever! :) I
+# worked out all the colour codes, at least my interpretation of them -
+# http://linux-sxs.org/housekeeping/lscolors.html
+#
+# 0   = default colour
+# 1   = bold
+# 4   = underlined
+# 5   = flashing text
+# 7   = reverse field
+# 31  = red
+# 32  = green
+# 33  = orange
+# 34  = blue
+# 35  = purple
+# 36  = cyan
+# 37  = grey
+# 40  = black background
+# 41  = red background
+# 42  = green background
+# 43  = orange background
+# 44  = blue background
+# 45  = purple background
+# 46  = cyan background
+# 47  = grey background
+# 90  = dark grey
+# 91  = light red
+# 92  = light green
+# 93  = yellow
+# 94  = light blue
+# 95  = light purple
+# 96  = turquoise
+# 100 = dark grey background
+# 101 = light red background
+# 102 = light green background
+# 103 = yellow background
+# 104 = light blue background
+# 105 = light purple background
+# 106 = turquoise background
+#
 # colored GCC warnings and errors
 export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 

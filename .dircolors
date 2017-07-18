@@ -1,12 +1,8 @@
 
 
-# The *.rpm=90 parameter at the end tells ls to display any files ending in .rpm in
-# the specified colour, in this case colour 90 (dark grey). This can be applied to any
-# types of files (eg. you could use '*.png=35' to make jpeg files appear purple.) As many
-# or as few parameters as you like can go into the LS_COLORS variable, as long as the
-# parameters are separated by colons.
 # Using trial and error (and a little bash script I wrote... my first one ever! :) I
 # worked out all the colour codes, at least my interpretation of them -
+# http://linux-sxs.org/housekeeping/lscolors.html
 #
 # 0   = default colour
 # 1   = bold
