@@ -398,13 +398,14 @@ export LS_COLORS
 # 4   = underlined
 # 5   = flashing text
 # 7   = reverse field
+# 30  = black
 # 31  = red
 # 32  = green
-# 33  = orange
+# 33  = orange/yellow
 # 34  = blue
-# 35  = purple
+# 35  = purple/magenta
 # 36  = cyan
-# 37  = grey
+# 37  = grey/white
 # 40  = black background
 # 41  = red background
 # 42  = green background

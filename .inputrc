@@ -21,6 +21,11 @@
 # would be benifitial to all, please feel free to send
 # a patch to the cygwin mailing list.
 
+
+# Disable beep of Linux Bash on Windows 10
+# https://stackoverflow.com/questions/36724209/disable-beep-of-linux-bash-on-windows-10
+set bell-style none
+
 # the following line is actually
 # equivalent to "\C-?": delete-char
 "\e[3~": delete-char
@@ -29,22 +34,17 @@
 "\e[1~": beginning-of-line
 "\e[4~": end-of-line
 
-
-
 # Make ctrl-arrow keys move forward/backward a word at a time
 "\e[1;5C": forward-word   # ctrl + right
 "\e[1;5D": backward-word  # ctrl + left
-
 
 # Make ctrl-arrow keys move forward/backward a word at a time
 "\e[1;2D": backward-word   # ctrl + right
 "\e[1;2C": forward-word    # ctrl + left
 
-
 # Ctrl-BackSpace
 # https://superuser.com/questions/552863/bash-home-end-delete-key-inserting-tilde-or-if-preceded-by-escape-key-1-3
 "\C-?": shell-backward-kill-word
-
 
 # kvt
 "\e[H": beginning-of-line
