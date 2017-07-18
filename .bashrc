@@ -353,8 +353,36 @@ then
 fi
 
 # Missing colors from `dircolors` export
+# http://www.bigsoft.co.uk/blog/index.php/2008/04/11/configuring-ls_colors
+#
+# no  NORMAL, NORM           Global default, although everything should be something
+# fi  FILE                   Normal file
+# di  DIR Directory
+# ln  SYMLINK, LINK, LNK     Symbolic link. If you set this to ‘target’ instead of a numerical value, the color is as for the file pointed to.
+# pi  FIFO, PIPE             Named pipe
+# do  DOOR                   Door
+# bd  BLOCK, BLK             Block device
+# cd  CHAR, CHR              Character device
+# or  ORPHAN                 Symbolic link pointing to a non-existent file
+# so  SOCK                   Socket
+# su  SETUID                 File that is setuid (u+s)
+# sg  SETGID                 File that is setgid (g+s)
+# tw  STICKY_OTHER_WRITABLE  Directory that is sticky and other-writable (+t,o+w)
+# ow  OTHER_WRITABLE         Directory that is other-writable (o+w) and not sticky
+# st  STICKY                 Directory with the sticky bit set (+t) and not other-writable
+# ex  EXEC                   Executable file (i.e. has ‘x’ set in permissions)
+# mi  MISSING                Non-existent file pointed to by a symbolic link (visible when you type ls -l)
+# lc  LEFTCODE, LEFT         Opening terminal code
+# rc  RIGHTCODE, RIGHT       Closing terminal code
+# ec  ENDCODE, END           Non-filename text
+# *.extension                Every file using this extension e.g. *.jpg
+#
 LS_COLORS=$LS_COLORS':fi=93'
 LS_COLORS=$LS_COLORS':ex=31'
+LS_COLORS=$LS_COLORS':ln=01;36'
+LS_COLORS=$LS_COLORS':di=01;34'
+LS_COLORS=$LS_COLORS':tw=01;34' # ls --color=auto rendering directory color as file color
+LS_COLORS=$LS_COLORS':ow=01;34' # https://github.com/Microsoft/BashOnWindows/issues/2343
 LS_COLORS=$LS_COLORS':*.sh=00;31'
 LS_COLORS=$LS_COLORS':*.exe=00;31'
 LS_COLORS=$LS_COLORS':*.bat=00;31'
