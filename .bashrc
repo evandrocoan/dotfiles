@@ -462,15 +462,16 @@ if ! shopt -oq posix; then
 fi
 
 
-
-
-# Add the current tools to the bash path when running on portable mode.
-# /cygdrive/d/User/Documents/SmartGit/git/bin:
-PATH=/cygdrive/D/User/Documents/CMake/bin:/cygdrive/D/User/Documents/latex/texmfs/install/miktex/bin:/usr/bin:$PATH
-
-
 # fix  X11 DISPLAY environment variable not set and allow to use `startxwin`
 export DISPLAY=:0
+
+
+
+# # Computer dependent, put them on `.per_computer_settings.sh`
+# Add the current tools to the bash path when running on portable mode.
+# /cygdrive/d/User/Documents/SmartGit/git/bin:
+# PATH=/cygdrive/D/User/Documents/CMake/bin:/cygdrive/D/User/Documents/latex/texmfs/install/miktex/bin:/usr/bin:$PATH
+# PATH=~/.local/bin:$PATH
 
 
 
