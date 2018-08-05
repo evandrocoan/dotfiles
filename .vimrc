@@ -225,6 +225,8 @@ set nocompatible
 """"""""
 if has('autocmd')
   filetype plugin indent on
+  " Uncomment the following to have Vim jump to the last position when reopening a file
+  au BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
 endif
 if has('syntax') && !exists('g:syntax_on')
   syntax enable
