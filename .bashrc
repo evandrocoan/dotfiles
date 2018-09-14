@@ -471,7 +471,9 @@ export DISPLAY=:0
 # Add the current tools to the bash path when running on portable mode.
 # /cygdrive/d/User/Documents/SmartGit/git/bin:
 # PATH=/cygdrive/D/User/Documents/CMake/bin:/cygdrive/D/User/Documents/latex/texmfs/install/miktex/bin:/usr/bin:$PATH
+# PATH=$PATH:"$(cygpath -u "$PROGRAMFILES")/Downloads/nodejs":"$(cygpath -u "$PROGRAMFILES")/Git":/cygdrive/l/SublimeText3176
 # PATH=~/.local/bin:$PATH
 
-
+# mkdir -p $(cygpath -u "$USERPROFILE")/Downloads
+# alias ~~='cd "$(cygpath -u "$USERPROFILE")/Downloads"'
 

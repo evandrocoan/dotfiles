@@ -4,7 +4,7 @@
 #[credential]
 #	helper = wincred
 [core]
-	autocrlf = input
+	autocrlf = false
 	eol = lf
 [branch]
 	autosetuprebase = always
