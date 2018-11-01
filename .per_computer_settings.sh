@@ -13,5 +13,6 @@
 export EPOS_COMPILER_MACHINE_PASS=""
 export EPOS_COMPILER_MACHINE_ADDRESS=""
 
-PATH=$PATH:"$(cygpath -u "$PROGRAMFILES")/Git"
+# Windows only
+# PATH=$PATH:"$(cygpath -u "$PROGRAMFILES")/Git"
 
