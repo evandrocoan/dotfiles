@@ -23,8 +23,8 @@ nnoremap td  :tabclose<CR>
 "nnoremap tl :tabprev<CR>
 "nnoremap tn :tabnew<CR>
 
-set colorcolumn=80
-set tw=80
+set colorcolumn=100
+set tw=100
 
 " URL: http://vim.wikia.com/wiki/Example_vimrc
 " Authors: http://vim.wikia.com/wiki/Vim_on_Freenode
@@ -292,7 +292,7 @@ set nowritebackup
 set noswapfile
 set fileformats=unix,dos,mac
 
-" exit insert mode 
+" exit insert mode
 inoremap <C-c> <Esc>
 
 set completeopt=menuone,longest,preview
@@ -302,7 +302,7 @@ set completeopt=menuone,longest,preview
 "
 
 " CtrlP
-set wildignore+=*/.git/*,*/.hg/*,*/.svn/* 
+set wildignore+=*/.git/*,*/.hg/*,*/.svn/*
 
 " Ultisnip
 " NOTE: <f1> otherwise it overrides <tab> forever
