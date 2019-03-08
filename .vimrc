@@ -18,16 +18,12 @@ nnoremap tt  :tabedit<Space>
 nnoremap tn  :tabnext<Space>
 nnoremap tm  :tabm<Space>
 nnoremap td  :tabclose<CR>
+
 " Alternatively use
 "nnoremap th :tabnext<CR>
 "nnoremap tl :tabprev<CR>
 "nnoremap tn :tabnew<CR>
 
-set colorcolumn=100
-set tw=100
-
-" https://stackoverflow.com/questions/55050366/how-to-set-vim-highlight-colorcolumn-guideline-transparency
-highlight ColorColumn ctermbg=238
 
 " URL: http://vim.wikia.com/wiki/Example_vimrc
 " Authors: http://vim.wikia.com/wiki/Vim_on_Freenode
@@ -371,11 +367,12 @@ endif
 
 set clipboard=unnamedplus
 
-
 set wrap
 set formatoptions-=t
 
+" https://stackoverflow.com/questions/55050366/how-to-set-vim-highlight-colorcolumn-guideline-transparency
+highlight ColorColumn ctermbg=238
 
-
-
+set colorcolumn=100
+set tw=100
 
