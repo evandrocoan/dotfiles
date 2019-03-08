@@ -145,7 +145,8 @@ set mouse=a
 
 " Set the command window height to 2 lines, to avoid many cases of having to
 " "press <Enter> to continue"
-set cmdheight=2
+" https://stackoverflow.com/questions/55053173/why-setting-the-command-window-height-to-2-lines
+set cmdheight=1
 
 " Display line numbers on the left
 set number
