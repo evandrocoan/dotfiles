@@ -20,7 +20,8 @@
 
 !README.md
 
-
-# The Smartgit `Tools` menu within the `Open in Terminal` and `Open with Tunar File Manager`.
+# The Smartgit `Tools` menu within the `Open in Terminal` and `Open with File Manager`.
 !/.config/smartgit/18.2/tools.xml
+!/.local/share/nemo/actions/*
+!/.local/bin/run_as_user.sh
 
