@@ -25,3 +25,6 @@
 !/.local/share/nemo/actions/*
 !/.local/bin/run_as_user.sh
 
+!/.config/xfce4/terminal/accels.scm
+!/.config/xfce4/terminal/terminalrc
+
