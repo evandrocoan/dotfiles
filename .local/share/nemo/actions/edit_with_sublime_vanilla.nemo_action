@@ -2,7 +2,7 @@
 Active=true
 Name=Edit with Sublime Text Vanilla
 Comment=Edit with Sublime Text Vanilla
-Exec=~/.local/bin/run_as_user.sh sublime_vanilla /usr/bin/subl -n %F
+Exec=run_as_user.sh sublime_vanilla /usr/bin/subl -n %F
 Selection=notnone
 Extensions=nodirs;
 Icon-Name=sublime-text
