@@ -1,13 +1,13 @@
-﻿My linux configurations used on Mint XFCE 17.3, Ubuntu and Cygwin
-===============
-Bash, ... vim.
+﻿# My linux configurations (or Dotfiles)
 
+These are used on Mint XFCE 19.1, Ubuntu and Cygwin.
 
+These are settings for bash, vim, etc.
 
 
 ### To install them
 
-First backup your settings, clone this repo using this commmand:
+First backup your settings, clone this repository using this command:
 ```
 git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
 ```
@@ -30,5 +30,4 @@ xfce4-power-manager -r
 
 For other components, research how it could be done, or just install the settings by using another
 user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
-
 
