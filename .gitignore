@@ -26,4 +26,5 @@
 !/.local/bin/run_as_user.sh
 
 !/.config/xfce4/**
+/.config/xfce4/desktop
 
