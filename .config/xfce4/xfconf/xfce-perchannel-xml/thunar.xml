@@ -4,15 +4,14 @@
   <property name="misc-volume-management" type="empty"/>
   <property name="shortcuts-icon-size" type="empty"/>
   <property name="misc-thumbnail-mode" type="empty"/>
-  <property name="last-view" type="string" value="ThunarIconView"/>
+  <property name="last-view" type="string" value="ThunarDetailsView"/>
   <property name="last-icon-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_NORMAL"/>
   <property name="last-window-maximized" type="bool" value="true"/>
-  <property name="last-show-hidden" type="bool" value="true"/>
   <property name="last-separator-position" type="int" value="170"/>
+  <property name="last-show-hidden" type="bool" value="true"/>
+  <property name="misc-exec-shell-scripts-by-default" type="bool" value="true"/>
   <property name="last-details-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_SMALLER"/>
-  <property name="last-details-view-column-widths" type="string" value="50,116,50,50,1130,50,50,72,426"/>
-  <property name="last-sort-column" type="string" value="THUNAR_COLUMN_NAME"/>
-  <property name="last-sort-order" type="string" value="GTK_SORT_ASCENDING"/>
-  <property name="misc-single-click" type="bool" value="false"/>
-  <property name="misc-date-style" type="string" value="THUNAR_DATE_STYLE_ISO"/>
+  <property name="last-details-view-column-widths" type="string" value="50,116,50,50,1368,50,50,72,192"/>
+  <property name="last-sort-column" type="string" value="THUNAR_COLUMN_DATE_MODIFIED"/>
+  <property name="last-sort-order" type="string" value="GTK_SORT_DESCENDING"/>
 </channel>

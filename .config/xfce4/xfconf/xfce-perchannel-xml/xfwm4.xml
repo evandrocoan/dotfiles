@@ -52,7 +52,7 @@
     <property name="snap_resist" type="empty"/>
     <property name="snap_to_border" type="empty"/>
     <property name="snap_to_windows" type="empty"/>
-    <property name="snap_width" type="int" value="14"/>
+    <property name="snap_width" type="empty"/>
     <property name="theme" type="empty"/>
     <property name="tile_on_move" type="empty"/>
     <property name="title_alignment" type="empty"/>
@@ -65,8 +65,8 @@
     <property name="toggle_workspaces" type="empty"/>
     <property name="unredirect_overlays" type="empty"/>
     <property name="urgent_blink" type="empty"/>
-    <property name="use_compositing" type="empty"/>
-    <property name="workspace_count" type="int" value="1"/>
+    <property name="use_compositing" type="bool" value="true"/>
+    <property name="workspace_count" type="int" value="2"/>
     <property name="workspace_names" type="empty"/>
     <property name="wrap_cycle" type="empty"/>
     <property name="wrap_layout" type="empty"/>
