@@ -152,6 +152,21 @@
 			<prop key="confirmationMessage" type="_NULL_" value=""/>
 		</obj>
 		<obj type="@Editor">
+			<prop key="name" type="String" value="Open with File Manager (nemo)"/>
+			<prop key="keystroke" type="_NULL_" value=""/>
+			<obj key="fileStarter" type="@FileStarter">
+				<prop key="command" type="String" value="nemo"/>
+				<prop key="parameters" type="String" value="${filePath}"/>
+			</obj>
+			<prop key="useForOpen" type="boolean" value="false"/>
+			<prop key="waitUntilFinished" type="boolean" value="false"/>
+			<prop key="filePattern" type="String" value="*"/>
+			<prop key="forFilesNotDirectories" type="boolean" value="false"/>
+			<prop key="forRefsNotShas" type="_NULL_" value=""/>
+			<prop key="requiresConfirmation" type="boolean" value="false"/>
+			<prop key="confirmationMessage" type="_NULL_" value=""/>
+		</obj>
+		<obj type="@Editor">
 			<prop key="name" type="String" value="Git Config"/>
 			<prop key="keystroke" type="_NULL_" value=""/>
 			<obj key="fileStarter" type="@FileStarter">
