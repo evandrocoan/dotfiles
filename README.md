@@ -22,10 +22,6 @@ After installing, reload the `XFCE` components, so the settings does not get ove
 This should reload the `XFCE` panel components:
 ```
 xfce4-panel -r
-xfce4-terminal -r
-xfce4-session -r
-xfce4-notifyd -r
-xfce4-power-manager -r
 ```
 
 For other components, research how it could be done, or just install the settings by using another
@@ -59,27 +55,7 @@ sudo passwd root
 1. https://forum.sublimetext.com/t/multiple-sublime-processes-with-different-environment/34575
 
 Setup it to start maximized with:
-```sh
-#!/usr/bin/env bash
-# run it with /home/evandro/Documents/open_maximized.sh "Sublime Text" /usr/bin/subl -n
-command_line=$(printf '%q ' "${@:2}")
-eval "$command_line"
-
-# https://unix.stackexchange.com/questions/264684/maximize-window-without-window-manager
-while [ true ]
-do
-    FocusApp=`xdotool getwindowfocus getwindowname`
-
-    if [[ "$FocusApp" == *"$1"* ]]
-    then
-        # xdotool key super+Up
-        wmctrl -ir $(xdotool getactivewindow) -b add,maximized_vert,maximized_horz
-        break
-    fi
-
-    sleep 0.5
-done
-```
+1. [.local/bin/open_maximized.sh](.local/bin/open_maximized.sh)
 
 
 ### Enable hibernation
@@ -178,72 +154,15 @@ sudo apt install autokey-gtk
 1. `Ctrl+Alt+O`, gnome-calculator
 1. `Ctrl+Alt+H`, gnome-system-monitor
 1. `Ctrl+Print`, flameshot gui
-1. `Pause`, /home/evandro/Programs/play_stop_music.sh space
-1. `Alt+Super+Up`, /home/evandro/Programs/play_stop_music.sh Up
-1. `Alt+Super+Down`, /home/evandro/Programs/play_stop_music.sh Down
-1. `Alt+Super+Left`, /home/evandro/Programs/play_stop_music.sh F1
-1. `Alt+Super+Right`, /home/evandro/Programs/play_stop_music.sh F2
+1. [.local/bin/play_stop_music.sh](.local/bin/play_stop_music.sh)
+   1. `Pause`, play_stop_music.sh space
+   1. `Alt+Super+Up`, play_stop_music.sh Up
+   1. `Alt+Super+Down`, play_stop_music.sh Down
+   1. `Alt+Super+Left`, play_stop_music.sh F1
+   1. `Alt+Super+Right`, play_stop_music.sh F2
 1. `Alt+Super+0`, wmctrl -x -a aimp.exe.Wine
 1. `Alt+Super+1`, wmctrl -x -a minilyrics.exe.Wine
    * To list active windows use `wmctrl -lx`
-
-**`/home/evandro/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml`**
-```
-      <property name="&lt;Alt&gt;F2" type="empty">
-        <property name="startup-notify" type="bool" value="true"/>
-      </property>
-      <property name="&lt;Primary&gt;Escape" type="string" value="xfdesktop --menu"/>
-      <property name="&lt;Alt&gt;F3" type="empty">
-        <property name="startup-notify" type="bool" value="true"/>
-      </property>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;Delete" type="string" value="xflock4"/>
-      <property name="XF86Mail" type="string" value="exo-open --launch MailReader"/>
-      <property name="Print" type="string" value="xfce4-screenshooter"/>
-      <property name="XF86Display" type="string" value="xfce4-display-settings --minimal"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="x-terminal-emulator"/>
-      <property name="&lt;Super&gt;p" type="string" value="xfce4-display-settings --minimal"/>
-      <property name="XF86WWW" type="string" value="exo-open --launch WebBrowser"/>
-      <property name="override" type="bool" value="true"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;o" type="string" value="gnome-calculator"/>
-      <property name="&lt;Super&gt;l" type="string" value="xflock4"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;j" type="string" value="subl -n"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;h" type="string" value="gnome-system-monitor"/>
-      <property name="&lt;Primary&gt;&lt;Shift&gt;&lt;Alt&gt;parenleft" type="string" value="xfce4-popup-whiskermenu"/>
-      <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
-      <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;KP_1" type="string" value="wmctrl -x -a minilyrics.exe.Wine"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;KP_0" type="string" value="wmctrl -x -a aimp.exe.Wine"/>
-      <property name="&lt;Super&gt;F3" type="string" value="xfce4-appfinder">
-        <property name="startup-notify" type="bool" value="true"/>
-      </property>
-      <property name="&lt;Super&gt;F2" type="string" value="xfce4-appfinder --collapsed">
-        <property name="startup-notify" type="bool" value="true"/>
-      </property>
-      <property name="&lt;Super&gt;F1" type="string" value="xfce4-popup-applicationsmenu"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Down" type="string" value="/home/evandro/Documents/Programs/play_stop_music.sh AIMP.exe Down"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Left" type="string" value="/home/evandro/Documents/Programs/play_stop_music.sh AIMP.exe F1"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Right" type="string" value="/home/evandro/Documents/Programs/play_stop_music.sh AIMP.exe F2"/>
-      <property name="Pause" type="string" value="/home/evandro/Documents/Programs/play_stop_music.sh AIMP.exe space"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="/home/evandro/Documents/Programs/play_stop_music.sh AIMP.exe Up"/>
-```
-
-**`/home/evandro/Programs/play_stop_music.sh`**
-```
-#!/bin/bash
-# To list active windows use `wmctrl -lx`
-window_title="$1"
-key_to_send="$2"
-
-# xdotool key --window "$target_window" "$key_to_send"
-target_window=$(xdotool search --limit 1 --all --pid $(pgrep "$window_title"))
-active_window=$(xdotool getactivewindow)
-
-wmctrl -x -a "$window_title" &&
-sleep 0.5 &&
-xdotool key "$key_to_send" &&
-xdotool windowactivate "$active_window" &&
-printf "%s Done!\\n" "$0"
-```
 
 **`/home/evandro/.local/share/applications/lastfm.desktop`**
 ```
@@ -302,24 +221,8 @@ https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4
 sudo apt-get install imwheel
 
 1. Run `imwheel -b "4 5"`on system start up
-1. Create `~/.imwheelrc` with:
-```sh
-"SmartGit"
-None,      Up,   Button4, 1
-None,      Down, Button5, 1
-Control_L, Up,   Control_L|Button4
-Control_L, Down, Control_L|Button5
-Shift_L,   Up,   Shift_L|Button4
-Shift_L,   Down, Shift_L|Button5
-
-".*"
-None,      Up,   Button4, 3
-None,      Down, Button5, 3
-Control_L, Up,   Control_L|Button4
-Control_L, Down, Control_L|Button5
-Shift_L,   Up,   Shift_L|Button4
-Shift_L,   Down, Shift_L|Button5
-```
+  1. Create `~/.imwheelrc` with:
+   * [.imwheelrc](.imwheelrc)
 1. https://wiki.archlinux.org/index.php/IMWheel
 1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
 
