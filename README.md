@@ -14,7 +14,7 @@ git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downl
 
 And move them to your main's user folder replacing your own settings:
 ```
-rsync -r -t -v -s ~/Downloads/MyLinuxSettings ~/
+rsync -r -t -v -s ~/Downloads/MyLinuxSettings/ ~/
 ```
 
 After installing, reload the `XFCE` components, so the settings does not get overridden.
