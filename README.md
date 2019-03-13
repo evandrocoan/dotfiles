@@ -99,7 +99,6 @@ done
 ### gnome-system-monitor & others
 
 ```
-sudo apt-get install build-dep gnome-system-monitor
 sudo apt-get install flameshot nethogs python3 python-pip python3-pip
 pip3 install setuptools wheel python-language-server
 pip install setuptools wheel
