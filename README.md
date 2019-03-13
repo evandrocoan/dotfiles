@@ -137,7 +137,7 @@ sudo add-apt-repository ppa:sporkwitch/autokey
 sudo apt update
 sudo apt install autokey-gtk
 ```
-1. Create keybind `,` (numpad comma), autokey-run -p insert_dot
+1. Create keybind `,` (numpad comma), `autokey-run -p insert_dot`
 1. Run `utokey-gtk --verbose &` for debugging it
 
 
