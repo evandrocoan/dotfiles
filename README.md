@@ -30,8 +30,6 @@ user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
 ### Manual installation
 
-1. https://github.com/evandrocoan/MyLinuxSettings
-
 Add `GRUB_CMDLINE_LINUX="i915.enable_rc6=0"` to `/etc/default/grub`:
 1. https://unix.stackexchange.com/questions/401746/drm-i915-resetting-chip-after-gpu-hang
 1. https://askubuntu.com/questions/857123/how-to-tweak-intel-hd-graphics-on-ubuntu-16-04
@@ -51,7 +49,7 @@ sudo passwd root
 
 1. https://www.sublimetext.com/3
 1. Install StudioChannel:
-   * https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json
+   * `https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json`
 1. https://forum.sublimetext.com/t/multiple-sublime-processes-with-different-environment/34575
 
 Setup it to start maximized with:
