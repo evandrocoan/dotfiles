@@ -1,4 +1,4 @@
-﻿# My linux configurations (or Dotfiles)
+# My linux configurations (or Dotfiles)
 
 These are used on Mint XFCE 19.1, Ubuntu and Cygwin.
 
