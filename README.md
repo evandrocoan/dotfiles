@@ -70,15 +70,24 @@ Setup it to start maximized with:
 1. Then, run the command: `ksuperkey -e 'Super_L=Control_L|i'`
 
 
-### gnome-system-monitor & others
+### Ksysguard & others
 
+Add ppa repositories:
 ```
-sudo apt-get install flameshot nethogs python3 python-pip python3-pip
+sudo add-apt-repository ppa:sporkwitch/autokey
+sudo add-apt-repository ppa:hluk/copyq
+sudo apt update
+```
+
+Install stuff:
+```
+sudo apt install -y autokey-gtk copyq mtp-tools gmtp imwheel
+sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip
 pip3 install setuptools wheel python-language-server
 pip install setuptools wheel
-sudo apt-get install audacity gnome-gmail ksysguard wmctrl
-sudo apt-get install xdotool grsync unison-gtk indicator-multiload
-sudo apt-get install vim vim-gtk3 ncdu nemo
+sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl
+sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload
+sudo apt-get install -y vim vim-gtk3 ncdu nemo
 ```
 
 1. `nethogs`
@@ -90,6 +99,17 @@ sudo apt-get install vim vim-gtk3 ncdu nemo
    * System Load and Temps - https://store.kde.org/p/1198291
 1. Open `Unisson` & `Grsync`
 1. Add `System Load Monitor` widget to the main panel
+1. Create keybind `,` (numpad comma), `autokey-run -p insert_dot`
+   * https://github.com/autokey/autokey
+1. Run `utokey-gtk --verbose &` for debugging it
+1. https://unix.stackexchange.com/questions/192048/mount-mtp-android-device-in-linux-mint-17-1
+1. https://unix.stackexchange.com/questions/389952/how-to-get-the-samsung-galaxy-s5-to-work-with-mtp-on-debian-9
+1. Run `imwheel -b "4 5"`on system start up
+  1. Create `~/.imwheelrc` with:
+   * [.imwheelrc](.imwheelrc)
+  1. https://wiki.archlinux.org/index.php/IMWheel
+  1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
+  1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
 
 
 ### Optionally install KDE
@@ -110,12 +130,6 @@ sudo apt-get install vim vim-gtk3 ncdu nemo
 
 ### Install wine & others
 
-1. https://github.com/hluk/CopyQ/issues/1099
-```
-sudo add-apt-repository ppa:hluk/copyq
-sudo apt update
-sudo apt install copyq
-```
 1. https://wiki.winehq.org/Ubuntu
 1. https://askubuntu.com/questions/785657/i-cant-install-gnome-schedule-on-ubuntu-16-04
 1. https://askubuntu.com/questions/779946/how-do-i-install-lastfm-scrobblernewbie-at-ubuntu-stuff
@@ -125,18 +139,8 @@ sudo apt install copyq
 1. https://askubuntu.com/questions/138908/how-to-execute-a-script-just-by-double-clicking-like-exe-files-in-windows
 1. https://www.teamviewer.com/pt-br/download/linux/
 1. https://askubuntu.com/questions/700712/how-to-install-wireshark
-
-
-### Configure AutoKey
-
-https://github.com/autokey/autokey
-```
-sudo add-apt-repository ppa:sporkwitch/autokey
-sudo apt update
-sudo apt install autokey-gtk
-```
-1. Create keybind `,` (numpad comma), `autokey-run -p insert_dot`
-1. Run `utokey-gtk --verbose &` for debugging it
+1. https://www.syntevo.com/smartgit/download/
+   Sometimes ignored directories are containing tracked files in which case changes to these files might not show up automatically. If this is the case for you, you may disable this optimization by setting system property 'fileMonitor.excludeIgnoredDirectories=false'.
 
 
 ### Remove Default Keybinds
@@ -201,34 +205,6 @@ Exec=wine "/home/evandro/.wine/dosdevices/c:/Program Files (x86)/MiniLyrics/Mini
 Actions=
 Categories=AudioVideo;
 ```
-
-
-### Install Smartphone drivers
-
-```
-sudo apt-get install mtp-tools gmtp
-```
-1. https://unix.stackexchange.com/questions/192048/mount-mtp-android-device-in-linux-mint-17-1
-1. https://unix.stackexchange.com/questions/389952/how-to-get-the-samsung-galaxy-s5-to-work-with-mtp-on-debian-9
-
-
-### Install imwheel
-
-https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
-
-sudo apt-get install imwheel
-
-1. Run `imwheel -b "4 5"`on system start up
-  1. Create `~/.imwheelrc` with:
-   * [.imwheelrc](.imwheelrc)
-1. https://wiki.archlinux.org/index.php/IMWheel
-1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
-
-
-### Install SmartGit
-
-1. https://www.syntevo.com/smartgit/download/
-   Sometimes ignored directories are containing tracked files in which case changes to these files might not show up automatically. If this is the case for you, you may disable this optimization by setting system property 'fileMonitor.excludeIgnoredDirectories=false'.
 
 
 ### Linux system information
