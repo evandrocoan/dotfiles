@@ -105,11 +105,11 @@ pip install setuptools wheel
 1. https://unix.stackexchange.com/questions/192048/mount-mtp-android-device-in-linux-mint-17-1
 1. https://unix.stackexchange.com/questions/389952/how-to-get-the-samsung-galaxy-s5-to-work-with-mtp-on-debian-9
 1. Run `imwheel -b "4 5"`on system start up
-  1. Create `~/.imwheelrc` with:
-   * [.imwheelrc](.imwheelrc)
-  1. https://wiki.archlinux.org/index.php/IMWheel
-  1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
-  1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
+   1. Create `~/.imwheelrc` with:
+      * [.imwheelrc](.imwheelrc)
+   1. https://wiki.archlinux.org/index.php/IMWheel
+   1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
+   1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
 
 
 ### Optionally install KDE
