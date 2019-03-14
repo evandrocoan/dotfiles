@@ -86,8 +86,10 @@ sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install -y vim vim-gtk3 ncdu nemo &&
-pip3 install setuptools wheel python-language-server &&
-pip install setuptools wheel
+pip install setuptools &&
+pip3 install setuptools &&
+pip install wheel &&
+pip3 install wheel python-language-server
 ```
 
 1. `nethogs`
