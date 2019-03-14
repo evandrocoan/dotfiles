@@ -74,20 +74,20 @@ Setup it to start maximized with:
 
 Add ppa repositories:
 ```
-sudo add-apt-repository ppa:sporkwitch/autokey
-sudo add-apt-repository ppa:hluk/copyq
+sudo add-apt-repository ppa:sporkwitch/autokey &&
+sudo add-apt-repository ppa:hluk/copyq &&
 sudo apt update
 ```
 
 Install stuff:
 ```
-sudo apt install -y autokey-gtk copyq mtp-tools gmtp imwheel
-sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip
-pip3 install setuptools wheel python-language-server
+sudo apt install -y autokey-gtk copyq mtp-tools gmtp imwheel &&
+sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
+sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
+sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
+sudo apt-get install -y vim vim-gtk3 ncdu nemo &&
+pip3 install setuptools wheel python-language-server &&
 pip install setuptools wheel
-sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl
-sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload
-sudo apt-get install -y vim vim-gtk3 ncdu nemo
 ```
 
 1. `nethogs`
