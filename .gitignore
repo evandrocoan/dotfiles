@@ -28,3 +28,6 @@
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
+!/.config/Thunar/**
+
+
