@@ -1,0 +1,19 @@
+State=AAAA/wAAAAD9AAAAAAAAB4AAAAPSAAAABAAAAAQAAAAIAAAACPwAAAABAAAAAgAAAAEAAAAWAG0AYQBpAG4AVABvAG8AbABCAGEAcgAAAAAA/////wAAAAAAAAAA
+Window-Maximized 1080x1920=true
+
+[DownloadDialog Settings]
+Height 1080=493
+Width 1920=700
+
+[MainWindow]
+CommandList=
+Height 1080=1023
+HostList=
+SelectedSheets[$e]=ProcessTable.sgrd,SystemLoad2.sgrd,Hard Disk Totals-0.1.sgrd,System Load and Temps-1.01.sgrd
+SplitterSizeList=1105,809
+State=AAAA/wAAAAD9AAAAAAAAB4AAAAPSAAAABAAAAAQAAAAIAAAACPwAAAABAAAAAgAAAAEAAAAWAG0AYQBpAG4AVABvAG8AbABCAGEAcgAAAAAA/////wAAAAAAAAAA
+ToolBarsMovable=Disabled
+Width 1920=1920
+Window-Maximized 1080x1920=true
+currentSheet=0
+isMinimized=false
