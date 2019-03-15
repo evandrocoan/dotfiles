@@ -85,15 +85,16 @@ sudo apt install -y autokey-gtk copyq mtp-tools gmtp imwheel &&
 sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
-sudo apt-get install -y vim vim-gtk3 ncdu nemo &&
+sudo apt-get install -y vim vim-gtk3 ncdu nemo glogg &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
 pip3 install wheel python-language-server
 ```
 
-1. `nethogs`
+1. `glogg`
 1. `ncdu`
+1. `nethogs`
 1. Open `Preferred Applications` and set mailto as `gnome-gmail`
 1. Open `Preferred Applications` and set File Manger as `nemo`
 1. Open `KSysGuard` & `System Monitor` and Install KSysGuard System Monitor Tabs:
