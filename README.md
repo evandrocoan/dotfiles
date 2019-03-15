@@ -45,6 +45,14 @@ sudo passwd root
 ```
 
 
+### To list all programs using a given port
+
+```
+sudo netstat -tulpn | grep 5060
+```
+1. https://www.cyberciti.biz/faq/what-process-has-open-linux-port/
+
+
 ### Install Sublime Text
 
 1. https://www.sublimetext.com/3
@@ -66,7 +74,7 @@ Setup it to start maximized with:
 ### ksuperkey
 
 1. Clone and install https://github.com/hanschen/ksuperkey with `make` and `sudo make install`
-1. Remove the `Super+L` to `xfce4-popup-whiskermenu` on `All Settings -> Keyboard -> Applications Shortcuts` and add it to `Control_L|i`
+1. Remove the `Super+L` to `xfce4-popup-whiskermenu` on `All Settings -> Keyboard -> Applications Shortcuts` and add it to `Super_L|m`
 1. Then, run the command: `ksuperkey -e 'Super_L=Control_L|i'`
 
 
@@ -85,13 +93,14 @@ sudo apt install -y autokey-gtk copyq mtp-tools gmtp imwheel &&
 sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
-sudo apt-get install -y vim vim-gtk3 ncdu nemo glogg nemo-fileroller &&
+sudo apt-get install -y vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
 pip3 install wheel python-language-server
 ```
 
+1. `qps`
 1. `glogg`
 1. `ncdu`
 1. `nethogs`
@@ -133,10 +142,10 @@ pip3 install wheel python-language-server
 
 ### Install wine & others
 
+1. Software Manager -> Twinkle -> Install
 1. https://wiki.winehq.org/Ubuntu
 1. https://askubuntu.com/questions/785657/i-cant-install-gnome-schedule-on-ubuntu-16-04
 1. https://askubuntu.com/questions/779946/how-do-i-install-lastfm-scrobblernewbie-at-ubuntu-stuff
-1. https://www.zoiper.com/en/voip-softphone/download/current
 1. http://www.aimp2.us/aimp3-download.php (install inside wine)
 1. https://www.last.fm/about/trackmymusic?platform=windows (install inside wine)
 1. https://askubuntu.com/questions/138908/how-to-execute-a-script-just-by-double-clicking-like-exe-files-in-windows

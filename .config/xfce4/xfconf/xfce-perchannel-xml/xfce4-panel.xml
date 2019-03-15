@@ -54,12 +54,15 @@
     </property>
     <property name="plugin-8" type="empty">
       <property name="names-visible" type="array">
+        <value type="string" value="twinkle"/>
+        <value type="string" value="qps"/>
         <value type="string" value="skypeforlinux"/>
       </property>
       <property name="show-frame" type="bool" value="true"/>
       <property name="names-hidden" type="array">
         <value type="string" value="thunar"/>
         <value type="string" value="alarm-clock-applet"/>
+        <value type="string" value="mintupdate.py"/>
         <value type="string" value="networkmanager applet"/>
         <value type="string" value="task manager"/>
         <value type="string" value="indicator-multiload"/>
@@ -70,13 +73,12 @@
         <value type="string" value="zoiper5"/>
         <value type="string" value="xfce4-power-manager"/>
         <value type="string" value="alarm clock"/>
-        <value type="string" value="teamviewer"/>
         <value type="string" value="rhythmbox"/>
+        <value type="string" value="teamviewer"/>
         <value type="string" value="last.fm"/>
         <value type="string" value="flameshot"/>
         <value type="string" value="copyq"/>
         <value type="string" value="ktimer"/>
-        <value type="string" value="mintupdate.py"/>
       </property>
     </property>
     <property name="plugin-9" type="empty"/>

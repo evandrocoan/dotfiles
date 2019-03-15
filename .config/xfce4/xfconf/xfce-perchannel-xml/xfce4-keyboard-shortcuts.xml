@@ -190,8 +190,9 @@
       <property name="&lt;Super&gt;Home" type="string" value="tile_up_left_key"/>
       <property name="&lt;Super&gt;Delete" type="string" value="tile_down_key"/>
       <property name="&lt;Super&gt;Page_Up" type="string" value="tile_up_right_key"/>
-      <property name="&lt;Super&gt;Page_Down" type="string" value="tile_down_left_key"/>
-      <property name="&lt;Super&gt;End" type="string" value="tile_down_right_key"/>
+      <property name="&lt;Super&gt;End" type="string" value="tile_down_left_key"/>
+      <property name="&lt;Super&gt;Page_Down" type="string" value="tile_down_right_key"/>
+      <property name="&lt;Super&gt;Down" type="string" value="lower_window_key"/>
     </property>
   </property>
   <property name="providers" type="empty"/>
