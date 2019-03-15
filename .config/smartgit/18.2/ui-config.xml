@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj key="UiConfig" type="@UiConfig">
+	<obj key="git" type="@GitConfig">
+		<obj key="projectToolBar-17" type="@ToolBarStructure">
+			<collection key="items" type="Object">
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="fetch"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="sync"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="push"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="flowContext"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="merge"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="rebaseHeadTo"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="commit"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="branchAbort"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="stage"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="indexEditor"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="unstage"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="discard"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="stashSave"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="stashApply"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="branchAddTag"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="delete"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="logRepository"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="annotate"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="investigate"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="windowLayoutSetMain"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="windowLayoutSetReview"/>
+				</obj>
+			</collection>
+			<prop key="textBelowIcon" type="boolean" value="true"/>
+			<prop key="visible" type="boolean" value="true"/>
+		</obj>
+		<obj key="logToolBar-18.2" type="@ToolBarStructure">
+			<collection key="items" type="Object">
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="fetch"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="sync"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="push"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="flowContext"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="merge"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="rebaseHeadTo"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="commit"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="branchAbort"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="stage"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="indexEditor"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="unstage"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="discard"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="false"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="stashSave"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="stashApply"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="branchAddTag"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="delete"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="annotate"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="investigate"/>
+				</obj>
+				<obj type="@ToolBarSeparator">
+					<prop key="stretching" type="boolean" value="true"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="windowLayoutSetMain"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="windowLayoutSetReview"/>
+				</obj>
+			</collection>
+			<prop key="textBelowIcon" type="boolean" value="true"/>
+			<prop key="visible" type="boolean" value="true"/>
+		</obj>
+	</obj>
+	<obj key="hg" type="_NULL_"/>
+	<obj key="filterConfiguration" type="@FindObjectConfiguration">
+		<prop key="enteredPattern" type="_NULL_" value=""/>
+		<collection key="patterns" type="String"/>
+		<prop key="regularExpressions" type="boolean" value="false"/>
+	</obj>
+</obj>

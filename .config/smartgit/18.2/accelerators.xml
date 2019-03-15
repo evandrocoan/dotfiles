@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj key="Accelerators" type="@AllAccelerators">
+	<obj key="compareAccelerators" type="@KeyStrokes">
+		<collection key="id-keystroke-mapping" type="Object"/>
+	</obj>
+	<obj key="conflictSolverAccelerators" type="_NULL_"/>
+	<obj key="gitAnnotate" type="@KeyStrokes">
+		<collection key="id-keystroke-mapping" type="Object"/>
+	</obj>
+	<obj key="indexEditorAccelerators" type="@KeyStrokes">
+		<collection key="id-keystroke-mapping" type="Object"/>
+	</obj>
+	<obj key="fileEditor" type="_NULL_"/>
+	<obj key="logAccelerators" type="@KeyStrokes">
+		<collection key="id-keystroke-mapping" type="Object">
+			<obj type="@KeyStroke">
+				<prop key="id" type="String" value="windowMaximizeRestore"/>
+				<prop key="keystroke" type="String" value="ESC"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="deepGitAccelerators" type="_NULL_"/>
+	<obj key="project" type="@KeyStrokes">
+		<collection key="id-keystroke-mapping" type="Object">
+			<obj type="@KeyStroke">
+				<prop key="id" type="String" value="windowMaximizeRestore"/>
+				<prop key="keystroke" type="String" value="ESC"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="hgAnnotate" type="_NULL_"/>
+	<obj key="hgLog" type="_NULL_"/>
+	<prop key="completionKeyStroke" type="String" value="CTRL+SPACE"/>
+</obj>
