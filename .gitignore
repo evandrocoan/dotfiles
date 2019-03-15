@@ -33,6 +33,8 @@
 
 !/.local/share/nemo/actions/*
 !/.local/bin/run_as_user.sh
+!/.local/share/xfce4/helpers/custom-FileManager.desktop
+!/.local/share/xfce4/helpers/custom-MailReader.desktop
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
