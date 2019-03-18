@@ -90,7 +90,7 @@
       <property name="enable-mpris" type="empty"/>
       <property name="mixer-command" type="empty"/>
       <property name="show-notifications" type="bool" value="false"/>
-      <property name="mpris-players" type="string" value="rhythmbox"/>
+      <property name="mpris-players" type="string" value="rhythmbox;xplayer"/>
       <property name="enable-wnck" type="bool" value="false"/>
       <property name="blacklisted-players" type="string" value="rhythmbox"/>
     </property>
