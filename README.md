@@ -75,7 +75,7 @@ Setup it to start maximized with:
 
 1. Clone and install https://github.com/hanschen/ksuperkey with `make` and `sudo make install`
 1. Remove the `Super+L` to `xfce4-popup-whiskermenu` on `All Settings -> Keyboard -> Applications Shortcuts` and add it to `Super_L|m`
-1. Then, run the command: `ksuperkey -e 'Super_L=Control_L|i'`
+1. Then, run the command: `ksuperkey -e 'Super_L=Super_L|m'`
 
 
 ### Ksysguard & others
