@@ -120,6 +120,7 @@ pip3 install wheel python-language-server
    1. Create `~/.imwheelrc` with:
       * [.imwheelrc](.imwheelrc)
    1. https://wiki.archlinux.org/index.php/IMWheel
+      * Use `imwheel -d --debug --kill` to list windows
    1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
 
