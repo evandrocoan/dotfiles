@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run it with /home/evandro/Documents/Programs/open_maximized.sh "Sublime Text" /usr/bin/subl -n
+# run it with open_maximized.sh "Sublime Text" /usr/bin/subl -n
 command_line=$(printf '%q ' "${@:2}")
 eval "$command_line"
 
