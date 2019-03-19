@@ -18,9 +18,7 @@
         <value type="int" value="7"/>
         <value type="int" value="8"/>
         <value type="int" value="9"/>
-        <value type="int" value="10"/>
         <value type="int" value="11"/>
-        <value type="int" value="15"/>
         <value type="int" value="3"/>
         <value type="int" value="12"/>
         <value type="int" value="2"/>
@@ -101,6 +99,5 @@
       <property name="digital-format" type="string" value="%a %d - %H:%M:%S"/>
       <property name="tooltip-format" type="string" value=""/>
     </property>
-    <property name="plugin-15" type="string" value="weather"/>
   </property>
 </channel>
