@@ -28,7 +28,7 @@ MiscShowRelaunchDialog=TRUE
 MiscRewrapOnResize=TRUE
 MiscUseShiftArrowsToScroll=FALSE
 MiscSlimTabs=FALSE
-MiscNewTabAdjacent=FALSE
+MiscNewTabAdjacent=TRUE
 ScrollingLines=999999
 ShortcutsNoMenukey=TRUE
 
