@@ -42,11 +42,14 @@
       <property name="items" type="empty"/>
     </property>
     <property name="plugin-6" type="empty">
-      <property name="show-handle" type="empty"/>
+      <property name="show-handle" type="bool" value="false"/>
       <property name="middle-click" type="uint" value="0"/>
       <property name="sort-order" type="uint" value="4"/>
       <property name="grouping" type="uint" value="0"/>
       <property name="show-wireframes" type="bool" value="false"/>
+      <property name="flat-buttons" type="bool" value="false"/>
+      <property name="window-scrolling" type="bool" value="false"/>
+      <property name="include-all-monitors" type="bool" value="true"/>
     </property>
     <property name="plugin-7" type="empty">
       <property name="expand" type="empty"/>
