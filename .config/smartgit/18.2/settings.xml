@@ -366,7 +366,7 @@
 	<obj key="listx" type="@L">
 		<prop key="eUT" type="long" value="-9223372036854775808"/>
 		<prop key="nRT" type="long" value="-9223372036854775808"/>
-		<prop key="lLCT" type="long" value="1553008355253"/>
+		<prop key="lLCT" type="long" value="1553095137030"/>
 		<prop key="ePP" type="long" value="0"/>
 		<prop key="eV" type="String" value="18.2"/>
 		<prop key="uid" type="String" value="x36627274560"/>
@@ -383,7 +383,7 @@
 		<prop key="themeChanged" type="boolean" value="false"/>
 	</obj>
 	<obj key="vcsRecords" type="@VcsRecords">
-		<prop key="lastGitUsage" type="long" value="1553032852124"/>
+		<prop key="lastGitUsage" type="long" value="1553122394487"/>
 		<prop key="lastSvnUsage" type="long" value="0"/>
 		<prop key="lastHgUsage" type="long" value="0"/>
 		<prop key="lastReviewUsage" type="long" value="0"/>
@@ -391,7 +391,7 @@
 	</obj>
 	<obj key="updateCheck" type="@UpdateAutoCheckSettings">
 		<prop key="mode" type="String" value="download"/>
-		<prop key="prevCheckTime" type="long" value="1553008353854"/>
+		<prop key="prevCheckTime" type="long" value="1553095141099"/>
 		<prop key="checkedBuild" type="int" value="13242"/>
 		<prop key="upgradeInstallation" type="boolean" value="false"/>
 		<prop key="previewAlwaysCheckForLatestBuild" type="boolean" value="false"/>
@@ -405,7 +405,7 @@
 		<prop key="useProxy" type="boolean" value="false"/>
 		<prop key="authenticate" type="boolean" value="false"/>
 	</obj>
-	<prop key="proxyPassword" type="int" value="47"/>
+	<prop key="proxyPassword" type="int" value="48"/>
 	<obj key="spellCheck" type="@SpellCheckSettings">
 		<collection key="dictionaries" type="Object">
 			<obj type="@SpellCheckDictionarySet" id="80">
@@ -432,6 +432,6 @@
 	<prop key="machineId" type="_NULL_" value=""/>
 	<prop key="lastUsedVersion" type="String" value="18.2"/>
 	<collection key="tempDirs" type="String">
-		<prop type="String" value="/tmp/smartgit-5144098304376543798tmp"/>
+		<prop type="String" value="/tmp/smartgit-3838123419406642259tmp"/>
 	</collection>
 </obj>

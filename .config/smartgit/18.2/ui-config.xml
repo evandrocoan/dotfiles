@@ -157,10 +157,13 @@
 					<prop key="stretching" type="boolean" value="true"/>
 				</obj>
 				<obj type="@ToolBarButton">
-					<prop key="id" type="String" value="branchAddTag"/>
+					<prop key="id" type="String" value="cherryPick"/>
 				</obj>
 				<obj type="@ToolBarButton">
 					<prop key="id" type="String" value="delete"/>
+				</obj>
+				<obj type="@ToolBarButton">
+					<prop key="id" type="String" value="branchAddTag"/>
 				</obj>
 				<obj type="@ToolBarSeparator">
 					<prop key="stretching" type="boolean" value="true"/>
