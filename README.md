@@ -141,6 +141,16 @@ pip3 install wheel python-language-server
      1. System Monitor
 
 
+### Hide user account from login screen
+
+Open **/var/lib/AccountsService/users/XXX** and add:
+```
+[User]
+SystemAccount=true
+```
+1. https://forums.linuxmint.com/viewtopic.php?t=212990
+
+
 ### Install wine & others
 
 1. Software Manager -> Twinkle -> Install
