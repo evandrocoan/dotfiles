@@ -6,7 +6,7 @@
   <property name="initial-opacity" type="empty"/>
   <property name="expire-timeout" type="empty"/>
   <property name="primary-monitor" type="empty"/>
-  <property name="do-fadeout" type="empty"/>
+  <property name="do-fadeout" type="bool" value="true"/>
   <property name="applications" type="empty">
     <property name="known_applications" type="array">
       <value type="string" value="alarm-clock"/>
@@ -25,10 +25,13 @@
       <value type="string" value="Xfce4-notifyd settings"/>
     </property>
     <property name="muted_applications" type="array">
-      <value type="string" value="Xfce volume daemon"/>
     </property>
   </property>
   <property name="log-level" type="uint" value="1"/>
-  <property name="log-level-apps" type="uint" value="1"/>
+  <property name="log-level-apps" type="uint" value="0"/>
   <property name="notification-log" type="bool" value="true"/>
+  <property name="plugin" type="empty">
+    <property name="log-display-limit" type="int" value="20"/>
+  </property>
+  <property name="do-slideout" type="bool" value="false"/>
 </channel>
