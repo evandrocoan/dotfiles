@@ -145,6 +145,7 @@ pip3 install wheel python-language-server
 
 1. Software Manager -> Twinkle -> Install
 1. https://wiki.winehq.org/Ubuntu
+1. https://www.cockos.com/licecap/
 1. https://askubuntu.com/questions/785657/i-cant-install-gnome-schedule-on-ubuntu-16-04
 1. https://askubuntu.com/questions/779946/how-do-i-install-lastfm-scrobblernewbie-at-ubuntu-stuff
 1. http://www.aimp2.us/aimp3-download.php (install inside wine)
