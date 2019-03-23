@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj key="UiConfig" type="@UiSettings">
+	<collection key="bounds.keys" type="String">
+		<prop type="String" value="annotate"/>
+		<prop type="String" value="compare"/>
+		<prop type="String" value="customize"/>
+		<prop type="String" value="git.commit"/>
+		<prop type="String" value="git.commit.editMessage"/>
+		<prop type="String" value="git.discard"/>
+		<prop type="String" value="git.ignore.file"/>
+		<prop type="String" value="git.indexEditor"/>
+		<prop type="String" value="git.rebase"/>
+		<prop type="String" value="git.stage"/>
+		<prop type="String" value="git.stashSave"/>
+		<prop type="String" value="git.tag"/>
+		<prop type="String" value="hostingProvider.gitlab.repository"/>
+		<prop type="String" value="log"/>
+		<prop type="String" value="preferences"/>
+		<prop type="String" value="project"/>
+		<prop type="String" value="rebase.interactive"/>
+		<prop type="String" value="welcome"/>
+	</collection>
+	<obj key="bounds.value.annotate" type="@Bounds">
+		<prop key="x" type="int" value="0"/>
+		<prop key="y" type="int" value="0"/>
+		<prop key="width" type="int" value="1440"/>
+		<prop key="height" type="int" value="872"/>
+		<prop key="maximized" type="int" value="1"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.compare" type="@Bounds">
+		<prop key="x" type="int" value="240"/>
+		<prop key="y" type="int" value="58"/>
+		<prop key="width" type="int" value="1440"/>
+		<prop key="height" type="int" value="872"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.customize" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="600"/>
+		<prop key="height" type="int" value="370"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.commit" type="@Bounds">
+		<prop key="x" type="int" value="-166"/>
+		<prop key="y" type="int" value="-6"/>
+		<prop key="width" type="int" value="630"/>
+		<prop key="height" type="int" value="847"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.commit.editMessage" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="600"/>
+		<prop key="height" type="int" value="370"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.discard" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="500"/>
+		<prop key="height" type="int" value="309"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.ignore.file" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="-2147483648"/>
+		<prop key="height" type="int" value="-2147483648"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.indexEditor" type="@Bounds">
+		<prop key="x" type="int" value="0"/>
+		<prop key="y" type="int" value="0"/>
+		<prop key="width" type="int" value="1440"/>
+		<prop key="height" type="int" value="872"/>
+		<prop key="maximized" type="int" value="1"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.rebase" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="850"/>
+		<prop key="height" type="int" value="525"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.stage" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="500"/>
+		<prop key="height" type="int" value="309"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.stashSave" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="500"/>
+		<prop key="height" type="int" value="309"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.tag" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="400"/>
+		<prop key="height" type="int" value="300"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.hostingProvider.gitlab.repository" type="@Bounds">
+		<prop key="x" type="int" value="-25"/>
+		<prop key="y" type="int" value="18"/>
+		<prop key="width" type="int" value="384"/>
+		<prop key="height" type="int" value="233"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.log" type="@Bounds">
+		<prop key="x" type="int" value="0"/>
+		<prop key="y" type="int" value="0"/>
+		<prop key="width" type="int" value="1440"/>
+		<prop key="height" type="int" value="872"/>
+		<prop key="maximized" type="int" value="1"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.preferences" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="-2147483648"/>
+		<prop key="height" type="int" value="-2147483648"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.project" type="@Bounds">
+		<prop key="x" type="int" value="0"/>
+		<prop key="y" type="int" value="0"/>
+		<prop key="width" type="int" value="1440"/>
+		<prop key="height" type="int" value="872"/>
+		<prop key="maximized" type="int" value="1"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.rebase.interactive" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="600"/>
+		<prop key="height" type="int" value="370"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.welcome" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="-2147483648"/>
+		<prop key="height" type="int" value="-2147483648"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="conflictSolverFrame" type="_NULL_"/>
+	<obj key="indexEditorFrame" type="@MergeFrameSettings">
+		<prop key="sLayout" type="String" value="left-merge-right"/>
+	</obj>
+	<prop key="gitAnnotateLayout" type="String" value="[+1920x862:document ][+1920x129:line-history ]"/>
+	<prop key="hgAnnotateLayout" type="_NULL_" value=""/>
+	<prop key="gitProjectLayout.main" type="String" value="(([+350x547:directories ][+350x364:branches ])(([+1567x368:files ][-2x1:message ])[+1567x303:changes ]([+892x237:outgoing ][+672x237:output ])))"/>
+	<prop key="gitProjectLayout.review" type="String" value="([+2x1:directories ][+7x1:files ][+3x1:message ])[+10x3:changes ]([-1x1:branches ][-3x1:outgoing ][-3x1:output ])"/>
+	<prop key="gitProjectLayout.mainIsDefault" type="boolean" value="true"/>
+	<prop key="gitLogRootLayout.main" type="String" value="(([+322x512:repositories ][+322x399:branches ])(([+1045x531:graph ](([+361x228:details ][+183x228:output ])[+547x300:files ]))[+1595x380:changes ])[-166x346:comments ][-2x1:message ])"/>
+	<prop key="gitLogRootLayout.review" type="String" value="(([+1x1:repositories ][+1x1:branches ])(([+4x1:graph ]([+2x1:details -2x1:message -1x1:output details ][+2x2:files +2x1:comments files ]))[+4x4:changes ]))"/>
+	<prop key="gitLogRootLayout.mainIsDefault" type="boolean" value="true"/>
+	<prop key="gitLogSubtreeLayout.main" type="String" value="((([+273x607:branches ][+1094x607:graph ]([+547x201:details -1x1:output details ][+547x403:files ]))[+1920x304:changes ]))"/>
+	<prop key="gitLogSubtreeLayout.review" type="String" value="((([+1x1:branches ][+4x1:graph ]([+2x1:details -1x1:output details ][+2x2:files ]))[+4x4:changes ]))"/>
+	<prop key="gitLogSubtreeLayout.mainIsDefault" type="boolean" value="true"/>
+	<prop key="hgProjectLayout.main" type="_NULL_" value=""/>
+	<prop key="hgProjectLayout.review" type="_NULL_" value=""/>
+	<prop key="hgProjectLayout.mainIsDefault" type="boolean" value="true"/>
+	<prop key="hgLogLayout.main" type="_NULL_" value=""/>
+	<prop key="hgLogLayout.review" type="_NULL_" value=""/>
+	<prop key="hgLogLayout.mainIsDefault" type="boolean" value="true"/>
+	<collection key="primitives.stringKeys" type="String">
+		<prop type="String" value="commit.expandOptions"/>
+		<prop type="String" value="git.addBranch.switch"/>
+		<prop type="String" value="git.cherryPick.appendSha"/>
+		<prop type="String" value="git.cherryPick.commit"/>
+		<prop type="String" value="git.pull.defaultFetch"/>
+		<prop type="String" value="lastClonedUrls.0"/>
+		<prop type="String" value="lastClonedUrls.1"/>
+		<prop type="String" value="lastClonedUrls.2"/>
+		<prop type="String" value="lastClonedUrls.3"/>
+		<prop type="String" value="lastClonedUrls.4"/>
+		<prop type="String" value="lastClonedUrls.5"/>
+		<prop type="String" value="lastClonedUrls.6"/>
+		<prop type="String" value="lastClonedUrls.7"/>
+		<prop type="String" value="lastClonedUrls.8"/>
+		<prop type="String" value="lastClonedUrls.9"/>
+		<prop type="String" value="lastClonedUrls.count"/>
+		<prop type="String" value="lastRepositoryPath"/>
+		<prop type="String" value="log.git.authorStyle"/>
+		<prop type="String" value="modifyNotSplit"/>
+		<prop type="String" value="stashApply.drop"/>
+		<prop type="String" value="stashApply.restoreIndex"/>
+	</collection>
+	<prop key="primitives.strings.commit.expandOptions" type="String" value="false"/>
+	<prop key="primitives.strings.git.addBranch.switch" type="String" value="true"/>
+	<prop key="primitives.strings.git.cherryPick.appendSha" type="String" value="false"/>
+	<prop key="primitives.strings.git.cherryPick.commit" type="String" value="true"/>
+	<prop key="primitives.strings.git.pull.defaultFetch" type="String" value="false"/>
+	<prop key="primitives.strings.log.git.authorStyle" type="String" value="full"/>
+	<prop key="primitives.strings.modifyNotSplit" type="String" value="false"/>
+	<prop key="primitives.strings.stashApply.drop" type="String" value="true"/>
+	<prop key="primitives.strings.stashApply.restoreIndex" type="String" value="true"/>
+	<collection key="columns.keys" type="String">
+		<prop type="String" value="git.log.files"/>
+		<prop type="String" value="hostingProvider.gitlab.repository.1"/>
+		<prop type="String" value="log.comments"/>
+		<prop type="String" value="project.files.git"/>
+		<prop type="String" value="rebase.interactive"/>
+	</collection>
+	<obj key="columns.value.git.log.files" type="@QColumnSettings">
+		<prop key="columnNames" type="String" value="Name\tModification\tRelative Directory\tRenamed Path\tExt.\tRelative Path"/>
+		<prop key="visibleColumnNames" type="String" value="Modification\tName\tRelative Directory\tRenamed Path"/>
+		<collection key="sortOrders" type="Object">
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Name"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+		</collection>
+		<collection key="columnWidths" type="Object">
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Name"/>
+				<prop key="width" type="int" value="200"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Modification"/>
+				<prop key="width" type="int" value="84"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Relative Directory"/>
+				<prop key="width" type="int" value="200"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Renamed Path"/>
+				<prop key="width" type="int" value="449"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Relative Path"/>
+				<prop key="width" type="int" value="500"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="columns.value.hostingProvider.gitlab.repository.1" type="@QColumnSettings">
+		<prop key="columnNames" type="String" value="Name\tNamespace"/>
+		<prop key="visibleColumnNames" type="String" value="Name\tNamespace"/>
+		<collection key="sortOrders" type="Object"/>
+		<collection key="columnWidths" type="Object">
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Name"/>
+				<prop key="width" type="int" value="118"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Namespace"/>
+				<prop key="width" type="int" value="82"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="columns.value.log.comments" type="@QColumnSettings">
+		<prop key="columnNames" type="String" value="Author\tText\tPath\tDate\tAssignee\tCommit"/>
+		<prop key="visibleColumnNames" type="String" value="Assignee\tAuthor\tDate\tPath\tText"/>
+		<collection key="sortOrders" type="Object">
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Assignee"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Date"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+		</collection>
+		<collection key="columnWidths" type="Object">
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Author"/>
+				<prop key="width" type="int" value="53"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Text"/>
+				<prop key="width" type="int" value="37"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Path"/>
+				<prop key="width" type="int" value="40"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Date"/>
+				<prop key="width" type="int" value="40"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Assignee"/>
+				<prop key="width" type="int" value="84"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="columns.value.project.files.git" type="@QColumnSettings">
+		<prop key="columnNames" type="String" value="Name\tState\tRelative Directory\tLast Changed On\tExt.\tIndex State\tRelative Path\tRenamed From\tSize\tWorking Tree State"/>
+		<prop key="visibleColumnNames" type="String" value="Last Changed On\tName\tRelative Directory\tState"/>
+		<collection key="sortOrders" type="Object">
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Relative Directory"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Last Changed On"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="State"/>
+				<prop key="reverse" type="boolean" value="true"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Name"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+		</collection>
+		<collection key="columnWidths" type="Object">
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Name"/>
+				<prop key="width" type="int" value="410"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="State"/>
+				<prop key="width" type="int" value="112"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Relative Directory"/>
+				<prop key="width" type="int" value="916"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Last Changed On"/>
+				<prop key="width" type="int" value="249"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Relative Path"/>
+				<prop key="width" type="int" value="500"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="columns.value.rebase.interactive" type="@QColumnSettings">
+		<prop key="columnNames" type="String" value="Message\tIDs"/>
+		<prop key="visibleColumnNames" type="String" value="IDs\tMessage"/>
+		<collection key="sortOrders" type="Object"/>
+		<collection key="columnWidths" type="Object">
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Message"/>
+				<prop key="width" type="int" value="322"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="IDs"/>
+				<prop key="width" type="int" value="61"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+		</collection>
+	</obj>
+	<obj key="gitViewFileFilter" type="@ViewFilter">
+		<prop key="viewRecursive" type="boolean" value="true"/>
+		<prop key="viewFromSubmodules" type="boolean" value="true"/>
+		<prop key="viewIgnoredFiles" type="boolean" value="false"/>
+		<prop key="viewRenameSources" type="boolean" value="false"/>
+		<prop key="viewSkipped" type="boolean" value="false"/>
+		<prop key="viewUnversionedFiles" type="boolean" value="true"/>
+		<prop key="viewUnchangedFiles" type="boolean" value="false"/>
+		<prop key="viewUnchangedAssumed" type="boolean" value="false"/>
+		<prop key="style" type="int" value="0"/>
+	</obj>
+	<obj key="hgViewFileFilter" type="_NULL_"/>
+	<obj key="deepGitUiConfiguration" type="_NULL_"/>
+</obj>
