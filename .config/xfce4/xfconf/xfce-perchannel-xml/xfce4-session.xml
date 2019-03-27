@@ -25,6 +25,9 @@
     </property>
   </property>
   <property name="splash" type="empty">
-    <property name="Engine" type="string" value="simple"/>
+    <property name="Engine" type="empty"/>
+  </property>
+  <property name="chooser" type="empty">
+    <property name="AlwaysDisplay" type="bool" value="true"/>
   </property>
 </channel>
