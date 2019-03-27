@@ -94,6 +94,7 @@ sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install -y vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
+sudo apt-get install -y libc6-dbg &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
@@ -121,6 +122,7 @@ pip3 install wheel python-language-server
       * [.imwheelrc](.imwheelrc)
    1. https://wiki.archlinux.org/index.php/IMWheel
       * Use `imwheel -d --debug --kill` to list windows
+   1. Use `sudo killall -9 imwheel; sleep 2; imwheel` to restart the service
    1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
 
