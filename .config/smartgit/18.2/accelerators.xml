@@ -3,7 +3,9 @@
 	<obj key="compareAccelerators" type="@KeyStrokes">
 		<collection key="id-keystroke-mapping" type="Object"/>
 	</obj>
-	<obj key="conflictSolverAccelerators" type="_NULL_"/>
+	<obj key="conflictSolverAccelerators" type="@KeyStrokes">
+		<collection key="id-keystroke-mapping" type="Object"/>
+	</obj>
 	<obj key="gitAnnotate" type="@KeyStrokes">
 		<collection key="id-keystroke-mapping" type="Object"/>
 	</obj>

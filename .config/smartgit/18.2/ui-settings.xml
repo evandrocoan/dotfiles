@@ -3,6 +3,7 @@
 	<collection key="bounds.keys" type="String">
 		<prop type="String" value="annotate"/>
 		<prop type="String" value="compare"/>
+		<prop type="String" value="conflictSolver"/>
 		<prop type="String" value="customize"/>
 		<prop type="String" value="git.commit"/>
 		<prop type="String" value="git.commit.editMessage"/>
@@ -34,6 +35,14 @@
 		<prop key="width" type="int" value="1440"/>
 		<prop key="height" type="int" value="872"/>
 		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.conflictSolver" type="@Bounds">
+		<prop key="x" type="int" value="0"/>
+		<prop key="y" type="int" value="0"/>
+		<prop key="width" type="int" value="1440"/>
+		<prop key="height" type="int" value="872"/>
+		<prop key="maximized" type="int" value="1"/>
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
 	<obj key="bounds.value.customize" type="@Bounds">
@@ -164,20 +173,22 @@
 		<prop key="maximized" type="int" value="0"/>
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
-	<obj key="conflictSolverFrame" type="_NULL_"/>
+	<obj key="conflictSolverFrame" type="@MergeFrameSettings">
+		<prop key="sLayout" type="String" value="left-merge-right"/>
+	</obj>
 	<obj key="indexEditorFrame" type="@MergeFrameSettings">
 		<prop key="sLayout" type="String" value="left-merge-right"/>
 	</obj>
 	<prop key="gitAnnotateLayout" type="String" value="[+1920x862:document ][+1920x129:line-history ]"/>
 	<prop key="hgAnnotateLayout" type="_NULL_" value=""/>
-	<prop key="gitProjectLayout.main" type="String" value="(([+350x547:directories ][+350x364:branches ])(([+1567x368:files ][-2x1:message ])[+1567x303:changes ]([+892x237:outgoing ][+672x237:output ])))"/>
+	<prop key="gitProjectLayout.main" type="String" value="(([+350x547:directories ][+350x364:branches ])(([+1567x387:files ][-2x1:message ])[+1567x361:changes ]([+892x160:outgoing ][+672x160:output ])))"/>
 	<prop key="gitProjectLayout.review" type="String" value="([+2x1:directories ][+7x1:files ][+3x1:message ])[+10x3:changes ]([-1x1:branches ][-3x1:outgoing ][-3x1:output ])"/>
 	<prop key="gitProjectLayout.mainIsDefault" type="boolean" value="true"/>
-	<prop key="gitLogRootLayout.main" type="String" value="(([+322x512:repositories ][+322x399:branches ])(([+1045x531:graph ](([+361x228:details ][+183x228:output ])[+547x300:files ]))[+1595x380:changes ])[-166x346:comments ][-2x1:message ])"/>
+	<prop key="gitLogRootLayout.main" type="String" value="(([+322x512:repositories ][+322x399:branches ])(([+1048x531:graph ](([+359x228:details ][+182x228:output ])[+544x300:files ]))[+1595x380:changes ])[-166x346:comments ][-2x1:message ])"/>
 	<prop key="gitLogRootLayout.review" type="String" value="(([+1x1:repositories ][+1x1:branches ])(([+4x1:graph ]([+2x1:details -2x1:message -1x1:output details ][+2x2:files +2x1:comments files ]))[+4x4:changes ]))"/>
 	<prop key="gitLogRootLayout.mainIsDefault" type="boolean" value="true"/>
-	<prop key="gitLogSubtreeLayout.main" type="String" value="((([+273x607:branches ][+1094x607:graph ]([+547x201:details -1x1:output details ][+547x403:files ]))[+1920x304:changes ]))"/>
-	<prop key="gitLogSubtreeLayout.review" type="String" value="((([+1x1:branches ][+4x1:graph ]([+2x1:details -1x1:output details ][+2x2:files ]))[+4x4:changes ]))"/>
+	<prop key="gitLogSubtreeLayout.main" type="String" value="([+273x607:branches ][+1094x607:graph ]([+547x201:details -1x1:output details ][+547x403:files ]))[+1920x304:changes ]"/>
+	<prop key="gitLogSubtreeLayout.review" type="String" value="([+1x1:branches ][+4x1:graph ]([+2x1:details -1x1:output details ][+2x2:files ]))[+4x4:changes ]"/>
 	<prop key="gitLogSubtreeLayout.mainIsDefault" type="boolean" value="true"/>
 	<prop key="hgProjectLayout.main" type="_NULL_" value=""/>
 	<prop key="hgProjectLayout.review" type="_NULL_" value=""/>
@@ -191,6 +202,7 @@
 		<prop type="String" value="git.cherryPick.appendSha"/>
 		<prop type="String" value="git.cherryPick.commit"/>
 		<prop type="String" value="git.pull.defaultFetch"/>
+		<prop type="String" value="git.switchBranch.fastForward"/>
 		<prop type="String" value="lastClonedUrls.0"/>
 		<prop type="String" value="lastClonedUrls.1"/>
 		<prop type="String" value="lastClonedUrls.2"/>
@@ -213,9 +225,10 @@
 	<prop key="primitives.strings.git.cherryPick.appendSha" type="String" value="false"/>
 	<prop key="primitives.strings.git.cherryPick.commit" type="String" value="true"/>
 	<prop key="primitives.strings.git.pull.defaultFetch" type="String" value="false"/>
+	<prop key="primitives.strings.git.switchBranch.fastForward" type="String" value="true"/>
 	<prop key="primitives.strings.log.git.authorStyle" type="String" value="full"/>
 	<prop key="primitives.strings.modifyNotSplit" type="String" value="false"/>
-	<prop key="primitives.strings.stashApply.drop" type="String" value="true"/>
+	<prop key="primitives.strings.stashApply.drop" type="String" value="false"/>
 	<prop key="primitives.strings.stashApply.restoreIndex" type="String" value="true"/>
 	<collection key="columns.keys" type="String">
 		<prop type="String" value="git.log.files"/>
@@ -320,13 +333,9 @@
 		</collection>
 	</obj>
 	<obj key="columns.value.project.files.git" type="@QColumnSettings">
-		<prop key="columnNames" type="String" value="Name\tState\tRelative Directory\tLast Changed On\tExt.\tIndex State\tRelative Path\tRenamed From\tSize\tWorking Tree State"/>
-		<prop key="visibleColumnNames" type="String" value="Last Changed On\tName\tRelative Directory\tState"/>
+		<prop key="columnNames" type="String" value="Name\tState\tRelative Path\tLast Changed On\tRenamed From\tSize\tIndex State\tWorking Tree State\tExt.\tRelative Directory"/>
+		<prop key="visibleColumnNames" type="String" value="Index State\tLast Changed On\tName\tRelative Path\tRenamed From\tSize\tState\tWorking Tree State"/>
 		<collection key="sortOrders" type="Object">
-			<obj type="@TableColumnSortOrder">
-				<prop key="id" type="String" value="Relative Directory"/>
-				<prop key="reverse" type="boolean" value="false"/>
-			</obj>
 			<obj type="@TableColumnSortOrder">
 				<prop key="id" type="String" value="Last Changed On"/>
 				<prop key="reverse" type="boolean" value="false"/>
@@ -334,6 +343,10 @@
 			<obj type="@TableColumnSortOrder">
 				<prop key="id" type="String" value="State"/>
 				<prop key="reverse" type="boolean" value="true"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Relative Path"/>
+				<prop key="reverse" type="boolean" value="false"/>
 			</obj>
 			<obj type="@TableColumnSortOrder">
 				<prop key="id" type="String" value="Name"/>
@@ -352,18 +365,43 @@
 				<prop key="width2x" type="int" value="0"/>
 			</obj>
 			<obj type="@ColumnWidth">
-				<prop key="id" type="String" value="Relative Directory"/>
-				<prop key="width" type="int" value="916"/>
+				<prop key="id" type="String" value="Relative Path"/>
+				<prop key="width" type="int" value="491"/>
 				<prop key="width2x" type="int" value="0"/>
 			</obj>
 			<obj type="@ColumnWidth">
 				<prop key="id" type="String" value="Last Changed On"/>
-				<prop key="width" type="int" value="249"/>
+				<prop key="width" type="int" value="123"/>
 				<prop key="width2x" type="int" value="0"/>
 			</obj>
 			<obj type="@ColumnWidth">
-				<prop key="id" type="String" value="Relative Path"/>
-				<prop key="width" type="int" value="500"/>
+				<prop key="id" type="String" value="Renamed From"/>
+				<prop key="width" type="int" value="103"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Size"/>
+				<prop key="width" type="int" value="68"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Index State"/>
+				<prop key="width" type="int" value="81"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Working Tree State"/>
+				<prop key="width" type="int" value="175"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Ext."/>
+				<prop key="width" type="int" value="34"/>
+				<prop key="width2x" type="int" value="0"/>
+			</obj>
+			<obj type="@ColumnWidth">
+				<prop key="id" type="String" value="Relative Directory"/>
+				<prop key="width" type="int" value="216"/>
 				<prop key="width2x" type="int" value="0"/>
 			</obj>
 		</collection>

@@ -73,7 +73,7 @@
 		</obj>
 	</obj>
 	<obj key="comparePreviewSettings" type="@ComparePreviewSettings">
-		<prop key="compareType" type="String" value="working-tree-vs-index"/>
+		<prop key="compareType" type="String" value="index-vs-head"/>
 		<prop key="selectCompareTypeAutomatically" type="boolean" value="true"/>
 	</obj>
 	<obj key="dateFormat" type="@DateFormatSettings">
@@ -366,14 +366,14 @@
 	<obj key="listx" type="@L">
 		<prop key="eUT" type="long" value="-9223372036854775808"/>
 		<prop key="nRT" type="long" value="-9223372036854775808"/>
-		<prop key="lLCT" type="long" value="1553268145063"/>
+		<prop key="lLCT" type="long" value="1553706112930"/>
 		<prop key="ePP" type="long" value="0"/>
 		<prop key="eV" type="String" value="18.2"/>
 		<prop key="uid" type="String" value="x36627274560"/>
 	</obj>
 	<obj key="project" type="@GlobalProjectSettings">
 		<prop key="reopenLastUsedRepositories" type="boolean" value="true"/>
-		<prop key="showWelcomeDialog" type="boolean" value="true"/>
+		<prop key="showWelcomeDialog" type="boolean" value="false"/>
 		<prop key="preferLogWindow" type="boolean" value="false"/>
 	</obj>
 	<obj key="uiSettings" type="@UiSettings">
@@ -383,7 +383,7 @@
 		<prop key="themeChanged" type="boolean" value="false"/>
 	</obj>
 	<obj key="vcsRecords" type="@VcsRecords">
-		<prop key="lastGitUsage" type="long" value="1553293119005"/>
+		<prop key="lastGitUsage" type="long" value="1553706436805"/>
 		<prop key="lastSvnUsage" type="long" value="0"/>
 		<prop key="lastHgUsage" type="long" value="0"/>
 		<prop key="lastReviewUsage" type="long" value="0"/>
@@ -391,7 +391,7 @@
 	</obj>
 	<obj key="updateCheck" type="@UpdateAutoCheckSettings">
 		<prop key="mode" type="String" value="download"/>
-		<prop key="prevCheckTime" type="long" value="1553288757469"/>
+		<prop key="prevCheckTime" type="long" value="1553641919123"/>
 		<prop key="checkedBuild" type="int" value="13242"/>
 		<prop key="upgradeInstallation" type="boolean" value="false"/>
 		<prop key="previewAlwaysCheckForLatestBuild" type="boolean" value="false"/>
@@ -405,7 +405,7 @@
 		<prop key="useProxy" type="boolean" value="false"/>
 		<prop key="authenticate" type="boolean" value="false"/>
 	</obj>
-	<prop key="proxyPassword" type="int" value="50"/>
+	<prop key="proxyPassword" type="int" value="62"/>
 	<obj key="spellCheck" type="@SpellCheckSettings">
 		<collection key="dictionaries" type="Object">
 			<obj type="@SpellCheckDictionarySet" id="80">
@@ -432,6 +432,6 @@
 	<prop key="machineId" type="_NULL_" value=""/>
 	<prop key="lastUsedVersion" type="String" value="18.2"/>
 	<collection key="tempDirs" type="String">
-		<prop type="String" value="/tmp/smartgit-17586401658314900761tmp"/>
+		<prop type="String" value="/tmp/smartgit-1077608766795963549tmp"/>
 	</collection>
 </obj>

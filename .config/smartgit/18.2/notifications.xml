@@ -3,6 +3,7 @@
 	<collection key="readNotifications" type="String">
 		<prop type="String" value="credential.helper-null"/>
 		<prop type="String" value="needsRestart-null"/>
+		<prop type="String" value="update-fetch-18.2.6-success"/>
 	</collection>
 	<collection key="dontPublishNotifications" type="String">
 		<prop type="String" value="credential.helper-null"/>
