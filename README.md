@@ -125,46 +125,69 @@ pip3 install wheel python-language-server
    1. Use `sudo killall -9 imwheel; sleep 2; imwheel` to restart the service
    1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
+
+
+# chroot
+
 1. Create an isolated environment with `chroot` (it will inherit your $HOME environment variable, etc)
    ```sh
-   mkdir /ubuntu_xenial_1604
-   mkdir -p /ubuntu_xenial_1604/home/$USER/
-   debootstrap --arch=amd64 xenial /ubuntu_xenial_1604 http://archive.ubuntu.com/ubuntu/
+   mkdir /myfiles/ubuntu_xenial_1604
+   debootstrap --arch=amd64 xenial /myfiles/ubuntu_xenial_1604 http://archive.ubuntu.com/ubuntu/
    locale-gen "en_US.UTF-8"
    locale-gen "pt_BR.UTF-8"
    cp /usr/share/i18n/SUPPORTED /etc/locale.gen
    locale-gen
    dpkg-reconfigure locales
    ```
-   1. `sudo mount --bind /usr/local/something /myfiles/ubuntu_xenial_1604/mnt/something`
-   1. `sudo umount /myfiles/ubuntu_xenial_1604/mnt/something`
-   1. Generate a new list of sources and add them to the file **/etc/apt/sources.list**
-      1. https://repogen.simplylinux.ch/
-      ```
-      #------------------------------------------------------------------------------#
-      #                            OFFICIAL UBUNTU REPOS                             #
-      #------------------------------------------------------------------------------#
+1. Add main machine resources to chroot nested machine
+   1. `mkdir -p /myfiles/ubuntu_xenial_1604/proc/`
+   1. `mkdir -p /myfiles/ubuntu_xenial_1604/sys/`
+   1. `mkdir -p /myfiles/ubuntu_xenial_1604/dev/pts`
+   1. `sudo mount -t proc proc /myfiles/ubuntu_xenial_1604/proc/`
+   1. `sudo mount -t sysfs sys /myfiles/ubuntu_xenial_1604/sys/`
+   1. `sudo mount -o bind /dev /myfiles/ubuntu_xenial_1604/dev/`
+   1. `sudo mount -t devpts pts dev/pts/`
+   1. https://wiki.archlinux.org/index.php/Chroot
+   1. https://unix.stackexchange.com/questions/98405/which-of-proc-sys-etc-should-be-bind-mounted
+1. Or edit fstab:
+   * https://askubuntu.com/questions/550348/how-to-make-mount-bind-permanent
+   ```sh
+   # <device>                             <dir>   <type>  <options>   <dump>  <pass>
+   /myfiles/ubuntu_xenial_1604/proc/      /proc    auto    -t,proc       0      1
+   /myfiles/ubuntu_xenial_1604/sys/       /sys     auto    -t,sysfs      0      1
+   /myfiles/ubuntu_xenial_1604/dev/pts    /dev     auto    -t,devpts     0      1
+   /myfiles/ubuntu_xenial_1604/dev/       /dev     auto    -o,bind       0      1
+   ```
+1. `mkdir -p /myfiles/ubuntu_xenial_1604/home/$USER/` (optionally, mount something inside the new Linux)
+1. `sudo mount --bind /usr/local/something /myfiles/ubuntu_xenial_1604/mnt/something`
+1. `sudo umount /myfiles/ubuntu_xenial_1604/mnt/something`
+1. Generate a new list of sources and add them to the file **/etc/apt/sources.list**
+   * https://repogen.simplylinux.ch/
+   ```
+   #------------------------------------------------------------------------------#
+   #                            OFFICIAL UBUNTU REPOS                             #
+   #------------------------------------------------------------------------------#
 
-      ###### Ubuntu Main Repos
-      deb http://55.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse
-      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse
+   ###### Ubuntu Main Repos
+   deb http://55.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse
+   deb-src http://55.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse
 
-      ###### Ubuntu Update Repos
-      deb http://55.archive.ubuntu.com/ubuntu/ xenial-security main restricted universe multiverse
-      deb http://55.archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe multiverse
-      deb http://55.archive.ubuntu.com/ubuntu/ xenial-proposed main restricted universe multiverse
-      deb http://55.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse
-      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-security main restricted universe multiverse
-      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe multiverse
-      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-proposed main restricted universe multiverse
-      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse
+   ###### Ubuntu Update Repos
+   deb http://55.archive.ubuntu.com/ubuntu/ xenial-security main restricted universe multiverse
+   deb http://55.archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe multiverse
+   deb http://55.archive.ubuntu.com/ubuntu/ xenial-proposed main restricted universe multiverse
+   deb http://55.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse
+   deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-security main restricted universe multiverse
+   deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe multiverse
+   deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-proposed main restricted universe multiverse
+   deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse
 
-      ###### Ubuntu Partner Repo
-      deb http://archive.canonical.com/ubuntu xenial partner
-      deb-src http://archive.canonical.com/ubuntu xenial partner
-      ```
-   1. https://help.ubuntu.com/community/BasicChroot
-   1. https://help.ubuntu.com/community/DebootstrapChroot
+   ###### Ubuntu Partner Repo
+   deb http://archive.canonical.com/ubuntu xenial partner
+   deb-src http://archive.canonical.com/ubuntu xenial partner
+   ```
+1. https://help.ubuntu.com/community/BasicChroot
+1. https://help.ubuntu.com/community/DebootstrapChroot
 
 
 ### Optionally install KDE
