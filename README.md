@@ -94,7 +94,7 @@ sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install -y vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
-sudo apt-get install -y libc6-dbg &&
+sudo apt-get install -y libc6-dbg debootstrap schroot &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
@@ -125,6 +125,46 @@ pip3 install wheel python-language-server
    1. Use `sudo killall -9 imwheel; sleep 2; imwheel` to restart the service
    1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
+1. Create an isolated environment with `chroot` (it will inherit your $HOME environment variable, etc)
+   ```sh
+   mkdir /ubuntu_xenial_1604
+   mkdir -p /ubuntu_xenial_1604/home/$USER/
+   debootstrap --arch=amd64 xenial /ubuntu_xenial_1604 http://archive.ubuntu.com/ubuntu/
+   locale-gen "en_US.UTF-8"
+   locale-gen "pt_BR.UTF-8"
+   cp /usr/share/i18n/SUPPORTED /etc/locale.gen
+   locale-gen
+   dpkg-reconfigure locales
+   ```
+   1. `sudo mount --bind /usr/local/something /myfiles/ubuntu_xenial_1604/mnt/something`
+   1. `sudo umount /myfiles/ubuntu_xenial_1604/mnt/something`
+   1. Generate a new list of sources and add them to the file **/etc/apt/sources.list**
+      1. https://repogen.simplylinux.ch/
+      ```
+      #------------------------------------------------------------------------------#
+      #                            OFFICIAL UBUNTU REPOS                             #
+      #------------------------------------------------------------------------------#
+
+      ###### Ubuntu Main Repos
+      deb http://55.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse
+      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial main restricted universe multiverse
+
+      ###### Ubuntu Update Repos
+      deb http://55.archive.ubuntu.com/ubuntu/ xenial-security main restricted universe multiverse
+      deb http://55.archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe multiverse
+      deb http://55.archive.ubuntu.com/ubuntu/ xenial-proposed main restricted universe multiverse
+      deb http://55.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse
+      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-security main restricted universe multiverse
+      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-updates main restricted universe multiverse
+      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-proposed main restricted universe multiverse
+      deb-src http://55.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse
+
+      ###### Ubuntu Partner Repo
+      deb http://archive.canonical.com/ubuntu xenial partner
+      deb-src http://archive.canonical.com/ubuntu xenial partner
+      ```
+   1. https://help.ubuntu.com/community/BasicChroot
+   1. https://help.ubuntu.com/community/DebootstrapChroot
 
 
 ### Optionally install KDE
