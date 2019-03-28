@@ -383,7 +383,7 @@
 		<prop key="themeChanged" type="boolean" value="false"/>
 	</obj>
 	<obj key="vcsRecords" type="@VcsRecords">
-		<prop key="lastGitUsage" type="long" value="1553706436805"/>
+		<prop key="lastGitUsage" type="long" value="1553793494680"/>
 		<prop key="lastSvnUsage" type="long" value="0"/>
 		<prop key="lastHgUsage" type="long" value="0"/>
 		<prop key="lastReviewUsage" type="long" value="0"/>
@@ -391,8 +391,8 @@
 	</obj>
 	<obj key="updateCheck" type="@UpdateAutoCheckSettings">
 		<prop key="mode" type="String" value="download"/>
-		<prop key="prevCheckTime" type="long" value="1553641919123"/>
-		<prop key="checkedBuild" type="int" value="13242"/>
+		<prop key="prevCheckTime" type="long" value="1553791987732"/>
+		<prop key="checkedBuild" type="int" value="13251"/>
 		<prop key="upgradeInstallation" type="boolean" value="false"/>
 		<prop key="previewAlwaysCheckForLatestBuild" type="boolean" value="false"/>
 	</obj>
@@ -405,7 +405,7 @@
 		<prop key="useProxy" type="boolean" value="false"/>
 		<prop key="authenticate" type="boolean" value="false"/>
 	</obj>
-	<prop key="proxyPassword" type="int" value="62"/>
+	<prop key="proxyPassword" type="int" value="66"/>
 	<obj key="spellCheck" type="@SpellCheckSettings">
 		<collection key="dictionaries" type="Object">
 			<obj type="@SpellCheckDictionarySet" id="80">
@@ -415,8 +415,7 @@
 			</obj>
 			<obj type="@SpellCheckDictionarySet">
 				<prop key="name" type="String" value="Portuguese (Brazilian)"/>
-				<prop key="file" type="String" value="~/Documents/SpellCheckDicts/Portuguese (Brazilian).dic"/>
-				<prop key="file.absolute" type="String" value="/home/evandro/Documents/SpellCheckDicts/Portuguese (Brazilian).dic"/>
+				<prop key="file" type="String" value="/myfiles/Programs/SpellCheckDicts/Portuguese (Brazilian).dic"/>
 			</obj>
 		</collection>
 		<ref key="activeDictionary" type="@SpellCheckDictionarySet" id="80"/>
@@ -432,6 +431,6 @@
 	<prop key="machineId" type="_NULL_" value=""/>
 	<prop key="lastUsedVersion" type="String" value="18.2"/>
 	<collection key="tempDirs" type="String">
-		<prop type="String" value="/tmp/smartgit-1077608766795963549tmp"/>
+		<prop type="String" value="/tmp/smartgit-14192338850013041687tmp"/>
 	</collection>
 </obj>
