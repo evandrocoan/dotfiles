@@ -139,6 +139,7 @@ pip3 install wheel python-language-server
    locale-gen
    dpkg-reconfigure locales
    ```
+1. `mkdir -p /myfiles/ubuntu_xenial_1604/home/$USER/`
 1. Add main machine resources to chroot nested machine
    1. `mkdir -p /myfiles/ubuntu_xenial_1604/proc/`
    1. `mkdir -p /myfiles/ubuntu_xenial_1604/sys/`
@@ -158,9 +159,9 @@ pip3 install wheel python-language-server
    /myfiles/ubuntu_xenial_1604/dev/pts    /dev     auto    -t,devpts     0      1
    /myfiles/ubuntu_xenial_1604/dev/       /dev     auto    -o,bind       0      1
    ```
-1. `mkdir -p /myfiles/ubuntu_xenial_1604/home/$USER/` (optionally, mount something inside the new Linux)
 1. `sudo mount --bind /usr/local/something /myfiles/ubuntu_xenial_1604/mnt/something`
-1. `sudo umount /myfiles/ubuntu_xenial_1604/mnt/something`
+   * Optionally, mount something inside the new Linux
+   * `sudo umount /myfiles/ubuntu_xenial_1604/mnt/something`
 1. Generate a new list of sources and add them to the file **/etc/apt/sources.list**
    * https://repogen.simplylinux.ch/
    ```
