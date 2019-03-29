@@ -41,7 +41,7 @@
     <property name="plugin-6" type="empty">
       <property name="show-handle" type="bool" value="false"/>
       <property name="middle-click" type="uint" value="0"/>
-      <property name="sort-order" type="uint" value="4"/>
+      <property name="sort-order" type="uint" value="1"/>
       <property name="grouping" type="uint" value="0"/>
       <property name="show-wireframes" type="bool" value="false"/>
       <property name="flat-buttons" type="bool" value="false"/>

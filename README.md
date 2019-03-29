@@ -40,8 +40,11 @@ GRUB_CMDLINE_LINUX="i915.enable_rc6=0 i915.semaphores=0"
 ```
 
 Enable super user account login with `su`:
-```
+```sh
 sudo passwd root
+
+# https://askubuntu.com/questions/20450/disable-root-account-in-ubuntu
+sudo passwd -l root
 ```
 
 
@@ -75,7 +78,7 @@ Setup it to start maximized with:
 
 1. Clone and install https://github.com/hanschen/ksuperkey with `make` and `sudo make install`
 1. Remove the `Super+L` to `xfce4-popup-whiskermenu` on `All Settings -> Keyboard -> Applications Shortcuts` and add it to `Super_L|m`
-1. Then, run the command: `ksuperkey -e 'Super_L=Super_L|m'`
+1. Then, run the command `ksuperkey -e 'Super_L=Super_L|m'` on system startup.
 
 
 ### Ksysguard & others
@@ -138,6 +141,7 @@ pip3 install wheel python-language-server
    cp /usr/share/i18n/SUPPORTED /etc/locale.gen
    locale-gen
    dpkg-reconfigure locales
+   apt-get install linux-headers-$(uname -r) gcc dialog unzip psmisc
    ```
 1. `mkdir -p /myfiles/ubuntu_xenial_1604/home/$USER/`
 1. Add main machine resources to chroot nested machine
