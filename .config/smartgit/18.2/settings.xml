@@ -405,7 +405,7 @@
 		<prop key="useProxy" type="boolean" value="false"/>
 		<prop key="authenticate" type="boolean" value="false"/>
 	</obj>
-	<prop key="proxyPassword" type="int" value="69"/>
+	<prop key="proxyPassword" type="int" value="70"/>
 	<obj key="spellCheck" type="@SpellCheckSettings">
 		<collection key="dictionaries" type="Object">
 			<obj type="@SpellCheckDictionarySet" id="80">
@@ -431,6 +431,6 @@
 	<prop key="machineId" type="_NULL_" value=""/>
 	<prop key="lastUsedVersion" type="String" value="18.2"/>
 	<collection key="tempDirs" type="String">
-		<prop type="String" value="/tmp/smartgit-11928912921708390408tmp"/>
+		<prop type="String" value="/tmp/smartgit-4483542595229181095tmp"/>
 	</collection>
 </obj>
