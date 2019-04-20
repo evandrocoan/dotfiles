@@ -130,7 +130,7 @@ pip3 install wheel python-language-server
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
 
 
-# chroot
+### chroot
 
 1. Create an isolated environment with `chroot` (it will inherit your $HOME environment variable, etc)
    ```sh
@@ -224,6 +224,7 @@ SystemAccount=true
 ### Install wine & others
 
 1. Software Manager -> Twinkle -> Install
+1. http://wiki.octave.org/Octave_for_Debian_systems
 1. https://wiki.winehq.org/Ubuntu
 1. https://www.cockos.com/licecap/
 1. https://github.com/balena-io/etcher
