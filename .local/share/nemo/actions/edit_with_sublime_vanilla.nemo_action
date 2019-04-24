@@ -4,5 +4,5 @@ Name=Edit with Sublime Text Vanilla
 Comment=Edit with Sublime Text Vanilla
 Exec=run_as_user.sh sublime /usr/bin/subl -n %F
 Selection=notnone
-Extensions=nodirs;
+Extensions=any;
 Icon-Name=sublime-text
