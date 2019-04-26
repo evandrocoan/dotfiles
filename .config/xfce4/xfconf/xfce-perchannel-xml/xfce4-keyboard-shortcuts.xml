@@ -54,11 +54,11 @@
       </property>
       <property name="&lt;Super&gt;F1" type="string" value="xfce4-popup-applicationsmenu"/>
       <property name="KP_Separator" type="string" value="autokey-run -p insert_dot"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Left" type="string" value="play_stop_music.sh AIMP.exe key Left"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Right" type="string" value="play_stop_music.sh AIMP.exe key Right"/>
-      <property name="Pause" type="string" value="play_stop_music.sh AIMP.exe key space"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="play_stop_music.sh AIMP.exe key Up"/>
-      <property name="&lt;Alt&gt;&lt;Super&gt;Down" type="string" value="play_stop_music.sh AIMP.exe key Down"/>
+      <property name="&lt;Alt&gt;&lt;Super&gt;Right" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+F2"/>
+      <property name="&lt;Alt&gt;&lt;Super&gt;Left" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+F1"/>
+      <property name="&lt;Alt&gt;&lt;Super&gt;Down" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+Down"/>
+      <property name="&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+Up"/>
+      <property name="Pause" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+space"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
