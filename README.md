@@ -66,6 +66,12 @@ Setup it to start maximized with:
 1. Set swap file size to 20GG on the next step tutorial
 1. https://forums.linuxmint.com/viewtopic.php?f=42&t=284100 [GUIDE] How to hibernate to a swap file in Linux Mint 19.x
 1. https://forums.linuxmint.com/viewtopic.php?t=273202 How to enable hibernation with swap partion on Linux Mint 19
+1. https://askubuntu.com/questions/33697/how-do-i-add-swap-after-system-installation
+1. https://askubuntu.com/questions/343268/how-to-use-manual-partitioning-during-installation
+1. https://www.cyberciti.biz/faq/linux-check-swap-usage-command/
+1. https://askubuntu.com/questions/562153/can-swap-be-on-a-different-disk
+1. https://askubuntu.com/questions/180730/how-do-i-restore-a-swap-partition-i-accidentally-deleted
+1. https://www.cyberciti.biz/faq/linux-add-a-swap-file-howto/
 
 Enable super user account login with `su`:
 ```sh
@@ -99,7 +105,7 @@ sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
 sudo apt-get install libc6-dbg debootstrap schroot gsmartcontrol iotop &&
-sudo apt-get install xfce4-terminal &&
+sudo apt-get install xfce4-terminal gnome-disk-utility &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
@@ -112,6 +118,7 @@ pip3 install wheel python-language-server
 1. `nethogs`
 1. `iotop`
 1. `gsmartcontrol`
+1. `gnome-disks`
 1. Open `Preferred Applications` and set mailto as `gnome-gmail`
 1. Open `Preferred Applications` and set File Manger as `nemo`
 1. Open `KSysGuard` & `System Monitor` and Install KSysGuard System Monitor Tabs:
