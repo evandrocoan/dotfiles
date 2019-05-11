@@ -28,7 +28,9 @@ For other components, research how it could be done, or just install the setting
 user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
 
-### Manual installation
+### Fix system crash
+
+Disable Google Chrome hardware acceleration: https://www.lifewire.com/hardware-acceleration-in-chrome-4125122
 
 Add `GRUB_CMDLINE_LINUX="i915.enable_rc6=0"` to `/etc/default/grub`:
 1. https://unix.stackexchange.com/questions/401746/drm-i915-resetting-chip-after-gpu-hang
@@ -37,14 +39,6 @@ Add `GRUB_CMDLINE_LINUX="i915.enable_rc6=0"` to `/etc/default/grub`:
 GRUB_CMDLINE_LINUX="i915.enable_rc6=0 i915.semaphores=0"
 # after changing this, run
 # sudo update-grub; sudo update-grub2
-```
-
-Enable super user account login with `su`:
-```sh
-sudo passwd root
-
-# https://askubuntu.com/questions/20450/disable-root-account-in-ubuntu
-sudo passwd -l root
 ```
 
 
@@ -73,6 +67,13 @@ Setup it to start maximized with:
 1. https://forums.linuxmint.com/viewtopic.php?f=42&t=284100 [GUIDE] How to hibernate to a swap file in Linux Mint 19.x
 1. https://forums.linuxmint.com/viewtopic.php?t=273202 How to enable hibernation with swap partion on Linux Mint 19
 
+Enable super user account login with `su`:
+```sh
+sudo passwd root
+
+# https://askubuntu.com/questions/20450/disable-root-account-in-ubuntu
+sudo passwd -l root
+```
 
 ### ksuperkey
 
@@ -92,12 +93,13 @@ sudo apt update
 
 Install stuff:
 ```
-sudo apt install -y autokey-gtk copyq mtp-tools gmtp imwheel openssh-server &&
-sudo apt-get install -y flameshot nethogs python3 python-pip python3-pip &&
-sudo apt-get install -y audacity gnome-gmail ksysguard wmctrl &&
-sudo apt-get install -y xdotool grsync unison-gtk indicator-multiload &&
-sudo apt-get install -y vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
-sudo apt-get install -y libc6-dbg debootstrap schroot &&
+sudo apt install autokey-gtk copyq mtp-tools gmtp imwheel openssh-server &&
+sudo apt-get install flameshot nethogs python3 python-pip python3-pip &&
+sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
+sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
+sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
+sudo apt-get install libc6-dbg debootstrap schroot gsmartcontrol iotop &&
+sudo apt-get install xfce4-terminal &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
@@ -108,6 +110,8 @@ pip3 install wheel python-language-server
 1. `glogg`
 1. `ncdu`
 1. `nethogs`
+1. `iotop`
+1. `gsmartcontrol`
 1. Open `Preferred Applications` and set mailto as `gnome-gmail`
 1. Open `Preferred Applications` and set File Manger as `nemo`
 1. Open `KSysGuard` & `System Monitor` and Install KSysGuard System Monitor Tabs:
