@@ -37,7 +37,6 @@
       <property name="&lt;Super&gt;p" type="string" value="xfce4-display-settings --minimal"/>
       <property name="XF86WWW" type="string" value="exo-open --launch WebBrowser"/>
       <property name="override" type="bool" value="true"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;o" type="string" value="gnome-calculator"/>
       <property name="&lt;Super&gt;l" type="string" value="xflock4"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;j" type="string" value="subl -n"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;h" type="string" value="gnome-system-monitor"/>
@@ -59,6 +58,8 @@
       <property name="&lt;Alt&gt;&lt;Super&gt;Down" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+Down"/>
       <property name="&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+Up"/>
       <property name="Pause" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+space"/>
+      <property name="F1" type="string" value="xfce4-appfinder"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;o" type="string" value="speedcrunch"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
