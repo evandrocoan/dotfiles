@@ -9,6 +9,7 @@
 ; (gtk_accel_path "<Actions>/ThunarWindow/open-home" "<Alt>Home")
 ; (gtk_accel_path "<Actions>/ThunarWindow/view-menu" "")
 ; (gtk_accel_path "<Actions>/ThunarLauncher/open" "<Primary>o")
+; (gtk_accel_path "<Actions>/ThunarBookmarks/0a282a3599f97dccdb9075bd1e198026" "")
 ; (gtk_accel_path "<Actions>/ThunarWindow/go-menu" "")
 ; (gtk_accel_path "<Actions>/ThunarActions/uca-action-1552353974025480-2" "")
 ; (gtk_accel_path "<Actions>/ThunarWindow/open-file-system" "")

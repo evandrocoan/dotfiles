@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <channel name="thunar" version="1.0">
-  <property name="misc-volume-management" type="empty"/>
+  <property name="misc-volume-management" type="bool" value="false"/>
   <property name="shortcuts-icon-size" type="empty"/>
   <property name="misc-thumbnail-mode" type="empty"/>
   <property name="last-view" type="string" value="ThunarDetailsView"/>
@@ -11,7 +11,8 @@
   <property name="last-show-hidden" type="bool" value="true"/>
   <property name="misc-exec-shell-scripts-by-default" type="bool" value="true"/>
   <property name="last-details-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_SMALLER"/>
-  <property name="last-details-view-column-widths" type="string" value="50,116,50,50,1398,50,50,72,162"/>
+  <property name="last-details-view-column-widths" type="string" value="50,116,50,50,1517,50,50,55,60"/>
   <property name="last-sort-column" type="string" value="THUNAR_COLUMN_DATE_MODIFIED"/>
   <property name="last-sort-order" type="string" value="GTK_SORT_DESCENDING"/>
+  <property name="misc-single-click" type="bool" value="false"/>
 </channel>
