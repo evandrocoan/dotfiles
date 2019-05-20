@@ -1,5 +1,5 @@
 favorites=mintinstall.desktop,nemo.desktop,org.gnome.Calculator.desktop,sublime_text.desktop,google-chrome.desktop,menulibre-aimp3.desktop,stopwatch.desktop,gimagereader-gtk.desktop,org.kde.ktimer.desktop,alarm-clock-applet.desktop,glogg.desktop,audacity.desktop,syntevo-smartgit.desktop,org.kde.ksysguard.desktop,grsync.desktop,unison-gtk.desktop,com.github.hluk.copyq.desktop,virtualbox.desktop,gnome-schedule.desktop,com.teamviewer.TeamViewer.desktop
-recent=org.kde.ksysguard.desktop,gnome-schedule.desktop,sublime_text.desktop,filezilla.desktop,nemo.desktop,twinkle.desktop,syntevo-smartgit.desktop,timeshift-gtk.desktop,glogg.desktop,google-chrome.desktop,virtualbox.desktop,xfce4-terminal-settings.desktop,gparted.desktop,kvpm.desktop,mintinstall.desktop
+recent=speedcrunch.desktop,sublime_text.desktop,syntevo-smartsynchronize.desktop,syntevo-smartgit.desktop,menulibre-aimp3.desktop,google-chrome.desktop,org.kde.ksysguard.desktop,skypeforlinux.desktop,timeshift-gtk.desktop,gparted.desktop,gnome-system-monitor.desktop,alarm-clock-applet.desktop,nemo.desktop,xfce-keyboard-settings.desktop,xfce4-screenshooter.desktop
 button-title=Applications
 button-icon=/usr/share/icons/hicolor/scalable/apps/linuxmint-logo-5.svg
 button-single-row=false
@@ -21,8 +21,8 @@ position-commands-alternate=false
 position-categories-alternate=false
 stay-on-focus-out=false
 confirm-session-command=true
-menu-width=597
-menu-height=799
+menu-width=497
+menu-height=696
 menu-opacity=100
 command-settings=xfce4-settings-manager
 show-command-settings=true
