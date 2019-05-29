@@ -106,6 +106,7 @@ sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
 sudo apt-get install libc6-dbg debootstrap schroot gsmartcontrol iotop &&
 sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch &&
+sudo apt-get install terminator &&
 pip install setuptools &&
 pip3 install setuptools &&
 pip install wheel &&
@@ -113,6 +114,7 @@ pip3 install wheel python-language-server
 ```
 
 1. `qps`
+1. `terminator`
 1. `glogg`
 1. `ncdu`
 1. `nethogs`

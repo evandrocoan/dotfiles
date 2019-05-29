@@ -125,8 +125,8 @@
 			<prop key="name" type="String" value="Open in Terminal"/>
 			<prop key="keystroke" type="_NULL_" value=""/>
 			<obj key="fileStarter" type="@FileStarter">
-				<prop key="command" type="String" value="xfce4-terminal"/>
-				<prop key="parameters" type="String" value="--default-working-directory ${filePath}"/>
+				<prop key="command" type="String" value="terminator"/>
+				<prop key="parameters" type="String" value="--working-directory ${filePath}"/>
 			</obj>
 			<prop key="useForOpen" type="boolean" value="false"/>
 			<prop key="waitUntilFinished" type="boolean" value="false"/>
