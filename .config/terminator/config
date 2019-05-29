@@ -1,0 +1,23 @@
+[global_config]
+  geometry_hinting = True
+  scroll_tabbar = True
+  window_state = maximise
+[keybindings]
+[layouts]
+  [[default]]
+    [[[child1]]]
+      parent = window0
+      type = Terminal
+    [[[window0]]]
+      parent = ""
+      type = Window
+[plugins]
+[profiles]
+  [[default]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 18
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    use_system_font = False
