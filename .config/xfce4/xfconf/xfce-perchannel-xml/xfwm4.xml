@@ -3,7 +3,7 @@
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
     <property name="activate_action" type="empty"/>
-    <property name="borderless_maximize" type="empty"/>
+    <property name="borderless_maximize" type="bool" value="true"/>
     <property name="box_move" type="empty"/>
     <property name="box_resize" type="empty"/>
     <property name="button_layout" type="empty"/>

@@ -113,8 +113,10 @@ pip install wheel &&
 pip3 install wheel python-language-server
 ```
 
+1. `terminator` (to set terminator as default terminal on `nemo` file manager)
+   1. `gsettings set org.cinnamon.desktop.default-applications.terminal exec 'xfce4-terminal'`
+   1. https://github.com/linuxmint/nemo/issues/2091
 1. `qps`
-1. `terminator`
 1. `glogg`
 1. `ncdu`
 1. `nethogs`
