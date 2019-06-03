@@ -99,7 +99,7 @@ sudo apt update
 
 Install stuff:
 ```
-sudo apt install autokey-gtk copyq mtp-tools gmtp imwheel openssh-server &&
+sudo apt install build-essential autokey-gtk copyq mtp-tools gmtp imwheel openssh-server &&
 sudo apt-get install flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
