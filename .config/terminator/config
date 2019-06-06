@@ -3,6 +3,7 @@
   scroll_tabbar = True
   window_state = maximise
 [keybindings]
+  new_window = <Primary><Shift>n
 [layouts]
   [[default]]
     [[[child1]]]
