@@ -63,6 +63,20 @@ Setup it to start maximized with:
 
 ### Enable hibernation
 
+Do not hibernate to a SWAP file because this is a new implementation and
+it is very bugged.
+It will take you computer from 10 to 30 minutes to come out from the hibernation,
+if you hibernating to a SWAP file!
+Create an SWAP Partition instead of a SWAP file to do hibernation!
+Even if,
+hibernating to a SWAP partition,
+it takes from 5 to 30 minutes to come out from the hibernation,
+you need to install an SSD drive of 16 or 32 GB,
+depending on how much memory do you use.
+Remember,
+the SWAP partition must hold all you RAM memory,
+including the actual virtual memory already on the SWAP partition.
+
 1. Set swap file size to 20GG on the next step tutorial
 1. https://forums.linuxmint.com/viewtopic.php?f=42&t=284100 [GUIDE] How to hibernate to a swap file in Linux Mint 19.x
 1. https://forums.linuxmint.com/viewtopic.php?t=273202 How to enable hibernation with swap partion on Linux Mint 19
