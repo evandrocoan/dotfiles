@@ -173,7 +173,7 @@
 			<prop key="smartHome" type="boolean" value="true"/>
 			<prop key="homeEndToLineNotDocument" type="boolean" value="true"/>
 			<prop key="cursorLeftRightLimitToLine" type="boolean" value="true"/>
-			<prop key="smartEnterAutoIndent" type="boolean" value="true"/>
+			<prop key="smartEnterAutoIndent" type="boolean" value="false"/>
 			<prop key="smartEnterDeleteWhitespace" type="boolean" value="true"/>
 			<prop key="smartEnterIgnoreEmptyLinesForIndentation" type="boolean" value="true"/>
 			<prop key="focusNextChangeAfterTakingChange" type="boolean" value="true"/>
