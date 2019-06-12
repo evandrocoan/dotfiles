@@ -52,7 +52,7 @@
 		<prop key="refreshRenameDetectionUntrackedMissing" type="boolean" value="true"/>
 		<prop key="refreshRenameDetectionWarnings" type="boolean" value="true"/>
 		<prop key="refreshInspectEols" type="boolean" value="true"/>
-		<prop key="backgroundRefreshing" type="boolean" value="true"/>
+		<prop key="backgroundRefreshing" type="boolean" value="false"/>
 		<prop key="backgroundScan" type="boolean" value="false"/>
 		<prop key="backgroundPoll" type="boolean" value="true"/>
 		<prop key="backgroundFetchClosed" type="boolean" value="false"/>
