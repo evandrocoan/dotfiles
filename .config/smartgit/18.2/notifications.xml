@@ -13,6 +13,7 @@
 		<prop type="String" value="hosting-provider-could-be-configured-stash-null"/>
 		<prop type="String" value="linux.theme-null"/>
 		<prop type="String" value="log-may-be-used-as-main-window-null"/>
+		<prop type="String" value="refresh-performance-repository-on-symlink-null"/>
 		<prop type="String" value="repositories-no-favorites-null"/>
 	</collection>
 	<prop key="dontPublishUntil-credential.helper-null" type="long" value="0"/>
@@ -22,5 +23,6 @@
 	<prop key="dontPublishUntil-hosting-provider-could-be-configured-stash-null" type="long" value="0"/>
 	<prop key="dontPublishUntil-linux.theme-null" type="long" value="0"/>
 	<prop key="dontPublishUntil-log-may-be-used-as-main-window-null" type="long" value="0"/>
+	<prop key="dontPublishUntil-refresh-performance-repository-on-symlink-null" type="long" value="0"/>
 	<prop key="dontPublishUntil-repositories-no-favorites-null" type="long" value="0"/>
 </obj>
