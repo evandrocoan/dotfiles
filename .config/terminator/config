@@ -1,4 +1,5 @@
 [global_config]
+  enabled_plugins = InactivityWatch, ActivityWatch, LaunchpadCodeURLHandler, APTURLHandler, Logger, LaunchpadBugURLHandler
   geometry_hinting = True
   scroll_tabbar = True
   window_state = maximise
