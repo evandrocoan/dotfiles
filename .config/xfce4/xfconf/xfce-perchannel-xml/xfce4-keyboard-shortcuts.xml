@@ -39,7 +39,6 @@
       <property name="override" type="bool" value="true"/>
       <property name="&lt;Super&gt;l" type="string" value="xflock4"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;j" type="string" value="subl -n"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;h" type="string" value="gnome-system-monitor"/>
       <property name="&lt;Primary&gt;&lt;Shift&gt;&lt;Alt&gt;parenleft" type="string" value="xfce4-popup-whiskermenu"/>
       <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
       <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
@@ -60,6 +59,7 @@
       <property name="Pause" type="string" value="play_stop_music.sh AIMP.exe key Ctrl+space"/>
       <property name="F1" type="string" value="xfce4-appfinder"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;o" type="string" value="speedcrunch"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;h" type="string" value="ksysguard"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
