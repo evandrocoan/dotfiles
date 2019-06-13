@@ -55,6 +55,7 @@
     <property name="plugin-8" type="empty">
       <property name="names-visible" type="array">
         <value type="string" value="system-config-printer"/>
+        <value type="string" value="skype"/>
         <value type="string" value="skypeforlinux"/>
       </property>
       <property name="show-frame" type="bool" value="true"/>

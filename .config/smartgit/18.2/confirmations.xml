@@ -2,6 +2,7 @@
 <obj key="UiConfig" type="@Confirmations">
 	<collection key="primitives.stringKeys" type="String">
 		<prop type="String" value="cherryPick.showConflictWarning"/>
+		<prop type="String" value="close.unpushedCommits"/>
 		<prop type="String" value="commit.amend.replaceWarning"/>
 		<prop type="String" value="docking.closed"/>
 		<prop type="String" value="git.push"/>
@@ -9,6 +10,7 @@
 		<prop type="String" value="remove.repositoryOrGroup"/>
 	</collection>
 	<prop key="primitives.strings.cherryPick.showConflictWarning" type="String" value="0"/>
+	<prop key="primitives.strings.close.unpushedCommits" type="String" value="0"/>
 	<prop key="primitives.strings.commit.amend.replaceWarning" type="String" value="0"/>
 	<prop key="primitives.strings.docking.closed" type="String" value="0"/>
 	<prop key="primitives.strings.git.push" type="String" value="0"/>

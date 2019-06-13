@@ -383,7 +383,7 @@
 		<prop key="themeChanged" type="boolean" value="false"/>
 	</obj>
 	<obj key="vcsRecords" type="@VcsRecords">
-		<prop key="lastGitUsage" type="long" value="1559159212747"/>
+		<prop key="lastGitUsage" type="long" value="1560361787124"/>
 		<prop key="lastSvnUsage" type="long" value="0"/>
 		<prop key="lastHgUsage" type="long" value="0"/>
 		<prop key="lastReviewUsage" type="long" value="0"/>
@@ -391,7 +391,7 @@
 	</obj>
 	<obj key="updateCheck" type="@UpdateAutoCheckSettings">
 		<prop key="mode" type="String" value="download"/>
-		<prop key="prevCheckTime" type="long" value="1559064170721"/>
+		<prop key="prevCheckTime" type="long" value="1560355186982"/>
 		<prop key="checkedBuild" type="int" value="13251"/>
 		<prop key="upgradeInstallation" type="boolean" value="false"/>
 		<prop key="previewAlwaysCheckForLatestBuild" type="boolean" value="false"/>
@@ -405,7 +405,7 @@
 		<prop key="useProxy" type="boolean" value="false"/>
 		<prop key="authenticate" type="boolean" value="false"/>
 	</obj>
-	<prop key="proxyPassword" type="int" value="81"/>
+	<prop key="proxyPassword" type="int" value="90"/>
 	<obj key="spellCheck" type="@SpellCheckSettings">
 		<collection key="dictionaries" type="Object">
 			<obj type="@SpellCheckDictionarySet" id="80">
@@ -431,6 +431,6 @@
 	<prop key="machineId" type="String" value="f3f90f38"/>
 	<prop key="lastUsedVersion" type="String" value="18.2"/>
 	<collection key="tempDirs" type="String">
-		<prop type="String" value="/tmp/smartgit-6484037210251296754tmp"/>
+		<prop type="String" value="/tmp/smartgit-5515141114275858264tmp"/>
 	</collection>
 </obj>
