@@ -118,7 +118,7 @@ sudo apt-get install flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
-sudo apt-get install libc6-dbg debootstrap schroot gsmartcontrol iotop &&
+sudo apt-get install libc6-dbg debootstrap schroot gsmartcontrol iotop fatrace &&
 sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch &&
 sudo apt-get install terminator &&
 pip install setuptools &&
@@ -135,7 +135,8 @@ pip3 install wheel python-language-server
 1. `ncdu`
 1. `nethogs`
 1. `speedcrunch`
-1. `iotop`
+1. `iotop` && `fatrace`
+   1. https://unix.stackexchange.com/questions/86875/determining-specific-file-responsible-for-high-i-o
 1. `gsmartcontrol`
 1. `gnome-disks`
 1. Open `Preferred Applications` and set mailto as `gnome-gmail`
