@@ -5,6 +5,7 @@
   window_state = maximise
 [keybindings]
   close_term = None
+  new_terminator = <Primary><Shift>i
   new_window = <Primary><Shift>n
 [layouts]
   [[default]]
