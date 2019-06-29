@@ -1,7 +1,7 @@
 BoldAsFont=yes
 Transparency=off
 FontHeight=16
-ScrollbackLines=99999999
+ScrollbackLines=9999999
 CursorType=line
 Columns=83
 Rows=20
