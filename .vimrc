@@ -1,4 +1,8 @@
 
+" https://vi.stackexchange.com/questions/2223/how-to-tell-vim-not-to-try-to-unzip-a-file
+let g:loaded_zipPlugin= 1
+let g:loaded_zip      = 1
+
 set history=10000         " remember more commands and search history
 set undolevels=10000      " use many muchos levels of undo
 
