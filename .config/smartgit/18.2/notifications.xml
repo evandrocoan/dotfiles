@@ -15,6 +15,7 @@
 		<prop type="String" value="log-may-be-used-as-main-window-null"/>
 		<prop type="String" value="refresh-performance-repository-on-symlink-null"/>
 		<prop type="String" value="repositories-no-favorites-null"/>
+		<prop type="String" value="update-check-infosmartgit-19.1-rc-null"/>
 	</collection>
 	<prop key="dontPublishUntil-credential.helper-null" type="long" value="0"/>
 	<prop key="dontPublishUntil-fileMonitor.directoriesExcluded-null" type="long" value="0"/>
@@ -25,4 +26,5 @@
 	<prop key="dontPublishUntil-log-may-be-used-as-main-window-null" type="long" value="0"/>
 	<prop key="dontPublishUntil-refresh-performance-repository-on-symlink-null" type="long" value="0"/>
 	<prop key="dontPublishUntil-repositories-no-favorites-null" type="long" value="0"/>
+	<prop key="dontPublishUntil-update-check-infosmartgit-19.1-rc-null" type="long" value="0"/>
 </obj>

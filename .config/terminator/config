@@ -135,7 +135,7 @@
     background_type = transparent
     cursor_color = "#ffffff"
     exit_action = restart
-    font = Monospace 18
+    font = Monospace 17
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
