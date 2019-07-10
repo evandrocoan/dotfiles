@@ -5,6 +5,7 @@
 		<prop type="String" value="compare"/>
 		<prop type="String" value="conflictSolver"/>
 		<prop type="String" value="customize"/>
+		<prop type="String" value="editMessage"/>
 		<prop type="String" value="git.commit"/>
 		<prop type="String" value="git.commit.editMessage"/>
 		<prop type="String" value="git.commit.selectFromLog"/>
@@ -13,8 +14,10 @@
 		<prop type="String" value="git.indexEditor"/>
 		<prop type="String" value="git.rebase"/>
 		<prop type="String" value="git.stage"/>
+		<prop type="String" value="git.stashRename"/>
 		<prop type="String" value="git.stashSave"/>
 		<prop type="String" value="git.tag"/>
+		<prop type="String" value="git.unstage"/>
 		<prop type="String" value="hostingProvider.gitlab.repository"/>
 		<prop type="String" value="log"/>
 		<prop type="String" value="preferences"/>
@@ -54,6 +57,14 @@
 		<prop key="maximized" type="int" value="0"/>
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
+	<obj key="bounds.value.editMessage" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="500"/>
+		<prop key="height" type="int" value="309"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
 	<obj key="bounds.value.git.commit" type="@Bounds">
 		<prop key="x" type="int" value="-166"/>
 		<prop key="y" type="int" value="-6"/>
@@ -71,10 +82,10 @@
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
 	<obj key="bounds.value.git.commit.selectFromLog" type="@Bounds">
-		<prop key="x" type="int" value="-2147483648"/>
-		<prop key="y" type="int" value="-2147483648"/>
-		<prop key="width" type="int" value="640"/>
-		<prop key="height" type="int" value="395"/>
+		<prop key="x" type="int" value="115"/>
+		<prop key="y" type="int" value="8"/>
+		<prop key="width" type="int" value="870"/>
+		<prop key="height" type="int" value="766"/>
 		<prop key="maximized" type="int" value="0"/>
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
@@ -118,6 +129,14 @@
 		<prop key="maximized" type="int" value="0"/>
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
+	<obj key="bounds.value.git.stashRename" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="500"/>
+		<prop key="height" type="int" value="309"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
 	<obj key="bounds.value.git.stashSave" type="@Bounds">
 		<prop key="x" type="int" value="-2147483648"/>
 		<prop key="y" type="int" value="-2147483648"/>
@@ -131,6 +150,14 @@
 		<prop key="y" type="int" value="-2147483648"/>
 		<prop key="width" type="int" value="400"/>
 		<prop key="height" type="int" value="300"/>
+		<prop key="maximized" type="int" value="0"/>
+		<prop key="scaling" type="int" value="1"/>
+	</obj>
+	<obj key="bounds.value.git.unstage" type="@Bounds">
+		<prop key="x" type="int" value="-2147483648"/>
+		<prop key="y" type="int" value="-2147483648"/>
+		<prop key="width" type="int" value="500"/>
+		<prop key="height" type="int" value="309"/>
 		<prop key="maximized" type="int" value="0"/>
 		<prop key="scaling" type="int" value="1"/>
 	</obj>
@@ -350,16 +377,24 @@
 		<prop key="visibleColumnNames" type="String" value="Index State\tLast Changed On\tName\tRelative Path\tRenamed From\tSize\tState\tWorking Tree State"/>
 		<collection key="sortOrders" type="Object">
 			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Relative Path"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
 				<prop key="id" type="String" value="Last Changed On"/>
 				<prop key="reverse" type="boolean" value="false"/>
 			</obj>
 			<obj type="@TableColumnSortOrder">
-				<prop key="id" type="String" value="State"/>
+				<prop key="id" type="String" value="Working Tree State"/>
+				<prop key="reverse" type="boolean" value="false"/>
+			</obj>
+			<obj type="@TableColumnSortOrder">
+				<prop key="id" type="String" value="Index State"/>
 				<prop key="reverse" type="boolean" value="true"/>
 			</obj>
 			<obj type="@TableColumnSortOrder">
-				<prop key="id" type="String" value="Relative Path"/>
-				<prop key="reverse" type="boolean" value="false"/>
+				<prop key="id" type="String" value="State"/>
+				<prop key="reverse" type="boolean" value="true"/>
 			</obj>
 			<obj type="@TableColumnSortOrder">
 				<prop key="id" type="String" value="Name"/>
