@@ -10,6 +10,8 @@
   close_window = None
   new_terminator = <Primary><Shift>i
   new_window = <Primary><Shift>n
+  next_tab = None
+  prev_tab = None
   switch_to_tab_1 = <Primary>1
   switch_to_tab_10 = <Primary>0
   switch_to_tab_2 = <Primary>2
@@ -30,7 +32,7 @@
     [[[window0]]]
       parent = ""
       type = Window
-  [[Debian8]]
+  [[Debian8Layout]]
     [[[child0]]]
       fullscreen = False
       last_active_window = True
@@ -53,7 +55,7 @@
       directory = ~/Downloads
       order = 8
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 1bd91562-42a5-4411-930d-61087ef76cdf
     [[[terminal11]]]
@@ -61,7 +63,7 @@
       directory = ~/Downloads
       order = 9
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = dd9b6108-544e-43e7-a9a0-31bf96a5c3fc
     [[[terminal2]]]
@@ -69,7 +71,7 @@
       directory = ~/Downloads
       order = 0
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 9b14a436-00be-41e6-8d91-97c240de5dd7
     [[[terminal3]]]
@@ -77,7 +79,7 @@
       directory = ~/Downloads
       order = 1
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 495715f2-bb7c-4a6e-bdec-0624f3ad7fe9
     [[[terminal4]]]
@@ -85,7 +87,7 @@
       directory = ~/Downloads
       order = 2
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 8b189198-8265-4b67-9675-00dfb0dd4b37
     [[[terminal5]]]
@@ -93,7 +95,7 @@
       directory = ~/Downloads
       order = 3
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = ccc938f6-a47f-416d-838d-5a3809665107
     [[[terminal6]]]
@@ -101,7 +103,7 @@
       directory = ~/Downloads
       order = 4
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 1a9f3d36-9e9f-4252-9985-4f7d9f15fb30
     [[[terminal7]]]
@@ -109,7 +111,7 @@
       directory = ~/Downloads
       order = 5
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 99af2e46-cda3-4753-b3b2-31a3c4b9aa31
     [[[terminal8]]]
@@ -117,7 +119,7 @@
       directory = ~/Downloads
       order = 6
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = c253eb4b-970b-4f06-af72-63ea6a6ed79f
     [[[terminal9]]]
@@ -125,12 +127,23 @@
       directory = ~/Downloads
       order = 7
       parent = child1
-      profile = default
+      profile = Debian8Profile
       type = Terminal
       uuid = 3d5196e9-7615-4e11-a8f4-f10e486d4c84
 [plugins]
 [profiles]
   [[default]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 17
+    foreground_color = "#ffffff"
+    login_shell = True
+    scrollback_lines = 10000000
+    show_titlebar = False
+    split_to_group = True
+    use_system_font = False
+  [[Debian8Profile]]
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
