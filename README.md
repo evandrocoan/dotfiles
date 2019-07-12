@@ -54,11 +54,14 @@ sudo netstat -tulpn | grep 5060
 
 1. https://www.sublimetext.com/3
 1. Install StudioChannel:
-   * `https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json`
+   1. https://github.com/evandrocoan/ITE#installation-go-to-top
+   1 `https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json`
 1. https://forum.sublimetext.com/t/multiple-sublime-processes-with-different-environment/34575
 
 Setup it to start maximized with:
+1. [.local/bin/](.local/bin/)
 1. [.local/bin/open_maximized.sh](.local/bin/open_maximized.sh)
+1. [.local/bin/SublimeTextMaximazed.sh](.local/bin/SublimeTextMaximazed.sh)
 
 
 ### Enable hibernation
@@ -118,7 +121,7 @@ sudo apt-get install flameshot nethogs python3 python-pip python3-pip &&
 sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
-sudo apt-get install libc6-dbg debootstrap schroot gsmartcontrol iotop fatrace &&
+sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace &&
 sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch &&
 sudo apt-get install terminator &&
 pip install setuptools &&
@@ -147,8 +150,8 @@ pip3 install wheel python-language-server
 1. Open `Unisson` & `Grsync`
 1. Add `System Load Monitor` widget to the main panel
 1. Create keybind `,` (numpad comma), `autokey-run -p insert_dot`
-   * https://github.com/autokey/autokey
-1. Run `utokey-gtk --verbose &` for debugging it
+   1. https://github.com/autokey/autokey
+   1. Run `autokey-gtk --verbose &` for debugging it
 1. https://unix.stackexchange.com/questions/192048/mount-mtp-android-device-in-linux-mint-17-1
 1. https://unix.stackexchange.com/questions/389952/how-to-get-the-samsung-galaxy-s5-to-work-with-mtp-on-debian-9
 1. Run `imwheel -b "4 5"`on system start up
@@ -163,6 +166,7 @@ pip3 install wheel python-language-server
 
 ### chroot
 
+1. `sudo apt-get install debootstrap schroot`
 1. Create an isolated environment with `chroot` (it will inherit your $HOME environment variable, etc)
    ```sh
    mkdir /myfiles/ubuntu_xenial_1604
@@ -271,7 +275,7 @@ SystemAccount=true
    Sometimes ignored directories are containing tracked files in which case changes to these files might not show up automatically. If this is the case for you, you may disable this optimization by setting system property 'fileMonitor.excludeIgnoredDirectories=false'.
 
 
-### Remove Default Keybinds
+### Remove Default XFCE 4 Keybinds
 
 1. All Settings -> Window Manger -> Keyboard ->
    * Raise Window, `Alt+Shift+PgUp`
@@ -337,7 +341,7 @@ Categories=AudioVideo;
 
 ### Linux system information
 ```
-inxi -Fxz
+$ inxi -Fxz
 
 System:    Host: evandro-pc Kernel: 4.15.0-45-generic x86_64 bits: 64 compiler: gcc v: 7.3.0 Desktop: Xfce 4.12.3
            Distro: Linux Mint 19.1 Tessa base: Ubuntu 18.04 bionic
