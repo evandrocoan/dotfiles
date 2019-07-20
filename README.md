@@ -62,7 +62,7 @@ Add `GRUB_CMDLINE_LINUX="i915.enable_rc6=0"` to `/etc/default/grub`:
 ```
 GRUB_CMDLINE_LINUX="i915.enable_rc6=0 i915.semaphores=0"
 # after changing this, run
-# sudo update-grub; sudo update-grub2
+# sudo update-grub
 ```
 
 
@@ -79,7 +79,7 @@ sudo netstat -tulpn | grep 5060
 1. https://www.sublimetext.com/3
 1. Install StudioChannel:
    1. https://github.com/evandrocoan/ITE#installation-go-to-top
-   1 `https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json`
+   1. `https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json`
 1. https://forum.sublimetext.com/t/multiple-sublime-processes-with-different-environment/34575
 
 Setup it to start maximized with:
@@ -195,8 +195,6 @@ pip3 install wheel python-language-server
    ```sh
    mkdir /myfiles/ubuntu_xenial_1604
    debootstrap --arch=amd64 xenial /myfiles/ubuntu_xenial_1604 http://archive.ubuntu.com/ubuntu/
-   locale-gen "en_US.UTF-8"
-   locale-gen "pt_BR.UTF-8"
    cp /usr/share/i18n/SUPPORTED /etc/locale.gen
    locale-gen
    dpkg-reconfigure locales
@@ -213,7 +211,7 @@ pip3 install wheel python-language-server
    1. `sudo mount -t devpts pts dev/pts/`
    1. https://wiki.archlinux.org/index.php/Chroot
    1. https://unix.stackexchange.com/questions/98405/which-of-proc-sys-etc-should-be-bind-mounted
-1. Or edit fstab:
+1. Or edit `/etc/fstab`:
    * https://askubuntu.com/questions/550348/how-to-make-mount-bind-permanent
    ```sh
    # <device>                             <dir>   <type>  <options>   <dump>  <pass>
