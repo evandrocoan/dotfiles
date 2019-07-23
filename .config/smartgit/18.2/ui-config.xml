@@ -7,9 +7,6 @@
 					<prop key="id" type="String" value="fetch"/>
 				</obj>
 				<obj type="@ToolBarButton">
-					<prop key="id" type="String" value="sync"/>
-				</obj>
-				<obj type="@ToolBarButton">
 					<prop key="id" type="String" value="push"/>
 				</obj>
 				<obj type="@ToolBarSeparator">
