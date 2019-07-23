@@ -56,181 +56,181 @@
     [[[child10]]]
       order = 0
       parent = child9
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child13]]]
       order = 1
       parent = child9
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child16]]]
       order = 2
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child17]]]
       order = 0
       parent = child16
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child2]]]
       order = 0
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child20]]]
       order = 1
       parent = child16
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child23]]]
       order = 3
       parent = child1
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child24]]]
       order = 0
       parent = child23
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child27]]]
       order = 1
       parent = child23
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child3]]]
       order = 0
       parent = child2
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child30]]]
       order = 4
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child31]]]
       order = 0
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child34]]]
       order = 1
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child37]]]
       order = 5
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child38]]]
       order = 0
       parent = child37
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child41]]]
       order = 1
       parent = child37
-      position = 1915
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child44]]]
       order = 6
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child45]]]
       order = 0
       parent = child44
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child48]]]
       order = 1
       parent = child44
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child51]]]
       order = 7
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child52]]]
       order = 0
       parent = child51
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child55]]]
       order = 1
       parent = child51
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child58]]]
       order = 8
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child59]]]
       order = 0
       parent = child58
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child6]]]
       order = 1
       parent = child2
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child62]]]
       order = 1
       parent = child58
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child65]]]
       order = 9
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child66]]]
       order = 0
       parent = child65
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child69]]]
       order = 1
       parent = child65
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child9]]]
       order = 1
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[terminal11]]]
@@ -574,181 +574,181 @@
     [[[child10]]]
       order = 0
       parent = child9
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child13]]]
       order = 1
       parent = child9
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child16]]]
       order = 2
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child17]]]
       order = 0
       parent = child16
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child2]]]
       order = 0
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child20]]]
       order = 1
       parent = child16
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child23]]]
       order = 3
       parent = child1
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child24]]]
       order = 0
       parent = child23
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child27]]]
       order = 1
       parent = child23
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child3]]]
       order = 0
       parent = child2
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child30]]]
       order = 4
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child31]]]
       order = 0
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child34]]]
       order = 1
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child37]]]
       order = 5
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child38]]]
       order = 0
       parent = child37
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child41]]]
       order = 1
       parent = child37
-      position = 1915
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child44]]]
       order = 6
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child45]]]
       order = 0
       parent = child44
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child48]]]
       order = 1
       parent = child44
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child51]]]
       order = 7
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child52]]]
       order = 0
       parent = child51
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child55]]]
       order = 1
       parent = child51
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child58]]]
       order = 8
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child59]]]
       order = 0
       parent = child58
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child6]]]
       order = 1
       parent = child2
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child62]]]
       order = 1
       parent = child58
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child65]]]
       order = 9
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child66]]]
       order = 0
       parent = child65
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child69]]]
       order = 1
       parent = child65
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child9]]]
       order = 1
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[terminal11]]]
@@ -1092,181 +1092,181 @@
     [[[child10]]]
       order = 0
       parent = child9
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child13]]]
       order = 1
       parent = child9
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child16]]]
       order = 2
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child17]]]
       order = 0
       parent = child16
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child2]]]
       order = 0
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child20]]]
       order = 1
       parent = child16
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child23]]]
       order = 3
       parent = child1
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child24]]]
       order = 0
       parent = child23
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child27]]]
       order = 1
       parent = child23
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child3]]]
       order = 0
       parent = child2
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child30]]]
       order = 4
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child31]]]
       order = 0
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child34]]]
       order = 1
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child37]]]
       order = 5
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child38]]]
       order = 0
       parent = child37
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child41]]]
       order = 1
       parent = child37
-      position = 1915
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child44]]]
       order = 6
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child45]]]
       order = 0
       parent = child44
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child48]]]
       order = 1
       parent = child44
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child51]]]
       order = 7
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child52]]]
       order = 0
       parent = child51
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child55]]]
       order = 1
       parent = child51
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child58]]]
       order = 8
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child59]]]
       order = 0
       parent = child58
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child6]]]
       order = 1
       parent = child2
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child62]]]
       order = 1
       parent = child58
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child65]]]
       order = 9
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child66]]]
       order = 0
       parent = child65
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child69]]]
       order = 1
       parent = child65
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child9]]]
       order = 1
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[terminal11]]]
@@ -1610,181 +1610,181 @@
     [[[child10]]]
       order = 0
       parent = child9
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child13]]]
       order = 1
       parent = child9
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child16]]]
       order = 2
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child17]]]
       order = 0
       parent = child16
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child2]]]
       order = 0
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child20]]]
       order = 1
       parent = child16
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child23]]]
       order = 3
       parent = child1
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child24]]]
       order = 0
       parent = child23
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child27]]]
       order = 1
       parent = child23
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child3]]]
       order = 0
       parent = child2
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child30]]]
       order = 4
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child31]]]
       order = 0
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child34]]]
       order = 1
       parent = child30
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child37]]]
       order = 5
       parent = child1
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child38]]]
       order = 0
       parent = child37
-      position = 1916
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child41]]]
       order = 1
       parent = child37
-      position = 1915
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child44]]]
       order = 6
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child45]]]
       order = 0
       parent = child44
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child48]]]
       order = 1
       parent = child44
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child51]]]
       order = 7
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child52]]]
       order = 0
       parent = child51
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child55]]]
       order = 1
       parent = child51
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child58]]]
       order = 8
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child59]]]
       order = 0
       parent = child58
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child6]]]
       order = 1
       parent = child2
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child62]]]
       order = 1
       parent = child58
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child65]]]
       order = 9
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[child66]]]
       order = 0
       parent = child65
-      position = 1014
+      position = 1050
       ratio = 1.0
       type = VPaned
     [[[child69]]]
       order = 1
       parent = child65
-      position = 505
+      position = 550
       ratio = 0.5
       type = VPaned
     [[[child9]]]
       order = 1
       parent = child1
-      position = 1917
+      position = 1980
       ratio = 1.0
       type = HPaned
     [[[terminal11]]]
