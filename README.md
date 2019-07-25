@@ -66,6 +66,28 @@ GRUB_CMDLINE_LINUX="i915.enable_rc6=0 i915.semaphores=0"
 ```
 
 
+#### Fix Skype Crash
+
+1. Edit the standard skype start menu shortcut with `Menu Editor` to:
+```
+/usr/bin/skypeforlinux %U --disable-gpu
+```
+1. Edit the `snap` start menu shortcut with `Menu Editor` to:
+```
+env BAMF_DESKTOP_FILE_HINT=/var/lib/snapd/desktop/applications/skype_skypeforlinux.desktop /snap/bin/skype --disable-gpu %U
+```
+1. Edit the file `/var/lib/snapd/desktop/applications/skype_skypeforlinux.desktop` to:
+```
+[Desktop Entry]
+X-SnapInstanceName=skype
+Name=Skype
+Comment=Skype Internet Telephony
+Exec=env BAMF_DESKTOP_FILE_HINT=/var/lib/snapd/desktop/applications/skype_skypeforlinux.desktop /snap/bin/skype --disable-gpu %U
+Icon=/snap/skype/66/meta/gui/skypeforlinux.png
+...
+```
+
+
 ### To list all programs using a given port
 
 ```
