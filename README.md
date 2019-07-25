@@ -363,8 +363,52 @@ Categories=AudioVideo;
 
 ### Linux system information
 ```
-$ inxi -Fxz
+$ sudo apt-get install inxi dmidecode lshw
 
+$ sudo lshw -short -C memory
+H/W path       Device     Class          Description
+====================================================
+/0/0                      memory         64KiB BIOS
+/0/3d                     memory         8GiB System Memory
+/0/3d/0                   memory         8GiB DIMM DDR4 Synchronous 2400 MHz (0,4 ns)
+/0/3d/1                   memory         [empty]
+/0/3d/2                   memory         [empty]
+/0/3d/3                   memory         [empty]
+/0/43                     memory         256KiB L1 cache
+/0/44                     memory         1MiB L2 cache
+/0/45                     memory         6MiB L3 cache
+/0/100/1f.2               memory         Memory controller
+
+$ sudo dmidecode --type 17
+# dmidecode 3.1
+Getting SMBIOS data from sysfs.
+SMBIOS 3.0.0 present.
+
+Handle 0x003E, DMI type 17, 40 bytes
+Memory Device
+  Array Handle: 0x003D
+  Error Information Handle: Not Provided
+  Total Width: 64 bits
+  Data Width: 64 bits
+  Size: 8192 MB
+  Form Factor: DIMM
+  Set: None
+  Locator: ChannelA-DIMM0
+  Bank Locator: BANK 0
+  Type: DDR4
+  Type Detail: Synchronous
+  Speed: 2400 MT/s
+  Manufacturer: 859B
+  Serial Number: E1A93CFC
+  Asset Tag: 9876543210
+  Part Number: BLS8G4D240FSB.16FBD2
+  Rank: 2
+  Configured Clock Speed: 2400 MT/s
+  Minimum Voltage: 1.2 V
+  Maximum Voltage: 1.2 V
+  Configured Voltage: 1.2 V
+
+$ sudo inxi -Fxz
 System:    Host: evandro-pc Kernel: 4.15.0-45-generic x86_64 bits: 64 compiler: gcc v: 7.3.0 Desktop: Xfce 4.12.3
            Distro: Linux Mint 19.1 Tessa base: Ubuntu 18.04 bionic
 Machine:   Type: Desktop System: Gigabyte product: H110M-S2PH v: N/A serial: <filter>
