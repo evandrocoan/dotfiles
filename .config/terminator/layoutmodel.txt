@@ -1,0 +1,98 @@
+  [[RootLayout]]
+    [[[child0]]]
+      fullscreen = False
+      last_active_window = True
+      maximised = True
+      order = 0
+      parent = ""
+      position = 0:0
+      size = 1920, 1047
+      title = evandro@evandro-pc: ~
+      type = Window
+    [[[child1]]]
+      active_page = 0
+      labels = None, None, None, None, None, None, None, None, None, None
+      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      order = 0
+      parent = child0
+      type = Notebook
+    [[[terminal10]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 8
+      parent = child1
+      type = Terminal
+      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+    [[[terminal11]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 9
+      parent = child1
+      type = Terminal
+      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+    [[[terminal2]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 0
+      parent = child1
+      type = Terminal
+      uuid = 95d12408-835e-49c3-93c1-788838bca582
+    [[[terminal3]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 1
+      parent = child1
+      type = Terminal
+      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+    [[[terminal4]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 2
+      parent = child1
+      type = Terminal
+      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+    [[[terminal5]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 3
+      parent = child1
+      type = Terminal
+      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+    [[[terminal6]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 4
+      parent = child1
+      type = Terminal
+      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+    [[[terminal7]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 5
+      parent = child1
+      type = Terminal
+      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+    [[[terminal8]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 6
+      parent = child1
+      type = Terminal
+      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+    [[[terminal9]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      profile = Debian8Profile
+      order = 7
+      parent = child1
+      type = Terminal
+      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
