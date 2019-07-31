@@ -49,510 +49,90 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = 23d45183-9b15-47a0-adfa-4afc6c0538b1, e5f7ef3b-1891-4a19-a9fd-e476f568838b, 2fcd1765-f52a-4d46-b2ea-912988a9b919, e79d567c-dc90-42ff-9af7-748f53a17bb4, 41e9ff99-10dd-4138-b93b-24f5bf6fca83, e3c4f02c-a832-4948-8733-fb89fdc209ef, cc81260e-f116-4fb6-882d-fc194786564d, 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4, ff15d89a-1113-4888-91ee-1ab6729df076, ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
+      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
       order = 0
       parent = child0
       type = Notebook
-    [[[child10]]]
-      order = 0
-      parent = child9
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child13]]]
-      order = 1
-      parent = child9
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child16]]]
-      order = 2
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child17]]]
-      order = 0
-      parent = child16
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child2]]]
-      order = 0
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child20]]]
-      order = 1
-      parent = child16
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child23]]]
-      order = 3
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child24]]]
-      order = 0
-      parent = child23
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child27]]]
-      order = 1
-      parent = child23
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child3]]]
-      order = 0
-      parent = child2
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child30]]]
-      order = 4
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child31]]]
-      order = 0
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child34]]]
-      order = 1
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child37]]]
-      order = 5
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child38]]]
-      order = 0
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child41]]]
-      order = 1
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child44]]]
-      order = 6
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child45]]]
-      order = 0
-      parent = child44
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child48]]]
-      order = 1
-      parent = child44
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child51]]]
-      order = 7
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child52]]]
-      order = 0
-      parent = child51
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child55]]]
-      order = 1
-      parent = child51
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child58]]]
+    [[[terminal10]]]
+      command = ssh root@10.3.50.180; bash
+      directory = ~/Downloads
       order = 8
       parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child59]]]
-      order = 0
-      parent = child58
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child6]]]
-      order = 1
-      parent = child2
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child62]]]
-      order = 1
-      parent = child58
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child65]]]
-      order = 9
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child66]]]
-      order = 0
-      parent = child65
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child69]]]
-      order = 1
-      parent = child65
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child9]]]
-      order = 1
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
-      order = 0
-      parent = child10
+      order = 9
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = e5f7ef3b-1891-4a19-a9fd-e476f568838b
-    [[[terminal12]]]
+      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+    [[[terminal2]]]
+      command = ssh root@10.3.50.180; bash
+      directory = ~/Downloads
+      order = 0
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 95d12408-835e-49c3-93c1-788838bca582
+    [[[terminal3]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
       order = 1
-      parent = child10
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 68afed21-3042-4ad2-91a1-69197db1db71
-    [[[terminal14]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4c202dc1-70f4-40e1-9d9a-438ef1b138a6
-    [[[terminal15]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 736122ea-c19b-4c58-9657-3186ae9963fb
-    [[[terminal18]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 2fcd1765-f52a-4d46-b2ea-912988a9b919
-    [[[terminal19]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4e1849eb-0548-432e-ba0c-ef192a1cac38
-    [[[terminal21]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 230f64df-464b-440b-82f0-9274235a2730
-    [[[terminal22]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 71d1bcf5-6635-476f-a187-0513d2b074fc
-    [[[terminal25]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e79d567c-dc90-42ff-9af7-748f53a17bb4
-    [[[terminal26]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 649d033a-01a5-4148-860a-abd3a4eb4e5e
-    [[[terminal28]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 18f2a964-775d-4cef-8f22-076c429c4abd
-    [[[terminal29]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c93c851b-c24c-44c0-9c61-5493351ff831
-    [[[terminal32]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 41e9ff99-10dd-4138-b93b-24f5bf6fca83
-    [[[terminal33]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = da78e5fd-3eff-4859-9d60-015b468e0950
-    [[[terminal35]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1c2ebcd9-5c45-4f1c-b3df-0b82bf91f950
-    [[[terminal36]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 14c7ff44-4d80-4b53-886d-a147f92e8961
-    [[[terminal39]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e3c4f02c-a832-4948-8733-fb89fdc209ef
+      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
-      order = 0
-      parent = child3
+      order = 2
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 23d45183-9b15-47a0-adfa-4afc6c0538b1
-    [[[terminal40]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1274b965-361e-41a6-a04f-2a6042e318b5
-    [[[terminal42]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c0d61163-1926-4fee-a622-68886120161d
-    [[[terminal43]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8cd9a309-6519-409b-b1f4-12669821da48
-    [[[terminal46]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = cc81260e-f116-4fb6-882d-fc194786564d
-    [[[terminal47]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 44d46c2f-c0d6-48fc-959d-a0b0e1f4cf6f
-    [[[terminal49]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child48
-      profile = Debian8Profile
-      type = Terminal
-      uuid = b54c8609-b283-4b62-a0ab-3323d886bc75
+      uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
-      order = 1
-      parent = child3
+      order = 3
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 63460a66-0bc6-4741-a493-21bf80bdbb2a
-    [[[terminal50]]]
+      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+    [[[terminal6]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
-      order = 1
-      parent = child48
+      order = 4
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 75801eaf-22e0-494f-ac65-97b17e64fe19
-    [[[terminal53]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4
-    [[[terminal54]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 72744292-47da-4ee6-9562-f18318119b8d
-    [[[terminal56]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 96bddbe1-cf81-45c5-9d7a-1e8517508805
-    [[[terminal57]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e0630a4b-245f-42d9-be12-a3d02e21917c
-    [[[terminal60]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ff15d89a-1113-4888-91ee-1ab6729df076
-    [[[terminal61]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4bd5a03e-f7d4-4882-96a9-e54927db1d2e
-    [[[terminal63]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 311a40be-075c-48cb-a511-3b1175a0ccba
-    [[[terminal64]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 118706f8-830e-44ae-8810-dc93dca809e9
-    [[[terminal67]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
-    [[[terminal68]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 61994e7a-ad2b-48e1-823f-f930bdb77b9a
+      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
-      order = 0
-      parent = child6
+      order = 5
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 3d2633e4-4126-4b67-956c-38c05ed0890f
-    [[[terminal70]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = f20b0dce-3e1a-491a-a018-9ab86ad2d949
-    [[[terminal71]]]
-      command = ssh root@10.3.50.180; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8c413837-f655-4a9d-babd-42bd0bd9da8a
+      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
       command = ssh root@10.3.50.180; bash
       directory = ~/Downloads
-      order = 1
-      parent = child6
+      order = 6
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 87810319-9a69-4710-ae7e-670540ad5310
+      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+    [[[terminal9]]]
+      command = ssh root@10.3.50.180; bash
+      directory = ~/Downloads
+      order = 7
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
   [[Debian8Layout]]
     [[[child0]]]
       fullscreen = False
@@ -567,510 +147,90 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = 23d45183-9b15-47a0-adfa-4afc6c0538b1, e5f7ef3b-1891-4a19-a9fd-e476f568838b, 2fcd1765-f52a-4d46-b2ea-912988a9b919, e79d567c-dc90-42ff-9af7-748f53a17bb4, 41e9ff99-10dd-4138-b93b-24f5bf6fca83, e3c4f02c-a832-4948-8733-fb89fdc209ef, cc81260e-f116-4fb6-882d-fc194786564d, 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4, ff15d89a-1113-4888-91ee-1ab6729df076, ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
+      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
       order = 0
       parent = child0
       type = Notebook
-    [[[child10]]]
-      order = 0
-      parent = child9
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child13]]]
-      order = 1
-      parent = child9
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child16]]]
-      order = 2
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child17]]]
-      order = 0
-      parent = child16
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child2]]]
-      order = 0
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child20]]]
-      order = 1
-      parent = child16
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child23]]]
-      order = 3
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child24]]]
-      order = 0
-      parent = child23
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child27]]]
-      order = 1
-      parent = child23
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child3]]]
-      order = 0
-      parent = child2
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child30]]]
-      order = 4
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child31]]]
-      order = 0
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child34]]]
-      order = 1
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child37]]]
-      order = 5
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child38]]]
-      order = 0
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child41]]]
-      order = 1
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child44]]]
-      order = 6
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child45]]]
-      order = 0
-      parent = child44
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child48]]]
-      order = 1
-      parent = child44
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child51]]]
-      order = 7
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child52]]]
-      order = 0
-      parent = child51
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child55]]]
-      order = 1
-      parent = child51
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child58]]]
+    [[[terminal10]]]
+      command = ssh root@10.3.50.181; bash
+      directory = ~/Downloads
       order = 8
       parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child59]]]
-      order = 0
-      parent = child58
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child6]]]
-      order = 1
-      parent = child2
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child62]]]
-      order = 1
-      parent = child58
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child65]]]
-      order = 9
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child66]]]
-      order = 0
-      parent = child65
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child69]]]
-      order = 1
-      parent = child65
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child9]]]
-      order = 1
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
-      order = 0
-      parent = child10
+      order = 9
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = e5f7ef3b-1891-4a19-a9fd-e476f568838b
-    [[[terminal12]]]
+      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+    [[[terminal2]]]
+      command = ssh root@10.3.50.181; bash
+      directory = ~/Downloads
+      order = 0
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 95d12408-835e-49c3-93c1-788838bca582
+    [[[terminal3]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
       order = 1
-      parent = child10
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 68afed21-3042-4ad2-91a1-69197db1db71
-    [[[terminal14]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4c202dc1-70f4-40e1-9d9a-438ef1b138a6
-    [[[terminal15]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 736122ea-c19b-4c58-9657-3186ae9963fb
-    [[[terminal18]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 2fcd1765-f52a-4d46-b2ea-912988a9b919
-    [[[terminal19]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4e1849eb-0548-432e-ba0c-ef192a1cac38
-    [[[terminal21]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 230f64df-464b-440b-82f0-9274235a2730
-    [[[terminal22]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 71d1bcf5-6635-476f-a187-0513d2b074fc
-    [[[terminal25]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e79d567c-dc90-42ff-9af7-748f53a17bb4
-    [[[terminal26]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 649d033a-01a5-4148-860a-abd3a4eb4e5e
-    [[[terminal28]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 18f2a964-775d-4cef-8f22-076c429c4abd
-    [[[terminal29]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c93c851b-c24c-44c0-9c61-5493351ff831
-    [[[terminal32]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 41e9ff99-10dd-4138-b93b-24f5bf6fca83
-    [[[terminal33]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = da78e5fd-3eff-4859-9d60-015b468e0950
-    [[[terminal35]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1c2ebcd9-5c45-4f1c-b3df-0b82bf91f950
-    [[[terminal36]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 14c7ff44-4d80-4b53-886d-a147f92e8961
-    [[[terminal39]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e3c4f02c-a832-4948-8733-fb89fdc209ef
+      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
-      order = 0
-      parent = child3
+      order = 2
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 23d45183-9b15-47a0-adfa-4afc6c0538b1
-    [[[terminal40]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1274b965-361e-41a6-a04f-2a6042e318b5
-    [[[terminal42]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c0d61163-1926-4fee-a622-68886120161d
-    [[[terminal43]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8cd9a309-6519-409b-b1f4-12669821da48
-    [[[terminal46]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = cc81260e-f116-4fb6-882d-fc194786564d
-    [[[terminal47]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 44d46c2f-c0d6-48fc-959d-a0b0e1f4cf6f
-    [[[terminal49]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child48
-      profile = Debian8Profile
-      type = Terminal
-      uuid = b54c8609-b283-4b62-a0ab-3323d886bc75
+      uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
-      order = 1
-      parent = child3
+      order = 3
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 63460a66-0bc6-4741-a493-21bf80bdbb2a
-    [[[terminal50]]]
+      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+    [[[terminal6]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
-      order = 1
-      parent = child48
+      order = 4
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 75801eaf-22e0-494f-ac65-97b17e64fe19
-    [[[terminal53]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4
-    [[[terminal54]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 72744292-47da-4ee6-9562-f18318119b8d
-    [[[terminal56]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 96bddbe1-cf81-45c5-9d7a-1e8517508805
-    [[[terminal57]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e0630a4b-245f-42d9-be12-a3d02e21917c
-    [[[terminal60]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ff15d89a-1113-4888-91ee-1ab6729df076
-    [[[terminal61]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4bd5a03e-f7d4-4882-96a9-e54927db1d2e
-    [[[terminal63]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 311a40be-075c-48cb-a511-3b1175a0ccba
-    [[[terminal64]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 118706f8-830e-44ae-8810-dc93dca809e9
-    [[[terminal67]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
-    [[[terminal68]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 61994e7a-ad2b-48e1-823f-f930bdb77b9a
+      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
-      order = 0
-      parent = child6
+      order = 5
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 3d2633e4-4126-4b67-956c-38c05ed0890f
-    [[[terminal70]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = f20b0dce-3e1a-491a-a018-9ab86ad2d949
-    [[[terminal71]]]
-      command = ssh root@10.3.50.181; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8c413837-f655-4a9d-babd-42bd0bd9da8a
+      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
       command = ssh root@10.3.50.181; bash
       directory = ~/Downloads
-      order = 1
-      parent = child6
+      order = 6
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 87810319-9a69-4710-ae7e-670540ad5310
+      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+    [[[terminal9]]]
+      command = ssh root@10.3.50.181; bash
+      directory = ~/Downloads
+      order = 7
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
   [[Debian9Layout]]
     [[[child0]]]
       fullscreen = False
@@ -1085,510 +245,90 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = 23d45183-9b15-47a0-adfa-4afc6c0538b1, e5f7ef3b-1891-4a19-a9fd-e476f568838b, 2fcd1765-f52a-4d46-b2ea-912988a9b919, e79d567c-dc90-42ff-9af7-748f53a17bb4, 41e9ff99-10dd-4138-b93b-24f5bf6fca83, e3c4f02c-a832-4948-8733-fb89fdc209ef, cc81260e-f116-4fb6-882d-fc194786564d, 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4, ff15d89a-1113-4888-91ee-1ab6729df076, ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
+      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
       order = 0
       parent = child0
       type = Notebook
-    [[[child10]]]
-      order = 0
-      parent = child9
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child13]]]
-      order = 1
-      parent = child9
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child16]]]
-      order = 2
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child17]]]
-      order = 0
-      parent = child16
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child2]]]
-      order = 0
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child20]]]
-      order = 1
-      parent = child16
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child23]]]
-      order = 3
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child24]]]
-      order = 0
-      parent = child23
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child27]]]
-      order = 1
-      parent = child23
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child3]]]
-      order = 0
-      parent = child2
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child30]]]
-      order = 4
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child31]]]
-      order = 0
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child34]]]
-      order = 1
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child37]]]
-      order = 5
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child38]]]
-      order = 0
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child41]]]
-      order = 1
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child44]]]
-      order = 6
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child45]]]
-      order = 0
-      parent = child44
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child48]]]
-      order = 1
-      parent = child44
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child51]]]
-      order = 7
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child52]]]
-      order = 0
-      parent = child51
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child55]]]
-      order = 1
-      parent = child51
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child58]]]
+    [[[terminal10]]]
+      command = ssh root@10.3.50.182; bash
+      directory = ~/Downloads
       order = 8
       parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child59]]]
-      order = 0
-      parent = child58
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child6]]]
-      order = 1
-      parent = child2
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child62]]]
-      order = 1
-      parent = child58
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child65]]]
-      order = 9
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child66]]]
-      order = 0
-      parent = child65
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child69]]]
-      order = 1
-      parent = child65
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child9]]]
-      order = 1
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
-      order = 0
-      parent = child10
+      order = 9
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = e5f7ef3b-1891-4a19-a9fd-e476f568838b
-    [[[terminal12]]]
+      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+    [[[terminal2]]]
+      command = ssh root@10.3.50.182; bash
+      directory = ~/Downloads
+      order = 0
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 95d12408-835e-49c3-93c1-788838bca582
+    [[[terminal3]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
       order = 1
-      parent = child10
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 68afed21-3042-4ad2-91a1-69197db1db71
-    [[[terminal14]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4c202dc1-70f4-40e1-9d9a-438ef1b138a6
-    [[[terminal15]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 736122ea-c19b-4c58-9657-3186ae9963fb
-    [[[terminal18]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 2fcd1765-f52a-4d46-b2ea-912988a9b919
-    [[[terminal19]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4e1849eb-0548-432e-ba0c-ef192a1cac38
-    [[[terminal21]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 230f64df-464b-440b-82f0-9274235a2730
-    [[[terminal22]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 71d1bcf5-6635-476f-a187-0513d2b074fc
-    [[[terminal25]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e79d567c-dc90-42ff-9af7-748f53a17bb4
-    [[[terminal26]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 649d033a-01a5-4148-860a-abd3a4eb4e5e
-    [[[terminal28]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 18f2a964-775d-4cef-8f22-076c429c4abd
-    [[[terminal29]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c93c851b-c24c-44c0-9c61-5493351ff831
-    [[[terminal32]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 41e9ff99-10dd-4138-b93b-24f5bf6fca83
-    [[[terminal33]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = da78e5fd-3eff-4859-9d60-015b468e0950
-    [[[terminal35]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1c2ebcd9-5c45-4f1c-b3df-0b82bf91f950
-    [[[terminal36]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 14c7ff44-4d80-4b53-886d-a147f92e8961
-    [[[terminal39]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e3c4f02c-a832-4948-8733-fb89fdc209ef
+      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
-      order = 0
-      parent = child3
+      order = 2
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 23d45183-9b15-47a0-adfa-4afc6c0538b1
-    [[[terminal40]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1274b965-361e-41a6-a04f-2a6042e318b5
-    [[[terminal42]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c0d61163-1926-4fee-a622-68886120161d
-    [[[terminal43]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8cd9a309-6519-409b-b1f4-12669821da48
-    [[[terminal46]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = cc81260e-f116-4fb6-882d-fc194786564d
-    [[[terminal47]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 44d46c2f-c0d6-48fc-959d-a0b0e1f4cf6f
-    [[[terminal49]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child48
-      profile = Debian8Profile
-      type = Terminal
-      uuid = b54c8609-b283-4b62-a0ab-3323d886bc75
+      uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
-      order = 1
-      parent = child3
+      order = 3
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 63460a66-0bc6-4741-a493-21bf80bdbb2a
-    [[[terminal50]]]
+      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+    [[[terminal6]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
-      order = 1
-      parent = child48
+      order = 4
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 75801eaf-22e0-494f-ac65-97b17e64fe19
-    [[[terminal53]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4
-    [[[terminal54]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 72744292-47da-4ee6-9562-f18318119b8d
-    [[[terminal56]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 96bddbe1-cf81-45c5-9d7a-1e8517508805
-    [[[terminal57]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e0630a4b-245f-42d9-be12-a3d02e21917c
-    [[[terminal60]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ff15d89a-1113-4888-91ee-1ab6729df076
-    [[[terminal61]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4bd5a03e-f7d4-4882-96a9-e54927db1d2e
-    [[[terminal63]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 311a40be-075c-48cb-a511-3b1175a0ccba
-    [[[terminal64]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 118706f8-830e-44ae-8810-dc93dca809e9
-    [[[terminal67]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
-    [[[terminal68]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 61994e7a-ad2b-48e1-823f-f930bdb77b9a
+      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
-      order = 0
-      parent = child6
+      order = 5
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 3d2633e4-4126-4b67-956c-38c05ed0890f
-    [[[terminal70]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 0
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = f20b0dce-3e1a-491a-a018-9ab86ad2d949
-    [[[terminal71]]]
-      command = ssh root@10.3.50.182; bash
-      directory = ~/Downloads
-      order = 1
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8c413837-f655-4a9d-babd-42bd0bd9da8a
+      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
       command = ssh root@10.3.50.182; bash
       directory = ~/Downloads
-      order = 1
-      parent = child6
+      order = 6
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 87810319-9a69-4710-ae7e-670540ad5310
+      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+    [[[terminal9]]]
+      command = ssh root@10.3.50.182; bash
+      directory = ~/Downloads
+      order = 7
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
   [[RootLayout]]
     [[[child0]]]
       fullscreen = False
@@ -1603,510 +343,90 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = 23d45183-9b15-47a0-adfa-4afc6c0538b1, e5f7ef3b-1891-4a19-a9fd-e476f568838b, 2fcd1765-f52a-4d46-b2ea-912988a9b919, e79d567c-dc90-42ff-9af7-748f53a17bb4, 41e9ff99-10dd-4138-b93b-24f5bf6fca83, e3c4f02c-a832-4948-8733-fb89fdc209ef, cc81260e-f116-4fb6-882d-fc194786564d, 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4, ff15d89a-1113-4888-91ee-1ab6729df076, ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
+      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
       order = 0
       parent = child0
       type = Notebook
-    [[[child10]]]
-      order = 0
-      parent = child9
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child13]]]
-      order = 1
-      parent = child9
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child16]]]
-      order = 2
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child17]]]
-      order = 0
-      parent = child16
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child2]]]
-      order = 0
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child20]]]
-      order = 1
-      parent = child16
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child23]]]
-      order = 3
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child24]]]
-      order = 0
-      parent = child23
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child27]]]
-      order = 1
-      parent = child23
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child3]]]
-      order = 0
-      parent = child2
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child30]]]
-      order = 4
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child31]]]
-      order = 0
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child34]]]
-      order = 1
-      parent = child30
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child37]]]
-      order = 5
-      parent = child1
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child38]]]
-      order = 0
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child41]]]
-      order = 1
-      parent = child37
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child44]]]
-      order = 6
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child45]]]
-      order = 0
-      parent = child44
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child48]]]
-      order = 1
-      parent = child44
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child51]]]
-      order = 7
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child52]]]
-      order = 0
-      parent = child51
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child55]]]
-      order = 1
-      parent = child51
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child58]]]
+    [[[terminal10]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
       order = 8
       parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child59]]]
-      order = 0
-      parent = child58
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child6]]]
-      order = 1
-      parent = child2
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child62]]]
-      order = 1
-      parent = child58
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child65]]]
-      order = 9
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
-    [[[child66]]]
-      order = 0
-      parent = child65
-      position = 1050
-      ratio = 1.0
-      type = VPaned
-    [[[child69]]]
-      order = 1
-      parent = child65
-      position = 550
-      ratio = 0.5
-      type = VPaned
-    [[[child9]]]
-      order = 1
-      parent = child1
-      position = 1980
-      ratio = 1.0
-      type = HPaned
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
-      order = 0
-      parent = child10
+      order = 9
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = e5f7ef3b-1891-4a19-a9fd-e476f568838b
-    [[[terminal12]]]
+      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+    [[[terminal2]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      order = 0
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = 95d12408-835e-49c3-93c1-788838bca582
+    [[[terminal3]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
       order = 1
-      parent = child10
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 68afed21-3042-4ad2-91a1-69197db1db71
-    [[[terminal14]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4c202dc1-70f4-40e1-9d9a-438ef1b138a6
-    [[[terminal15]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child13
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 736122ea-c19b-4c58-9657-3186ae9963fb
-    [[[terminal18]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 2fcd1765-f52a-4d46-b2ea-912988a9b919
-    [[[terminal19]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child17
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4e1849eb-0548-432e-ba0c-ef192a1cac38
-    [[[terminal21]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 230f64df-464b-440b-82f0-9274235a2730
-    [[[terminal22]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child20
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 71d1bcf5-6635-476f-a187-0513d2b074fc
-    [[[terminal25]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e79d567c-dc90-42ff-9af7-748f53a17bb4
-    [[[terminal26]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child24
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 649d033a-01a5-4148-860a-abd3a4eb4e5e
-    [[[terminal28]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 18f2a964-775d-4cef-8f22-076c429c4abd
-    [[[terminal29]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child27
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c93c851b-c24c-44c0-9c61-5493351ff831
-    [[[terminal32]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 41e9ff99-10dd-4138-b93b-24f5bf6fca83
-    [[[terminal33]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child31
-      profile = Debian8Profile
-      type = Terminal
-      uuid = da78e5fd-3eff-4859-9d60-015b468e0950
-    [[[terminal35]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1c2ebcd9-5c45-4f1c-b3df-0b82bf91f950
-    [[[terminal36]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child34
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 14c7ff44-4d80-4b53-886d-a147f92e8961
-    [[[terminal39]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e3c4f02c-a832-4948-8733-fb89fdc209ef
+      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
-      order = 0
-      parent = child3
+      order = 2
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 23d45183-9b15-47a0-adfa-4afc6c0538b1
-    [[[terminal40]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child38
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1274b965-361e-41a6-a04f-2a6042e318b5
-    [[[terminal42]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = c0d61163-1926-4fee-a622-68886120161d
-    [[[terminal43]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child41
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8cd9a309-6519-409b-b1f4-12669821da48
-    [[[terminal46]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = cc81260e-f116-4fb6-882d-fc194786564d
-    [[[terminal47]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child45
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 44d46c2f-c0d6-48fc-959d-a0b0e1f4cf6f
-    [[[terminal49]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child48
-      profile = Debian8Profile
-      type = Terminal
-      uuid = b54c8609-b283-4b62-a0ab-3323d886bc75
+      uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
-      order = 1
-      parent = child3
+      order = 3
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 63460a66-0bc6-4741-a493-21bf80bdbb2a
-    [[[terminal50]]]
+      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+    [[[terminal6]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
-      order = 1
-      parent = child48
+      order = 4
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 75801eaf-22e0-494f-ac65-97b17e64fe19
-    [[[terminal53]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 1b40446c-4d6e-42ea-88f1-d9b3fd548cf4
-    [[[terminal54]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child52
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 72744292-47da-4ee6-9562-f18318119b8d
-    [[[terminal56]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 96bddbe1-cf81-45c5-9d7a-1e8517508805
-    [[[terminal57]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child55
-      profile = Debian8Profile
-      type = Terminal
-      uuid = e0630a4b-245f-42d9-be12-a3d02e21917c
-    [[[terminal60]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ff15d89a-1113-4888-91ee-1ab6729df076
-    [[[terminal61]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child59
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 4bd5a03e-f7d4-4882-96a9-e54927db1d2e
-    [[[terminal63]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 311a40be-075c-48cb-a511-3b1175a0ccba
-    [[[terminal64]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child62
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 118706f8-830e-44ae-8810-dc93dca809e9
-    [[[terminal67]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = ea2424c6-58f5-4efb-87f6-bbb8ae630ab4
-    [[[terminal68]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child66
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 61994e7a-ad2b-48e1-823f-f930bdb77b9a
+      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
-      order = 0
-      parent = child6
+      order = 5
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 3d2633e4-4126-4b67-956c-38c05ed0890f
-    [[[terminal70]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 0
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = f20b0dce-3e1a-491a-a018-9ab86ad2d949
-    [[[terminal71]]]
-      command = sudo su; pwd; bash; pwd;
-      directory = ~/Downloads
-      order = 1
-      parent = child69
-      profile = Debian8Profile
-      type = Terminal
-      uuid = 8c413837-f655-4a9d-babd-42bd0bd9da8a
+      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
       command = sudo su; pwd; bash; pwd;
       directory = ~/Downloads
-      order = 1
-      parent = child6
+      order = 6
+      parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 87810319-9a69-4710-ae7e-670540ad5310
+      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+    [[[terminal9]]]
+      command = sudo su; pwd; bash; pwd;
+      directory = ~/Downloads
+      order = 7
+      parent = child1
+      profile = Debian8Profile
+      type = Terminal
+      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
 [plugins]
 [profiles]
   [[default]]
