@@ -59,7 +59,7 @@
       <property name="F1" type="string" value="xfce4-appfinder"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;o" type="string" value="speedcrunch"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;h" type="string" value="ksysguard"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;j" type="string" value="open_maximized.sh &quot;Sublime Text&quot; /usr/bin/subl -n"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;j" type="string" value="SublimeTextMaximazed.sh"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
