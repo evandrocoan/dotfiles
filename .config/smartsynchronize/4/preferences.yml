@@ -1,0 +1,119 @@
+globalTextComponent:
+  font: {family: Ubuntu Mono, size: 11}
+  actions: {focusNextChangeAfterTakingChange: false, homeEndToLineNotDocument: true,
+    smartHome: true, cursorLeftRightLimitToLine: true, smartEnterAutoIndent: true,
+    smartEnterIgnoreEmptyLinesForIndentation: true, smartEnterDeleteWhitespace: true}
+  syntaxHighlightingSettings:
+    entries:
+    - {language: Apollo, pattern: '*.aea, *.agc, *.apollo'}
+    - {language: Basic, pattern: '*.basic, *.cbm, *.vb, *.vbs'}
+    - {language: C#, pattern: '*.cs'}
+    - {language: C/C++, pattern: '*.c, *.cc, *.cpp, *.cxx, *.cyc, *.h, *.ino, *.m'}
+    - {language: CSS, pattern: '*.css, *.css-kw, *.css-str'}
+    - {language: Clojure, pattern: '*.clj'}
+    - {language: CoffeeScript, pattern: '*.coffee'}
+    - {language: Dart, pattern: '*.dart'}
+    - {language: Erlang, pattern: '*.erl, *.erlang'}
+    - {language: F#, pattern: '*.fs'}
+    - {language: Go, pattern: '*.go'}
+    - {language: HTML, pattern: '*.htm, *.html, *.xhtml'}
+    - {language: Haskell, pattern: '*.hs'}
+    - {language: JSON, pattern: '*.json'}
+    - {language: Java, pattern: '*.java'}
+    - {language: JavaScript, pattern: '*.javascript, *.js'}
+    - {language: LLVM, pattern: '*.ll, *.llvm'}
+    - {language: Lisp, pattern: '*.cl, *.el, *.lisp, *.lsp, *.rkt, *.scm, *.ss'}
+    - {language: Lua, pattern: '*.lua'}
+    - {language: Matlab, pattern: '*.matlab'}
+    - {language: Mumps, pattern: '*.mumps'}
+    - {language: Nemerle, pattern: '*.n, *.nemerle'}
+    - {language: OCaml, pattern: '*.ml'}
+    - {language: PHP, pattern: '*.php, *.php3, *.php4, *.php5, *.phps, *.phtml'}
+    - {language: Pascal, pattern: '*.pas, *.pascal'}
+    - {language: Perl, pattern: '*.perl, *.pl, *.pm'}
+    - {language: Protocol Buffer File, pattern: '*.proto'}
+    - {language: Python, pattern: '*.cv, *.py, *.python, *.pyw'}
+    - {language: R, pattern: '*.R, *.S, *.Splus, *.r, *.s'}
+    - {language: Rd, pattern: '*.Rd, *.rd'}
+    - {language: Regular Expression, pattern: '*.regex'}
+    - {language: Ruby, pattern: '*.rb, *.ruby'}
+    - {language: Rust, pattern: '*.rc, *.rs, *.rust'}
+    - {language: SQL, pattern: '*.sql'}
+    - {language: Scala, pattern: '*.scala'}
+    - {language: Shell Script, pattern: '*.bash, *.bsh, *.csh, *.sh'}
+    - {language: Tcl, pattern: '*.tcl'}
+    - {language: TeX/LaTeX, pattern: '*.latex, *.tex'}
+    - {language: VHDL '93, pattern: '*.vhd, *.vhdl'}
+    - {language: Wiki, pattern: '*.wiki'}
+    - {language: XML, pattern: '*.mxml, *.storyboard, *.xib, *.xml'}
+    - {language: XQuery, pattern: '*.xq, *.xquery'}
+    - {language: XSL, pattern: '*.xsl'}
+    - {language: YAML, pattern: '*.yaml, *.yml'}
+    - {pattern: '*.default-code, *.default-markup, *.in.tag, *.uq.val'}
+  colors.light: {color-annotation: 8421376, color-attrib-name: 255, color-attrib-value: 32768,
+    color-comment: 8421504, color-declaration: 0, color-keyword: 128, color-literal: 255,
+    color-no-code: 0, color-plain-text: 0, color-punctuation: 0, color-source: 0,
+    color-string: 32768, color-tag: 128, color-type: 0, foregroundText: 0, foregroundGutter: 9868950,
+    foregroundWhitespace: 12632256, foregroundTrailingWhitespace: 12624064, foregroundCompactSeparator: 10526880,
+    backgroundEditable: 16777215, backgroundReadOnly: 16185078, backgroundGutter: 16316661,
+    backgroundCurrentLine: 16185004, backgroundModified: 16763080, backgroundAdded: 12513470,
+    backgroundRemoved: 13158655, backgroundConflict: 16755370, backgroundCompactSeparator: 15132390,
+    backgroundModifiedCS: 16763080, backgroundAddedCS: 12513470, backgroundRemovedCS: 13158655,
+    highlightCurrentLine: true}
+  colors.dark: {color-annotation: 13092749, color-attrib-name: 9291719, color-attrib-value: 12558303,
+    color-comment: 8421504, color-declaration: 14002858, color-keyword: 10733475,
+    color-literal: 11184853, color-no-code: 0, color-plain-text: 12566463, color-punctuation: 12561045,
+    color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807}
+  colors.useDark: false
+defaultTextView:
+  compareSettings:
+    textSettings: {whitespaces: 0}
+directoryCompare:
+  defaultProfileSettings:
+    compare:
+      filter:
+        fileExcludePatterns: []
+        directoryIncludePatterns: []
+        directoryExcludePatterns: []
+      quickCompare: false
+      useFileAgeThreshold: false
+      fileAgeThreshold: 365
+      inspectEOLForChangeOverview: true
+      evaluateLineBasedChanges: true
+    encoding: {}
+    showCompareSettingsOnRefresh: false
+    displayFileTimeState: true
+list32: {ePP: 1563226480412, eUT: -9223372036854775808, nRT: -9223372036854775808,
+  eV: '4', uid: x21888332130}
+updateCheck: {prevCheckTime: 1564606272870, checkedBuild: 3086, mode: download, previewAlwaysCheckForLatestBuild: false,
+  upgradeInstallation: false}
+proxySettings: {enabled: false, autoDetect: true}
+proxyPassword: {}
+dateFormat: {datePattern: yyyy-MM-dd, timePattern: 'HH:mm', showTimeForLastDays: true}
+fileManager:
+  favorites:
+  - {name: Home, path: /home/evandro}
+  - {name: Downloads, path: /home/evandro/Downloads}
+  sortings:
+    pathSortings:
+    - {path: /home/evandro/Downloads, sorting: Time}
+  ui: {}
+  accelerators:
+    fileManager:
+    - {action: tool-reveal, keyStroke: SHIFT+F3}
+    - {action: tool-terminal, keyStroke: NUMPAD_DIVIDE}
+    fileViewer: []
+  tools:
+    7zipExecutable: 7z
+    edit:
+    - {pattern: '*', command: gedit, parameters: '${file}'}
+    tools:
+    - {id: open, name: Open File, fileNamePattern: '*', command: xdg-open, parameters: '${file}'}
+    - {id: reveal, name: Reveal in Nemo, fileNamePattern: '', command: /usr/bin/nemo,
+      parameters: '${fileOrDir}'}
+    - {id: terminal, name: Open Terminal, fileNamePattern: '', command: /usr/bin/xfce4-terminal,
+      parameters: '--working-directory ${currentDir}'}
+openFileManager: false
+sendStacktraces2: true
+theme: auto
+themeChanged: false
