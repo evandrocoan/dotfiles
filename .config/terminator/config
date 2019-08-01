@@ -58,7 +58,7 @@
       directory = ~/Downloads
       order = 8
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
@@ -66,7 +66,7 @@
       directory = ~/Downloads
       order = 9
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
     [[[terminal2]]]
@@ -74,7 +74,7 @@
       directory = ~/Downloads
       order = 0
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = 95d12408-835e-49c3-93c1-788838bca582
     [[[terminal3]]]
@@ -82,7 +82,7 @@
       directory = ~/Downloads
       order = 1
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
@@ -90,7 +90,7 @@
       directory = ~/Downloads
       order = 2
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
@@ -98,7 +98,7 @@
       directory = ~/Downloads
       order = 3
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
     [[[terminal6]]]
@@ -106,7 +106,7 @@
       directory = ~/Downloads
       order = 4
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
@@ -114,7 +114,7 @@
       directory = ~/Downloads
       order = 5
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
@@ -122,7 +122,7 @@
       directory = ~/Downloads
       order = 6
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
     [[[terminal9]]]
@@ -130,7 +130,7 @@
       directory = ~/Downloads
       order = 7
       parent = child1
-      profile = Debian8Profile
+      profile = Debian7Profile
       type = Terminal
       uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
   [[Debian8Layout]]
@@ -254,7 +254,7 @@
       directory = ~/Downloads
       order = 8
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
@@ -262,7 +262,7 @@
       directory = ~/Downloads
       order = 9
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
     [[[terminal2]]]
@@ -270,7 +270,7 @@
       directory = ~/Downloads
       order = 0
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = 95d12408-835e-49c3-93c1-788838bca582
     [[[terminal3]]]
@@ -278,7 +278,7 @@
       directory = ~/Downloads
       order = 1
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
@@ -286,7 +286,7 @@
       directory = ~/Downloads
       order = 2
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
@@ -294,7 +294,7 @@
       directory = ~/Downloads
       order = 3
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
     [[[terminal6]]]
@@ -302,7 +302,7 @@
       directory = ~/Downloads
       order = 4
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
@@ -310,7 +310,7 @@
       directory = ~/Downloads
       order = 5
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
@@ -318,7 +318,7 @@
       directory = ~/Downloads
       order = 6
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
     [[[terminal9]]]
@@ -326,7 +326,7 @@
       directory = ~/Downloads
       order = 7
       parent = child1
-      profile = Debian8Profile
+      profile = Debian9Profile
       type = Terminal
       uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
   [[RootLayout]]
@@ -352,7 +352,7 @@
       directory = ~/Downloads
       order = 8
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
     [[[terminal11]]]
@@ -360,7 +360,7 @@
       directory = ~/Downloads
       order = 9
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
     [[[terminal2]]]
@@ -368,7 +368,7 @@
       directory = ~/Downloads
       order = 0
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = 95d12408-835e-49c3-93c1-788838bca582
     [[[terminal3]]]
@@ -376,7 +376,7 @@
       directory = ~/Downloads
       order = 1
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
     [[[terminal4]]]
@@ -384,7 +384,7 @@
       directory = ~/Downloads
       order = 2
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = f9787419-6687-405e-be5b-6ccf449af68b
     [[[terminal5]]]
@@ -392,7 +392,7 @@
       directory = ~/Downloads
       order = 3
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
     [[[terminal6]]]
@@ -400,7 +400,7 @@
       directory = ~/Downloads
       order = 4
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
     [[[terminal7]]]
@@ -408,7 +408,7 @@
       directory = ~/Downloads
       order = 5
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
     [[[terminal8]]]
@@ -416,7 +416,7 @@
       directory = ~/Downloads
       order = 6
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
     [[[terminal9]]]
@@ -424,7 +424,7 @@
       directory = ~/Downloads
       order = 7
       parent = child1
-      profile = Debian8Profile
+      profile = RootProfile
       type = Terminal
       uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
 [plugins]
@@ -440,10 +440,11 @@
     show_titlebar = False
     split_to_group = True
     use_system_font = False
-  [[Debian8Profile]]
+  [[Debian7Profile]]
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
+    custom_command = ssh root@10.3.50.180; bash
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
@@ -451,4 +452,47 @@
     scrollback_lines = 10000000
     show_titlebar = False
     split_to_group = True
+    use_custom_command = True
+    use_system_font = False
+  [[Debian8Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    custom_command = ssh root@10.3.50.181; bash
+    exit_action = restart
+    font = Monospace 17
+    foreground_color = "#ffffff"
+    login_shell = True
+    scrollback_lines = 10000000
+    show_titlebar = False
+    split_to_group = True
+    use_custom_command = True
+    use_system_font = False
+  [[Debian9Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    custom_command = ssh root@10.3.50.182; bash
+    exit_action = restart
+    font = Monospace 17
+    foreground_color = "#ffffff"
+    login_shell = True
+    scrollback_lines = 10000000
+    show_titlebar = False
+    split_to_group = True
+    use_custom_command = True
+    use_system_font = False
+  [[RootProfile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    custom_command = sudo su; pwd; bash; pwd;
+    exit_action = restart
+    font = Monospace 17
+    foreground_color = "#ffffff"
+    login_shell = True
+    scrollback_lines = 10000000
+    show_titlebar = False
+    split_to_group = True
+    use_custom_command = True
     use_system_font = False
