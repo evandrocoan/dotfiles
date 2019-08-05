@@ -1,0 +1,30 @@
+{
+    "type": "script",
+    "description": "FirefoxCtrlQfix",
+    "store": {},
+    "modes": [
+        3
+    ],
+    "usageCount": 8,
+    "prompt": false,
+    "omitTrigger": false,
+    "showInTrayMenu": false,
+    "abbreviation": {
+        "abbreviations": [],
+        "backspace": true,
+        "ignoreCase": false,
+        "immediate": false,
+        "triggerInside": false,
+        "wordChars": "[\\w]"
+    },
+    "hotkey": {
+        "modifiers": [
+            "<ctrl>"
+        ],
+        "hotKey": "q"
+    },
+    "filter": {
+        "regex": ".*Firefox",
+        "isRecursive": false
+    }
+}

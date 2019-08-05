@@ -54,7 +54,11 @@ user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
 ### Fix system crash
 
-Disable Google Chrome hardware acceleration: https://www.lifewire.com/hardware-acceleration-in-chrome-4125122
+Disable Google Chrome/Firefox hardware acceleration: 
+1. https://www.lifewire.com/hardware-acceleration-in-chrome-4125122
+1. https://support.mozilla.org/en-US/kb/hardware-acceleration-and-windowblinds-crash
+1. https://superuser.com/questions/18609/changing-firefox-tab-cycle-order
+1. https://superuser.com/questions/1318336/how-to-disable-ctrlq-shortcut-in-firefox-on-linux
 
 Add `GRUB_CMDLINE_LINUX="i915.enable_rc6=0"` to `/etc/default/grub`:
 1. https://unix.stackexchange.com/questions/401746/drm-i915-resetting-chip-after-gpu-hang
