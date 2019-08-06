@@ -23,7 +23,7 @@
   switch_to_tab_8 = <Primary>8
   switch_to_tab_9 = <Primary>9
   zoom_in = <Primary>equal
-  zoom_normal = <Primary>BackSpace
+  zoom_normal = <Alt>equal
   zoom_out = <Primary>minus
 [layouts]
   [[default]]
