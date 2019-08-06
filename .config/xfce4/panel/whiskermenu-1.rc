@@ -1,5 +1,5 @@
 favorites=mintinstall.desktop,nemo.desktop,org.gnome.Calculator.desktop,sublime_text.desktop,google-chrome.desktop,menulibre-aimp3.desktop,stopwatch.desktop,gimagereader-gtk.desktop,org.kde.ktimer.desktop,alarm-clock-applet.desktop,glogg.desktop,audacity.desktop,syntevo-smartgit.desktop,org.kde.ksysguard.desktop,grsync.desktop,unison-gtk.desktop,com.github.hluk.copyq.desktop,virtualbox.desktop,gnome-schedule.desktop,com.teamviewer.TeamViewer.desktop
-recent=sublime_text.desktop,virtualbox.desktop,gparted.desktop,syntevo-smartsynchronize.desktop,twinkle.desktop,skype_skypeforlinux.desktop,skype-desktop.desktop,org.kde.ksysguard.desktop,google-chrome.desktop,syntevo-smartgit.desktop,nemo.desktop,glogg.desktop,menulibre-aimp3.desktop,mintinstall.desktop,gnome-system-monitor.desktop
+recent=syntevo-smartgit.desktop,virtualbox.desktop,org.kde.ksysguard.desktop,firefox.desktop,google-chrome.desktop,sublime_text.desktop,menulibre-aimp3.desktop,syntevo-smartsynchronize.desktop,skypeforlinux.desktop,nemo.desktop,klogg.desktop,twinkle.desktop,audacity.desktop,menulibre.desktop,gnome-schedule.desktop
 button-title=Applications
 button-icon=/usr/share/icons/hicolor/scalable/apps/linuxmint-logo-5.svg
 button-single-row=false
