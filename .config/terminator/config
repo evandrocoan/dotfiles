@@ -8,6 +8,8 @@
 [keybindings]
   close_term = None
   close_window = None
+  move_tab_left = <Primary><Shift>Page_Down
+  move_tab_right = <Primary><Shift>Page_Up
   new_terminator = <Primary><Shift>i
   new_window = <Primary><Shift>n
   next_tab = None
