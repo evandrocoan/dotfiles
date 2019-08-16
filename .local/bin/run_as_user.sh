@@ -1,5 +1,13 @@
 #!/bin/bash
 
+
+pushd `dirname $0` > /dev/null
+SCRIPT_FOLDER_PATH=`pwd`
+popd > /dev/null
+
+source "${SCRIPT_FOLDER_PATH}/installation_model.sh";
+
+
 function print_usage() {
     printf "\\n"
     printf "Installation: \\n"
@@ -45,6 +53,7 @@ then
     exit 1
 fi
 
+
 SOURCE_USER=$USER
 DESTINE_USER=$2
 
@@ -63,13 +72,6 @@ then
 fi
 
 
-function handle_exception() {
-    printf "\\n"
-    printf "There was some exception while running this script!\\n"
-    printf "Check/revise the error messages and decide if it is safe to continue.\\n"
-    read -p "If it is safe, press 'Enter' to continue... Otherwise close this terminal window!" variable1
-}
-
 SOURCE_GROUPS=$(id -Gn "${SOURCE_USER}" | sed "s/${SOURCE_USER} //g" | sed "s/ ${SOURCE_USER}//g" | sed "s/ /,/g")
 SOURCE_SHELL=$(awk -F : -v name="${SOURCE_USER}" '(name == $1) { print $7 }' /etc/passwd)
 
@@ -78,23 +80,24 @@ id -u "$DESTINE_USER" > /dev/null 2>&1
 if [ "$?" != "0" ]
 then
     printf "Creating destine user %s\\n" "$DESTINE_USER"
-    sudo useradd --groups "${SOURCE_GROUPS}" --shell "${SOURCE_SHELL}" --create-home "${DESTINE_USER}" || handle_exception
-    sudo passwd "${DESTINE_USER}" || handle_exception
+    run sudo useradd --groups "${SOURCE_GROUPS}" --shell "${SOURCE_SHELL}" --create-home "${DESTINE_USER}"
+    run sudo passwd "${DESTINE_USER}"
 else
     printf "Updating destine user '%s' with groups '%s' and shell '%s'\\n" "$DESTINE_USER" "$SOURCE_GROUPS" "$SOURCE_SHELL"
-    xhost "+si:localuser:$DESTINE_USER" || handle_exception
+    run xhost "+si:localuser:$DESTINE_USER"
     sudo useradd -G "$DESTINE_USER" "$SOURCE_USER"
     sudo useradd -G "$SOURCE_USER" "$DESTINE_USER"
 
-    sudo usermod -a -G "$DESTINE_USER" "$SOURCE_USER" || handle_exception
-    sudo usermod -a -G "$SOURCE_USER" "$DESTINE_USER" || handle_exception
-    sudo usermod -a -G "$SOURCE_GROUPS" "$DESTINE_USER" || handle_exception
-    sudo chsh -s "$SOURCE_SHELL" "$SOURCE_USER" || handle_exception
+    run sudo usermod -a -G "$DESTINE_USER" "$SOURCE_USER"
+    run sudo usermod -a -G "$SOURCE_USER" "$DESTINE_USER"
+    run sudo usermod -a -G "$SOURCE_GROUPS" "$DESTINE_USER"
+    run sudo chsh -s "$SOURCE_SHELL" "$SOURCE_USER"
 fi
 
-command_line=$(printf '%q ' "${@:3}")
-sudo runuser "$DESTINE_USER" -c "$command_line" || handle_exception
+runset command_line printf '%q ' "${@:3}"
+run sudo runuser "$DESTINE_USER" -c "$command_line"
 
 # read -p "Press 'Enter' to continue" variable1
 printf "Exiting %s...\\n" "$0"
 exit 0
+
