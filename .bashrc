@@ -19,6 +19,9 @@ function start() {
 }
 
 
+if ! command -v "sudo" >/dev/null 2>&1; then
+    alias sudo="printf 'Warning: Running as current user\n';"
+fi
 
 # http://www.linuxjournal.com/content/using-bash-history-more-efficiently-histcontrol
 #
