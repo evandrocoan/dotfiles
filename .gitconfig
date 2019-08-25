@@ -1,11 +1,12 @@
 [user]
-	email = github.com/evandrocoan
-	name = evandrocoan
+	email = 
+	name = 
 #[credential]
 #	helper = wincred
 [core]
 	autocrlf = false
 	eol = lf
+	safecrlf = false
 [branch]
 	autosetuprebase = always
 [gc]
