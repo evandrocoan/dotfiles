@@ -1,4 +1,4 @@
-WebBrowser=firefox
+WebBrowser=google-chrome
 MailReader=custom-MailReader
 FileManager=custom-FileManager
 TerminalEmulator=terminator
