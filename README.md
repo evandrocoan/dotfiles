@@ -54,7 +54,7 @@ user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
 ### Fix system crash
 
-Disable Google Chrome/Firefox hardware acceleration: 
+Disable Google Chrome/Firefox hardware acceleration:
 1. https://www.lifewire.com/hardware-acceleration-in-chrome-4125122
 1. https://support.mozilla.org/en-US/kb/hardware-acceleration-and-windowblinds-crash
 1. https://superuser.com/questions/18609/changing-firefox-tab-cycle-order
@@ -321,6 +321,24 @@ SystemAccount=true
 1. https://askubuntu.com/questions/700712/how-to-install-wireshark
 1. https://www.syntevo.com/smartgit/download/
    Sometimes ignored directories are containing tracked files in which case changes to these files might not show up automatically. If this is the case for you, you may disable this optimization by setting system property 'fileMonitor.excludeIgnoredDirectories=false'.
+
+
+### Configure Second Monitor
+
+1. https://www.ostechnix.com/how-to-adjust-monitor-brightness-from-command-line-in-linux/
+```
+$ xrandr -q
+HDMI-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 510mm x 290mm
+DP-1 connected 1920x1080+1920+0 (normal left inverted right x axis y axis) 510mm x 290mm
+
+$ xrandr --output DP-1 --brightness 0.7
+```
+
+1. https://github.com/calandoa/movescreen
+```
+./movescreen.py right
+./movescreen.py left
+```
 
 
 ### Remove Default XFCE 4 Keybinds
