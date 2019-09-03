@@ -326,19 +326,25 @@ SystemAccount=true
 ### Configure Second Monitor
 
 1. https://www.ostechnix.com/how-to-adjust-monitor-brightness-from-command-line-in-linux/
-```
-$ xrandr -q
-HDMI-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 510mm x 290mm
-DP-1 connected 1920x1080+1920+0 (normal left inverted right x axis y axis) 510mm x 290mm
+   ```
+   $ xrandr -q
+   HDMI-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 510mm x 290mm
+   DP-1 connected 1920x1080+1920+0 (normal left inverted right x axis y axis) 510mm x 290mm
 
-$ xrandr --output DP-1 --brightness 0.7
-```
+   $ xrandr --output DP-1 --brightness 0.7
+   ```
 
 1. https://github.com/calandoa/movescreen
-```
-./movescreen.py right
-./movescreen.py left
-```
+   ```
+   ./movescreen.py right
+   ./movescreen.py left
+   ```
+
+1. To see all current monitor settings
+   * http://shallowsky.com/blog/tags/x11/
+   ```
+   $ xrandr --verbose
+   ```
 
 
 ### Remove Default XFCE 4 Keybinds
