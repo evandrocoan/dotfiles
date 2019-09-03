@@ -2,7 +2,9 @@
 
 <channel name="xfce4-panel" version="1.0">
   <property name="configver" type="empty"/>
-  <property name="panels" type="empty">
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <value type="int" value="2"/>
     <property name="panel-1" type="empty">
       <property name="position" type="empty"/>
       <property name="length" type="empty"/>
@@ -24,11 +26,30 @@
       </property>
       <property name="autohide-behavior" type="uint" value="0"/>
       <property name="disable-struts" type="bool" value="false"/>
+      <property name="span-monitors" type="bool" value="false"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="output-name" type="string" value="monitor-0"/>
+    </property>
+    <property name="panel-2" type="empty">
+      <property name="position" type="string" value="p=8;x=2016;y=1055"/>
+      <property name="span-monitors" type="bool" value="false"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="2"/>
+      </property>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="output-name" type="string" value="monitor-1"/>
+      <property name="mode" type="uint" value="0"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="size" type="uint" value="32"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="disable-struts" type="bool" value="false"/>
+      <property name="autohide-behavior" type="uint" value="2"/>
     </property>
   </property>
   <property name="plugins" type="empty">
     <property name="plugin-1" type="empty"/>
-    <property name="plugin-2" type="empty"/>
+    <property name="plugin-2" type="string" value="tasklist"/>
     <property name="plugin-3" type="string" value="systemload">
       <property name="items" type="empty"/>
     </property>
@@ -49,15 +70,15 @@
       <property name="include-all-monitors" type="bool" value="true"/>
     </property>
     <property name="plugin-7" type="empty">
-      <property name="expand" type="empty"/>
+      <property name="expand" type="bool" value="true"/>
       <property name="style" type="empty"/>
     </property>
     <property name="plugin-8" type="empty">
       <property name="names-visible" type="array">
         <value type="string" value="system-config-printer"/>
         <value type="string" value="skype"/>
-        <value type="string" value="anydesk"/>
         <value type="string" value="skypeforlinux"/>
+        <value type="string" value="anydesk"/>
       </property>
       <property name="show-frame" type="bool" value="true"/>
       <property name="names-hidden" type="array">
@@ -93,7 +114,7 @@
       <property name="enable-mpris" type="empty"/>
       <property name="mixer-command" type="empty"/>
       <property name="show-notifications" type="bool" value="false"/>
-      <property name="mpris-players" type="string" value="chrome.instance10317;chrome.instance3442;chrome.instance7707;rhythmbox;xplayer"/>
+      <property name="mpris-players" type="string" value="chrome.instance10317;chrome.instance18372;chrome.instance3442;chrome.instance7707;rhythmbox;xplayer"/>
       <property name="enable-wnck" type="bool" value="false"/>
       <property name="blacklisted-players" type="string" value="rhythmbox"/>
     </property>

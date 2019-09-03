@@ -22,7 +22,7 @@
     <property name="easy_click" type="empty"/>
     <property name="focus_hint" type="empty"/>
     <property name="focus_new" type="empty"/>
-    <property name="frame_opacity" type="empty"/>
+    <property name="frame_opacity" type="int" value="84"/>
     <property name="full_width_title" type="empty"/>
     <property name="inactive_opacity" type="empty"/>
     <property name="maximized_offset" type="empty"/>
@@ -47,7 +47,7 @@
     <property name="shadow_opacity" type="empty"/>
     <property name="show_app_icon" type="empty"/>
     <property name="show_dock_shadow" type="empty"/>
-    <property name="show_frame_shadow" type="empty"/>
+    <property name="show_frame_shadow" type="bool" value="true"/>
     <property name="show_popup_shadow" type="empty"/>
     <property name="snap_resist" type="empty"/>
     <property name="snap_to_border" type="empty"/>
