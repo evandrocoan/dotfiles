@@ -357,6 +357,12 @@ SystemAccount=true
    * https://wiki.archlinux.org/index.php/Xprofile
 
 
+### Disable line wrap
+
+1. `setterm -linewrap off`
+1. https://unix.stackexchange.com/questions/20493/how-to-disable-line-wrap-in-a-terminal/345492
+
+
 ### Remove Default XFCE 4 Keybinds
 
 1. All Settings -> Window Manger -> Keyboard ->
