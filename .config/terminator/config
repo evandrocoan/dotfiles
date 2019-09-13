@@ -32,7 +32,7 @@
     [[[child1]]]
       command = ""
       parent = window0
-      profile = New Profile
+      profile = RootProfile
       type = Terminal
     [[[window0]]]
       parent = ""
@@ -355,12 +355,15 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
+    custom_command = cd ~/Downloads; sudo su; pwd; bash; pwd;
+    exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
     show_titlebar = False
     split_to_group = True
+    use_custom_command = True
     use_system_font = False
   [[Debian7Profile]]
     background_darkness = 0.85

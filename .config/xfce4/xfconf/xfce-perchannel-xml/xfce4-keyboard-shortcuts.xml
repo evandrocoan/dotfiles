@@ -33,7 +33,6 @@
       <property name="XF86Mail" type="string" value="exo-open --launch MailReader"/>
       <property name="Print" type="string" value="xfce4-screenshooter"/>
       <property name="XF86Display" type="string" value="xfce4-display-settings --minimal"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="x-terminal-emulator"/>
       <property name="&lt;Super&gt;p" type="string" value="xfce4-display-settings --minimal"/>
       <property name="XF86WWW" type="string" value="exo-open --launch WebBrowser"/>
       <property name="override" type="bool" value="true"/>
@@ -62,6 +61,7 @@
       <property name="&lt;Primary&gt;&lt;Alt&gt;j" type="string" value="SublimeTextMaximazed.sh"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Right" type="string" value="movescreen.py right"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Left" type="string" value="movescreen.py left"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="x-terminal-emulator"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
