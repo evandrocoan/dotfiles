@@ -78,32 +78,32 @@
         <value type="string" value="system-config-printer"/>
         <value type="string" value="skype"/>
         <value type="string" value="skypeforlinux"/>
-        <value type="string" value="anydesk"/>
       </property>
       <property name="show-frame" type="bool" value="true"/>
       <property name="names-hidden" type="array">
         <value type="string" value="thunar"/>
         <value type="string" value="alarm-clock-applet"/>
-        <value type="string" value="ktimer"/>
+        <value type="string" value="mintupdate.py"/>
         <value type="string" value="qps"/>
         <value type="string" value="task manager"/>
         <value type="string" value="networkmanager applet"/>
         <value type="string" value="indicator-multiload"/>
         <value type="string" value="network"/>
-        <value type="string" value="autokey-gtk"/>
         <value type="string" value="shutter"/>
         <value type="string" value="zoiper"/>
+        <value type="string" value="autokey-gtk"/>
         <value type="string" value="linphone"/>
         <value type="string" value="zoiper5"/>
         <value type="string" value="teamviewer"/>
-        <value type="string" value="alarm clock"/>
+        <value type="string" value="anydesk"/>
         <value type="string" value="xfce4-power-manager"/>
+        <value type="string" value="alarm clock"/>
         <value type="string" value="last.fm"/>
-        <value type="string" value="flameshot"/>
         <value type="string" value="rhythmbox"/>
-        <value type="string" value="copyq"/>
+        <value type="string" value="flameshot"/>
+        <value type="string" value="ktimer"/>
         <value type="string" value="twinkle"/>
-        <value type="string" value="mintupdate.py"/>
+        <value type="string" value="copyq"/>
       </property>
       <property name="size-max" type="uint" value="64"/>
     </property>
