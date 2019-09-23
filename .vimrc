@@ -4,7 +4,6 @@ let g:loaded_zipPlugin= 1
 let g:loaded_zip      = 1
 
 set history=10000         " remember more commands and search history
-set undolevels=10000      " use many muchos levels of undo
 
 " Color Themes
 :colorscheme elflord
@@ -199,7 +198,7 @@ set nolist
 " Enable use of the mouse for all modes
 " In many terminal emulators the mouse works just fine, thus enable it.
 if has('mouse')
-  set mouse=a
+  set mouse=v
 endif
 
 set nobackup
