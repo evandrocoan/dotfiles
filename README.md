@@ -212,6 +212,9 @@ pip3 install wheel python-language-server
    1. Use `sudo killall -9 imwheel; sleep 2; imwheel` to restart the service
    1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
+   1. Disable smooth scrolling on Google Chrome:
+      * `chrome://flags/#smooth-scrolling`
+      * https://www.ghacks.net/2016/03/16/turn-off-smooth-scrolling-google-chrome/
 
 
 ### chroot
