@@ -1,0 +1,13 @@
+completionKeyStroke: CTRL+SPACE
+annotateGit: []
+annotateHg: []
+compare: []
+conflictSolver: []
+deepGit: []
+fileEditor: []
+indexEditor: []
+logGit:
+- {action: windowMaximizeRestore, keyStroke: ESC}
+logHg: []
+workingTree:
+- {action: windowMaximizeRestore, keyStroke: ESC}

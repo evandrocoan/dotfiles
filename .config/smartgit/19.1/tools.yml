@@ -1,0 +1,100 @@
+tools:
+- name: Open File
+  fileStarter: {command: xdg-open, parameters: '${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: true
+- id: formatPatch
+  name: Format Patch
+  fileStarter: {command: '${smartGitDir}/lib/format-patch.sh', parameters: '${dirSelect}
+      ${commit} ${commit2}'}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- id: applyPatch
+  name: Apply Patch
+  fileStarter: {command: '${git}', parameters: 'apply ${fileOpen}'}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- id: verifyDatabase
+  name: Verify Database
+  fileStarter: {command: '${git}', parameters: fsck --full --no-progress}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- id: fastForwardMerge
+  name: Fast-Forward Merge
+  fileStarter: {command: '${smartGitDir}/lib/ff-merge.sh', parameters: '${commit}'}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+  forRefsNotShas: true
+  confirmationMessage: Do you want to fast forward '${commit}' to its tracking branch?
+- id: mergeDirectlyTo
+  name: Merge Directly To
+  fileStarter: {command: /usr/bin/python3, parameters: '"${smartGitDir}/lib/git-forward-merge.sh"
+      ${commit} ${commit2}'}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+  forRefsNotShas: true
+  requiresConfirmation: true
+  confirmationMessage: Do you want to merge changes to ${commit2} *without* checking
+    out?
+- id: gitVersion
+  name: Git Version
+  fileStarter: {command: '${git}', parameters: --version}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- id: gitLfsVersion
+  name: Git-LFS Version
+  fileStarter: {command: '${git}', parameters: lfs --version}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- name: Open in Terminal
+  fileStarter: {command: terminator, parameters: '--working-directory ${filePath}'}
+  useForOpen: false
+  waitUntilFinished: false
+  filePattern: '*'
+- name: Open with File Manager (thunar)
+  fileStarter: {command: thunar, parameters: '${filePath}'}
+  useForOpen: false
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: false
+- name: Open with File Manager (nemo)
+  fileStarter: {command: nemo, parameters: '${filePath}'}
+  useForOpen: false
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: false
+- id: gitConfigList
+  name: Git Config
+  fileStarter: {command: '${git}', parameters: config --list --show-origin}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- name: Open File
+  fileStarter: {command: /usr/bin/xdg-open, parameters: '${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: true
+- id: revealInNemo
+  name: Reveal in Nemo
+  fileStarter: {command: /usr/bin/nemo, parameters: '${fileUri}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+- id: openXfceTerminal
+  name: Open Terminal
+  fileStarter: {command: /usr/bin/xfce4-terminal, parameters: '--working-directory
+      ${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: false

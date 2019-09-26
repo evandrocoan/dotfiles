@@ -1,0 +1,16 @@
+readNotifications: [credential.helper-null, needsRestart-null, update-fetch-18.2.6-success,
+  update-fetch-18.2.9-success]
+dontPublishNotifications: [credential.helper-null, fileMonitor.directoriesExcluded-null,
+  gc.autoDetach-null, hosting-provider-could-be-configured-github-null, hosting-provider-could-be-configured-stash-null,
+  linux.theme-null, log-may-be-used-as-main-window-null, refresh-performance-repository-on-symlink-null,
+  repositories-no-favorites-null, update-check-infosmartgit-19.1-rc-null]
+dontPublishUntil-credential.helper-null: 0
+dontPublishUntil-fileMonitor.directoriesExcluded-null: 0
+dontPublishUntil-gc.autoDetach-null: 0
+dontPublishUntil-hosting-provider-could-be-configured-github-null: 0
+dontPublishUntil-hosting-provider-could-be-configured-stash-null: 0
+dontPublishUntil-linux.theme-null: 0
+dontPublishUntil-log-may-be-used-as-main-window-null: 0
+dontPublishUntil-refresh-performance-repository-on-symlink-null: 0
+dontPublishUntil-repositories-no-favorites-null: 0
+dontPublishUntil-update-check-infosmartgit-19.1-rc-null: 0

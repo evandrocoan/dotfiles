@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj key="BugtrackerSettings" type="@BugtrackerSettings">
+	<collection key="passwords" type="Object"/>
+	<collection key="sslFingerprints" type="Object"/>
+	<collection key="sslClientCertificates" type="Object"/>
+	<collection key="keys" type="String"/>
+</obj>

@@ -1,0 +1,139 @@
+conflictSolverFrame: {sLayout: left-merge-right}
+indexEditorFrame: {sLayout: left-merge-right}
+gitAnnotateLayout: '[+1920x862:document ][+1920x129:line-history ]'
+gitProjectLayout.main: (([+350x602:directories ][+350x366:branches ])(([+1567x288:files
+  ][-2x1:message ])[+1567x469:changes ]([+892x208:outgoing ][+672x208:output ])))
+gitProjectLayout.review: ([+2x1:directories ][+7x1:files ][+3x1:message ])[+10x3:changes
+  ]([-1x1:branches ][-3x1:outgoing ][-3x1:output ])
+gitProjectLayout.mainIsDefault: true
+gitLogRootLayout.main: (([+322x348:repositories ][+322x620:branches ])(([+1049x564:graph
+  ](([+381x242:details ][+159x242:output ])[+543x319:files ]))[+1595x404:changes ])[-166x346:comments
+  ])[-1x1:debug-log ]
+gitLogRootLayout.review: (([+1x1:repositories ][+1x1:branches ])(([+4x1:graph ]([+2x1:details
+  -1x1:output details ][+2x2:files +2x1:comments files ]))[+4x4:changes ]))[-1x1:debug-log
+  ]
+gitLogRootLayout.mainIsDefault: true
+gitLogSubtreeLayout.main: ([+273x623:branches ][+1094x623:graph ]([+547x206:details
+  -1x1:output details ][+547x414:files ]))[+1920x312:changes ]
+gitLogSubtreeLayout.review: ([+1x1:branches ][+4x1:graph ]([+2x1:details -1x1:output
+  details ][+2x2:files ]))[+4x4:changes ]
+gitLogSubtreeLayout.mainIsDefault: true
+hgProjectLayout.mainIsDefault: true
+hgLogLayout.mainIsDefault: true
+primitives.stringKeys: [commit.messageSelector.fixup, git.addBranch.switch, git.cherryPick.appendSha,
+  git.cherryPick.commit, git.pull.fetchAll, git.switchBranch.fastForward, lastClonedUrls.4,
+  lastClonedUrls.5, lastClonedUrls.6, lastClonedUrls.7, lastClonedUrls.8, lastClonedUrls.9,
+  lastRepositoryPath, modifyNotSplit, stashApply.drop, stashApply.restoreIndex]
+primitives.strings.commit.messageSelector.fixup: 'false'
+primitives.strings.git.addBranch.switch: 'true'
+primitives.strings.git.cherryPick.appendSha: 'false'
+primitives.strings.git.cherryPick.commit: 'true'
+primitives.strings.git.pull.fetchAll: 'true'
+primitives.strings.git.switchBranch.fastForward: 'true'
+primitives.strings.lastRepositoryPath: /home/evandro/.config/sublime-text-3/Packages/ColorHighlighter
+primitives.strings.modifyNotSplit: 'true'
+primitives.strings.stashApply.drop: 'true'
+primitives.strings.stashApply.restoreIndex: 'true'
+gitViewFileFilter: {viewRecursive: true, viewFromSubmodules: true, viewIgnoredFiles: false,
+  viewRenameSources: false, viewSkipped: false, viewUnversionedFiles: true, viewUnchangedFiles: false,
+  viewUnchangedAssumed: false, style: 0}
+bounds:
+- {key: annotate, x: 0, y: 0, width: 1440, height: 872}
+- {key: compare, x: 0, y: 0, width: 1440, height: 872}
+- {key: conflictSolver, x: 0, y: 0, width: 1440, height: 872}
+- {key: customize, width: 600, height: 370}
+- {key: editMessage, width: 500, height: 309}
+- {key: git.commit, x: -166, y: -6, width: 630, height: 847}
+- {key: git.commit.editMessage, width: 600, height: 370}
+- {key: git.commit.selectFromLog, x: 115, y: 8, width: 870, height: 766}
+- {key: git.discard, width: 500, height: 309}
+- {key: git.flow.configure, width: 400, height: 247}
+- {key: git.ignore.file, width: -2147483648, height: -2147483648}
+- {key: git.ignore.reveal, width: 600, height: 400}
+- {key: git.indexEditor, x: 0, y: 0, width: 1440, height: 872}
+- {key: git.rebase, width: 850, height: 525}
+- {key: git.stage, width: 500, height: 309}
+- {key: git.stashRename, width: 500, height: 309}
+- {key: git.stashSave, width: 500, height: 309}
+- {key: git.tag, width: 400, height: 300}
+- {key: git.unstage, width: 500, height: 309}
+- {key: hostingProvider.gitlab.repository, x: -25, y: 18, width: 384, height: 233}
+- {key: log, x: 1920, y: 0, width: 1440, height: 1049, state: 1}
+- {key: preferences, width: -2147483648, height: -2147483648}
+- {key: project, x: 1920, y: 0, width: 1312, height: 822, state: 1}
+- {key: rebase.interactive, width: 600, height: 370}
+- {key: welcome, width: -2147483648, height: -2147483648}
+lastClonedUrls: ['https://github.com/evandroforks/ColorHighlighter', 'https://github.com/evandrocoan/RememberCommandPaletteInput',
+  'https://github.com/bminor/glibc', 'https://github.com/evandroforks/HighlightWords']
+columns:
+  git.log.files:
+    columnNames: "Name\tModification\tRelative Directory\tRenamed Path\tExt.\tRelative\
+      \ Path"
+    visibleColumnNames: "Modification\tName\tRelative Directory\tRenamed Path"
+    sortOrders:
+    - {id: Name, reverse: false}
+    columnWidths:
+    - {id: Name, width: 200, width2x: 0}
+    - {id: Modification, width: 84, width2x: 0}
+    - {id: Relative Directory, width: 200, width2x: 0}
+    - {id: Renamed Path, width: 449, width2x: 0}
+    - {id: Relative Path, width: 500, width2x: 0}
+  hostingProvider.gitlab.repository.1:
+    columnNames: "Name\tNamespace"
+    visibleColumnNames: "Name\tNamespace"
+    sortOrders: []
+    columnWidths:
+    - {id: Name, width: 118, width2x: 0}
+    - {id: Namespace, width: 82, width2x: 0}
+  log.comments:
+    columnNames: "Author\tText\tPath\tDate\tAssignee\tCommit"
+    visibleColumnNames: "Assignee\tAuthor\tDate\tPath\tText"
+    sortOrders:
+    - {id: Assignee, reverse: false}
+    - {id: Date, reverse: false}
+    columnWidths:
+    - {id: Author, width: 53, width2x: 0}
+    - {id: Text, width: 37, width2x: 0}
+    - {id: Path, width: 40, width2x: 0}
+    - {id: Date, width: 40, width2x: 0}
+    - {id: Assignee, width: 84, width2x: 0}
+  project.files.git:
+    columnNames: "Name\tState\tRelative Path\tLast Changed On\tRenamed From\tSize\t\
+      Index State\tWorking Tree State\tExt.\tRelative Directory"
+    visibleColumnNames: "Index State\tLast Changed On\tName\tRelative Path\tRenamed\
+      \ From\tSize\tState\tWorking Tree State"
+    sortOrders:
+    - {id: Last Changed On, reverse: false}
+    - {id: Name, reverse: false}
+    - {id: Relative Path, reverse: false}
+    - {id: Working Tree State, reverse: false}
+    - {id: Index State, reverse: true}
+    - {id: State, reverse: true}
+    columnWidths:
+    - {id: Name, width: 410, width2x: 0}
+    - {id: State, width: 112, width2x: 0}
+    - {id: Relative Path, width: 491, width2x: 0}
+    - {id: Last Changed On, width: 123, width2x: 0}
+    - {id: Renamed From, width: 103, width2x: 0}
+    - {id: Size, width: 68, width2x: 0}
+    - {id: Index State, width: 81, width2x: 0}
+    - {id: Working Tree State, width: 175, width2x: 0}
+    - {id: Ext., width: 34, width2x: 0}
+    - {id: Relative Directory, width: 216, width2x: 0}
+  rebase.interactive:
+    columnNames: "Message\tIDs"
+    visibleColumnNames: "IDs\tMessage"
+    sortOrders: []
+    columnWidths:
+    - {id: Message, width: 322, width2x: 0}
+    - {id: IDs, width: 61, width2x: 0}
+hgViewFileFilter: {}
+deepGitUiConfiguration: {}
+confirmations: {cherryPick.showConflictWarning: false, close.unpushedCommits: false,
+  commit.amend.replaceWarning: true, conflictSolver.showConflictWarning: false, docking.closed: true,
+  git.push: true, git.switchBranch.confirmation: false, remove.repositoryOrGroup: false}
+gitProjectLayout.mainIsdefault: true
+commit.expandOptions: false
+log.git.authorStyle: full
+git.pull.defaultFetch: false
+gitLogRootLayout.mainIsdefault: true

@@ -20,16 +20,17 @@
 
 !README.md
 
-!/.config/smartgit/18.2/accelerators.xml
-!/.config/smartgit/18.2/bugtracker-settings.xml
-!/.config/smartgit/18.2/confirmations.xml
-!/.config/smartgit/18.2/logger.properties
-!/.config/smartgit/18.2/my-words.dic
-!/.config/smartgit/18.2/notifications.xml
-!/.config/smartgit/18.2/settings.xml
-!/.config/smartgit/18.2/smartgit.properties
-!/.config/smartgit/18.2/ui-config.xml
-!/.config/smartgit/18.2/ui-settings.xml
+!/.config/smartgit/19.1/bugtracker-settings.xml
+!/.config/smartgit/19.1/logger.properties
+!/.config/smartgit/19.1/my-words.dic
+!/.config/smartgit/19.1/smartgit.properties
+!/.config/smartgit/19.1/smartgit.properties
+!/.config/smartgit/19.1/ui-state.yml
+!/.config/smartgit/19.1/tools.yml
+!/.config/smartgit/19.1/preferences.yml
+!/.config/smartgit/19.1/notifications.yml
+!/.config/smartgit/19.1/accelerators.yml
+!/.config/smartgit/19.1/ui-config.yml
 
 !/.local/share/nemo/actions/*
 !/.local/bin/run_as_user.sh
