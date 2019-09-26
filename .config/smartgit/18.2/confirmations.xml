@@ -12,10 +12,10 @@
 	</collection>
 	<prop key="primitives.strings.cherryPick.showConflictWarning" type="String" value="0"/>
 	<prop key="primitives.strings.close.unpushedCommits" type="String" value="0"/>
-	<prop key="primitives.strings.commit.amend.replaceWarning" type="String" value="0"/>
-	<prop key="primitives.strings.conflictSolver.showConflictWarning" type="String" value="true"/>
+	<prop key="primitives.strings.commit.amend.replaceWarning" type="String" value="true"/>
+	<prop key="primitives.strings.conflictSolver.showConflictWarning" type="String" value="0"/>
 	<prop key="primitives.strings.docking.closed" type="String" value="true"/>
 	<prop key="primitives.strings.git.push" type="String" value="true"/>
-	<prop key="primitives.strings.git.switchBranch.confirmation" type="String" value="false"/>
-	<prop key="primitives.strings.remove.repositoryOrGroup" type="String" value="true"/>
+	<prop key="primitives.strings.git.switchBranch.confirmation" type="String" value="0"/>
+	<prop key="primitives.strings.remove.repositoryOrGroup" type="String" value="0"/>
 </obj>

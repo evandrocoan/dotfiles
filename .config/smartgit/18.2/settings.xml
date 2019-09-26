@@ -52,7 +52,7 @@
 		<prop key="refreshRenameDetectionUntrackedMissing" type="boolean" value="true"/>
 		<prop key="refreshRenameDetectionWarnings" type="boolean" value="true"/>
 		<prop key="refreshInspectEols" type="boolean" value="true"/>
-		<prop key="backgroundRefreshing" type="boolean" value="false"/>
+		<prop key="backgroundRefreshing" type="boolean" value="true"/>
 		<prop key="backgroundScan" type="boolean" value="false"/>
 		<prop key="backgroundPoll" type="boolean" value="true"/>
 		<prop key="backgroundFetchClosed" type="boolean" value="false"/>
@@ -66,10 +66,21 @@
 		<prop key="enableHostingProvider" type="boolean" value="true"/>
 		<prop key="allowMultipleWindowsForSameLocation" type="boolean" value="true"/>
 		<obj key="filterConfiguration" type="@FilterState">
-			<prop key="enteredPattern" type="_NULL_" value=""/>
+			<prop key="enteredPattern" type="String" value="datetime"/>
 			<collection key="patterns" type="String"/>
 			<prop key="regularExpressions" type="boolean" value="false"/>
-			<collection key="keys" type="String"/>
+			<collection key="keys" type="String">
+				<prop type="String" value="author"/>
+				<prop type="String" value="committer"/>
+				<prop type="String" value="id"/>
+				<prop type="String" value="message"/>
+				<prop type="String" value="ref"/>
+			</collection>
+			<prop key="key-author" type="boolean" value="true"/>
+			<prop key="key-committer" type="boolean" value="true"/>
+			<prop key="key-id" type="boolean" value="true"/>
+			<prop key="key-message" type="boolean" value="true"/>
+			<prop key="key-ref" type="boolean" value="true"/>
 		</obj>
 	</obj>
 	<obj key="comparePreviewSettings" type="@ComparePreviewSettings">
@@ -366,7 +377,7 @@
 	<obj key="listx" type="@L">
 		<prop key="eUT" type="long" value="-9223372036854775808"/>
 		<prop key="nRT" type="long" value="-9223372036854775808"/>
-		<prop key="lLCT" type="long" value="1563544461180"/>
+		<prop key="lLCT" type="long" value="1569503166959"/>
 		<prop key="ePP" type="long" value="0"/>
 		<prop key="eV" type="String" value="18.2"/>
 		<prop key="uid" type="String" value="x36627274560"/>
@@ -383,7 +394,7 @@
 		<prop key="themeChanged" type="boolean" value="false"/>
 	</obj>
 	<obj key="vcsRecords" type="@VcsRecords">
-		<prop key="lastGitUsage" type="long" value="1563550366588"/>
+		<prop key="lastGitUsage" type="long" value="1569505556191"/>
 		<prop key="lastSvnUsage" type="long" value="0"/>
 		<prop key="lastHgUsage" type="long" value="0"/>
 		<prop key="lastReviewUsage" type="long" value="0"/>
@@ -391,8 +402,8 @@
 	</obj>
 	<obj key="updateCheck" type="@UpdateAutoCheckSettings">
 		<prop key="mode" type="String" value="download"/>
-		<prop key="prevCheckTime" type="long" value="1563544460418"/>
-		<prop key="checkedBuild" type="int" value="13251"/>
+		<prop key="prevCheckTime" type="long" value="1569505570687"/>
+		<prop key="checkedBuild" type="int" value="13269"/>
 		<prop key="upgradeInstallation" type="boolean" value="false"/>
 		<prop key="previewAlwaysCheckForLatestBuild" type="boolean" value="false"/>
 	</obj>
@@ -405,7 +416,7 @@
 		<prop key="useProxy" type="boolean" value="false"/>
 		<prop key="authenticate" type="boolean" value="false"/>
 	</obj>
-	<prop key="proxyPassword" type="int" value="101"/>
+	<prop key="proxyPassword" type="int" value="114"/>
 	<obj key="spellCheck" type="@SpellCheckSettings">
 		<collection key="dictionaries" type="Object">
 			<obj type="@SpellCheckDictionarySet" id="80">
@@ -431,6 +442,6 @@
 	<prop key="machineId" type="String" value="f3f90f38"/>
 	<prop key="lastUsedVersion" type="String" value="18.2"/>
 	<collection key="tempDirs" type="String">
-		<prop type="String" value="/tmp/smartgit-14675922306372443406tmp"/>
+		<prop type="String" value="/tmp/smartgit-16725230594262920882tmp"/>
 	</collection>
 </obj>

@@ -27,4 +27,4 @@ bounds:
 - {key: main, x: 0, y: 0, width: 1440, height: 872, state: 1}
 - {key: welcome, x: 693, y: 211, width: 534, height: 624}
 - {key: fileCompare, x: 0, y: 0, width: 1440, height: 872, state: 1}
-tempDirs: [/tmp/smartsynchronize-10858867855187920281]
+tempDirs: [/tmp/smartsynchronize-8911283779450739635]
