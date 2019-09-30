@@ -21,15 +21,13 @@ gitLogSubtreeLayout.mainIsDefault: true
 hgProjectLayout.mainIsDefault: true
 hgLogLayout.mainIsDefault: true
 primitives.stringKeys: [commit.messageSelector.fixup, git.addBranch.switch, git.cherryPick.appendSha,
-  git.cherryPick.commit, git.pull.fetchAll, git.switchBranch.fastForward, lastClonedUrls.4,
-  lastClonedUrls.5, lastClonedUrls.6, lastClonedUrls.7, lastClonedUrls.8, lastClonedUrls.9,
-  lastRepositoryPath, modifyNotSplit, stashApply.drop, stashApply.restoreIndex]
+  git.cherryPick.commit, lastClonedUrls.4, lastClonedUrls.5, lastClonedUrls.6, lastClonedUrls.7,
+  lastClonedUrls.8, lastClonedUrls.9, lastRepositoryPath, modifyNotSplit, stashApply.drop,
+  stashApply.restoreIndex]
 primitives.strings.commit.messageSelector.fixup: 'false'
 primitives.strings.git.addBranch.switch: 'true'
 primitives.strings.git.cherryPick.appendSha: 'false'
 primitives.strings.git.cherryPick.commit: 'true'
-primitives.strings.git.pull.fetchAll: 'true'
-primitives.strings.git.switchBranch.fastForward: 'true'
 primitives.strings.lastRepositoryPath: /home/evandro/.config/sublime-text-3/Packages/ColorHighlighter
 primitives.strings.modifyNotSplit: 'true'
 primitives.strings.stashApply.drop: 'true'
@@ -60,7 +58,7 @@ bounds:
 - {key: hostingProvider.gitlab.repository, x: -25, y: 18, width: 384, height: 233}
 - {key: log, x: 1920, y: 0, width: 1440, height: 1049, state: 1}
 - {key: preferences, width: -2147483648, height: -2147483648}
-- {key: project, x: 1920, y: 0, width: 1312, height: 822, state: 1}
+- {key: project, x: 1920, y: 0, width: 1926, height: 1109, state: 1}
 - {key: rebase.interactive, width: 600, height: 370}
 - {key: welcome, width: -2147483648, height: -2147483648}
 lastClonedUrls: ['https://github.com/evandroforks/ColorHighlighter', 'https://github.com/evandrocoan/RememberCommandPaletteInput',
@@ -131,9 +129,12 @@ hgViewFileFilter: {}
 deepGitUiConfiguration: {}
 confirmations: {cherryPick.showConflictWarning: false, close.unpushedCommits: false,
   commit.amend.replaceWarning: true, conflictSolver.showConflictWarning: false, docking.closed: true,
-  git.push: true, git.switchBranch.confirmation: false, remove.repositoryOrGroup: false}
+  git.push: true, git.switchBranch.confirmation: false, remove.repositoryOrGroup: false,
+  commitPushSubset: true}
 gitProjectLayout.mainIsdefault: true
 commit.expandOptions: false
 log.git.authorStyle: full
 git.pull.defaultFetch: false
 gitLogRootLayout.mainIsdefault: true
+git.switchBranch.fastForward: true
+git.pull.fetchAll: true

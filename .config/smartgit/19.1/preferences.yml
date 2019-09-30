@@ -139,13 +139,13 @@ globalTextComponentSettings:
     color-comment: 8421504, color-declaration: 14002858, color-keyword: 10733475,
     color-literal: 11184853, color-no-code: 0, color-plain-text: 12566463, color-punctuation: 12561045,
     color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807}
-listx: {eUT: -9223372036854775808, nRT: -9223372036854775808, lLCT: 1569505808557,
+listx: {eUT: -9223372036854775808, nRT: -9223372036854775808, lLCT: 1569598114273,
   ePP: 0, eV: '18.2', uid: x36627274560}
 project: {reopenLastUsedRepositories: true, showWelcomeDialog: false, preferLogWindow: false}
 uiSettings: {useBackgroundColorInFileTable: true, fileSearchPatternType: 1, themeChanged: false}
-vcsRecords: {lastGitUsage: 1569505936269, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
+vcsRecords: {lastGitUsage: 1569859848885, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
   lastDgUsage: 0}
-updateCheck: {mode: download, prevCheckTime: 1569505704435, checkedBuild: 14185, upgradeInstallation: false,
+updateCheck: {mode: download, prevCheckTime: 1569857425154, checkedBuild: 14185, upgradeInstallation: false,
   previewAlwaysCheckForLatestBuild: false}
 proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
@@ -158,13 +158,14 @@ spellCheck:
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
   useOnlyBestOfficial: false
   deleted: false
+  activeDictionary: 0
 warnForMissingMasterPassword: false
 askForMasterPasswordOnStartup: false
 sendStacktraces2: true
 sendStacktracesBeta: false
 machineId: f3f90f38
 lastUsedVersion: '19.1'
-tempDirs: [/tmp/smartgit-1923955981451680666tmp]
+tempDirs: [/tmp/smartgit-5154811833532480026tmp]
 updateCheckDg: {}
 upgradedFromVersion: '18.2'
 firstUsedTime: 1569505697899
