@@ -1,4 +1,4 @@
-
+#!/bin/bash
 PER_COMPUTER_SETTINGS=~/.per_computer_settings.sh
 
 # Import variable settings bound to each computer machine
@@ -464,6 +464,9 @@ if ! shopt -oq posix; then
   fi
 fi
 
+# https://stackoverflow.com/questions/767040/save-last-working-directory-on-bash-logout
+trap 'printf "%s" "$(pwd)" > /tmp/last_used_pwd.txt; printf "%s" "${OLDPWD}" > /tmp/last_used_cd.txt;' EXIT
+
 # fix  X11 DISPLAY environment variable not set and allow to use `startxwin`
 export DISPLAY=:0
 
@@ -474,3 +477,4 @@ export DISPLAY=:0
 
 # mkdir -p $(cygpath -u "$USERPROFILE")/Downloads
 # alias ~~='cd "$(cygpath -u "$USERPROFILE")/Downloads"'
+
