@@ -41,14 +41,39 @@ PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 # with spaces. The other flag, ignoredups, tells bash to ignore duplicates. You can concatenate and
 # separate the values with a colon, ignorespace:ignoredups, if you wish to specify both values, or
 # you can just specify ignoreboth.
-export HISTCONTROL=ignoredups:erasedups  # no duplicate entries
-export HISTSIZE=100000                   # big big history
-export HISTFILESIZE=100000               # big big history
-shopt -s histappend                      # append to history, don't overwrite it
+# export HISTCONTROL=ignoredups:erasedups  # no duplicate entries
+# export HISTSIZE=100000                   # big big history
+# export HISTFILESIZE=100000               # big big history
+# shopt -s histappend                      # append to history, don't overwrite it
 
 # Save and reload the history after each command finishes
 # https://unix.stackexchange.com/questions/1288/preserve-bash-history-in-multiple-terminal-windows
-export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+# Consistent and forever bash history
+HISTSIZE=100000
+HISTFILESIZE=$HISTSIZE
+HISTCONTROL=ignoredups:erasedups
+
+_bash_history_sync() {
+  builtin history -a         #1
+  HISTFILESIZE=$HISTSIZE     #2
+}
+
+_bash_history_sync_and_reload() {
+  builtin history -a         #1
+  HISTFILESIZE=$HISTSIZE     #2
+  builtin history -c         #3
+  builtin history -r         #4
+}
+
+history() {                  #5
+  _bash_history_sync_and_reload
+  builtin history "$@"
+}
+
+export HISTTIMEFORMAT="%y/%m/%d %H:%M:%S   "
+PROMPT_COMMAND='history 1 >> ${HOME}/.bash_eternal_history'
+PROMPT_COMMAND=_bash_history_sync;$PROMPT_COMMAND
+
 
 alias clc='reset;clear;clear;'
 # alias where='locate -b'
