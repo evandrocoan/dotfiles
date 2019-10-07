@@ -23,21 +23,6 @@ if ! command -v "sudo" >/dev/null 2>&1; then
     alias sudo="printf 'Warning: Running as current user\n';"
 fi
 
-# http://www.linuxjournal.com/content/using-bash-history-more-efficiently-histcontrol
-#
-# Another alternative is to tell bash not to store duplicates. This is done with the HISTCONTROL
-# variable. HISTCONTROL controls how bash stores command history. Currently there are two possible
-# flags: ignorespace and ignoredups. The ignorespace flag tells bash to ignore commands that start
-# with spaces. The other flag, ignoredups, tells bash to ignore duplicates. You can concatenate and
-# separate the values with a colon, ignorespace:ignoredups, if you wish to specify both values, or
-# you can just specify ignoreboth.
-export HISTCONTROL=ignoredups
-
-# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=10000
-HISTFILESIZE=20000
-
-
 # Invoke octave from command line, add the option -q to run without the intro.
 alias octave='octave --no-gui -i'
 
@@ -47,6 +32,23 @@ alias octave='octave --no-gui -i'
 
 
 PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+
+# http://www.linuxjournal.com/content/using-bash-history-more-efficiently-histcontrol
+#
+# Another alternative is to tell bash not to store duplicates. This is done with the HISTCONTROL
+# variable. HISTCONTROL controls how bash stores command history. Currently there are two possible
+# flags: ignorespace and ignoredups. The ignorespace flag tells bash to ignore commands that start
+# with spaces. The other flag, ignoredups, tells bash to ignore duplicates. You can concatenate and
+# separate the values with a colon, ignorespace:ignoredups, if you wish to specify both values, or
+# you can just specify ignoreboth.
+export HISTCONTROL=ignoredups:erasedups  # no duplicate entries
+export HISTSIZE=100000                   # big big history
+export HISTFILESIZE=100000               # big big history
+shopt -s histappend                      # append to history, don't overwrite it
+
+# Save and reload the history after each command finishes
+# https://unix.stackexchange.com/questions/1288/preserve-bash-history-in-multiple-terminal-windows
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 
 alias clc='reset;clear;clear;'
 # alias where='locate -b'
@@ -98,9 +100,6 @@ alias clc='reset;clear;clear;'
 #
 # Use case-insensitive filename globbing
 # shopt -s nocaseglob
-
-# Make bash append rather than overwrite the history on disk
-shopt -s histappend
 
 #
 # When changing directory small typos can be ignored by bash
