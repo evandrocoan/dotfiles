@@ -1,4 +1,33 @@
 
+" https://github.com/junegunn/vim-plug/wiki/tips
+if empty(glob('~/.vim/autoload/plug.vim'))
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall | source $MYVIMRC
+endif
+
+" https://github.com/junegunn/vim-plug
+"
+" Specify a directory for plugins
+" - For Neovim: stdpath('data') . '/plugged'
+" - Avoid using standard Vim directory names like 'plugin'
+call plug#begin('~/.vim/plugged')
+
+
+if has('nvim')
+  Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+else
+  Plug 'Shougo/deoplete.nvim'
+  Plug 'roxma/nvim-yarp'
+  Plug 'roxma/vim-hug-neovim-rpc'
+endif
+let g:deoplete#enable_at_startup = 1
+
+
+" Initialize plugin system
+call plug#end()
+
+
 " https://vi.stackexchange.com/questions/2223/how-to-tell-vim-not-to-try-to-unzip-a-file
 let g:loaded_zipPlugin= 1
 let g:loaded_zip      = 1
