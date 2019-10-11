@@ -62,6 +62,10 @@ highlight ColorColumn ctermbg=238
 set colorcolumn=100
 set tw=0
 
+" https://vim.fandom.com/wiki/Make_search_results_appear_in_the_middle_of_the_screen
+" https://vi.stackexchange.com/questions/7699/how-do-i-make-vim-always-display-several-lines-after-eof
+set scrolloff=10
+
 " URL: http://vim.wikia.com/wiki/Example_vimrc
 " Authors: http://vim.wikia.com/wiki/Vim_on_Freenode
 " Description: A minimal, but feature rich, example .vimrc. If you are a
