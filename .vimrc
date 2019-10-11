@@ -58,8 +58,9 @@ endif
 " https://stackoverflow.com/questions/55050366/how-to-set-vim-highlight-colorcolumn-guideline-transparency
 highlight ColorColumn ctermbg=238
 
+" https://vim.fandom.com/wiki/Automatic_word_wrapping
 set colorcolumn=100
-set tw=100
+set tw=0
 
 " URL: http://vim.wikia.com/wiki/Example_vimrc
 " Authors: http://vim.wikia.com/wiki/Vim_on_Freenode
