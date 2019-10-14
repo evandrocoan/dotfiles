@@ -52,6 +52,37 @@ For other components, research how it could be done, or just install the setting
 user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
 
+### Vim style cheat
+
+1. In vim, how can I quickly switch between tabs?
+   1. **`g, t`** Next tab
+   1. **`g, T`** Prior tab
+   1. **`nnn, g, t`** Numbered tab
+   1. https://superuser.com/questions/410982/in-vim-how-can-i-quickly-switch-between-tabs
+
+1. Splitting a single file into multiple windows on Vim
+   1. **`Ctrl+w, v`** Vertical Split
+   1. **`Ctrl+w, n`** Horizontal Split
+   1. https://superuser.com/questions/1139804/splitting-a-single-file-into-multiple-windows-on-vim
+
+1. Is there a way to move a split page to a new tab in Vim?
+   1. **`Ctrl+w, Shift+t`**
+   1. https://superuser.com/questions/117969/is-there-a-way-to-move-a-split-page-to-a-new-tab-in-vim
+
+1. How to copy selected lines to clipboard in vim
+   1. The unnamed register ""
+   1. 10 numbered registers "0 to "9
+   1. The small delete register "-
+   1. 26 named registers "a to "z or "A to "Z
+   1. four read-only registers ":, "., "% and "#
+   1. the expression register "=
+   1. The selection and drop registers "*, "+ and "~
+   1. The black hole register "_
+   1. Last search pattern register "/
+   1. http://vimdoc.sourceforge.net/htmldoc/change.html#registers
+   1. https://stackoverflow.com/questions/9166328/how-to-copy-selected-lines-to-clipboard-in-vim
+
+
 ### Fix system crash
 
 Disable Google Chrome/Firefox hardware acceleration:

@@ -37,8 +37,9 @@ set history=10000         " remember more commands and search history
 " Color Themes
 :colorscheme elflord
 
+http://vimdoc.sourceforge.net/htmldoc/change.html#registers
+" https://stackoverflow.com/questions/9166328/how-to-copy-selected-lines-to-clipboard-in-vim
 set clipboard=unnamedplus
-set clipboard=unnamed
 set formatoptions-=t
 
 " Best view with a 256 color terminal and Powerline fonts
