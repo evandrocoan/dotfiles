@@ -3,6 +3,9 @@
 # installation_model.sh
 # Copyright (c) 2019 Evandro Coan
 #
+# Always ensure you are using the latest version by checking:
+# https://github.com/evandrocoan/MyLinuxSettings/blob/master/.local/bin/installation_model.sh
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -265,11 +268,11 @@ function hiddeninstallationmodelhandlegeneralexception() {
     fixcommand="d";
 
     printf "\\n";
-    if [[ "${generalexceptiontype}" == "set" ]];
+    if [[ "w${generalexceptiontype}" == "wset" ]];
     then
         printf "The last set command '%s=%s' on step '%sº' returned with the error code '%s'...\\n" "${newvariablename}" "${commandline}" "${g_installation_model_command_counter}" "${returncode}";
 
-    elif [[ "${generalexceptiontype}" == "run" ]];
+    elif [[ "w${generalexceptiontype}" == "wrun" ]];
     then
         printf "The last '%sº' command '%s' returned with the error code '%s'...\\n" "${g_installation_model_command_counter}" "${commandline}" "${returncode}";
 
@@ -279,18 +282,18 @@ function hiddeninstallationmodelhandlegeneralexception() {
         return 1;
     fi;
 
-    while [[ "${fixcommand}" != "q" ]];
+    while [[ "w${fixcommand}" != "wq" ]];
     do
         printf "\\n";
         printf "Type 'q' and press 'Enter' to continue the main script execution...\\n";
 
-        if [[ "${generalexceptiontype}" == "set" ]];
+        if [[ "w${generalexceptiontype}" == "wset" ]];
         then
             printf "Type 'r' to run again the last set command...\\n";
             printf "Type 's' to manually set the '%s' variable value.\\n" "${newvariablename}";
             printf "Type 'e' to edit in memory the '%s=%s' variable set command...\\n" "${newvariablename}" "${commandline}";
 
-        elif [[ "${generalexceptiontype}" == "run" ]];
+        elif [[ "w${generalexceptiontype}" == "wrun" ]];
         then
             printf "Type 'r' and press 'Enter' to repeat the last '%sº' command...\\n" "${g_installation_model_command_counter}";
             printf "Type 'e' to edit in memory the '%sº' command '%s'...\\n" "${g_installation_model_command_counter}" "${commandline}";
@@ -306,20 +309,20 @@ function hiddeninstallationmodelhandlegeneralexception() {
             read -e -r -p "Command: " fixcommand;
         done;
 
-        if [[ "${fixcommand}" == "q" ]];
+        if [[ "w${fixcommand}" == "wq" ]];
         then
             printf "\\n";
             printf "Continuing the main script execution on step '%sº'... (%s)\\n" "${g_installation_model_command_counter}" "$(pwd)";
             return 0;
 
-        elif [[ "${fixcommand}" == "r" ]] && [[ "${generalexceptiontype}" == "run" ]];
+        elif [[ "w${fixcommand}" == "wr" ]] && [[ "w${generalexceptiontype}" == "wrun" ]];
         then
             printf "\\n";
             printf "Repeating the last '%sº' command '%s'... (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
             eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
             return 0;
 
-        elif [[ "${fixcommand}" == "e" ]] && [[ "${generalexceptiontype}" == "run" ]];
+        elif [[ "w${fixcommand}" == "we" ]] && [[ "w${generalexceptiontype}" == "wrun" ]];
         then
             # https://stackoverflow.com/questions/2642585/read-a-variable-in-bash-with-a-default-value
             printf "\\n";
@@ -330,14 +333,14 @@ function hiddeninstallationmodelhandlegeneralexception() {
             eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
             return 0;
 
-        elif [[ "${fixcommand}" == "r" ]] && [[ "${generalexceptiontype}" == "set" ]];
+        elif [[ "w${fixcommand}" == "wr" ]] && [[ "w${generalexceptiontype}" == "wset" ]];
         then
             printf "\\n";
             printf "Repeating the last set command '%s' on step '%sº'... (%s)\\n" "${commandline}" "${g_installation_model_command_counter}" "$(pwd)";
             hiddeninstallationmodelrunsetunexpandable "${newvariablename}" ${commandline};
             return 0;
 
-        elif [[ "${fixcommand}" == "e" ]] && [[ "${generalexceptiontype}" == "set" ]];
+        elif [[ "w${fixcommand}" == "we" ]] && [[ "w${generalexceptiontype}" == "wset" ]];
         then
             # https://stackoverflow.com/questions/2642585/read-a-variable-in-bash-with-a-default-value
             printf "\\n";
@@ -347,7 +350,7 @@ function hiddeninstallationmodelhandlegeneralexception() {
             hiddeninstallationmodelrunsetunexpandable "${newvariablename}" ${commandline};
             return 0;
 
-        elif [[ "${fixcommand}" == "s" ]] && [[ "${generalexceptiontype}" == "set" ]];
+        elif [[ "w${fixcommand}" == "ws" ]] && [[ "w${generalexceptiontype}" == "wset" ]];
         then
             printf "\\n";
             printf "Manually setting the variable '%s' value for the command '%s' on step '%sº' (%s)\\n" "${newvariablename}" "${commandline}" "${g_installation_model_command_counter}" "$(pwd)";
@@ -366,7 +369,7 @@ function hiddeninstallationmodelhandlegeneralexception() {
                 printf "The '%sº' new variable set value command '%s=%s' returned with the error code '%s'...\\n" "${g_installation_model_command_counter}" "${newvariablename}" "${fixcommand}" "${returncode}";
             fi;
 
-        elif [[ "${fixcommand}" == "l" ]];
+        elif [[ "w${fixcommand}" == "wl" ]];
         then
             hiddeninstallationmodellistalreadyrancommands;
 
@@ -450,7 +453,7 @@ function hiddeninstallationmodelrunset() {
     temporary_variable="$(eval "${commandline}" | sed -e 's/[[:space:]]*$//')" || hiddeninstallationmodelhandlegeneralexception "set" "${commandline}" "${?}" "${newvariablename}" || return "${?}";
 
     eval "${newvariablename}='${temporary_variable}'";
-    if [[ "${issilent}" == "yes" ]];
+    if [[ "w${issilent}" == "wyes" ]];
     then
         :
     else
@@ -489,7 +492,7 @@ function hiddeninstallationmodelrunsetunexpandable() {
 
     printf "\\n";
     printf "Setting the variable '%s' with the command '%s'... (%s)\\n" "${newvariablename}" "${commandline}" "$(pwd)";
-    temporary_variable="$(eval "${commandline}" | sed -e 's/[[:space:]]*$//')" || hiddeninstallationmodelhandlegeneralexception "set" "${commandline}" "${?}" "${newvariablename}" || return "${?}";
+    temporary_variable="$(eval "${commandline}")" || hiddeninstallationmodelhandlegeneralexception "set" "${commandline}" "${?}" "${newvariablename}" || return "${?}";
 
     eval "${newvariablename}='${temporary_variable}'";
     printf "The new variable value set on step '%sº' is '%s=%s'...\\n" "${g_installation_model_command_counter}" "${newvariablename}" "${!newvariablename}";
@@ -520,7 +523,10 @@ function ask_to_run() {
         printf "Should I run the '%sº' optional command '%s'? (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
         shouldirun="${yes_to_all_questions:1}";
 
-        while [[ "${shouldirun}" != "y" ]] && [[ "${shouldirun}" != "n" ]] && [[ "${shouldirun}" != "q" ]];
+        while [[ "w${shouldirun}" != "wy" ]] &&
+            [[ "w${shouldirun}" != "wyes" ]] &&
+            [[ "w${shouldirun}" != "wn" ]] &&
+            [[ "w${shouldirun}" != "wq" ]];
         do
             printf "\\n";
             printf "Type 'y' and press 'Enter' if yes. Otherwise, type 'n'...\\n";
@@ -534,22 +540,22 @@ function ask_to_run() {
                 read -e -r -p "Command: " shouldirun;
             done;
 
-            if [[ "${shouldirun}" == "q" ]];
+            if [[ "w${shouldirun}" == "wq" ]];
             then
                 printf "\\n";
                 printf "Continuing the main script execution on step '%sº'... (%s)\\n" "${g_installation_model_command_counter}" "$(pwd)";
                 return 0;
 
-            elif [[ "${shouldirun}" == "y" ]];
+            elif [[ "w${shouldirun}" == "wy" ]] || [[ "w${shouldirun}" == "wyes" ]];
             then
                 printf "Running the '%sº' optional command '%s'...\\n" "${g_installation_model_command_counter}" "${commandline}";
                 eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
 
-            elif [[ "${shouldirun}" == "n" ]];
+            elif [[ "w${shouldirun}" == "wn" ]];
             then
                 printf "NOT running the '%sº' optional command '%s'...\\n" "${g_installation_model_command_counter}" "${commandline}";
 
-            elif [[ "${shouldirun}" == "l" ]];
+            elif [[ "w${shouldirun}" == "wl" ]];
             then
                 hiddeninstallationmodellistalreadyrancommands;
 
@@ -603,12 +609,12 @@ function hiddeninstallationmodellistgitremote() {
         read -ra stringarray <<<"${linevariable}";
         stringarray="${stringarray[1]}";
 
-        if [[ "${stringarray}" == "${git_filter_string}"* ]];
+        if [[ "w${stringarray}" == "w${git_filter_string}"* ]];
         then
             stringarraysize="${#git_filter_string}";
             stringarray="${stringarray:${stringarraysize}}";
 
-            if [[ "${stringarray}" != *'^{}' ]];
+            if [[ "${stringarray}w" != *'^{}w' ]];
             then
                 # printf "linevariable=$linevariable\\n";
                 arrayfilteredlines+=("${stringarray}");
@@ -729,11 +735,11 @@ function getabsolutepath() {
     local firstattempt;
 
     target="${1}";
-    if [ "$target" == "." ];
+    if [ "w$target" == "w." ];
     then
         printf "%s" "$(pwd)";
 
-    elif [ "$target" == ".." ];
+    elif [ "w$target" == "w.." ];
     then
         printf "%s" "$(dirname "$(pwd)")";
 
@@ -766,7 +772,7 @@ function getabsolutepath() {
                 fi;
             done;
 
-            if [[ "${pythoninterpreter}" != "python" ]];
+            if [[ "w${pythoninterpreter}" != "wpython" ]];
             then
                 # printf "Breaking... ${pythoninterpreter}\\n"
                 break;
