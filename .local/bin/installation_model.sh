@@ -418,7 +418,9 @@ function run() {
 function runalways() {
     local commandline;
 
+    g_installation_model_skip_commands=$((g_installation_model_skip_commands-1));
     g_installation_model_command_counter=$((g_installation_model_command_counter+1));
+
     commandline="$(printf '%q ' "${@}" | sed -e 's/[[:space:]]*$//')";
     g_installation_model_commands_ranarray+=("${g_installation_model_command_counter}º ${commandline};");
 
@@ -441,6 +443,8 @@ function hiddeninstallationmodelrunset() {
 
     issilent="${1}";
     newvariablename="${2}";
+
+    g_installation_model_skip_commands=$((g_installation_model_skip_commands-1));
     g_installation_model_command_counter=$((g_installation_model_command_counter+1));
 
     # https://stackoverflow.com/questions/56822216/how-to-portability-use-2#56822303
