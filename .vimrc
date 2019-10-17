@@ -1,32 +1,41 @@
 
-" https://github.com/junegunn/vim-plug/wiki/tips
-if empty(glob('~/.vim/autoload/plug.vim'))
-  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
-    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+" :echo v:version
+" https://stackoverflow.com/questions/9193066/how-do-i-inspect-vim-variables
+
+" https://github.com/junegunn/vim-plug/issues/894
+if v:version >= 740
+
+  " https://github.com/junegunn/vim-plug/wiki/tips
+  if empty(glob('~/.vim/autoload/plug.vim'))
+    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+      \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+  endif
+
+  " https://github.com/junegunn/vim-plug
+  "
+  " Specify a directory for plugins
+  " - For Neovim: stdpath('data') . '/plugged'
+  " - Avoid using standard Vim directory names like 'plugin'
+  call plug#begin('~/.vim/plugged')
+
+  if v:version >= 800
+  
+    if has('nvim')
+      Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+    else
+      Plug 'Shougo/deoplete.nvim'
+      Plug 'roxma/nvim-yarp'
+      Plug 'roxma/vim-hug-neovim-rpc'
+    endif
+    let g:deoplete#enable_at_startup = 1
+
+  endif
+
+  " Initialize plugin system
+  call plug#end()
+
 endif
-
-" https://github.com/junegunn/vim-plug
-"
-" Specify a directory for plugins
-" - For Neovim: stdpath('data') . '/plugged'
-" - Avoid using standard Vim directory names like 'plugin'
-call plug#begin('~/.vim/plugged')
-
-
-if has('nvim')
-  Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
-else
-  Plug 'Shougo/deoplete.nvim'
-  Plug 'roxma/nvim-yarp'
-  Plug 'roxma/vim-hug-neovim-rpc'
-endif
-let g:deoplete#enable_at_startup = 1
-
-
-" Initialize plugin system
-call plug#end()
-
 
 " https://vi.stackexchange.com/questions/2223/how-to-tell-vim-not-to-try-to-unzip-a-file
 " let g:loaded_zipPlugin = 1
