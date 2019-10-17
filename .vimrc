@@ -3,7 +3,7 @@
 if empty(glob('~/.vim/autoload/plug.vim'))
   silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
     \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-  autocmd VimEnter * PlugInstall | source $MYVIMRC
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
 
 " https://github.com/junegunn/vim-plug
@@ -37,7 +37,7 @@ set history=10000         " remember more commands and search history
 " Color Themes
 :colorscheme elflord
 
-http://vimdoc.sourceforge.net/htmldoc/change.html#registers
+" http://vimdoc.sourceforge.net/htmldoc/change.html#registers
 " https://stackoverflow.com/questions/9166328/how-to-copy-selected-lines-to-clipboard-in-vim
 set clipboard=unnamedplus
 set formatoptions-=t
