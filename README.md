@@ -94,11 +94,37 @@ Disable Google Chrome/Firefox hardware acceleration:
 Add `GRUB_CMDLINE_LINUX="i915.enable_rc6=0"` to `/etc/default/grub`:
 1. https://unix.stackexchange.com/questions/401746/drm-i915-resetting-chip-after-gpu-hang
 1. https://askubuntu.com/questions/857123/how-to-tweak-intel-hd-graphics-on-ubuntu-16-04
+1. https://bugs.freedesktop.org/show_bug.cgi?id=104522
+1. https://bugs.freedesktop.org/show_bug.cgi?id=104520
+1. https://bbs.archlinux.org/viewtopic.php?id=232551
+1. https://forum.manjaro.org/t/i915-gpu-hang-solved/37200
+1. https://bugs.freedesktop.org/show_bug.cgi?id=108614
 ```
 GRUB_CMDLINE_LINUX="i915.enable_rc6=0 i915.semaphores=0"
 # after changing this, run
 # sudo update-grub
 ```
+
+1. https://unix.stackexchange.com/questions/408582/how-to-disable-hardware-acceleration-in-linux
+   * **`vim /etc/X11/xorg.conf.d/disable-gpu.conf`**
+   * **`vim /etc/X11/xorg.conf.d/90-disable-gpu.conf`**
+   ```shell
+   Section "Extensions"
+       Option "GLX" "Disable"
+       Option "DRI2" "Disable"
+       Option "DRI3" "Disable"
+   EndSection
+   ```
+   * **`/var/log/sysinfo`**
+   ```
+   Oct 18 14:26:37 evandro-pc kernel: [309258.854944] [drm] GPU HANG: ecode 9:0:0x89b0929b, in twinkle [12478], reason: Hang on rcs0, action: reset
+   Oct 18 14:26:37 evandro-pc kernel: [309258.854956] i915 0000:00:02.0: Resetting rcs0 after gpu hang
+   Oct 18 14:26:38 evandro-pc kernel: [309260.071284] [drm:gen8_reset_engines [i915]] *ERROR* rcs0: reset request timeout
+   Oct 18 14:26:38 evandro-pc kernel: [309260.071330] i915 0000:00:02.0: Resetting chip after gpu hang
+   Oct 18 14:26:39 evandro-pc kernel: [309261.286980] [drm:gen8_reset_engines [i915]] *ERROR* rcs0: reset request timeout
+   Oct 18 14:26:39 evandro-pc kernel: [309261.287024] [drm:i915_reset [i915]] *ERROR* Failed to reset chip: -5
+   Oct 18 14:26:40 evandro-pc xdg-desktop-por[22547]: xdg-desktop-portal-gtk: Fatal IO error 11 (Resource temporarily unavailable) on X server :0.0.
+   ```
 
 
 #### Fix Skype Crash
