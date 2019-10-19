@@ -2,13 +2,28 @@
 " :echo v:version
 " https://stackoverflow.com/questions/9193066/how-do-i-inspect-vim-variables
 
+" https://github.com/junegunn/vim-plug/wiki/tips
 " https://github.com/junegunn/vim-plug/issues/894
 if v:version >= 740
 
-  " https://github.com/junegunn/vim-plug/wiki/tips
   if empty(glob('~/.vim/autoload/plug.vim'))
-    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
-      \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    let s:downloadurl = "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+    let s:destinedirectory = $HOME . "/.vim/autoload/"
+    let s:destinefile = s:destinedirectory . "plug.vim"
+
+    if !isdirectory(s:destinedirectory)
+      call mkdir(s:destinedirectory, "p")
+    endif
+
+    if executable("curl")
+      silent execute '!curl --output ' . s:destinefile .
+          \ ' --create-dirs --location --fail --silent ' . s:downloadurl
+
+    else
+      silent execute '!wget --output-document ' . s:destinefile .
+          \ ' --no-host-directories --force-directories --quiet ' . s:downloadurl
+    endif
+
     autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
   endif
 
@@ -20,7 +35,7 @@ if v:version >= 740
   call plug#begin('~/.vim/plugged')
 
   if v:version >= 800
-  
+
     if has('nvim')
       Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
     else
