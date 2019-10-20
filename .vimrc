@@ -44,7 +44,9 @@ if v:version >= 740
       endif
 
       let s:ispython3supported = system( s:pythonexecutable .
-          \ ' -c "import sys; sys.stdout.write( str( int( sys.version_info[0] > 2 and sys.version_info[1] > 5 ) ) )"' )
+          \ ' -c "import sys; sys.stdout.write(
+          \    str( int( sys.version_info[0] > 2 and sys.version_info[1] > 5 ) )
+          \    )"' )
 
       if s:ispython3supported == '1'
 
