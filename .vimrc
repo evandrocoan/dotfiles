@@ -69,6 +69,12 @@ if v:version >= 740
 
 endif
 
+if has('win32unix')
+  if executable("python3.6")
+    let g:python3_host_prog = 'python3.6'
+  endif
+endif
+
 " Start deoplete when available
 let g:deoplete#enable_at_startup = 1
 
