@@ -55,7 +55,6 @@ if v:version >= 740
           Plug 'roxma/nvim-yarp'
           Plug 'roxma/vim-hug-neovim-rpc'
         endif
-        let g:deoplete#enable_at_startup = 1
 
       endif
 
@@ -67,6 +66,10 @@ if v:version >= 740
   call plug#end()
 
 endif
+
+" Start deoplete when available
+let g:deoplete#enable_at_startup = 1
+
 
 " https://vi.stackexchange.com/questions/2223/how-to-tell-vim-not-to-try-to-unzip-a-file
 " let g:loaded_zipPlugin = 1
