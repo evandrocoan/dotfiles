@@ -36,14 +36,30 @@ if v:version >= 740
 
   if v:version >= 800
 
-    if has('nvim')
-      Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
-    else
-      Plug 'Shougo/deoplete.nvim'
-      Plug 'roxma/nvim-yarp'
-      Plug 'roxma/vim-hug-neovim-rpc'
+    if has('python3')
+      let s:pythonexecutable = "python"
+
+      if executable("python3")
+        let s:pythonexecutable = "python3"
+      endif
+
+      let s:ispython3supported = system( s:pythonexecutable .
+          \ ' -c "import sys; sys.stdout.write( str( int( sys.version_info[0] > 2 and sys.version_info[1] > 5 ) ) )"' )
+
+      if s:ispython3supported == '1'
+
+        if has('nvim')
+          Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+        else
+          Plug 'Shougo/deoplete.nvim'
+          Plug 'roxma/nvim-yarp'
+          Plug 'roxma/vim-hug-neovim-rpc'
+        endif
+        let g:deoplete#enable_at_startup = 1
+
+      endif
+
     endif
-    let g:deoplete#enable_at_startup = 1
 
   endif
 
