@@ -8,8 +8,8 @@ if v:version >= 740
 
   if empty(glob('~/.vim/autoload/plug.vim'))
     let s:downloadurl = "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
-    let s:destinedirectory = $HOME . "/.vim/autoload/"
-    let s:destinefile = s:destinedirectory . "plug.vim"
+    let s:destinedirectory = $HOME . "/.vim/autoload"
+    let s:destinefile = s:destinedirectory . "/plug.vim"
 
     if !isdirectory(s:destinedirectory)
       call mkdir(s:destinedirectory, "p")
