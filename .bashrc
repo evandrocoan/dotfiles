@@ -490,7 +490,7 @@ fi
 
 # https://stackoverflow.com/questions/767040/save-last-working-directory-on-bash-logout
 # https://superuser.com/questions/19318/how-can-i-give-write-access-of-a-folder-to-all-users-in-linux
-trap 'printf "%s" "$(pwd)" > /tmp/last_used_pwd.txt && printf "%s" "${OLDPWD}" > /tmp/last_used_cd.txt || printf "You need to run: sudo chmod -R 777 /tmp/\\n";' EXIT
+trap 'printf "%s" "$(pwd)" > /tmp/last_used_pwd.txt && printf "%s" "${OLDPWD}" > /tmp/last_used_cd.txt || printf "You need to run: sudo chmod -R 777 /tmp/last_used_*\\n";' EXIT
 
 # fix  X11 DISPLAY environment variable not set and allow to use `startxwin`
 export DISPLAY=:0
