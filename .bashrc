@@ -494,6 +494,10 @@ trap 'printf "%s" "$(pwd)" > /tmp/last_used_pwd.txt; printf "%s" "${OLDPWD}" > /
 # fix  X11 DISPLAY environment variable not set and allow to use `startxwin`
 export DISPLAY=:0
 
+# https://stackoverflow.com/questions/35898734/pip-installs-packages-successfully-but-executables-not-found-from-command-line/35899029
+python3 -m site &> /dev/null && PATH="$PATH:`python3 -m site --user-base`/bin"
+python2 -m site &> /dev/null && PATH="$PATH:`python2 -m site --user-base`/bin"
+
 # # Computer dependent, put them on `.per_computer_settings.sh`
 # Add the current tools to the bash path when running on portable mode.
 # PATH="$PATH:$(cygpath -u "$PROGRAMFILES")/Git:/cygdrive/l/someprogram"
