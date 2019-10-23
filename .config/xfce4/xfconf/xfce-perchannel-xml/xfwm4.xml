@@ -22,7 +22,7 @@
     <property name="easy_click" type="empty"/>
     <property name="focus_hint" type="empty"/>
     <property name="focus_new" type="empty"/>
-    <property name="frame_opacity" type="int" value="84"/>
+    <property name="frame_opacity" type="int" value="100"/>
     <property name="full_width_title" type="empty"/>
     <property name="inactive_opacity" type="empty"/>
     <property name="maximized_offset" type="empty"/>

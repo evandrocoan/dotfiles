@@ -1,5 +1,5 @@
 readNotifications: [credential.helper-null, needsRestart-null, update-fetch-18.2.6-success,
-  update-fetch-18.2.9-success]
+  update-fetch-18.2.9-success, update-fetch-19.1.4-success]
 dontPublishNotifications: [credential.helper-null, fileMonitor.directoriesExcluded-null,
   gc.autoDetach-null, hosting-provider-could-be-configured-github-null, hosting-provider-could-be-configured-stash-null,
   linux.theme-null, log-may-be-used-as-main-window-null, refresh-performance-repository-on-symlink-null,
