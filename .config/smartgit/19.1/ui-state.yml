@@ -3,15 +3,16 @@ indexEditorFrame: {sLayout: left-merge-right}
 gitAnnotateLayout: '[+1920x883:document ][+1920x132:line-history ]'
 gitProjectLayout.main: (([+350x581:directories ][+350x354:branches ])(([+1567x278:files
   ][-2x1:message ])[+1567x453:changes ]([+892x201:outgoing ][+672x201:output ])))
-gitProjectLayout.review: ([+256x234:directories ][+1012x234:files ][+646x234:message
-  ])[+1920x701:changes ]([-1x1:branches ][-3x1:outgoing ][-3x1:output ])
+gitProjectLayout.review: ([+145x300:directories ][+150x300:branches ][+415x300:files
+  ][+612x300:outgoing ]([+586x154:message ][+586x143:output ]))[+1920x635:changes
+  ]
 gitProjectLayout.mainIsDefault: true
 gitLogRootLayout.main: (([+322x579:repositories ][+322x389:branches ])(([+1049x564:graph
   ](([+381x242:details ][+159x242:output ])[+543x319:files ]))[+1595x404:changes ])[-166x346:comments
   ])[-1x1:debug-log ]
-gitLogRootLayout.review: (((([+287x249:repositories ][+287x191:branches ])[+901x443:graph
-  ](([+726x202:details ][-129x226:comments ])[+726x238:files ]))[+1920x525:changes
-  ])[-1x1:output ])[-1x1:debug-log ]
+gitLogRootLayout.review: ((([+167x339:repositories ][+160x339:branches ][+347x339:files
+  ][+721x339:graph ]([+513x217:details ][+513x119:output ]))[+1920x629:changes ])[-129x226:comments
+  ])[-1x1:debug-log ]
 gitLogRootLayout.mainIsDefault: true
 gitLogSubtreeLayout.main: ([+239x645:branches ][+1117x645:graph ]([+558x213:details
   -1x1:output details ][+558x429:files ]))[+1920x323:changes ]
@@ -91,7 +92,7 @@ columns:
     - {id: Date, width: 40, width2x: 0}
     - {id: Assignee, width: 84, width2x: 0}
   project.files.git:
-    columnNames: "Name\tState\tRelative Path\tLast Changed On\tRenamed From\tSize\t\
+    columnNames: "Name\tState\tLast Changed On\tRelative Path\tRenamed From\tSize\t\
       Index State\tWorking Tree State\tExt.\tRelative Directory"
     visibleColumnNames: "Index State\tLast Changed On\tName\tRelative Path\tRenamed\
       \ From\tSize\tState\tWorking Tree State"
@@ -105,8 +106,8 @@ columns:
     columnWidths:
     - {id: Name, width: 217, width2x: 0}
     - {id: State, width: 112, width2x: 0}
-    - {id: Relative Path, width: 237, width2x: 0}
     - {id: Last Changed On, width: 123, width2x: 0}
+    - {id: Relative Path, width: 237, width2x: 0}
     - {id: Renamed From, width: 103, width2x: 0}
     - {id: Size, width: 68, width2x: 0}
     - {id: Index State, width: 81, width2x: 0}
