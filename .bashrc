@@ -2,9 +2,38 @@
 PER_COMPUTER_SETTINGS=~/.per_computer_settings.sh
 
 # Import variable settings bound to each computer machine
-if [ -f $PER_COMPUTER_SETTINGS ]
+if [[ -f "$PER_COMPUTER_SETTINGS" ]]
 then
-    source $PER_COMPUTER_SETTINGS
+    source "$PER_COMPUTER_SETTINGS"
+else
+    printf '%s\n' '#!/bin/bash' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# See "~/.bashrc"' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# # Windows only' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# PATH=$PATH:"$(cygpath -u "$PROGRAMFILES")/Git"' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# # Computer dependent, put them on `.per_computer_settings.sh`'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# # Add the current tools to the bash path when running on portable mode.'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# PATH="$PATH:$(cygpath -u "$PROGRAMFILES")/Git:/cygdrive/l/someprogram"'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# PATH="~/.local/bin:$PATH"'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# mkdir -p "$(cygpath -u "$USERPROFILE")/Downloads"'  >> "$PER_COMPUTER_SETTINGS"
+
+    # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
+    printf '%s\n' '# alias ~~='"'"'cd "$(cygpath -u "$USERPROFILE")/Downloads"'"'"''  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '# https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' 'run_post_rules_for_per_computer_settings=$(cat << EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # # linux@linux$ sudo apt ...'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # PS1="\[\033[01;32m\]\u@\h\[\033[01;34m\]\$ \[\033[00m\]"'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # # linux@linux:/root$ sudo apt ...' >> "$PER_COMPUTER_SETTINGS"
+
+    # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
+    printf '%s\n' '    # PS1='"'"'${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' 'EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' ')'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
 fi
 
 # Prefix a command with start to run it detached from the terminal.
@@ -311,13 +340,8 @@ fi
 if [ "$color_prompt" = yes ]; then
     # linux@linux:/root$ sudo apt ...
     PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-
-    # linux@linux$ sudo apt ...
-    # PS1="\[\033[01;32m\]\u@\h\[\033[01;34m\]\$ \[\033[00m\]"
-
 else
     PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
-
 fi
 unset color_prompt force_color_prompt
 
@@ -499,11 +523,6 @@ export DISPLAY=:0
 python3 -m site &> /dev/null && PATH="$PATH:`python3 -m site --user-base`/bin"
 python2 -m site &> /dev/null && PATH="$PATH:`python2 -m site --user-base`/bin"
 
-# # Computer dependent, put them on `.per_computer_settings.sh`
-# Add the current tools to the bash path when running on portable mode.
-# PATH="$PATH:$(cygpath -u "$PROGRAMFILES")/Git:/cygdrive/l/someprogram"
-# PATH=~/.local/bin:$PATH
-
-# mkdir -p $(cygpath -u "$USERPROFILE")/Downloads
-# alias ~~='cd "$(cygpath -u "$USERPROFILE")/Downloads"'
-
+# Run `.per_computer_settings` rules which override some other variable on this `.bashrc`
+# https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved-indentation/36240082
+eval "$run_post_rules_for_per_computer_settings"
