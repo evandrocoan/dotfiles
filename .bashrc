@@ -25,12 +25,12 @@ else
     printf '%s\n' '# https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' 'run_post_rules_for_per_computer_settings=$(cat << EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' '    # # linux@linux$ sudo apt ...'  >> "$PER_COMPUTER_SETTINGS"
-    printf '%s\n' '    # PS1="\[\033[01;32m\]\u@\h\[\033[01;34m\]\$ \[\033[00m\]"'  >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # export PS1="\[\033[01;32m\]\u@\h\[\033[01;34m\]\$ \[\033[00m\]"'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' '    # # linux@linux:/root$ sudo apt ...' >> "$PER_COMPUTER_SETTINGS"
 
     # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
-    printf '%s\n' '    # PS1='"'"'${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # export PS1='"'"'${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' 'EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' ')'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
@@ -339,20 +339,11 @@ fi
 
 if [ "$color_prompt" = yes ]; then
     # linux@linux:/root$ sudo apt ...
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+    export PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 fi
 unset color_prompt force_color_prompt
-
-# If this is an xterm set the title to user@host:dir
-case "$TERM" in
-xterm*|rxvt*)
-    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
-    ;;
-*)
-    ;;
-esac
 
 
 # Default to human readable figures
@@ -526,3 +517,12 @@ python2 -m site &> /dev/null && PATH="$PATH:`python2 -m site --user-base`/bin"
 # Run `.per_computer_settings` rules which override some other variable on this `.bashrc`
 # https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved-indentation/36240082
 eval "$run_post_rules_for_per_computer_settings"
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    export PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
