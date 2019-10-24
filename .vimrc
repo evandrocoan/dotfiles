@@ -27,12 +27,19 @@ if v:version >= 740
     autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
   endif
 
+  " https://github.com/junegunn/vim-plug/issues/896
+  let g:plug_home='~/.vim/plugged'
+
+  if has('win32unix')
+  \ && executable('cygpath')
+  \ && executable('git')
+  \ && split(system('git --version'))[2] =~# 'windows'
+    " Use mixed path on Cygwin so that Windows git works
+    let g:plug_home = substitute(system('cygpath -m ' . g:plug_home), '\r*\n\+$', '', '')
+  endif
+
   " https://github.com/junegunn/vim-plug
-  "
-  " Specify a directory for plugins
-  " - For Neovim: stdpath('data') . '/plugged'
-  " - Avoid using standard Vim directory names like 'plugin'
-  call plug#begin('~/.vim/plugged')
+  call plug#begin()
 
   if v:version >= 800
 
