@@ -369,7 +369,7 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
-    custom_command = cd ~/Downloads; ssh root@10.3.50.180;
+    custom_command = ssh root@10.3.50.180; printf 'Reconnecting ssh in 2 seconds...\n'; sleep 2;
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
@@ -383,7 +383,7 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
-    custom_command = cd ~/Downloads; ssh root@10.3.50.181;
+    custom_command = ssh root@10.3.50.181; printf 'Reconnecting ssh in 2 seconds...\n'; sleep 2;
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
@@ -397,7 +397,7 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
-    custom_command = cd ~/Downloads; ssh root@10.3.50.182;
+    custom_command = ssh root@10.3.50.182; printf 'Reconnecting ssh in 2 seconds...\n'; sleep 2;
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
