@@ -224,7 +224,7 @@ sudo apt update
 Install stuff:
 ```
 sudo apt install build-essential autokey-gtk copyq mtp-tools gmtp imwheel openssh-server &&
-sudo apt-get install flameshot nethogs python3 python-pip python3-pip &&
+sudo apt-get install nethogs python3 python-pip python3-pip &&
 sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
@@ -237,6 +237,7 @@ pip install wheel &&
 pip3 install wheel python-language-server
 ```
 
+1. `flameshot` https://github.com/lupoDharkael/flameshot/issues/11#issuecomment-397026899
 1. `terminator` (to set terminator as default terminal on `nemo` file manager)
    1. `gsettings set org.cinnamon.desktop.default-applications.terminal exec 'xfce4-terminal'`
    1. https://github.com/linuxmint/nemo/issues/2091
