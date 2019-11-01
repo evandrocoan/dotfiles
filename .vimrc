@@ -222,10 +222,6 @@ set autoindent
 " coming from other editors would expect.
 set nostartofline
 
-" Display the cursor position on the last line of the screen or in the status
-" line of a window
-set ruler
-
 " Always display the status line, even if only one window is displayed
 set laststatus=1
 
@@ -301,6 +297,11 @@ set nowritebackup
 set noswapfile
 set fileformats=unix,dos,mac
 set completeopt=menuone,longest,preview
+
+" Display the cursor position on the last line of the screen or in the status
+" line of a window https://vi.stackexchange.com/questions/13539/why-does-set-ruler-get-reset-to-noruler
+set ruler
+
 
 "
 " Plugins config
@@ -433,4 +434,3 @@ noremap  <Leader>g :GitGutterToggle<CR>
 if filereadable(expand("~/.vimrc.local"))
   source ~/.vimrc.local
 endif
-
