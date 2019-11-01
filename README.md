@@ -237,6 +237,7 @@ pip install wheel &&
 pip3 install wheel python-language-server
 ```
 
+1. https://remmina.org/how-to-install-remmina/
 1. `flameshot` https://github.com/lupoDharkael/flameshot/issues/11#issuecomment-397026899
 1. `terminator` (to set terminator as default terminal on `nemo` file manager)
    1. `gsettings set org.cinnamon.desktop.default-applications.terminal exec 'xfce4-terminal'`
