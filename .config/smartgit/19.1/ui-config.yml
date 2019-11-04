@@ -34,7 +34,6 @@ git:
   logToolBar-18.2:
     items:
     - {id: fetch}
-    - {id: sync}
     - {id: push}
     - {stretching: false}
     - {id: flowContext}
