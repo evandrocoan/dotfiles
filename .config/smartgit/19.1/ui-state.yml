@@ -10,8 +10,8 @@ gitProjectLayout.mainIsDefault: true
 gitLogRootLayout.main: (([+322x579:repositories ][+322x389:branches ])(([+1049x564:graph
   ](([+381x242:details ][+159x242:output ])[+543x319:files ]))[+1595x404:changes ])[-166x346:comments
   ])[-1x1:debug-log ]
-gitLogRootLayout.review: ((([+167x339:repositories ][+160x339:branches ][+347x339:files
-  ][+721x339:graph ]([+513x217:details ][+513x119:output ]))[+1920x629:changes ])[-129x226:comments
+gitLogRootLayout.review: ((([+167x327:repositories ][+160x327:branches ][+347x327:files
+  ][+721x327:graph ]([+513x209:details ][+513x115:output ]))[+1920x608:changes ])[-129x226:comments
   ])[-1x1:debug-log ]
 gitLogRootLayout.mainIsDefault: true
 gitLogSubtreeLayout.main: ([+239x645:branches ][+1117x645:graph ]([+558x213:details
@@ -22,16 +22,15 @@ gitLogSubtreeLayout.mainIsDefault: true
 hgProjectLayout.mainIsDefault: true
 hgLogLayout.mainIsDefault: true
 primitives.stringKeys: [commit.messageSelector.fixup, lastClonedUrls.4, lastClonedUrls.5,
-  lastClonedUrls.6, lastClonedUrls.7, lastClonedUrls.8, lastClonedUrls.9, modifyNotSplit]
+  lastClonedUrls.6, lastClonedUrls.7, lastClonedUrls.8, lastClonedUrls.9]
 primitives.strings.commit.messageSelector.fixup: 'false'
-primitives.strings.modifyNotSplit: 'true'
 gitViewFileFilter: {viewRecursive: true, viewFromSubmodules: true, viewIgnoredFiles: false,
   viewRenameSources: true, viewSkipped: false, viewUnversionedFiles: true, viewUnchangedFiles: false,
   viewUnchangedAssumed: false, style: 0}
 bounds:
 - {key: annotate, x: 0, y: 0, width: 1440, height: 872, state: 1}
 - {key: compare, x: 0, y: 0, width: 1440, height: 872, state: 1}
-- {key: conflictSolver, x: 0, y: 0, width: 1440, height: 872}
+- {key: conflictSolver, x: 0, y: 0, width: 1440, height: 872, state: 1}
 - {key: customize, width: 600, height: 370}
 - {key: editMessage, width: 500, height: 309}
 - {key: git.commit, x: -166, y: -6, width: 630, height: 847}
@@ -49,7 +48,7 @@ bounds:
 - {key: git.tag, width: 400, height: 300}
 - {key: git.unstage, width: 500, height: 309}
 - {key: hostingProvider.gitlab.repository, x: -25, y: 18, width: 384, height: 233}
-- {key: log, x: 1920, y: 0, width: 1440, height: 1049, state: 1}
+- {key: log, x: 240, y: 58, width: 1440, height: 872, state: 1}
 - {key: preferences, width: -2147483648, height: -2147483648}
 - {key: project, x: 0, y: 0, width: 1926, height: 1082, state: 1}
 - {key: rebase.interactive, width: 600, height: 370}
@@ -57,6 +56,7 @@ bounds:
 - {key: deepgit, x: 0, y: 0, width: 1440, height: 872, state: 1}
 - {key: git.squashCommits, width: 630, height: 400}
 - {key: findObject, width: 400, height: 247}
+- {key: output}
 lastClonedUrls: ['https://github.com/evandroforks/ColorHighlighter', 'https://github.com/evandrocoan/RememberCommandPaletteInput',
   'https://github.com/bminor/glibc', 'https://github.com/evandroforks/HighlightWords']
 columns:
@@ -65,6 +65,7 @@ columns:
       \ Path"
     visibleColumnNames: "Modification\tName\tRelative Directory\tRenamed Path"
     sortOrders:
+    - {id: Modification, reverse: false}
     - {id: Name, reverse: true}
     columnWidths:
     - {id: Name, width: 200, width2x: 0}
@@ -92,22 +93,23 @@ columns:
     - {id: Date, width: 40, width2x: 0}
     - {id: Assignee, width: 84, width2x: 0}
   project.files.git:
-    columnNames: "Name\tState\tLast Changed On\tRelative Path\tRenamed From\tSize\t\
+    columnNames: "Name\tRelative Path\tState\tLast Changed On\tRenamed From\tSize\t\
       Index State\tWorking Tree State\tExt.\tRelative Directory"
     visibleColumnNames: "Index State\tLast Changed On\tName\tRelative Path\tRenamed\
       \ From\tSize\tState\tWorking Tree State"
     sortOrders:
     - {id: Last Changed On, reverse: false}
-    - {id: Name, reverse: false}
     - {id: Relative Path, reverse: false}
+    - {id: Last Changed On, reverse: false}
+    - {id: Name, reverse: false}
     - {id: Working Tree State, reverse: false}
     - {id: Index State, reverse: true}
     - {id: State, reverse: true}
     columnWidths:
     - {id: Name, width: 217, width2x: 0}
+    - {id: Relative Path, width: 237, width2x: 0}
     - {id: State, width: 112, width2x: 0}
     - {id: Last Changed On, width: 123, width2x: 0}
-    - {id: Relative Path, width: 237, width2x: 0}
     - {id: Renamed From, width: 103, width2x: 0}
     - {id: Size, width: 68, width2x: 0}
     - {id: Index State, width: 81, width2x: 0}
@@ -157,3 +159,5 @@ stashApply.drop: true
 gitLogSubtreeLayout.mainIsdefault: true
 git.cherryPick.commit: true
 git.cherryPick.appendSha: false
+modifyNotSplit: true
+git.reset: 2
