@@ -369,7 +369,7 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.180"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 5 + 1 )); printf 'Reconnecting ssh "%s" in "%s" seconds...\n' "$sshlogin" "$sleeptime"; sleep "$sleeptime"; ssh "$sshlogin"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.180"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 5 + 1 )); printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; ssh "$sshlogin"; done; bash;'''
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
@@ -383,7 +383,7 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.181"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 5 + 1 )); printf 'Reconnecting ssh "%s" in "%s" seconds...\n' "$sshlogin" "$sleeptime"; sleep "$sleeptime"; ssh "$sshlogin"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.181"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 5 + 1 )); printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; ssh "$sshlogin"; done; bash;'''
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
@@ -397,7 +397,7 @@
     background_darkness = 0.85
     background_type = transparent
     cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.182"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 5 + 1 )); printf 'Reconnecting ssh "%s" in "%s" seconds...\n' "$sshlogin" "$sleeptime"; sleep "$sleeptime"; ssh "$sshlogin"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.182"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 5 + 1 )); printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; ssh "$sshlogin"; done; bash;'''
     exit_action = restart
     font = Monospace 17
     foreground_color = "#ffffff"
