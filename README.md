@@ -31,7 +31,7 @@ These are settings for bash, vim, etc.
 
 ### To install them
 
-First backup your settings, clone this repository using this command:
+First backup your settings, only then, clone this repository using this command:
 ```
 git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
 ```
