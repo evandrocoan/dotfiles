@@ -95,7 +95,12 @@ else
 fi
 
 runset command_line printf '%q ' "${@:3}"
-run sudo runuser "$DESTINE_USER" -c "$command_line"
+printf "%s command_line: '%s'\\n" "${0}" "${command_line}";
+
+# read -p var;
+# run sudo runuser "$DESTINE_USER" --command "$command_line"
+# https://askubuntu.com/questions/294736/run-a-shell-script-as-another-user-that-has-no-password
+sudo -H -u "$DESTINE_USER" $command_line
 
 # read -p "Press 'Enter' to continue" variable1
 printf "Exiting %s...\\n" "$0"
