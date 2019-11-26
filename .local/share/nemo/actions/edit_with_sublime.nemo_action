@@ -3,7 +3,7 @@
 Active=true
 Name=Edit with Sublime Text
 Comment=Edit with Sublime Text
-Exec=/usr/bin/subl -n "%F"
+Exec=SublimeTextMaximazed.sh "%F"
 Selection=any
 Extensions=any;
 Icon-Name=sublime-text
