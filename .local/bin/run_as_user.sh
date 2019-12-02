@@ -23,6 +23,7 @@ function print_usage() {
     exit 1
 }
 rerunnow="rerunnow"
+target_user="$2"
 
 # Open a terminal window to ask for the sudo password
 if [ "$1" != "$rerunnow" ]
@@ -54,10 +55,11 @@ then
 fi
 
 
-SOURCE_USER=$USER
-DESTINE_USER=$2
+SOURCE_USER="$USER"
+DESTINE_USER="$target_user"
 
 id -u "$SOURCE_USER" > /dev/null 2>&1
+
 
 if [ "$?" != "0" ] || [ -z "$SOURCE_USER" ]
 then
@@ -77,6 +79,7 @@ SOURCE_SHELL=$(awk -F : -v name="${SOURCE_USER}" '(name == $1) { print $7 }' /et
 
 id -u "$DESTINE_USER" > /dev/null 2>&1
 
+
 if [ "$?" != "0" ]
 then
     printf "Creating destine user %s\\n" "$DESTINE_USER"
@@ -94,13 +97,16 @@ else
     run sudo chsh -s "$SOURCE_SHELL" "$SOURCE_USER"
 fi
 
+
 runset command_line printf '%q ' "${@:3}"
 printf "%s command_line: '%s'\\n" "${0}" "${command_line}";
 
-# read -p var;
-# run sudo runuser "$DESTINE_USER" --command "$command_line"
+# This one is not working when the command line had path names with `\ ` escaped spaces!
 # https://askubuntu.com/questions/294736/run-a-shell-script-as-another-user-that-has-no-password
-sudo -H -u "$DESTINE_USER" $command_line
+# run sudo -H -u "$DESTINE_USER" $command_line
+
+# read -p var;
+run sudo runuser "$DESTINE_USER" --command "$command_line"
 
 # read -p "Press 'Enter' to continue" variable1
 printf "Exiting %s...\\n" "$0"
