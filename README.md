@@ -381,7 +381,9 @@ SystemAccount=true
 1. https://www.last.fm/about/trackmymusic?platform=windows (install inside wine)
 1. https://askubuntu.com/questions/138908/how-to-execute-a-script-just-by-double-clicking-like-exe-files-in-windows
 1. https://www.teamviewer.com/pt-br/download/linux/
-1. https://askubuntu.com/questions/700712/how-to-install-wireshark
+1. Wireshark
+   * https://askubuntu.com/questions/700712/how-to-install-wireshark
+   * https://askubuntu.com/questions/74059/how-do-i-run-wireshark-with-root-privileges
 1. https://www.syntevo.com/smartgit/download/
    Sometimes ignored directories are containing tracked files in which case changes to these files might not show up automatically. If this is the case for you, you may disable this optimization by setting system property 'fileMonitor.excludeIgnoredDirectories=false'.
 
