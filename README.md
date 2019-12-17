@@ -31,28 +31,39 @@ These are settings for bash, vim, etc.
 
 ### To install them
 
-First backup your settings, only then, clone this repository using this command:
-```
-git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
-```
+1. First backup your settings, only then, clone this repository using this command:
+   ```
+   git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
+   ```
+   
+   And move them to your main's user folder replacing your own settings:
+   ```
+   rsync -r -t -v -s ~/Downloads/MyLinuxSettings/ ~/
+   ```
 
-And move them to your main's user folder replacing your own settings:
-```
-rsync -r -t -v -s ~/Downloads/MyLinuxSettings/ ~/
-```
+1. Enable the `.gitignore_global` file with:
+   1. **`git config --global core.excludesfile ~/.gitignore_global`**
+   1. https://stackoverflow.com/questions/7335420/global-git-ignore
 
-After installing, reload the `XFCE` components, so the settings does not get overridden.
+1. After installing, reload the `XFCE` components, so the settings does not get overridden.
+   
+   This should reload the `XFCE` panel components:
+   ```
+   xfce4-panel -r
+   ```
 
-This should reload the `XFCE` panel components:
-```
-xfce4-panel -r
-```
-
-For other components, research how it could be done, or just install the settings by using another
-user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
+   For other components, research how it could be done, or just install the settings by using another
+   user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
 
 ### Vim style cheat
+
+1. Select all lines:
+   1.  **`ggVG`**
+   1. **`gg`** moves to first line.
+      **`V`** starts visual mode.
+      **`G`** jumps to last line thereby selecting from first to last line
+   1. https://vi.stackexchange.com/questions/9028/what-is-the-command-for-select-all-in-vim-and-vsvim
 
 1. In vim, how can I quickly switch between tabs?
    1. **`g, t`** Next tab
