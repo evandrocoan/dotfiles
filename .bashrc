@@ -104,6 +104,9 @@ PROMPT_COMMAND='history 1 >> ${HOME}/.bash_eternal_history'
 PROMPT_COMMAND=_bash_history_sync;$PROMPT_COMMAND
 
 
+# https://unix.stackexchange.com/questions/73498/how-to-cycle-through-reverse-i-search-in-bash
+stty -ixon
+
 alias clc='reset;clear;clear;'
 # alias where='locate -b'
 
