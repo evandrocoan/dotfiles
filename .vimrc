@@ -118,7 +118,12 @@ endif
 highlight ColorColumn ctermbg=238
 
 " https://vim.fandom.com/wiki/Automatic_word_wrapping
-set colorcolumn=100
+" https://stackoverflow.com/questions/2447109/showing-a-different-background-colour-in-vim-past-80-characters
+if v:version >= 730
+  set colorcolumn=100
+endif
+
+" https://vim.fandom.com/wiki/Automatic_word_wrapping
 set tw=0
 
 " https://vim.fandom.com/wiki/Make_search_results_appear_in_the_middle_of_the_screen
