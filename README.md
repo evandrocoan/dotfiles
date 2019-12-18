@@ -81,15 +81,16 @@ These are settings for bash, vim, etc.
    1. https://superuser.com/questions/117969/is-there-a-way-to-move-a-split-page-to-a-new-tab-in-vim
 
 1. How to copy selected lines to clipboard in vim
-   1. The unnamed register ""
-   1. 10 numbered registers "0 to "9
-   1. The small delete register "-
-   1. 26 named registers "a to "z or "A to "Z
-   1. four read-only registers ":, "., "% and "#
-   1. the expression register "=
-   1. The selection and drop registers "*, "+ and "~
-   1. The black hole register "_
-   1. Last search pattern register "/
+   1. Copy to the clipboard **`" * y`**
+   1. The unnamed register **`" " y`**
+   1. 10 numbered registers **`" 0 y`** to **`" 9 y`**
+   1. The small delete register **`" - y`**
+   1. 26 named registers **`" a y`** to **`" z y`** or **`" A y`** to **`" Z y`**
+   1. four read-only registers **`" : y`**, **`" . y`**, **`" % y`** and **`" # y`**
+   1. the expression register **`" = y`**
+   1. The selection and drop registers **`" * y`**, **`" + y`** and **`" ~ y`**
+   1. The black hole register **`" _ y`**
+   1. Last search pattern register **`" / y`**
    1. http://vimdoc.sourceforge.net/htmldoc/change.html#registers
    1. https://stackoverflow.com/questions/9166328/how-to-copy-selected-lines-to-clipboard-in-vim
 
