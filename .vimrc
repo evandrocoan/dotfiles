@@ -378,16 +378,16 @@ inoremap <C-c> <Esc>
 vnoremap <Tab> >
 vnoremap <S-Tab> <
 
-" FIXME: (broken) ctrl s to save
-noremap  <C-S> :update<CR>
-vnoremap <C-S> <C-C>:update<CR>
-inoremap <C-S> <Esc>:update<CR>
+" " FIXME: (broken) ctrl s to save
+" noremap  <C-S> :update<CR>
+" vnoremap <C-S> <C-C>:update<CR>
+" inoremap <C-S> <Esc>:update<CR>
 
-" Undo, Redo (broken)
-nnoremap <C-z>  :undo<CR>
-inoremap <C-z>  <Esc>:undo<CR>
-nnoremap <C-y>  :redo<CR>
-inoremap <C-y>  <Esc>:redo<CR>
+" " Undo, Redo (broken)
+" nnoremap <C-z>  :undo<CR>
+" inoremap <C-z>  <Esc>:undo<CR>
+" nnoremap <C-y>  :redo<CR>
+" inoremap <C-y>  <Esc>:redo<CR>
 
 " Use <C-L> to clear the highlighting of :set hlsearch.
 if maparg('<C-L>', 'n') ==# ''
