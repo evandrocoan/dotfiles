@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-# installation_model.sh
+# _generic_installer.sh
 # Copyright (c) 2019 Evandro Coan
 #
 # Version: 1.0.0
 # Always ensure you are using the latest version by checking:
-# https://github.com/evandrocoan/MyLinuxSettings/blob/master/.local/bin/installation_model.sh
+# wget https://github.com/evandrocoan/MyLinuxSettings/blob/master/.local/bin/_generic_installer.sh
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
