@@ -29,12 +29,12 @@
 # https://stackoverflow.com/questions/5261959/unignore-subdirectories-of-ignored-directories-in-git
 !/.local/
 !/.local/bin/
-!/.local/share/nemo/actions/*
 !/.local/bin/run_as_user.sh
 !/.local/bin/_generic_timer.sh
 !/.local/bin/_generic_installer.sh
 !/.local/share/xfce4/helpers/custom-FileManager.desktop
 !/.local/share/xfce4/helpers/custom-MailReader.desktop
+!/.local/share/nemo/actions/*
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
