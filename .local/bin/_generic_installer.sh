@@ -643,11 +643,12 @@ function hiddeninstallationmodellistgitremote() {
         fi;
     done < <(printf "%s\\n" "${git_raw_string}");
 
-    printf '%s\n' "${hiddeninstallationmodelpythonsortprogram}" > hiddeninstallationmodelpythonsortprogram.py;
-    git_parsed_string="$(python hiddeninstallationmodelpythonsortprogram.py "${git_parsed_string}")";
-    git_parsed_string="$(printf '%s' "${git_parsed_string}" | tr -d '\r')"
+    # printf '%s\n' "${hiddeninstallationmodelpythonsortprogram}" > hiddeninstallationmodelpythonsortprogram.py;
+    # git_parsed_string="$(python hiddeninstallationmodelpythonsortprogram.py "${git_parsed_string}")";
+    # git_parsed_string="$(printf '%s' "${git_parsed_string}" | tr -d '\r')"
+    # rm hiddeninstallationmodelpythonsortprogram.py
+    git_parsed_string="$(printf '%s' "${git_parsed_string}" | sort -V)"
 
-    rm hiddeninstallationmodelpythonsortprogram.py
     # printf "git_parsed_string: %s\\n" "${git_parsed_string}";
     while read -r linevariable;
     do
