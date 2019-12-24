@@ -28,7 +28,7 @@ if v:version >= 740
   endif
 
   " https://github.com/junegunn/vim-plug/issues/896
-  let g:plug_home='~/.vim/plugged'
+  let g:plug_home = $HOME . '/.vim/plugged'
 
   if has('win32unix')
   \ && executable('cygpath')
@@ -42,13 +42,18 @@ if v:version >= 740
   call plug#begin()
 
   if v:version >= 800
+    let s:pythonexecutable = "notinstalled"
 
-    if has('python3')
+    if executable("python")
       let s:pythonexecutable = "python"
+    endif
 
-      if executable("python3")
-        let s:pythonexecutable = "python3"
-      endif
+    if executable("python3")
+      let s:pythonexecutable = "python3"
+    endif
+
+    " https://vi.stackexchange.com/questions/9606/vim-compiled-with-python3-but-haspython-returns-0
+    if s:pythonexecutable != 'notinstalled'
 
       let s:ispython3supported = system( s:pythonexecutable .
           \ ' -c "import sys; sys.stdout.write(
@@ -59,10 +64,12 @@ if v:version >= 740
 
         if has('nvim')
           Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+
         else
           Plug 'Shougo/deoplete.nvim'
           Plug 'roxma/nvim-yarp'
           Plug 'roxma/vim-hug-neovim-rpc'
+
         endif
 
       endif
@@ -76,9 +83,14 @@ if v:version >= 740
 
 endif
 
+" https://stackoverflow.com/questions/42298671/libpython2-7-dll-a-in-cygwin
+" https://stackoverflow.com/questions/34309101/vim-could-not-load-library-libpython
+" https://vi.stackexchange.com/questions/18222/compiling-vim-with-python3-showing-e370-could-not-load-library-libpython3-7m-a
+" https://github.com/vim/vim-win32-installer/issues/48
 if has('win32unix')
   if executable("python3.6")
     let g:python3_host_prog = 'python3.6'
+    let &pythonthreedll = 'libpython3.6m.dll'
   endif
 endif
 
