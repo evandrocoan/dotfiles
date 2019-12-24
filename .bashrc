@@ -24,13 +24,11 @@ else
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' '# https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' 'run_post_rules_for_per_computer_settings=$(cat << EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
-    printf '%s\n' '    # # linux@linux$ sudo apt ...'  >> "$PER_COMPUTER_SETTINGS"
-    printf '%s\n' '    # export PS1="\[\033[01;32m\]\u@\h\[\033[01;34m\]\$ \[\033[00m\]"'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
-    printf '%s\n' '    # # linux@linux:/root$ sudo apt ...' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # # linux@linux:(master)/root$ echo hi' >> "$PER_COMPUTER_SETTINGS"
 
     # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
-    printf '%s\n' '    # export PS1='"'"'${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # export PS1='"'"'${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' 'EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' ')'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
@@ -340,11 +338,24 @@ if [ -n "$force_color_prompt" ]; then
     fi
 fi
 
-if [ "$color_prompt" = yes ]; then
-    # linux@linux:/root$ sudo apt ...
-    export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+# linux@linux:(master)/root$ sudo apt ...
+# https://stackoverflow.com/questions/37021988/conditional-space-in-ps1
+# https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh
+# https://gist.github.com/justintv/168835 - Display git branch in bash prompt
+if [ -z "${__git_ps1}" ];
+then
+    function __git_ps1() {
+        :;
+    }
+fi
+
+if [ "$color_prompt" = yes ];
+then
+    # linux@linux:(master)/root$ echo hi
+    # https://www.tecmint.com/customize-bash-colors-terminal-prompt-linux/
+    export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
-    export PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+    export PS1='${debian_chroot:+($debian_chroot)}\u@\h:$(__git_ps1 "(%s)")\w\$ '
 fi
 unset color_prompt force_color_prompt
 
