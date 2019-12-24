@@ -338,17 +338,6 @@ if [ -n "$force_color_prompt" ]; then
     fi
 fi
 
-# linux@linux:(master)/root$ sudo apt ...
-# https://stackoverflow.com/questions/37021988/conditional-space-in-ps1
-# https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh
-# https://gist.github.com/justintv/168835 - Display git branch in bash prompt
-if [ -z "${__git_ps1}" ];
-then
-    function __git_ps1() {
-        :;
-    }
-fi
-
 if [ "$color_prompt" = yes ];
 then
     # linux@linux:(master)/root$ echo hi
@@ -527,6 +516,24 @@ export DISPLAY=:0
 # https://stackoverflow.com/questions/35898734/pip-installs-packages-successfully-but-executables-not-found-from-command-line/35899029
 python3 -m site &> /dev/null && PATH="$PATH:`python3 -m site --user-base`/bin"
 python2 -m site &> /dev/null && PATH="$PATH:`python2 -m site --user-base`/bin"
+
+# linux@linux:(master)/root$ sudo apt ...
+# https://stackoverflow.com/questions/37021988/conditional-space-in-ps1
+# https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh
+# https://gist.github.com/justintv/168835 - Display git branch in bash prompt
+if [ -z "${__git_ps1}" ];
+then
+    function __git_ps1() {
+        :;
+    }
+
+    # To update it:
+    # wget https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh -O ~/.local/git-prompt.sh
+    if [ -f ~/.local/git-prompt.sh ];
+    then
+        source ~/.local/git-prompt.sh;
+    fi
+fi
 
 # Run `.per_computer_settings` rules which override some other variable on this `.bashrc`
 # https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved-indentation/36240082

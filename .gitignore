@@ -28,6 +28,7 @@
 
 # https://stackoverflow.com/questions/5261959/unignore-subdirectories-of-ignored-directories-in-git
 !/.local/
+!/.local/git-prompt.sh
 !/.local/bin/
 !/.local/bin/run_as_user.sh
 !/.local/bin/_generic_timer.sh
