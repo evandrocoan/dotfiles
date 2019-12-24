@@ -609,7 +609,11 @@ function hiddeninstallationmodellistgitremote() {
     local maximum_columns_width;
     local extradifferencetocompesate;
 
+    # https://stackoverflow.com/questions/19912681/build-a-string-in-bash-with-newlines
+    local newline=$'\n'
+
     git_raw_string="${1}";
+    git_parsed_string="";
     git_filter_string="${2}";
     maximum_columns_width="${3}";
 
@@ -634,10 +638,25 @@ function hiddeninstallationmodellistgitremote() {
             if [[ "${stringarray}w" != *'^{}w' ]];
             then
                 # printf "linevariable=$linevariable\\n";
-                arrayfilteredlines+=("${stringarray}");
+                git_parsed_string+="${stringarray}${newline}";
             fi;
         fi;
     done < <(printf "%s\\n" "${git_raw_string}");
+
+    printf '%s\n' "${hiddeninstallationmodelpythonsortprogram}" > hiddeninstallationmodelpythonsortprogram.py;
+    git_parsed_string="$(python hiddeninstallationmodelpythonsortprogram.py "${git_parsed_string}")";
+    git_parsed_string="$(printf '%s' "${git_parsed_string}" | tr -d '\r')"
+
+    rm hiddeninstallationmodelpythonsortprogram.py
+    # printf "git_parsed_string: %s\\n" "${git_parsed_string}";
+    while read -r linevariable;
+    do
+        # printf "linevariable=$linevariable\\n";
+        if [[ -n "${linevariable}" ]];
+        then
+            arrayfilteredlines+=("${linevariable}");
+        fi
+    done < <(printf "%s\\n" "${git_parsed_string}");
 
     function hiddeninstallationmodelfillstringwithpaddding() {
         local padddingtofill;
@@ -668,6 +687,7 @@ function hiddeninstallationmodellistgitremote() {
     # printf "arrayfilteredlines=$arrayfilteredlines\\n";
     for stringarray in "${arrayfilteredlines[@]}";
     do
+        # printf "stringarray '%s'" "${stringarray}";
         version_to_flush="${stringarray}";
         stringarraysize="${#stringarray}";
         fillingdifference="$(( maximum_columns_width - stringarraysize ))";
@@ -1114,3 +1134,23 @@ function getabsolutepath() {
         return 1;
     fi
 }
+
+
+hiddeninstallationmodelpythonsortprogram="$(cat << EndOfMessage
+import sys
+from natsort import natsorted
+
+def sort_alphabetically_and_by_length(iterable):
+    """ https://stackoverflow.com/questions/4659524/how-to-sort-by-length-of-string-followed-by-alphabetical-order """
+    return natsorted( iterable, key=lambda item: str( item ).lower() )
+
+lines = sys.argv[1].split( '\\n' )
+# sys.stderr.write( "lines: %s\n\n" % lines )
+
+sorted_lines = sort_alphabetically_and_by_length( lines )
+# sys.stderr.write( "sorted_lines: %s\n\n" % sorted_lines )
+
+text = '\n'.join( sorted_lines )
+print( text )
+EndOfMessage
+)";
