@@ -37,6 +37,84 @@
     [[[window0]]]
       parent = ""
       type = Window
+  [[Ubuntu19Layout]]
+    [[[child0]]]
+      fullscreen = False
+      last_active_window = True
+      maximised = True
+      order = 0
+      parent = ""
+      position = 0:0
+      size = 1920, 1047
+      title = evandro@evandro-pc: ~
+      type = Window
+    [[[child1]]]
+      active_page = 0
+      labels = None, None, None, None, None, None, None, None, None, None
+      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      order = 0
+      parent = child0
+      type = Notebook
+    [[[terminal10]]]
+      order = 8
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+    [[[terminal11]]]
+      order = 9
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+    [[[terminal2]]]
+      order = 0
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = 95d12408-835e-49c3-93c1-788838bca582
+    [[[terminal3]]]
+      order = 1
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+    [[[terminal4]]]
+      order = 2
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+    [[[terminal5]]]
+      order = 3
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+    [[[terminal6]]]
+      order = 4
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+    [[[terminal7]]]
+      order = 5
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+    [[[terminal8]]]
+      order = 6
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+    [[[terminal9]]]
+      order = 7
+      parent = child1
+      profile = Ubuntu19Profile
+      type = Terminal
+      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
   [[Debian7Layout]]
     [[[child0]]]
       fullscreen = False
@@ -357,7 +435,21 @@
     cursor_color = "#ffffff"
     custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
     exit_action = restart
-    font = Monospace 17
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    login_shell = True
+    scrollback_lines = 10000000
+    show_titlebar = False
+    split_to_group = True
+    use_custom_command = True
+    use_system_font = False
+  [[Ubuntu19Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    custom_command = '''sshlogin="root@10.3.50.192"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 60 + 1 )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    exit_action = restart
+    font = Monospace 13
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
@@ -371,7 +463,7 @@
     cursor_color = "#ffffff"
     custom_command = '''sshlogin="root@10.3.50.180"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 60 + 1 )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
     exit_action = restart
-    font = Monospace 17
+    font = Monospace 13
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
@@ -385,7 +477,7 @@
     cursor_color = "#ffffff"
     custom_command = '''sshlogin="root@10.3.50.181"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 60 + 1 )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
     exit_action = restart
-    font = Monospace 17
+    font = Monospace 13
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
@@ -399,7 +491,7 @@
     cursor_color = "#ffffff"
     custom_command = '''sshlogin="root@10.3.50.182"; counter=10; while [[ $counter -gt 0 ]]; do counter=$((counter-1)); sleeptime=$(( RANDOM % 60 + 1 )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
     exit_action = restart
-    font = Monospace 17
+    font = Monospace 13
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
@@ -413,7 +505,7 @@
     cursor_color = "#ffffff"
     custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
     exit_action = restart
-    font = Monospace 17
+    font = Monospace 13
     foreground_color = "#ffffff"
     login_shell = True
     scrollback_lines = 10000000
