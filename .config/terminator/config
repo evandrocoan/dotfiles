@@ -46,7 +46,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Debian 10
       type = Window
     [[[child1]]]
       active_page = 0
@@ -124,7 +124,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Debian 7
       type = Window
     [[[child1]]]
       active_page = 0
@@ -202,7 +202,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Debian 8
       type = Window
     [[[child1]]]
       active_page = 0
@@ -280,7 +280,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Debian 9
       type = Window
     [[[child1]]]
       active_page = 0
@@ -358,7 +358,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Root
       type = Window
     [[[child1]]]
       active_page = 0
@@ -436,7 +436,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Ubuntu 19
       type = Window
     [[[child1]]]
       active_page = 0
@@ -514,7 +514,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = evandro@evandro-pc: ~
+      title = Windows
       type = Window
     [[[child1]]]
       active_page = 0
