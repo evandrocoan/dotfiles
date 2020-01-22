@@ -24,51 +24,55 @@ if v:version >= 740
           \ ' --no-host-directories --force-directories --quiet ' . s:downloadurl
     endif
 
+  endif
+
+  if !empty(glob('~/.vim/autoload/plug.vim'))
     autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
-  endif
 
-  " https://github.com/junegunn/vim-plug/issues/896
-  let g:plug_home = $HOME . '/.vim/plugged'
+    " https://github.com/junegunn/vim-plug/issues/896
+    let g:plug_home = $HOME . '/.vim/plugged'
 
-  if has('win32unix')
-  \ && executable('cygpath')
-  \ && executable('git')
-  \ && split(system('git --version'))[2] =~# 'windows'
-    " Use mixed path on Cygwin so that Windows git works
-    let g:plug_home = substitute(system('cygpath -m ' . g:plug_home), '\r*\n\+$', '', '')
-  endif
-
-  " https://github.com/junegunn/vim-plug
-  call plug#begin()
-
-  if v:version >= 800
-    let s:pythonexecutable = "notinstalled"
-
-    if executable("python")
-      let s:pythonexecutable = "python"
+    if has('win32unix')
+    \ && executable('cygpath')
+    \ && executable('git')
+    \ && split(system('git --version'))[2] =~# 'windows'
+      " Use mixed path on Cygwin so that Windows git works
+      let g:plug_home = substitute(system('cygpath -m ' . g:plug_home), '\r*\n\+$', '', '')
     endif
 
-    if executable("python3")
-      let s:pythonexecutable = "python3"
-    endif
+    " https://github.com/junegunn/vim-plug
+    call plug#begin()
 
-    " https://vi.stackexchange.com/questions/9606/vim-compiled-with-python3-but-haspython-returns-0
-    if s:pythonexecutable != 'notinstalled'
+    if v:version >= 800
+      let s:pythonexecutable = "notinstalled"
 
-      let s:ispython3supported = system( s:pythonexecutable .
-          \ ' -c "import sys; sys.stdout.write(
-          \    str( int( sys.version_info[0] > 2 and sys.version_info[1] > 5 ) )
-          \    )"' )
+      if executable("python")
+        let s:pythonexecutable = "python"
+      endif
 
-      if s:ispython3supported == '1' && has('python3')
+      if executable("python3")
+        let s:pythonexecutable = "python3"
+      endif
 
-        if has('nvim')
-          Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+      " https://vi.stackexchange.com/questions/9606/vim-compiled-with-python3-but-haspython-returns-0
+      if s:pythonexecutable != 'notinstalled'
 
-        else
-          Plug 'Shougo/deoplete.nvim'
-          Plug 'roxma/nvim-yarp'
-          Plug 'roxma/vim-hug-neovim-rpc'
+        let s:ispython3supported = system( s:pythonexecutable .
+            \ ' -c "import sys; sys.stdout.write(
+            \    str( int( sys.version_info[0] > 2 and sys.version_info[1] > 5 ) )
+            \    )"' )
+
+        if s:ispython3supported == '1' && has('python3')
+
+          if has('nvim')
+            Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+
+          else
+            Plug 'Shougo/deoplete.nvim'
+            Plug 'roxma/nvim-yarp'
+            Plug 'roxma/vim-hug-neovim-rpc'
+
+          endif
 
         endif
 
@@ -76,10 +80,10 @@ if v:version >= 740
 
     endif
 
-  endif
+    " Initialize plugin system
+    call plug#end()
 
-  " Initialize plugin system
-  call plug#end()
+  endif
 
 endif
 
