@@ -4,6 +4,7 @@ These are used on Mint XFCE 19.1, Ubuntu and Cygwin.
 
 These are settings for bash, vim, etc.
 
+To debug any ShellScript, just add `set -x` after the shell bang: https://stackoverflow.com/questions/36273665/what-does-set-x-do
 
 - [My linux configurations (or Dotfiles)](#my-linux-configurations-or-dotfiles)
     + [To install them](#to-install-them)
