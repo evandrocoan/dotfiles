@@ -41,7 +41,6 @@ git:
     - {id: merge}
     - {id: rebaseHeadTo}
     - {id: commit}
-    - {id: branchAbort}
     - {stretching: true}
     - {id: stage}
     - {id: indexEditor}
@@ -56,6 +55,7 @@ git:
     - {id: delete}
     - {id: branchAddTag}
     - {stretching: true}
+    - {id: log}
     - {id: annotate}
     - {id: investigate}
     - {stretching: true}

@@ -83,9 +83,14 @@ directoryCompare:
     encoding: {}
     showCompareSettingsOnRefresh: false
     displayFileTimeState: true
+  showEolChangedFiles: false
+  showRightOnlyFiles: false
+  showLeftOnlyFiles: false
+  showUnchangedFiles: false
+  recursiveView: true
 list32: {ePP: 1563226480412, eUT: -9223372036854775808, nRT: -9223372036854775808,
   eV: '4', uid: x21888332130}
-updateCheck: {prevCheckTime: 1570047403555, checkedBuild: 3086, mode: download, previewAlwaysCheckForLatestBuild: false,
+updateCheck: {prevCheckTime: 1579895584754, checkedBuild: 3102, mode: download, previewAlwaysCheckForLatestBuild: false,
   upgradeInstallation: false}
 proxySettings: {enabled: false, autoDetect: true}
 proxyPassword: {}

@@ -98,3 +98,4 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: false
+manuallyDeletedIds: []
