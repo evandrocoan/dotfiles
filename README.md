@@ -506,77 +506,97 @@ Categories=AudioVideo;
 
 
 ### Linux system information
-```
-$ sudo apt-get install inxi dmidecode lshw
 
-$ sudo lshw -short -C memory
-H/W path       Device     Class          Description
-====================================================
-/0/0                      memory         64KiB BIOS
-/0/3d                     memory         8GiB System Memory
-/0/3d/0                   memory         8GiB DIMM DDR4 Synchronous 2400 MHz (0,4 ns)
-/0/3d/1                   memory         [empty]
-/0/3d/2                   memory         [empty]
-/0/3d/3                   memory         [empty]
-/0/43                     memory         256KiB L1 cache
-/0/44                     memory         1MiB L2 cache
-/0/45                     memory         6MiB L3 cache
-/0/100/1f.2               memory         Memory controller
+1. **`lshw -class disk`**
+    ```
+      *-disk:0                
+           description: ATA Disk
+           product: WDC WD20EFRX-68E
+           vendor: Western Digital
+           physical id: 0
+           bus info: scsi@0:0.0.0
+           logical name: /dev/sda
+           version: 82.0
+           serial: WD-WCC4M0NJKLUP
+           size: 1863GiB (2TB)
+           capabilities: gpt-1.00 partitioned partitioned:gpt
+           configuration: ansiversion=5 guid=3fc710f6-7e35-4a0a-9142-73a813966c3b
+    ```
 
-$ sudo dmidecode --type 17
-# dmidecode 3.1
-Getting SMBIOS data from sysfs.
-SMBIOS 3.0.0 present.
+1. **`sudo apt-get install inxi dmidecode lshw`**
+    ```
+    $ sudo lshw -short -C memory
+    H/W path       Device     Class          Description
+    ====================================================
+    /0/0                      memory         64KiB BIOS
+    /0/3d                     memory         8GiB System Memory
+    /0/3d/0                   memory         8GiB DIMM DDR4 Synchronous 2400 MHz (0,4 ns)
+    /0/3d/1                   memory         [empty]
+    /0/3d/2                   memory         [empty]
+    /0/3d/3                   memory         [empty]
+    /0/43                     memory         256KiB L1 cache
+    /0/44                     memory         1MiB L2 cache
+    /0/45                     memory         6MiB L3 cache
+    /0/100/1f.2               memory         Memory controller
+    ```
 
-Handle 0x003E, DMI type 17, 40 bytes
-Memory Device
-  Array Handle: 0x003D
-  Error Information Handle: Not Provided
-  Total Width: 64 bits
-  Data Width: 64 bits
-  Size: 8192 MB
-  Form Factor: DIMM
-  Set: None
-  Locator: ChannelA-DIMM0
-  Bank Locator: BANK 0
-  Type: DDR4
-  Type Detail: Synchronous
-  Speed: 2400 MT/s
-  Manufacturer: 859B
-  Serial Number: E1A93CFC
-  Asset Tag: 9876543210
-  Part Number: BLS8G4D240FSB.16FBD2
-  Rank: 2
-  Configured Clock Speed: 2400 MT/s
-  Minimum Voltage: 1.2 V
-  Maximum Voltage: 1.2 V
-  Configured Voltage: 1.2 V
+1. **`sudo dmidecode --type 17`**
+    ```
+    # dmidecode 3.1
+    Getting SMBIOS data from sysfs.
+    SMBIOS 3.0.0 present.
 
-$ sudo inxi -Fxz
-System:    Host: evandro-pc Kernel: 4.15.0-45-generic x86_64 bits: 64 compiler: gcc v: 7.3.0 Desktop: Xfce 4.12.3
-           Distro: Linux Mint 19.1 Tessa base: Ubuntu 18.04 bionic
-Machine:   Type: Desktop System: Gigabyte product: H110M-S2PH v: N/A serial: <filter>
-           Mobo: Gigabyte model: H110M-S2PH-CF v: x.x serial: <filter> UEFI: American Megatrends v: F21 date: 06/09/2017
-CPU:       Topology: Quad Core model: Intel Core i5-7400 bits: 64 type: MCP arch: Kaby Lake rev: 9 L2 cache: 6144 KiB
-           flags: lm nx pae sse sse2 sse3 sse4_1 sse4_2 ssse3 vmx bogomips: 24000
-           Speed: 800 MHz min/max: 800/3500 MHz Core speeds (MHz): 1: 800 2: 800 3: 800 4: 800
-Graphics:  Device-1: Intel HD Graphics 630 vendor: Gigabyte driver: i915 v: kernel bus ID: 00:02.0
-           Display: x11 server: X.Org 1.19.6 driver: modesetting unloaded: fbdev,vesa resolution: 1920x1080~60Hz
-           OpenGL: renderer: Mesa DRI Intel HD Graphics 630 (Kaby Lake GT2) v: 4.5 Mesa 18.2.2 direct render: Yes
-Audio:     Device-1: Intel 100 Series/C230 Series Family HD Audio vendor: Gigabyte Sunrise Point-H driver: snd_hda_intel
-           v: kernel bus ID: 00:1f.3
-           Sound Server: ALSA v: k4.15.0-45-generic
-Network:   Device-1: Realtek RTL8111/8168/8411 PCI Express Gigabit Ethernet vendor: Gigabyte driver: r8169 v: 2.3LK-NAPI
-           port: e000 bus ID: 01:00.0
-           IF: enp1s0 state: up speed: 1000 Mbps duplex: full mac: <filter>
-Drives:    Local Storage: total: 931.51 GiB used: 47.82 GiB (5.1%)
-           ID-1: /dev/sda vendor: Western Digital model: WD10EZEX-00WN4A0 size: 931.51 GiB
-Partition: ID-1: / size: 907.63 GiB used: 47.81 GiB (5.3%) fs: ext4 dev: /dev/dm-0
-Sensors:   System Temperatures: cpu: 29.8 C mobo: 27.8 C
-           Fan Speeds (RPM): N/A
-Info:      Processes: 236 Uptime: 1h 13m Memory: 7.68 GiB used: 4.39 GiB (57.2%) Init: systemd runlevel: 5 Compilers:
-           gcc: 7.3.0 Shell: bash v: 4.4.19 inxi: 3.0.27
-```
+    Handle 0x003E, DMI type 17, 40 bytes
+    Memory Device
+      Array Handle: 0x003D
+      Error Information Handle: Not Provided
+      Total Width: 64 bits
+      Data Width: 64 bits
+      Size: 8192 MB
+      Form Factor: DIMM
+      Set: None
+      Locator: ChannelA-DIMM0
+      Bank Locator: BANK 0
+      Type: DDR4
+      Type Detail: Synchronous
+      Speed: 2400 MT/s
+      Manufacturer: 859B
+      Serial Number: E1A93CFC
+      Asset Tag: 9876543210
+      Part Number: BLS8G4D240FSB.16FBD2
+      Rank: 2
+      Configured Clock Speed: 2400 MT/s
+      Minimum Voltage: 1.2 V
+      Maximum Voltage: 1.2 V
+      Configured Voltage: 1.2 V
+    ```
+
+1. **`sudo inxi -Fxz`**
+    ```
+    System:    Host: evandro-pc Kernel: 4.15.0-45-generic x86_64 bits: 64 compiler: gcc v: 7.3.0 Desktop: Xfce 4.12.3
+               Distro: Linux Mint 19.1 Tessa base: Ubuntu 18.04 bionic
+    Machine:   Type: Desktop System: Gigabyte product: H110M-S2PH v: N/A serial: <filter>
+               Mobo: Gigabyte model: H110M-S2PH-CF v: x.x serial: <filter> UEFI: American Megatrends v: F21 date: 06/09/2017
+    CPU:       Topology: Quad Core model: Intel Core i5-7400 bits: 64 type: MCP arch: Kaby Lake rev: 9 L2 cache: 6144 KiB
+               flags: lm nx pae sse sse2 sse3 sse4_1 sse4_2 ssse3 vmx bogomips: 24000
+               Speed: 800 MHz min/max: 800/3500 MHz Core speeds (MHz): 1: 800 2: 800 3: 800 4: 800
+    Graphics:  Device-1: Intel HD Graphics 630 vendor: Gigabyte driver: i915 v: kernel bus ID: 00:02.0
+               Display: x11 server: X.Org 1.19.6 driver: modesetting unloaded: fbdev,vesa resolution: 1920x1080~60Hz
+               OpenGL: renderer: Mesa DRI Intel HD Graphics 630 (Kaby Lake GT2) v: 4.5 Mesa 18.2.2 direct render: Yes
+    Audio:     Device-1: Intel 100 Series/C230 Series Family HD Audio vendor: Gigabyte Sunrise Point-H driver: snd_hda_intel
+               v: kernel bus ID: 00:1f.3
+               Sound Server: ALSA v: k4.15.0-45-generic
+    Network:   Device-1: Realtek RTL8111/8168/8411 PCI Express Gigabit Ethernet vendor: Gigabyte driver: r8169 v: 2.3LK-NAPI
+               port: e000 bus ID: 01:00.0
+               IF: enp1s0 state: up speed: 1000 Mbps duplex: full mac: <filter>
+    Drives:    Local Storage: total: 931.51 GiB used: 47.82 GiB (5.1%)
+               ID-1: /dev/sda vendor: Western Digital model: WD10EZEX-00WN4A0 size: 931.51 GiB
+    Partition: ID-1: / size: 907.63 GiB used: 47.81 GiB (5.3%) fs: ext4 dev: /dev/dm-0
+    Sensors:   System Temperatures: cpu: 29.8 C mobo: 27.8 C
+               Fan Speeds (RPM): N/A
+    Info:      Processes: 236 Uptime: 1h 13m Memory: 7.68 GiB used: 4.39 GiB (57.2%) Init: systemd runlevel: 5 Compilers:
+               gcc: 7.3.0 Shell: bash v: 4.4.19 inxi: 3.0.27
+    ```
 
 
 
