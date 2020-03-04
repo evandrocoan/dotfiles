@@ -1,6 +1,20 @@
 #!/bin/bash
-set -eo pipefail
+set -e
+ANKIPID="true"
 
+# Wait until anki exits before running the backup
+while [[ "w${ANKIPID}" != "w" ]];
+do :
+    ANKIPID="$(ps axf | grep anki | grep -v grep | awk '{print $1}')"
+    printf 'Checking if "anki=%s" is running...\n' "${ANKIPID}"
+
+    if [[ "w${ANKIPID}" != "w" ]];
+    then
+        sleep 600
+    fi;
+done
+
+set -eo pipefail
 SRCDIR="/cygdrive/d/User/Documents/Anki2"
 DESTDIR="/cygdrive/d/User/Documents/AnkiApp/Backups"
 FILENAME="$(date +%-Y-%-m-%-d)_$(date +%-T).zip"
