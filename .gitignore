@@ -15,6 +15,9 @@
 
 !README.md
 
+!/scripts/
+!/scripts/backupanki.sh
+
 !/.config/smartgit/19.1/bugtracker.yml
 !/.config/smartgit/19.1/logger.properties
 !/.config/smartgit/19.1/my-words.dic
