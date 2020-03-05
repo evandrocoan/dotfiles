@@ -1,8 +1,20 @@
 #!/bin/bash
 set -e
-ANKIPID="true"
+SRCDIR="/cygdrive/d/User/Documents/Anki2"
+DESTDIR="/cygdrive/d/User/Documents/AnkiApp/Backups"
 
 # Wait until anki exits before running the backup
+ANKIPID="true"
+BACKUP_FLAG_FILE="${SRCDIR}/backup_running"
+
+if [[ -f "${BACKUP_FLAG_FILE}" ]];
+then :
+    printf 'The anki "backup=%s" is already running...\n' "${BACKUP_FLAG_FILE}"
+    exit 1
+else
+    touch "${BACKUP_FLAG_FILE}"
+fi
+
 while [[ "w${ANKIPID}" != "w" ]];
 do :
     ANKIPID="$(ps axf | grep anki | grep -v grep | awk '{print $1}')"
@@ -15,8 +27,6 @@ do :
 done
 
 set -eo pipefail
-SRCDIR="/cygdrive/d/User/Documents/Anki2"
-DESTDIR="/cygdrive/d/User/Documents/AnkiApp/Backups"
 FILENAME="$(date +%-Y-%-m-%-d)_$(date +%-T).zip"
 FILENAME="$(printf '%s' "$FILENAME" | sed -E 's@\/|:@-@g')"
 
@@ -59,3 +69,4 @@ do
 done
 
 # read -p var
+rm "${BACKUP_FLAG_FILE}"
