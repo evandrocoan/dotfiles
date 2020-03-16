@@ -5,7 +5,7 @@ pushd `dirname $0` > /dev/null
 SCRIPT_FOLDER_PATH=`pwd`
 popd > /dev/null
 
-source "${SCRIPT_FOLDER_PATH}/installation_model.sh";
+source "${SCRIPT_FOLDER_PATH}/_generic_installer.sh";
 
 
 function print_usage() {
