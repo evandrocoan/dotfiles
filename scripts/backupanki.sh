@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+MAXIMUM_BACKUPS=100
 SRCDIR="/cygdrive/d/User/Documents/Anki2"
 DESTDIR="/cygdrive/d/User/Documents/AnkiApp/Backups"
 
@@ -62,7 +63,7 @@ do
         fi
     fi
 
-    if [[ "${BACKUP_COUNTER}" -gt 10 ]];
+    if [[ "${BACKUP_COUNTER}" -gt "${MAXIMUM_BACKUPS}" ]];
     then :
         rm -v "${file}"
     fi
