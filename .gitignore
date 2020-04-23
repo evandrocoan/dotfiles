@@ -17,6 +17,7 @@
 
 !/scripts/
 !/scripts/backupanki.sh
+!/scripts/backupankihelper.sh
 
 !/.config/smartgit/19.1/bugtracker.yml
 !/.config/smartgit/19.1/logger.properties
