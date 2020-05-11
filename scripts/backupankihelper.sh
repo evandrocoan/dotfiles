@@ -8,7 +8,7 @@ BACKUP_FLAG_FILE="${DESTDIR}/backup_running"
 if [[ -f "${BACKUP_FLAG_FILE}" ]];
 then :
     printf 'The anki "backup=%s" is already running...\n' "${BACKUP_FLAG_FILE}"
-    exit 1
+    exit 11
 else
     touch "${BACKUP_FLAG_FILE}"
 fi

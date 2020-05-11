@@ -11,6 +11,13 @@ export MAXIMUM_BACKUPS=100
 export SRCDIR="/cygdrive/d/User/Documents/Anki2"
 export DESTDIR="/cygdrive/d/User/Documents/AnkiApp"
 
-# requires sudo apt-get install moreutils
-/bin/bash "${SCRIPT_FOLDER_PATH}/backupankihelper.sh" 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >> "${SCRIPT_FOLDER_PATH}/ankibackup.log"
+BACKUP_FILE_NAME="${SCRIPT_FOLDER_PATH}/ankibackup.log"
 
+# requires sudo apt-get install moreutils
+if /bin/bash "${SCRIPT_FOLDER_PATH}/backupankihelper.sh" 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >> "${BACKUP_FILE_NAME}";
+then :
+else
+    exitcode="$?"
+    tail -20 "${BACKUP_FILE_NAME}"
+    exit "${exitcode}"
+fi
