@@ -2,8 +2,7 @@
 set -eo pipefail
 
 # Create a Task Scheduler with the following arguments: wscript "D:\User\Dropbox\SoftwareVersioning\SpeakTimeVBScript\silent_run.vbs" cmd "cmd /c ""F:\cygwin\bin\sh.exe"" ""/cygdrive/f/cygwin/home/Professional/scripts/backupanki.sh"""
-# On: https://github.com/evandrocoan/batch_scripts/blob/master/WindowsTaksTcheduler/Anki%20Backup%20-%20Daily%20Task.xml
-# You can find a Windows 10 Task Scheduler task you can import.
+# You can find a Windows 10 Task Scheduler task you can import: https://github.com/evandrocoan/batch_scripts/blob/master/WindowsTaksTcheduler/AnkiBackupDailyTask.xml
 pushd `dirname $0` > /dev/null
 SCRIPT_FOLDER_PATH=`pwd`
 popd > /dev/null
