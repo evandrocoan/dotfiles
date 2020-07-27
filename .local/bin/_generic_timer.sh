@@ -119,8 +119,8 @@ isFloatNumber()
     then
         # Removed the file extension, just in case there exists.
         firstFloatNumberPart=$(printf '%s' "$1" | cut -d'.' -f 1);
-        secondFloatNumberPart=$(printf '%s' "$1" | cut --only-delimited -d'.' -f 2);
-        thirdNumberPart=$(printf '%s' "$1" | cut --only-delimited -d'.' -f 3);
+        secondFloatNumberPart=$(printf '%s' "$1" | cut -s -d'.' -f 2);
+        thirdNumberPart=$(printf '%s' "$1" | cut -s -d'.' -f 3);
 
         # printf 'a "%s", b "%s", c "%s"\n' "$firstFloatNumberPart" "$secondFloatNumberPart" "$thirdNumberPart"
         # Checks whether the first float number part is an integer.
