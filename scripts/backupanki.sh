@@ -8,8 +8,8 @@ SCRIPT_FOLDER_PATH=`pwd`
 popd > /dev/null
 
 export MAXIMUM_BACKUPS=100
-export SRCDIR="/cygdrive/d/User/Documents/Anki2"
-export DESTDIR="/cygdrive/d/User/Documents/AnkiApp"
+export SRCDIR="/d/User/Documents/Anki2"
+export DESTDIR="/d/User/Documents/AnkiApp"
 
 BACKUP_FILE_NAME="${SCRIPT_FOLDER_PATH}/ankibackup.log"
 
