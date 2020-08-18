@@ -36,7 +36,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    ```
    git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
    ```
-   
+
    And move them to your main's user folder replacing your own settings:
    ```
    rsync -r -t -v -s ~/Downloads/MyLinuxSettings/ ~/
@@ -47,7 +47,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://stackoverflow.com/questions/7335420/global-git-ignore
 
 1. After installing, reload the `XFCE` components, so the settings does not get overridden.
-   
+
    This should reload the `XFCE` panel components:
    ```
    xfce4-panel -r
@@ -250,21 +250,14 @@ pip install wheel &&
 pip3 install wheel python-language-server
 ```
 
+1. `sudo apt-get install gnome-disks` (https://askubuntu.com/questions/500549/how-to-run-gnome-disk-utility#)
 1. https://www.poweriso.com/download-poweriso-for-linux.htm
 1. https://remmina.org/how-to-install-remmina/
 1. `flameshot` https://github.com/lupoDharkael/flameshot/issues/11#issuecomment-397026899
 1. `terminator` (to set terminator as default terminal on `nemo` file manager)
    1. `gsettings set org.cinnamon.desktop.default-applications.terminal exec 'xfce4-terminal'`
    1. https://github.com/linuxmint/nemo/issues/2091
-1. `qps`
-1. `glogg`
-1. `ncdu`
-1. `nethogs`
-1. `speedcrunch`
-1. `iotop` && `fatrace`
    1. https://unix.stackexchange.com/questions/86875/determining-specific-file-responsible-for-high-i-o
-1. `gsmartcontrol`
-1. `gnome-disks`
 1. Open `Preferred Applications` and set mailto as `gnome-gmail`
 1. Open `Preferred Applications` and set File Manger as `nemo`
 1. Open `KSysGuard` & `System Monitor` and Install KSysGuard System Monitor Tabs:
@@ -509,7 +502,7 @@ Categories=AudioVideo;
 
 1. **`lshw -class disk`**
     ```
-      *-disk:0                
+      *-disk:0
            description: ATA Disk
            product: WDC WD20EFRX-68E
            vendor: Western Digital
