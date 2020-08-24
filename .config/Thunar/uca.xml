@@ -52,10 +52,10 @@
 </action>
 <action>
 	<icon>sublime-text</icon>
-	<name>Edit with Sublime Text Vanilla</name>
-	<unique-id>1552616163094708-1</unique-id>
-	<command>run_as_user.sh sublime_vanilla /usr/bin/subl -n %F</command>
-	<description>Edit with Sublime Text Vanilla</description>
+	<name>Edit with Sublime Text</name>
+	<unique-id>1598282233323516-1</unique-id>
+	<command>/usr/bin/subl -n %F</command>
+	<description>Edit with Sublime Text</description>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>
@@ -66,10 +66,10 @@
 </action>
 <action>
 	<icon>sublime-text</icon>
-	<name>Edit with Sublime Text</name>
-	<unique-id>1598282233323516-1</unique-id>
-	<command>/usr/bin/subl -n %F</command>
-	<description>Edit with Sublime Text</description>
+	<name>Edit with Sublime Text Vanilla</name>
+	<unique-id>1552616163094708-1</unique-id>
+	<command>run_as_user.sh sublime_vanilla /usr/bin/subl -n %F</command>
+	<description>Edit with Sublime Text Vanilla</description>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>
