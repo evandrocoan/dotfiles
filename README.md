@@ -236,18 +236,18 @@ sudo apt update
 
 Install stuff:
 ```
-sudo apt install build-essential autokey-gtk copyq mtp-tools gmtp imwheel openssh-server &&
-sudo apt-get install nethogs python3 python-pip python3-pip &&
-sudo apt-get install audacity gnome-gmail ksysguard wmctrl &&
-sudo apt-get install xdotool grsync unison-gtk indicator-multiload &&
-sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller &&
-sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace &&
-sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch &&
-sudo apt-get install terminator &&
-pip install setuptools &&
-pip3 install setuptools &&
-pip install wheel &&
-pip3 install wheel python-language-server
+sudo apt install build-essential autokey-gtk copyq mtp-tools gmtp imwheel openssh-server;
+sudo apt-get install nethogs python3 python-pip python3-pip;
+sudo apt-get install audacity gnome-gmail ksysguard wmctrl;
+sudo apt-get install xdotool grsync unison-gtk indicator-multiload;
+sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller;
+sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace;
+sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch;
+sudo apt-get install terminator;
+pip install setuptools;
+pip3 install setuptools;
+pip install wheel;
+pip3 install wheel python-language-server;
 ```
 
 1. `sudo apt-get install gnome-disks` (https://askubuntu.com/questions/500549/how-to-run-gnome-disk-utility#)
