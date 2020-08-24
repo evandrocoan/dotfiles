@@ -1,4 +1,4 @@
-<?xml encoding="UTF-8" version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <actions>
 <action>
 	<icon>Terminal</icon>
@@ -51,7 +51,7 @@
 	<directories/>
 </action>
 <action>
-	<icon>sublime_text</icon>
+	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text Vanilla</name>
 	<unique-id>1552616163094708-1</unique-id>
 	<command>run_as_user.sh sublime_vanilla /usr/bin/subl -n %F</command>
