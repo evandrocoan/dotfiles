@@ -64,4 +64,18 @@
 	<text-files/>
 	<video-files/>
 </action>
+<action>
+	<icon>sublime-text</icon>
+	<name>Edit with Sublime Text</name>
+	<unique-id>1598282233323516-1</unique-id>
+	<command>/usr/bin/subl -n %F</command>
+	<description>Edit with Sublime Text</description>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
 </actions>
