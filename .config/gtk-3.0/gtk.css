@@ -1,0 +1,10 @@
+/*
+The minimum/maximum acceptable sizes for icon-size are 24/128 and for preview-size are 48/512.
+
+https://forum.xfce.org/viewtopic.php?id=13625
+*/
+#xfwm-tabwin {
+   -XfwmTabwinWidget-icon-size: 32px;
+   -XfwmTabwinWidget-preview-size: 160px; 
+}
+

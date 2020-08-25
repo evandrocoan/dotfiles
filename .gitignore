@@ -43,6 +43,11 @@
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
+!/.config/
+!/.config/gtk-3.0/
+!/.config/gtk-3.0/**
+/.config/gtk-3.0/bookmarks
+
 !/.config/Thunar/**
 !/.config/ksysguardrc
 !/.config/autokey/**
