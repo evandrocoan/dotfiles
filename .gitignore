@@ -50,6 +50,9 @@
 
 !/.config/okularpartrc
 
+!/.config/copyq/
+!/.config/copyq/copyq.conf
+
 !/.config/Thunar/**
 !/.config/ksysguardrc
 !/.config/autokey/**
