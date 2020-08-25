@@ -244,6 +244,7 @@ sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller;
 sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace;
 sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch;
 sudo apt-get install terminator thunar-archive-plugin xfce4-screenshooter;
+sudo apt-get install gparted;
 pip install setuptools;
 pip3 install setuptools;
 pip install wheel;
