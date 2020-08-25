@@ -186,15 +186,8 @@ Setup it to start maximized with:
 
 ### Enable hibernation
 
-Do not hibernate to a SWAP file because this is a new implementation and
-it is very bugged.
-It will take you computer from 10 to 30 minutes to come out from the hibernation,
-if you hibernating to a SWAP file!
-Create an SWAP Partition instead of a SWAP file to do hibernation!
-Even if,
-hibernating to a SWAP partition,
-it takes from 5 to 30 minutes to come out from the hibernation,
-you need to install an SSD drive of 16 or 32 GB,
+It will take you computer from 10 to 30 minutes to come out from the hibernation.
+To speed things up, you need to install an SSD drive of 16 or 32 GB,
 depending on how much memory do you use.
 Remember,
 the SWAP partition must hold all you RAM memory,
@@ -210,13 +203,31 @@ including the actual virtual memory already on the SWAP partition.
 1. https://askubuntu.com/questions/180730/how-do-i-restore-a-swap-partition-i-accidentally-deleted
 1. https://www.cyberciti.biz/faq/linux-add-a-swap-file-howto/
 
-Enable super user account login with `su`:
-```sh
-sudo passwd root
+### Extension Swap Partition/File
 
-# https://askubuntu.com/questions/20450/disable-root-account-in-ubuntu
-sudo passwd -l root
-```
+Instead of expanding a SWAP partition, just create a swap file instead!
+
+1. sudo swapon --show
+   ```
+   NAME      TYPE      SIZE USED PRIO
+   /dev/sda2 partition 1.9G   0B   -2
+   ```
+1. `sudo fallocate -l 1G /swapfile`
+1. `sudo chmod 600 /swapfile`
+1. `sudo mkswap /swapfile`
+1. `sudo swapon /swapfile`
+1. `sudo nano /etc/fstab`
+1. And paste the following line:
+   ```
+   /swapfile swap swap defaults 0 0
+   ```
+1. `sudo swapon --show`
+   ```
+   NAME      TYPE  SIZE   USED PRIO
+   /swapfile file 1024M 507.4M   -1
+   ```
+1. `sudo free -h`
+1. https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/
 
 ### ksuperkey
 
@@ -224,6 +235,13 @@ sudo passwd -l root
 1. Remove the `Super+L` to `xfce4-popup-whiskermenu` on `All Settings -> Keyboard -> Applications Shortcuts` and add it to `Super_L|m`
 1. Then, run the command `ksuperkey -e 'Super_L=Super_L|m'` on system startup.
 
+Enable super user account login with `su`:
+```sh
+sudo passwd root
+
+# https://askubuntu.com/questions/20450/disable-root-account-in-ubuntu
+sudo passwd -l root
+```
 
 ### Ksysguard & others
 
@@ -242,9 +260,10 @@ sudo apt-get install audacity gnome-gmail ksysguard wmctrl;
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload;
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller;
 sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace;
-sudo apt-get install xfce4-terminal gnome-disk-utility speedcrunch;
-sudo apt-get install terminator thunar-archive-plugin xfce4-screenshooter;
-sudo apt-get install gparted;
+sudo apt-get install gnome-disk-utility speedcrunch;
+sudo apt-get install terminator thunar-archive-plugin gparted p7zip-full;
+sudo apt-get install xfce4-power-manager xfce4-systemload-plugin xfce4-screenshooter;
+sudo apt-get install xfce4-terminal;
 pip install setuptools;
 pip3 install setuptools;
 pip install wheel;
