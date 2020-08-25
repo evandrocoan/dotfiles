@@ -281,7 +281,7 @@ sudo apt-get install audacity gnome-gmail ksysguard wmctrl;
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload;
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller;
 sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace;
-sudo apt-get install gnome-disk-utility speedcrunch;
+sudo apt-get install gnome-disk-utility speedcrunch okular;
 sudo apt-get install terminator thunar-archive-plugin gparted p7zip-full;
 sudo apt-get install xfce4-power-manager xfce4-systemload-plugin xfce4-screenshooter;
 sudo apt-get install xfce4-terminal xfdashboard;
