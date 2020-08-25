@@ -264,6 +264,12 @@ sudo passwd root
 sudo passwd -l root
 ```
 
+### Disable auto update pop up
+
+1. `sudo vim /etc/apt/apt.conf.d/99update-notifier`
+1. Add `#` in front of `DPkg::Post-Invoke {"if ...`
+1. https://askubuntu.com/questions/218755/how-to-disable-the-update-manager-popup
+
 ### Ksysguard & others
 
 Add ppa repositories:
