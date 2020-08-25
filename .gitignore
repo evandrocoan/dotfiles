@@ -51,3 +51,6 @@
 !/.config/Thunar/**
 !/.config/ksysguardrc
 !/.config/autokey/**
+
+!/scripts/
+!/scripts/**

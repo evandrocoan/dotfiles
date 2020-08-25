@@ -203,6 +203,27 @@ including the actual virtual memory already on the SWAP partition.
 1. https://askubuntu.com/questions/180730/how-do-i-restore-a-swap-partition-i-accidentally-deleted
 1. https://www.cyberciti.biz/faq/linux-add-a-swap-file-howto/
 
+### Disable Suspention/Hibernation Wake Up
+
+By default almost any device can wake up your computer.
+To disable this,
+create the file `vim /etc/systemd/system/wakeup-events.service`
+```
+[Unit]
+Description=Disable wakeup events on startup
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash ~/scripts/wakeup-events.sh
+
+[Install]
+WantedBy=multi-user.target
+```
+And run `sudo systemctl enable wakeup-events`
+```
+Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.service → /etc/systemd/system/wakeup-events.service.
+```
+
 ### Extension Swap Partition/File
 
 Instead of expanding a SWAP partition, just create a swap file instead!
