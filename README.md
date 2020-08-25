@@ -46,6 +46,10 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. **`git config --global core.excludesfile ~/.gitignore_global`**
    1. https://stackoverflow.com/questions/7335420/global-git-ignore
 
+1. Fix `~/.ssh/config` permissions:
+   1. `chmod 600 ~/.ssh/config`
+   1. https://serverfault.com/questions/253313/ssh-returns-bad-owner-or-permissions-on-ssh-config
+
 1. After installing, reload the `XFCE` components, so the settings does not get overridden.
 
    This should reload the `XFCE` panel components:
