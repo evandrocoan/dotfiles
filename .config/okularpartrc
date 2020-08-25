@@ -1,0 +1,8 @@
+[General]
+ttsEngine=flite
+
+[PageView]
+MouseMode=TextSelect
+
+[Zoom]
+ZoomMode=0
