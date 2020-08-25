@@ -1,21 +1,21 @@
 [global_config]
-  always_split_with_profile = True
-  enabled_plugins = InactivityWatch, ActivityWatch, LaunchpadCodeURLHandler, APTURLHandler, Logger, LaunchpadBugURLHandler
   geometry_hinting = True
-  scroll_tabbar = True
-  tab_position = hidden
   window_state = maximise
+  tab_position = hidden
+  scroll_tabbar = True
+  enabled_plugins = InactivityWatch, ActivityWatch, LaunchpadCodeURLHandler, APTURLHandler, Logger, LaunchpadBugURLHandler
+  always_split_with_profile = True
 [keybindings]
+  zoom_in = <Primary>equal
+  zoom_out = <Primary>minus
+  zoom_normal = <Alt>equal
   close_term = None
   close_window = None
-  move_tab_left = <Primary><Shift>Page_Down
   move_tab_right = <Primary><Shift>Page_Up
-  new_terminator = <Primary><Shift>i
-  new_window = <Primary><Shift>n
+  move_tab_left = <Primary><Shift>Page_Down
   next_tab = None
   prev_tab = None
   switch_to_tab_1 = <Primary>1
-  switch_to_tab_10 = <Primary>0
   switch_to_tab_2 = <Primary>2
   switch_to_tab_3 = <Primary>3
   switch_to_tab_4 = <Primary>4
@@ -24,9 +24,123 @@
   switch_to_tab_7 = <Primary>7
   switch_to_tab_8 = <Primary>8
   switch_to_tab_9 = <Primary>9
-  zoom_in = <Primary>equal
-  zoom_normal = <Alt>equal
-  zoom_out = <Primary>minus
+  switch_to_tab_10 = <Primary>0
+  new_window = <Primary><Shift>n
+  new_terminator = <Primary><Shift>i
+[profiles]
+  [[default]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
+    use_system_font = False
+    split_to_group = True
+  [[Debian10Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="root@10.3.50.183"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    use_system_font = False
+    split_to_group = True
+  [[Debian7Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="root@10.3.50.180"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    use_system_font = False
+    split_to_group = True
+  [[Debian8Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="root@10.3.50.181"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    use_system_font = False
+    split_to_group = True
+  [[Debian9Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="root@10.3.50.182"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    use_system_font = False
+    split_to_group = True
+  [[RootProfile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
+    use_system_font = False
+    split_to_group = True
+  [[Ubuntu19Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    use_system_font = False
+    split_to_group = True
+  [[WindowsProfile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="@10.5.0.16"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    use_system_font = False
+    encoding = WINDOWS-1252
+    split_to_group = True
 [layouts]
   [[default]]
     [[[child1]]]
@@ -584,117 +698,3 @@
       type = Terminal
       uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
 [plugins]
-[profiles]
-  [[default]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[Debian10Profile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.183"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[Debian7Profile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.180"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[Debian8Profile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.181"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[Debian9Profile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.182"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[RootProfile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[Ubuntu19Profile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = '''sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
-  [[WindowsProfile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    custom_command = '''sshlogin="@10.5.0.16"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
-    encoding = WINDOWS-1252
-    exit_action = restart
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    login_shell = True
-    scrollback_lines = 10000000
-    show_titlebar = False
-    split_to_group = True
-    use_custom_command = True
-    use_system_font = False
