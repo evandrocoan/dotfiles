@@ -54,3 +54,6 @@
 
 !/scripts/
 !/scripts/**
+
+!/.ssh/
+!/.ssh/config
