@@ -12,6 +12,7 @@
 echo XHC > /proc/acpi/wakeup
 echo RP09 > /proc/acpi/wakeup
 echo RP13 > /proc/acpi/wakeup
+echo LID0 > /proc/acpi/wakeup
 
 # https://unix.stackexchange.com/questions/236127/acpi-wakeup-4-letters-code-meaning
 # RP0x or EXPx: PCIE slot #x (aka PCI Express Root Port #x)
