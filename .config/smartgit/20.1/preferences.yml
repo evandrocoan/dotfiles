@@ -46,9 +46,8 @@ logSettings:
     key-id: true
     key-message: true
     key-ref: true
-    enteredPattern: 7ab7546f17b38406ac9dbc252ca4d9197bdd3c94
 comparePreviewSettings: {compareType: working-tree-vs-index, selectCompareTypeAutomatically: true}
-dateFormat: {datePattern: MM/dd/yyyy, timePattern: 'hh:mm a', timeZone: '', showTimeForLastDays: true}
+dateFormat: {datePattern: yyyy/MM/dd, timePattern: 'HH:mm:ss', timeZone: '', showTimeForLastDays: true}
 defaultViewSettings:
   compareSettings:
     textSettings: {tabSize: 4, whitespaces: 2, showLineNumbers: true}
@@ -64,11 +63,11 @@ git:
   useSystemGitFlow: false
   maxCount: 3
   executable: /usr/bin/git
-  alternatives: [/usr/bin/git]
+  alternatives: [/bin/git, /usr/bin/git]
 hg:
   maxCount: 3
   alternatives: []
-ssh: {useOwnSshClient: true}
+ssh: {useOwnSshClient: false}
 deepGit2: {followRenames: true, extendLineToBlock: true, optimizeCreationOrigins: true,
   ignoreWhitespaceOnlyChanges: true, showLineNumbers: true, highlightBlameChanges: false,
   highlightOriginChanges: false, preferSimpleBlamePerspective: true, lineHistoryVisible: false}
@@ -144,7 +143,7 @@ listx: {ePP: 1600447840289, eUT: -9223372036854775808, nRT: -9223372036854775808
 project: {reopenLastUsedRepositories: true, showWelcomeDialog: false, preferLogWindow: false}
 uiSettings: {useBackgroundColorInFileTable: true, fileSearchPatternType: 1, themeChanged: false,
   theme: auto}
-vcsRecords: {lastGitUsage: 1598447291991, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
+vcsRecords: {lastGitUsage: 1600452100894, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
   lastDgUsage: 1598448918017}
 updateCheck: {mode: download, prevCheckTime: 1600450886231, checkedBuild: 15176, upgradeInstallation: false,
   previewAlwaysCheckForLatestBuild: false}
@@ -152,14 +151,14 @@ proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
 spellCheck:
   dictionaries:
-  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   - {name: Portuguese (Brazilian), file: /myfiles/Programs/SpellCheckDicts/Portuguese
       (Brazilian).dic}
+  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   personalFile: ${smartgit.settings}/my-words.dic
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
   useOnlyBestOfficial: false
   deleted: false
-  activeDictionary: 0
+  activeDictionary: 1
 warnForMissingMasterPassword: false
 askForMasterPasswordOnStartup: false
 sendStacktraces2: true
@@ -168,5 +167,5 @@ machineId: f3f90f38
 lastUsedVersion: '20.1'
 tempDirs: [/tmp/smartgit15774006280725035718]
 updateCheckDg: {prevCheckTime: 1580489666669, checkedBuild: 5005}
-upgradedFromVersion: '18.2'
+upgradedFromVersion: '19.1'
 firstUsedTime: 1569505697899

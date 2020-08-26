@@ -2,14 +2,10 @@ git:
   projectToolBar-17:
     items:
     - {id: fetch}
+    - {id: sync}
     - {id: push}
     - {stretching: false}
-    - {id: flowContext}
-    - {stretching: false}
-    - {id: merge}
-    - {id: rebaseHeadTo}
     - {id: commit}
-    - {id: branchAbort}
     - {stretching: true}
     - {id: stage}
     - {id: indexEditor}
@@ -20,15 +16,14 @@ git:
     - {id: stashSave}
     - {id: stashApply}
     - {stretching: true}
-    - {id: delete}
-    - {id: branchAddTag}
-    - {stretching: true}
     - {id: logRepository}
     - {id: annotate}
     - {id: investigate}
     - {stretching: true}
-    - {id: windowLayoutSetMain}
-    - {id: windowLayoutSetReview}
+    - {id: flowContext}
+    - {stretching: false}
+    - {id: merge}
+    - {id: rebaseHeadTo}
     textBelowIcon: true
     visible: true
   logToolBar-18.2:

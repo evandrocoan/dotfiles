@@ -98,4 +98,18 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: false
+- id: revealInNautilus
+  name: Reveal in Files (Nautilus)
+  fileStarter: {command: /usr/bin/nautilus, parameters: '${fileUri}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+- id: openGnomeTerminal
+  name: Open Terminal
+  fileStarter: {command: /usr/bin/gnome-terminal, parameters: '--working-directory
+      ${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: false
 manuallyDeletedIds: []
