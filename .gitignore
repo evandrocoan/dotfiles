@@ -43,7 +43,6 @@
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
-!/.config/
 !/.config/gtk-3.0/
 !/.config/gtk-3.0/**
 /.config/gtk-3.0/bookmarks
@@ -53,8 +52,10 @@
 !/.config/copyq/
 !/.config/copyq/copyq.conf
 
+!/.config/Thunar/
 !/.config/Thunar/**
 !/.config/ksysguardrc
+!/.config/autokey/
 !/.config/autokey/**
 
 !/scripts/
