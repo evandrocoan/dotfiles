@@ -61,6 +61,7 @@
       <property name="&lt;Primary&gt;&lt;Super&gt;Right" type="string" value="movescreen.py right"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Left" type="string" value="movescreen.py left"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="x-terminal-emulator"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;ccedilla" type="string" value="google-chrome --start-maximized --new-window"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
