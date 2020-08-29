@@ -1,0 +1,31 @@
+fileManager:
+  recentPaths:
+    maxPaths: 500
+    paths: [/home/evandro_coan]
+  dirLeft:
+    columnWidths:
+    - {name: Name, width: 454, width2x: 0}
+    - {name: Ext., width: 28, width2x: 0}
+    - {name: Size, width: 35, width2x: 0}
+    - {name: Time, width: 117, width2x: 0}
+    - {name: Attr., width: 75, width2x: 0}
+    - {name: '', width: 38, width2x: 0}
+    lastDir: /home/evandro_coan
+  dirRight:
+    columnWidths:
+    - {name: Name, width: 454, width2x: 0}
+    - {name: Ext., width: 28, width2x: 0}
+    - {name: Size, width: 35, width2x: 0}
+    - {name: Time, width: 117, width2x: 0}
+    - {name: Attr., width: 75, width2x: 0}
+    - {name: '', width: 38, width2x: 0}
+    lastDir: /home/evandro_coan
+  checkSumColumnWidth: []
+  lastUsedSide: left
+directory.fileTable: {}
+confirmations: {}
+bounds:
+- {key: main, x: 240, y: 58, width: 1440, height: 872}
+- {key: welcome, x: 659, y: 213, width: 601, height: 620}
+- {key: fileCompare, x: 0, y: 0, width: 1440, height: 872, state: 1}
+tempDirs: [/tmp/smartsynchronize-4230007871641029580]

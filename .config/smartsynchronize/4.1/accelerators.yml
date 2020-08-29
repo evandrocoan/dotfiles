@@ -1,0 +1,3 @@
+global:
+- {action: tool-reveal, keyStroke: SHIFT+F3}
+- {action: tool-terminal, keyStroke: NUMPAD_DIVIDE}

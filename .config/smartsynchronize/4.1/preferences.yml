@@ -1,0 +1,103 @@
+globalTextComponent:
+  font: {family: Ubuntu Mono, size: 11}
+  actions: {focusNextChangeAfterTakingChange: false, homeEndToLineNotDocument: true,
+    smartHome: true, cursorLeftRightLimitToLine: true, smartEnterAutoIndent: true,
+    smartEnterIgnoreEmptyLinesForIndentation: true, smartEnterDeleteWhitespace: true}
+  syntaxHighlightingSettings:
+    entries:
+    - {language: ANTLR4, pattern: '*.g4'}
+    - {language: Basic, pattern: '*.basic, *.cbm, *.vb, *.vbs'}
+    - {language: C#, pattern: '*.cs'}
+    - {language: C/C++, pattern: '*.c, *.cc, *.cpp, *.cxx, *.cyc, *.h, *.ino, *.m'}
+    - {language: CMake, pattern: '*.cmake'}
+    - {language: CSS, pattern: '*.css, *.css-kw, *.css-str'}
+    - {language: Clojure, pattern: '*.clj'}
+    - {language: Cmd, pattern: '*.bat, *.cmd'}
+    - {language: Embedded Ruby Template, pattern: '*.erb'}
+    - {language: Go, pattern: '*.go'}
+    - {language: HTML, pattern: '*.htm, *.html, *.xhtml'}
+    - {language: InnoSetup, pattern: '*.iss'}
+    - {language: JSON, pattern: '*.json'}
+    - {language: Java, pattern: '*.java'}
+    - {language: JavaScript, pattern: '*.javascript, *.js'}
+    - {language: Kotlin, pattern: '*.kt'}
+    - {language: Mumps, pattern: '*.mumps'}
+    - {language: PHP, pattern: '*.php, *.php3, *.php4, *.php5, *.phps, *.phtml'}
+    - {language: Pascal, pattern: '*.pas, *.pascal'}
+    - {language: Perl, pattern: '*.perl, *.pl, *.pm'}
+    - {language: Properties, pattern: '*.properties'}
+    - {language: Python, pattern: '*.cv, *.py, *.python, *.pyw'}
+    - {language: Ruby, pattern: '*.rb, *.ruby'}
+    - {language: Rust, pattern: '*.rc, *.rs, *.rust'}
+    - {language: SQL, pattern: '*.sql'}
+    - {language: Scala, pattern: '*.scala'}
+    - {language: Shell Script, pattern: '*.bash, *.bsh, *.csh, *.sh'}
+    - {language: VHDL '93, pattern: '*.vhd, *.vhdl'}
+    - {language: XML, pattern: '*.mxml, *.storyboard, *.xib, *.xml'}
+    - {language: Yaml, pattern: '*.yaml, *.yml'}
+  colors.light: {color-annotation: 11564032, color-attrib-name: 255, color-attrib-value: 32768,
+    color-comment: 8421504, color-declaration: 0, color-keyword: 32768, color-literal: 255,
+    color-no-code: 0, color-plain-text: 0, color-punctuation: 16721920, color-source: 0,
+    color-string: 12583104, color-tag: 128, color-type: 4227200, foregroundText: 0,
+    foregroundGutter: 9868950, foregroundWhitespace: 12632256, foregroundTrailingWhitespace: 12624064,
+    foregroundCompactSeparator: 10526880, backgroundEditable: 16777215, backgroundReadOnly: 16185078,
+    backgroundGutter: 16316661, backgroundCurrentLine: 16185004, backgroundModified: 16763080,
+    backgroundAdded: 12513470, backgroundRemoved: 13158655, backgroundConflict: 16755370,
+    backgroundCompactSeparator: 15132390, backgroundModifiedCS: 16763080, backgroundAddedCS: 12513470,
+    backgroundRemovedCS: 13158655, highlightCurrentLine: false}
+  colors.dark: {color-annotation: 13092749, color-attrib-name: 9291719, color-attrib-value: 12558303,
+    color-comment: 8421504, color-declaration: 14002858, color-keyword: 10733475,
+    color-literal: 11184853, color-no-code: 12632256, color-plain-text: 12566463,
+    color-punctuation: 12561045, color-source: 12632256, color-string: 14002901, color-tag: 10274701,
+    color-type: 11513807}
+  colors.useDark: false
+defaultTextView:
+  compareSettings:
+    textSettings: {whitespaces: 0}
+directoryCompare:
+  defaultProfileSettings:
+    compare:
+      filter:
+        fileExcludePatterns: []
+        directoryIncludePatterns: []
+        directoryExcludePatterns: []
+      quickCompare: false
+      useFileAgeThreshold: false
+      fileAgeThreshold: 365
+      inspectEOLForChangeOverview: true
+      evaluateLineBasedChanges: true
+    encoding: {}
+    showCompareSettingsOnRefresh: false
+    displayFileTimeState: true
+list32: {ePP: 1598322888486, eUT: -9223372036854775808, nRT: -9223372036854775808,
+  eV: '4.1', uid: x29339198760}
+updateCheck: {mode: download, upgradeInstallation: false, prevCheckTime: 1598556384460,
+  checkedBuild: 4074}
+proxySettings: {enabled: false, autoDetect: true}
+proxyPassword: {}
+dateFormat: {datePattern: yyyy-MM-dd, timePattern: 'HH:mm', showTimeForLastDays: true}
+fileManager:
+  favorites:
+  - {name: Home, path: /home/evandro_coan}
+  - {name: Downloads, path: /home/evandro_coan/Downloads}
+  sortings:
+    pathSortings:
+    - {path: /home/evandro_coan/Downloads, sorting: Time}
+  ui: {}
+  tools:
+    7zipExecutable: /usr/bin/7z
+    edit:
+    - {pattern: '*', command: gedit, parameters: '${file}'}
+    tools:
+    - {id: open, name: Open File, fileNamePattern: '*', command: xdg-open, parameters: '${file}'}
+    - {id: reveal, name: Reveal in Files (Nautilus), fileNamePattern: '', command: /usr/bin/nautilus,
+      parameters: '${fileOrDir}'}
+    - {id: executeInTerminal, name: Execute in Terminal, fileNamePattern: '*.sh',
+      command: /usr/bin/gnome-terminal, parameters: '--working-directory ${currentDir}
+        -- ${file}'}
+    - {id: terminal, name: Open Terminal, fileNamePattern: '', command: /usr/bin/gnome-terminal,
+      parameters: '--working-directory ${currentDir}'}
+openFileManager: false
+sendStacktraces2: true
+theme: auto
+themeChanged: false

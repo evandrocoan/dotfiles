@@ -30,6 +30,17 @@
 !/.config/smartgit/19.1/accelerators.yml
 !/.config/smartgit/19.1/ui-config.yml
 
+!/.config/smartsynchronize/
+!/.config/smartsynchronize/4.1/
+!/.config/smartsynchronize/4.1/accelerators.yml
+!/.config/smartsynchronize/4.1/logger.properties
+!/.config/smartsynchronize/4.1/notifications.yml
+!/.config/smartsynchronize/4.1/port
+!/.config/smartsynchronize/4.1/preferences.yml
+!/.config/smartsynchronize/4.1/profiles.yml
+!/.config/smartsynchronize/4.1/smartsynchronize.properties
+!/.config/smartsynchronize/4.1/state.yml
+
 # https://stackoverflow.com/questions/5261959/unignore-subdirectories-of-ignored-directories-in-git
 !/.local/
 !/.local/git-prompt.sh
