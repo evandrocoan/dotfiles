@@ -1,58 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <channel name="xfce4-panel" version="1.0">
-  <property name="configver" type="empty"/>
+  <property name="configver" type="int" value="2"/>
   <property name="panels" type="array">
     <value type="int" value="1"/>
     <value type="int" value="2"/>
     <property name="panel-1" type="empty">
-      <property name="position" type="empty"/>
-      <property name="length" type="empty"/>
+      <property name="position" type="string" value="p=8;x=1994;y=743"/>
+      <property name="length" type="uint" value="100"/>
       <property name="position-locked" type="bool" value="true"/>
-      <property name="size" type="empty"/>
-      <property name="background-style" type="empty"/>
+      <property name="size" type="uint" value="32"/>
+      <property name="background-style" type="uint" value="0"/>
       <property name="background-alpha" type="empty"/>
       <property name="enter-opacity" type="empty"/>
       <property name="leave-opacity" type="empty"/>
       <property name="plugin-ids" type="array">
-        <value type="int" value="1"/>
-        <value type="int" value="6"/>
-        <value type="int" value="7"/>
-        <value type="int" value="8"/>
-        <value type="int" value="9"/>
-        <value type="int" value="11"/>
         <value type="int" value="3"/>
+        <value type="int" value="12"/>
         <value type="int" value="5"/>
       </property>
-      <property name="autohide-behavior" type="uint" value="0"/>
+      <property name="autohide-behavior" type="uint" value="2"/>
       <property name="disable-struts" type="bool" value="false"/>
       <property name="span-monitors" type="bool" value="false"/>
       <property name="length-adjust" type="bool" value="true"/>
-      <property name="output-name" type="string" value="monitor-0"/>
+      <property name="output-name" type="string" value="Automatic"/>
+      <property name="mode" type="uint" value="0"/>
+      <property name="icon-size" type="uint" value="0"/>
+      <property name="nrows" type="uint" value="1"/>
     </property>
     <property name="panel-2" type="empty">
       <property name="position" type="string" value="p=8;x=2016;y=1055"/>
       <property name="span-monitors" type="bool" value="false"/>
       <property name="plugin-ids" type="array">
         <value type="int" value="4"/>
+        <value type="int" value="16"/>
         <value type="int" value="2"/>
+        <value type="int" value="11"/>
+        <value type="int" value="13"/>
+        <value type="int" value="15"/>
+        <value type="int" value="17"/>
+        <value type="int" value="6"/>
+        <value type="int" value="8"/>
+        <value type="int" value="1"/>
+        <value type="int" value="14"/>
       </property>
       <property name="background-style" type="uint" value="0"/>
-      <property name="output-name" type="string" value="monitor-1"/>
+      <property name="output-name" type="string" value="Automatic"/>
       <property name="mode" type="uint" value="0"/>
       <property name="length-adjust" type="bool" value="true"/>
       <property name="length" type="uint" value="100"/>
       <property name="size" type="uint" value="32"/>
       <property name="position-locked" type="bool" value="true"/>
       <property name="disable-struts" type="bool" value="false"/>
-      <property name="autohide-behavior" type="uint" value="2"/>
+      <property name="autohide-behavior" type="uint" value="0"/>
     </property>
   </property>
   <property name="plugins" type="empty">
-    <property name="plugin-1" type="empty"/>
-    <property name="plugin-2" type="string" value="tasklist"/>
-    <property name="plugin-3" type="string" value="systemload">
-      <property name="items" type="empty"/>
+    <property name="plugin-1" type="string" value="clock">
+      <property name="timezone" type="string" value=""/>
+      <property name="digital-format" type="string" value="%a %d - %H:%M:%S"/>
+    </property>
+    <property name="plugin-2" type="string" value="tasklist">
+      <property name="sort-order" type="uint" value="1"/>
+      <property name="flat-buttons" type="bool" value="false"/>
     </property>
     <property name="plugin-4" type="string" value="whiskermenu">
       <property name="items" type="empty"/>
@@ -62,60 +72,9 @@
       <property name="tooltip-format" type="string" value="%a %d - %H:%M:%S"/>
       <property name="digital-format" type="string" value="%a %d - %H:%M:%S"/>
       <property name="timezone" type="string" value=""/>
+      <property name="mode" type="uint" value="2"/>
     </property>
-    <property name="plugin-6" type="empty">
-      <property name="show-handle" type="bool" value="false"/>
-      <property name="middle-click" type="uint" value="0"/>
-      <property name="sort-order" type="uint" value="1"/>
-      <property name="grouping" type="uint" value="0"/>
-      <property name="show-wireframes" type="bool" value="false"/>
-      <property name="flat-buttons" type="bool" value="false"/>
-      <property name="window-scrolling" type="bool" value="false"/>
-      <property name="include-all-monitors" type="bool" value="true"/>
-    </property>
-    <property name="plugin-7" type="empty">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="empty"/>
-    </property>
-    <property name="plugin-8" type="empty">
-      <property name="names-visible" type="array">
-        <value type="string" value="system-config-printer"/>
-        <value type="string" value="nemo"/>
-        <value type="string" value="skype"/>
-        <value type="string" value="skypeforlinux"/>
-      </property>
-      <property name="show-frame" type="bool" value="true"/>
-      <property name="names-hidden" type="array">
-        <value type="string" value="thunar"/>
-        <value type="string" value="alarm-clock-applet"/>
-        <value type="string" value="mintupdate.py"/>
-        <value type="string" value="qps"/>
-        <value type="string" value="task manager"/>
-        <value type="string" value="networkmanager applet"/>
-        <value type="string" value="indicator-multiload"/>
-        <value type="string" value="network"/>
-        <value type="string" value="shutter"/>
-        <value type="string" value="zoiper"/>
-        <value type="string" value="autokey-gtk"/>
-        <value type="string" value="linphone"/>
-        <value type="string" value="zoiper5"/>
-        <value type="string" value="flameshot"/>
-        <value type="string" value="teamviewer"/>
-        <value type="string" value="anydesk"/>
-        <value type="string" value="xfce4-power-manager"/>
-        <value type="string" value="alarm clock"/>
-        <value type="string" value="last.fm"/>
-        <value type="string" value="rhythmbox"/>
-        <value type="string" value="copyq"/>
-        <value type="string" value="ktimer"/>
-        <value type="string" value="twinkle"/>
-        <value type="string" value="remmina"/>
-      </property>
-      <property name="size-max" type="uint" value="64"/>
-    </property>
-    <property name="plugin-9" type="empty"/>
-    <property name="plugin-10" type="empty"/>
-    <property name="plugin-11" type="empty">
+    <property name="plugin-11" type="string" value="separator">
       <property name="enable-keyboard-shortcuts" type="empty"/>
       <property name="enable-mpris" type="empty"/>
       <property name="mixer-command" type="empty"/>
@@ -123,9 +82,48 @@
       <property name="mpris-players" type="string" value="chrome.instance10317;chrome.instance17576;chrome.instance18304;chrome.instance18372;chrome.instance2090;chrome.instance2737;chrome.instance32023;chrome.instance3442;chrome.instance465;chrome.instance7707;rhythmbox;xplayer"/>
       <property name="enable-wnck" type="bool" value="false"/>
       <property name="blacklisted-players" type="string" value="rhythmbox"/>
+      <property name="style" type="uint" value="0"/>
+      <property name="expand" type="bool" value="true"/>
     </property>
-    <property name="plugin-12" type="empty">
+    <property name="plugin-12" type="string" value="separator">
       <property name="digital-format" type="empty"/>
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
     </property>
+    <property name="plugin-3" type="string" value="tasklist"/>
+    <property name="plugin-13" type="string" value="systray">
+      <property name="names-ordered" type="array">
+        <value type="string" value="autokey-gtk"/>
+        <value type="string" value="teamviewer"/>
+        <value type="string" value="xfce4-power-manager"/>
+        <value type="string" value="update-notifier"/>
+        <value type="string" value="networkmanager applet"/>
+        <value type="string" value="twinkle"/>
+        <value type="string" value="zoiper5"/>
+        <value type="string" value="flameshot"/>
+        <value type="string" value="skypeforlinux"/>
+        <value type="string" value="thunar"/>
+        <value type="string" value="copyq"/>
+        <value type="string" value="network"/>
+      </property>
+      <property name="square-icons" type="bool" value="false"/>
+      <property name="names-hidden" type="array">
+        <value type="string" value="skypeforlinux"/>
+        <value type="string" value="autokey-gtk"/>
+        <value type="string" value="copyq"/>
+        <value type="string" value="flameshot"/>
+        <value type="string" value="teamviewer"/>
+      </property>
+      <property name="show-frame" type="bool" value="false"/>
+    </property>
+    <property name="plugin-14" type="string" value="showdesktop"/>
+    <property name="plugin-15" type="string" value="notification-plugin"/>
+    <property name="plugin-16" type="string" value="windowmenu"/>
+    <property name="plugin-17" type="string" value="pulseaudio">
+      <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
+      <property name="mpris-players" type="string" value="chrome.instance19621;chrome.instance321148"/>
+    </property>
+    <property name="plugin-6" type="string" value="power-manager-plugin"/>
+    <property name="plugin-8" type="string" value="systemload"/>
   </property>
 </channel>
