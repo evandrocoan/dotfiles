@@ -12,6 +12,7 @@
       </property>
       <property name="&lt;Primary&gt;&lt;Alt&gt;Delete" type="empty"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;l" type="empty"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="empty"/>
       <property name="XF86Display" type="empty"/>
       <property name="&lt;Super&gt;p" type="empty"/>
       <property name="&lt;Primary&gt;Escape" type="empty"/>
@@ -19,7 +20,6 @@
       <property name="XF86Mail" type="empty"/>
       <property name="Print" type="empty"/>
       <property name="Super_L" type="empty"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="empty"/>
     </property>
     <property name="custom" type="empty">
       <property name="&lt;Alt&gt;F2" type="empty">
@@ -37,8 +37,6 @@
       <property name="XF86WWW" type="string" value="exo-open --launch WebBrowser"/>
       <property name="override" type="bool" value="true"/>
       <property name="&lt;Super&gt;l" type="string" value="xflock4"/>
-      <property name="&lt;Primary&gt;&lt;Shift&gt;&lt;Alt&gt;parenleft" type="string" value="xfce4-popup-whiskermenu"/>
-      <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
       <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
       <property name="&lt;Alt&gt;&lt;Super&gt;KP_1" type="string" value="wmctrl -x -a minilyrics.exe.Wine"/>
       <property name="&lt;Alt&gt;&lt;Super&gt;KP_0" type="string" value="wmctrl -x -a aimp.exe.Wine"/>
@@ -61,6 +59,8 @@
       <property name="&lt;Primary&gt;&lt;Super&gt;Right" type="string" value="movescreen.py right"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Left" type="string" value="movescreen.py left"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="x-terminal-emulator"/>
+      <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
+      <property name="&lt;Super&gt;Tab" type="string" value="xfdashboard"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;ccedilla" type="string" value="google-chrome --start-maximized --new-window"/>
     </property>
   </property>
@@ -157,7 +157,6 @@
       <property name="&lt;Control&gt;&lt;Alt&gt;Down" type="string" value="down_workspace_key"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;End" type="string" value="move_window_next_workspace_key"/>
       <property name="Left" type="string" value="left_key"/>
-      <property name="&lt;Super&gt;Tab" type="string" value="switch_window_key"/>
       <property name="&lt;Alt&gt;&lt;Control&gt;End" type="string" value="move_window_next_workspace_key"/>
       <property name="&lt;Alt&gt;&lt;Control&gt;Home" type="string" value="move_window_prev_workspace_key"/>
       <property name="&lt;Control&gt;&lt;Shift&gt;&lt;Alt&gt;Right" type="string" value="move_window_right_key"/>
@@ -216,5 +215,8 @@
       <property name="&lt;Primary&gt;&lt;Alt&gt;Left" type="string" value="left_workspace_key"/>
     </property>
   </property>
-  <property name="providers" type="empty"/>
+  <property name="providers" type="array">
+    <value type="string" value="xfwm4"/>
+    <value type="string" value="commands"/>
+  </property>
 </channel>
