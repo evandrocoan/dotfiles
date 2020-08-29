@@ -3,7 +3,7 @@
   window_state = maximise
   tab_position = hidden
   scroll_tabbar = True
-  enabled_plugins = InactivityWatch, ActivityWatch, LaunchpadCodeURLHandler, APTURLHandler, Logger, LaunchpadBugURLHandler
+  enabled_plugins = LaunchpadBugURLHandler, LaunchpadCodeURLHandler, APTURLHandler, Logger, ActivityWatch, InactivityWatch
   always_split_with_profile = True
 [keybindings]
   zoom_in = <Primary>equal
