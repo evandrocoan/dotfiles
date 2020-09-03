@@ -54,7 +54,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
    This should reload the `XFCE` panel components:
    ```
-   xfce4-panel -r
+   # https://www.makeuseof.com/tag/refresh-linux-desktop-without-rebooting/
+   xfce4-panel -r && xfwm4 --replace &
    ```
 
    For other components, research how it could be done, or just install the settings by using another
