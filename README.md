@@ -61,6 +61,29 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    For other components, research how it could be done, or just install the settings by using another
    user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
+1. `sudo apt-get install anacron && sudo vim /etc/anacrontab`
+   ```sh
+   # the maximal random minutes delay added to the base delay of the jobs
+   RANDOM_DELAY=45
+
+   # the jobs will be started during the following hours only
+   START_HOURS_RANGE=3-22
+
+   # These replace cron's entries
+   # period in days    delay in minutes    job-identifier  command
+   1                   5                   cron.daily      run-parts --report /etc/cron.daily
+   7                   10                  cron.weekly     run-parts --report /etc/cron.weekly
+   @monthly            15                  cron.monthly    run-parts --report /etc/cron.monthly
+   1                   1                   kill-twinkle    killall -9 twinkle
+   ```
+   1. https://www.thegeekdiary.com/centos-rhel-anacron-basics-what-is-anacron-and-how-to-configure-it/
+   1. https://linux.die.net/man/5/anacrontab
+   1. https://unix.stackexchange.com/questions/18151/how-to-follow-links-in-linux-man-pages
+   1. https://askubuntu.com/questions/761658/manually-run-an-anacron-job
+   1. https://www.certdepot.net/rhel7-how-get-started-anacron/
+   1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
+
+
 
 ### Vim style cheat
 
