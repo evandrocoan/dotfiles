@@ -53,7 +53,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''sshlogin="root@10.3.50.183"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.183"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[Debian7Profile]]
@@ -67,7 +67,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''sshlogin="root@10.3.50.180"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.180"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[Debian8Profile]]
@@ -81,7 +81,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''sshlogin="root@10.3.50.181"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.181"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[Debian9Profile]]
@@ -95,7 +95,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''sshlogin="root@10.3.50.182"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.182"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[RootProfile]]
@@ -123,7 +123,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    custom_command = '''sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[WindowsProfile]]
@@ -137,7 +137,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''sshlogin="@10.5.0.16"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; sleep "$sleeptime"; done; bash;'''
+    custom_command = '''sshlogin="@10.5.0.16"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     encoding = WINDOWS-1252
     split_to_group = True
