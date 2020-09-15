@@ -77,7 +77,7 @@ alias octave='octave --no-gui -i'
 
 # https://stackoverflow.com/questions/15384025/bash-git-ps1-command-not-found/17508424
 # https://stackoverflow.com/questions/12870928/mac-bash-git-ps1-command-not-found
-source ~/.git-prompt.sh
+source ~/.local/git-prompt.sh
 
 
 PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
