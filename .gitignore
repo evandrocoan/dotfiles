@@ -74,3 +74,4 @@
 
 !/.ssh/
 !/.ssh/config
+*.log
