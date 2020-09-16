@@ -109,21 +109,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;
-    use_system_font = False
-    split_to_group = True
-  [[Ubuntu19Profile]]
-    background_darkness = 0.85
-    background_type = transparent
-    cursor_color = "#ffffff"
-    font = Monospace 13
-    foreground_color = "#ffffff"
-    show_titlebar = False
-    scrollback_lines = 10000000
-    exit_action = restart
-    login_shell = True
-    use_custom_command = True
-    custom_command = '''sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; sudo -E su; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; pwd; cd -; bash; pwd; cd "$(cat /tmp/last_used_cd.txt)"; pwd; cd "$(cat /tmp/last_used_pwd.txt)"; cd -;'''
     use_system_font = False
     split_to_group = True
   [[WindowsProfile]]
@@ -140,6 +126,20 @@
     custom_command = '''sshlogin="@10.5.0.16"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     encoding = WINDOWS-1252
+    split_to_group = True
+  [[Ubuntu19Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); ssh "$sshlogin"; printf '%s - Reconnecting ssh "%s" in "%s" seconds...\n' "$(date)" "$sshlogin" "$sleeptime"; answer=""; read -t "$sleeptime" -e -r -p "Press something and enter to exit: " answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    use_system_font = False
     split_to_group = True
 [layouts]
   [[default]]
