@@ -83,6 +83,9 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://www.certdepot.net/rhel7-how-get-started-anacron/
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
 
+1. For Ubuntu, disable the annoying daily update check:
+   1. `systemctl disable --now apt-daily{,-upgrade}.{timer,service}`
+   1. https://askubuntu.com/questions/1059971/disable-updates-from-command-line-in-ubuntu-16-04
 
 
 ### Vim style cheat
