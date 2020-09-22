@@ -252,6 +252,38 @@ And run `sudo systemctl enable wakeup-events`
 Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.service → /etc/systemd/system/wakeup-events.service.
 ```
 
+### Disable systemctl power options
+
+If you got a black screen after suspend the computer or locking the session and unlocking,
+you got the following problem:
+1. https://ubuntuforums.org/showthread.php?t=2392824
+1. https://bbs.archlinux.org/viewtopic.php?id=249053
+
+1. `sudo vim /etc/systemd/logind.conf`
+1. `systemctl restart systemd-logind.service`
+```
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+#
+# Entries in this file show the compile time defaults.
+# You can change settings by editing this file.
+# Defaults can be restored by simply deleting this file.
+#
+# See logind.conf(5) for details.
+
+[Login]
+HandlePowerKey=ignore
+HandleSuspendKey=ignore
+HandleHibernateKey=ignore
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+```
+
 ### Extension Swap Partition/File
 
 Instead of expanding a SWAP partition, just create a swap file instead!
