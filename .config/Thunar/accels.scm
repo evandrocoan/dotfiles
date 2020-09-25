@@ -2,6 +2,7 @@
 ; this file is an automated accelerator map dump
 ;
 ; (gtk_accel_path "<Actions>/ThunarActions/uca-action-1552616163094708-1" "")
+; (gtk_accel_path "<Actions>/ThunarBookmarks/70f6a95b7806b0f2861e96855a9d300c" "")
 ; (gtk_accel_path "<Actions>/ThunarBookmarks/3d15885b9e36c1ad6bfa65f32538ac4b" "")
 ; (gtk_accel_path "<Actions>/ThunarStandardView/invert-selection" "")
 ; (gtk_accel_path "<Actions>/ThunarBookmarks/e8361ac1174000ec291cd1b159fe8208" "")
@@ -27,9 +28,9 @@
 ; (gtk_accel_path "<Actions>/ThunarStandardView/properties" "<Alt>Return")
 ; (gtk_accel_path "<Actions>/ThunarLauncher/open-in-new-window" "<Primary><Shift>o")
 ; (gtk_accel_path "<Actions>/ThunarStandardView/back" "<Alt>Left")
-; (gtk_accel_path "<Actions>/ThunarStandardView/setup-columns" "")
 ; (gtk_accel_path "<Actions>/ThunarWindow/sendto-menu" "")
 ; (gtk_accel_path "<Actions>/ThunarStandardView/delete" "")
+; (gtk_accel_path "<Actions>/ThunarBookmarks/f5ff54339c11ce16ea2a875c5d3d25cb" "")
 ; (gtk_accel_path "<Actions>/ThunarActions/uca-action-1552353974025715-3" "")
 ; (gtk_accel_path "<Actions>/ThunarBookmarks/c5ffb7bda51ec3db4e4316c10ba90b8c" "")
 ; (gtk_accel_path "<Actions>/ThunarStandardView/select-by-pattern" "<Primary>s")
@@ -58,7 +59,7 @@
 ; (gtk_accel_path "<Actions>/ThunarWindow/close-window" "<Primary>q")
 ; (gtk_accel_path "<Actions>/ThunarStandardView/cut" "<Primary>x")
 ; (gtk_accel_path "<Actions>/ThunarWindow/switch-previous-tab" "<Primary>Page_Up")
-; (gtk_accel_path "<Actions>/ThunarBookmarks/f5ff54339c11ce16ea2a875c5d3d25cb" "")
+; (gtk_accel_path "<Actions>/ThunarBookmarks/ff7af7efcaad146152b2618ece374b46" "")
 ; (gtk_accel_path "<Actions>/ThunarActions/uca-action-1552353974025192-1" "")
 ; (gtk_accel_path "<Actions>/ThunarStandardView/sort-by-type" "")
 ; (gtk_accel_path "<Actions>/ThunarWindow/close-all-windows" "<Primary><Shift>w")
