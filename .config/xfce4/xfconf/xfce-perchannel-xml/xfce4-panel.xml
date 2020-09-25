@@ -93,6 +93,13 @@
     <property name="plugin-3" type="string" value="tasklist"/>
     <property name="plugin-13" type="string" value="systray">
       <property name="names-ordered" type="array">
+        <value type="string" value="remmina"/>
+        <value type="string" value="nemo"/>
+        <value type="string" value="autokey"/>
+        <value type="string" value="jami"/>
+        <value type="string" value="electron"/>
+        <value type="string" value="systray icon"/>
+        <value type="string" value="anydesk"/>
         <value type="string" value="autokey-gtk"/>
         <value type="string" value="teamviewer"/>
         <value type="string" value="xfce4-power-manager"/>
@@ -108,6 +115,7 @@
       </property>
       <property name="square-icons" type="bool" value="false"/>
       <property name="names-hidden" type="array">
+        <value type="string" value="autokey"/>
         <value type="string" value="skypeforlinux"/>
         <value type="string" value="autokey-gtk"/>
         <value type="string" value="copyq"/>
@@ -121,7 +129,7 @@
     <property name="plugin-16" type="string" value="windowmenu"/>
     <property name="plugin-17" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="mpris-players" type="string" value="chrome.instance19621;chrome.instance321148"/>
+      <property name="mpris-players" type="string" value="chrome.instance1795972;chrome.instance19621;chrome.instance2011951;chrome.instance2267337;chrome.instance321148;chrome.instance325435;chrome.instance7580"/>
     </property>
     <property name="plugin-6" type="string" value="power-manager-plugin"/>
     <property name="plugin-8" type="string" value="systemload"/>
