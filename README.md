@@ -83,10 +83,6 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://www.certdepot.net/rhel7-how-get-started-anacron/
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
 
-1. For Ubuntu, disable the annoying daily update check:
-   1. `systemctl disable --now apt-daily{,-upgrade}.{timer,service}`
-   1. https://askubuntu.com/questions/1059971/disable-updates-from-command-line-in-ubuntu-16-04
-
 
 ### Vim style cheat
 
@@ -332,6 +328,18 @@ sudo passwd -l root
 1. `sudo vim /etc/apt/apt.conf.d/99update-notifier`
 1. Add `#` in front of `DPkg::Post-Invoke {"if ...`
 1. https://askubuntu.com/questions/218755/how-to-disable-the-update-manager-popup
+
+1. For Ubuntu, disable the annoying daily update check:
+   1. `systemctl disable --now apt-daily{,-upgrade}.{timer,service}`
+   1. https://askubuntu.com/questions/1059971/disable-updates-from-command-line-in-ubuntu-16-04
+
+
+### Restart audio interface
+
+1. `pulseaudio -k && sudo alsa force-reload && sleep 2 && pulseaudio -k && sudo alsa force-reload`
+1. `sudo killall pulseaudio && sudo alsa force-reload && sleep 2 && sudo killall pulseaudio && sudo alsa force-reload`
+1. https://askubuntu.com/questions/15223/how-can-i-restart-pulseaudio-without-having-to-logout
+
 
 ### Ksysguard & others
 
