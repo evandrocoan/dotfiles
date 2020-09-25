@@ -385,7 +385,7 @@ pip3 install wheel python-language-server;
       * [.imwheelrc](.imwheelrc)
    1. https://wiki.archlinux.org/index.php/IMWheel
       * Use `imwheel -d --debug --kill` to list windows
-   1. Use `sudo killall -9 imwheel; sleep 2; imwheel` to restart the service
+   1. Use `sudo killall -9 imwheel; sleep 2; imwheel -b "4 5"` to restart the service
    1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
    1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
    1. Disable smooth scrolling on Google Chrome:
