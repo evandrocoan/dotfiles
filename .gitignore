@@ -57,6 +57,11 @@
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
+!/.config/xfce4/
+!/.config/xfce4/panel/
+!/.config/xfce4/panel/whiskermenu-1.rc
+!/.config/xfce4/panel/whiskermenu-4.rc
+
 !/.config/gtk-3.0/
 !/.config/gtk-3.0/**
 /.config/gtk-3.0/bookmarks
