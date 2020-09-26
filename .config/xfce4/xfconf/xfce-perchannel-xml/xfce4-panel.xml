@@ -37,10 +37,6 @@
         <value type="int" value="2"/>
         <value type="int" value="11"/>
         <value type="int" value="13"/>
-        <value type="int" value="15"/>
-        <value type="int" value="17"/>
-        <value type="int" value="6"/>
-        <value type="int" value="8"/>
         <value type="int" value="1"/>
         <value type="int" value="14"/>
       </property>
@@ -63,9 +59,6 @@
     <property name="plugin-2" type="string" value="tasklist">
       <property name="sort-order" type="uint" value="1"/>
       <property name="flat-buttons" type="bool" value="false"/>
-    </property>
-    <property name="plugin-4" type="string" value="whiskermenu">
-      <property name="items" type="empty"/>
     </property>
     <property name="plugin-5" type="string" value="clock">
       <property name="items" type="empty"/>
@@ -129,9 +122,10 @@
     <property name="plugin-16" type="string" value="windowmenu"/>
     <property name="plugin-17" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="mpris-players" type="string" value="chrome.instance1795972;chrome.instance19621;chrome.instance2011951;chrome.instance2267337;chrome.instance321148;chrome.instance325435;chrome.instance7580"/>
+      <property name="mpris-players" type="string" value="chrome.instance1795972;chrome.instance19621;chrome.instance2011951;chrome.instance2267337;chrome.instance321148;chrome.instance325435;chrome.instance497007;chrome.instance7580"/>
     </property>
     <property name="plugin-6" type="string" value="power-manager-plugin"/>
     <property name="plugin-8" type="string" value="systemload"/>
+    <property name="plugin-4" type="string" value="whiskermenu"/>
   </property>
 </channel>
