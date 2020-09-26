@@ -75,6 +75,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    7                   10                  cron.weekly     run-parts --report /etc/cron.weekly
    @monthly            15                  cron.monthly    run-parts --report /etc/cron.monthly
    1                   1                   kill-twinkle    killall -9 twinkle
+   1                   1                   kill-jami       killall -9 jami-gnome
+
+   # https://bigint.wordpress.com/2016/08/10/xfce-panel-hiding-maximized-window-title/
+   # https://forum.xfce.org/viewtopic.php?id=10836 - change xfwm4-settings through command line
+   # https://stackoverflow.com/questions/14612371/how-do-i-run-multiple-background-commands-in-bash-in-a-single-line
+   1                   1                   restart-xfwm4   sudo -u evandro_coan xfwm4 --replace & sleep 3 && xfconf-query -c xfwm4 -p /general/titleless_maximize -s false && sleep 2 && xfconf-query -c xfwm4 -p /general/titleless_maximize -s true
    ```
    1. https://www.thegeekdiary.com/centos-rhel-anacron-basics-what-is-anacron-and-how-to-configure-it/
    1. https://linux.die.net/man/5/anacrontab
@@ -82,6 +88,29 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://askubuntu.com/questions/761658/manually-run-an-anacron-job
    1. https://www.certdepot.net/rhel7-how-get-started-anacron/
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
+
+
+### Install XFCE from sources
+
+1. **`xfce4-panel / whiskermenu`**
+   ```bash
+   # The default branch is 4.14
+   git clone https://github.com/evandroforks/xfce4-panel
+   cd xfce4-panel
+
+   sudo apt-get build-dep xfce4-panel
+   ./autogen.sh
+   make
+   sudo make install
+
+   # if: ls /usr/local/lib/xfce4/panel-plugins is a file
+   # move it: mv /usr/local/lib/xfce4/panel-plugins{,old}
+   xfce4-panel -q && PANEL_DEBUG=1 xfce4-panel
+
+   # May be install it from source: https://github.com/gottcode/xfce4-whiskermenu-plugin/blob/master/INSTALL
+   # May be run: sudo cp /usr/lib/x86_64-linux-gnu/xfce4/panel/plugins/libwhiskermenu.so /usr/local/lib/xfce4/panel-plugins/
+   cp /usr/share/xfce4/panel/plugins/whiskermenu.desktop /usr/local/share/xfce4/panel/plugins/
+   ```
 
 
 ### Vim style cheat
