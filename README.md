@@ -295,7 +295,8 @@ Never use `dm-tool lock`!
 
 1. `sudo vim /etc/systemd/logind.conf`
 1. `sudo systemctl restart systemd-logind.service`
-   ```
+1. Configure systemd to handle suspend. (Do not use xfce4-power-manager)
+   ```shell
    #  This file is part of systemd.
    #
    #  systemd is free software; you can redistribute it and/or modify it
@@ -315,17 +316,28 @@ Never use `dm-tool lock`!
    HandleLidSwitch=ignore
    HandleLidSwitchExternalPower=ignore
    HandleLidSwitchDocked=ignore
+   # -->
+   # IdleAction=suspend
+   # IdleActionSec=30min
+   HandlePowerKey=suspend
+   HandleSuspendKey=suspend
+   HandleHibernateKey=ignore
+   HandleLidSwitch=ignore
+   HandleLidSwitchExternalPower=ignore
+   HandleLidSwitchDocked=ignore
    ```
-1. Add `/usr/bin/light-locker` to run on system start up (`Settings -> Sessions and Start up -> Application Auto Start -> (login)`)
+1. ~Add `/usr/bin/light-locker` to run on system start up (`Settings -> Sessions and Start up -> Application Auto Start -> (login)`)~
 1. `xfconf-query -c xfce4-session -p /general/LockCommand`
-1. `xfconf-query -c xfce4-session -p /general/LockCommand -s "light-locker-command --lock"`
+1. ~`xfconf-query -c xfce4-session -p /general/LockCommand -s "light-locker-command --lock"`~
+1. `xfconf-query -c xfce4-session -p /general/LockCommand -s ""`
 1. `sudo apt-get install xfce4-screensaver xscreensaver`
 1. `sudo vim /usr/bin/xflock4`
    ```sh
    ...
+   # "dm-tool switch-to-greeter" \
+   # "light-locker-command --lock" \
    for lock_cmd in \
        "$LOCK_CMD" \
-       "light-locker-command --lock" \
        "xfce4-screensaver-command --lock" \
        "xscreensaver-command -lock" \
        "gnome-screensaver-command --lock" \
