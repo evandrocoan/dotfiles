@@ -108,8 +108,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    xfce4-panel -q && PANEL_DEBUG=1 xfce4-panel
 
    # May be install it from source: https://github.com/gottcode/xfce4-whiskermenu-plugin/blob/master/INSTALL
-   # May be run: sudo cp /usr/lib/x86_64-linux-gnu/xfce4/panel/plugins/libwhiskermenu.so /usr/local/lib/xfce4/panel-plugins/
-   cp /usr/share/xfce4/panel/plugins/whiskermenu.desktop /usr/local/share/xfce4/panel/plugins/
+   sudo rsync -ar /usr/lib/x86_64-linux-gnu/xfce4/panel/plugins/ /usr/local/lib/xfce4/panel-plugins/
+   sudo rsync -ar /usr/share/xfce4/panel/plugins/ /usr/local/share/xfce4/panel/plugins/
    ```
 
 
