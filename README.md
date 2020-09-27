@@ -112,6 +112,21 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    sudo rsync -ar /usr/share/xfce4/panel/plugins/ /usr/local/share/xfce4/panel/plugins/
    ```
 
+1. **`xfwm4`**
+   ```bash
+   # The default branch is 4.14
+   git clone https://github.com/evandroforks/xfce4-xfwm4
+   cd xfce4-xfwm4
+
+   sudo apt-get build-dep xfce4-xfwm4
+   ./autogen.sh
+   make
+   sudo make install
+
+   xfwm4 --version
+   /usr/local/bin/xfwm4 --version
+   ```
+
 
 ### Vim style cheat
 
