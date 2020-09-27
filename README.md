@@ -259,6 +259,7 @@ including the actual virtual memory already on the SWAP partition.
 1. https://askubuntu.com/questions/180730/how-do-i-restore-a-swap-partition-i-accidentally-deleted
 1. https://www.cyberciti.biz/faq/linux-add-a-swap-file-howto/
 
+
 ### Disable Suspention/Hibernation Wake Up
 
 By default almost any device can wake up your computer.
@@ -280,37 +281,60 @@ And run `sudo systemctl enable wakeup-events`
 Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.service → /etc/systemd/system/wakeup-events.service.
 ```
 
+
 ### Disable systemctl power options
 
 If you got a black screen after suspend the computer or locking the session and unlocking,
 you got the following problem:
 1. https://ubuntuforums.org/showthread.php?t=2392824
 1. https://bbs.archlinux.org/viewtopic.php?id=249053
+1. https://github.com/the-cavalry/light-locker/issues/126 - Painful "You'll be redirected to the unlock dialog in a few seconds" - Does it have to be there?
+1. https://askubuntu.com/questions/1133341/xubuntu-18-10-light-locker-wrong-behavior
+
+Never use `dm-tool lock`!
 
 1. `sudo vim /etc/systemd/logind.conf`
-1. `systemctl restart systemd-logind.service`
-```
-#  This file is part of systemd.
-#
-#  systemd is free software; you can redistribute it and/or modify it
-#  under the terms of the GNU Lesser General Public License as published by
-#  the Free Software Foundation; either version 2.1 of the License, or
-#  (at your option) any later version.
-#
-# Entries in this file show the compile time defaults.
-# You can change settings by editing this file.
-# Defaults can be restored by simply deleting this file.
-#
-# See logind.conf(5) for details.
+1. `sudo systemctl restart systemd-logind.service`
+   ```
+   #  This file is part of systemd.
+   #
+   #  systemd is free software; you can redistribute it and/or modify it
+   #  under the terms of the GNU Lesser General Public License as published by
+   #  the Free Software Foundation; either version 2.1 of the License, or
+   #  (at your option) any later version.
+   #
+   # Entries in this file show the compile time defaults.
+   # You can change settings by editing this file.
+   # Defaults can be restored by simply deleting this file.
+   #
+   # See logind.conf(5) for details.
+   [Login]
+   HandlePowerKey=ignore
+   HandleSuspendKey=ignore
+   HandleHibernateKey=ignore
+   HandleLidSwitch=ignore
+   HandleLidSwitchExternalPower=ignore
+   HandleLidSwitchDocked=ignore
+   ```
+1. Add `/usr/bin/light-locker` to run on system start up (`Settings -> Sessions and Start up -> Application Auto Start -> (login)`)
+1. `xfconf-query -c xfce4-session -p /general/LockCommand`
+1. `xfconf-query -c xfce4-session -p /general/LockCommand -s "light-locker-command --lock"`
+1. `sudo apt-get install xfce4-screensaver xscreensaver`
+1. `sudo vim /usr/bin/xflock4`
+   ```sh
+   ...
+   for lock_cmd in \
+       "$LOCK_CMD" \
+       "light-locker-command --lock" \
+       "xfce4-screensaver-command --lock" \
+       "xscreensaver-command -lock" \
+       "gnome-screensaver-command --lock" \
+       "mate-screensaver-command --lock" \
+       ""
+   do
+   ...
+   ```
 
-[Login]
-HandlePowerKey=ignore
-HandleSuspendKey=ignore
-HandleHibernateKey=ignore
-HandleLidSwitch=ignore
-HandleLidSwitchExternalPower=ignore
-HandleLidSwitchDocked=ignore
-```
 
 ### Extension Swap Partition/File
 
@@ -338,6 +362,7 @@ Instead of expanding a SWAP partition, just create a swap file instead!
 1. `sudo free -h`
 1. https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/
 
+
 ### ksuperkey
 
 1. Clone and install https://github.com/hanschen/ksuperkey with `make` and `sudo make install`
@@ -351,6 +376,7 @@ sudo passwd root
 # https://askubuntu.com/questions/20450/disable-root-account-in-ubuntu
 sudo passwd -l root
 ```
+
 
 ### Disable auto update pop up
 
