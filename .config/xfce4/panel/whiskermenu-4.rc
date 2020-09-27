@@ -1,5 +1,5 @@
 favorites=exo-file-manager.desktop,exo-terminal-emulator.desktop,org.remmina.Remmina.desktop,google-chrome.desktop,jami-gnome.desktop,org.kde.ksysguard.desktop,twinkle.desktop,syntevo-smartsynchronize.desktop,syntevo-smartgit.desktop
-recent=exo-terminal-emulator.desktop
+recent=org.kde.ksysguard.desktop,light-locker-settings.desktop,xscreensaver-properties.desktop,xfce4-power-manager-settings.desktop,xfce4-screenshooter.desktop,exo-terminal-emulator.desktop
 button-icon=xfce4-whiskermenu
 button-single-row=false
 show-button-title=false
