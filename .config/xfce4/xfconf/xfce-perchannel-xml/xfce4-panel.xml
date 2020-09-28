@@ -35,7 +35,7 @@
         <value type="int" value="4"/>
         <value type="int" value="16"/>
         <value type="int" value="2"/>
-        <value type="int" value="11"/>
+        <value type="int" value="9"/>
         <value type="int" value="13"/>
         <value type="int" value="8"/>
         <value type="int" value="7"/>
@@ -69,17 +69,6 @@
       <property name="digital-format" type="string" value="%a %d - %H:%M:%S"/>
       <property name="timezone" type="string" value=""/>
       <property name="mode" type="uint" value="2"/>
-    </property>
-    <property name="plugin-11" type="string" value="separator">
-      <property name="enable-keyboard-shortcuts" type="empty"/>
-      <property name="enable-mpris" type="empty"/>
-      <property name="mixer-command" type="empty"/>
-      <property name="show-notifications" type="bool" value="false"/>
-      <property name="mpris-players" type="string" value="chrome.instance10317;chrome.instance17576;chrome.instance18304;chrome.instance18372;chrome.instance2090;chrome.instance2737;chrome.instance32023;chrome.instance3442;chrome.instance465;chrome.instance7707;rhythmbox;xplayer"/>
-      <property name="enable-wnck" type="bool" value="false"/>
-      <property name="blacklisted-players" type="string" value="rhythmbox"/>
-      <property name="style" type="uint" value="0"/>
-      <property name="expand" type="bool" value="true"/>
     </property>
     <property name="plugin-12" type="string" value="separator">
       <property name="digital-format" type="empty"/>
@@ -134,5 +123,9 @@
       <property name="mpris-players" type="string" value="chrome.instance497007"/>
     </property>
     <property name="plugin-8" type="string" value="systemload"/>
+    <property name="plugin-9" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
   </property>
 </channel>
