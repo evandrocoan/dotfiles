@@ -130,6 +130,27 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    /usr/local/bin/xfwm4 --version
    ```
 
+1. **`xf86-input-libinput`** (Fix mouse scroll speed without using bugged has as imwheel!)
+   ```bash
+   git clone https://github.com/evandroforks/xf86-input-libinput
+   cd xf86-input-libinput
+
+   sudo apt-get install xserver-xorg-input-libinput
+   # dpkg -l | grep xserver-xorg-input-libinput
+   git checkout 0.29.0
+
+   sudo apt-get build-dep libinput
+   autoreconf -vif
+   ./configure --prefix=/usr
+   make
+   make install
+
+   ```
+   1. To these change take effect, restart your xorg session, i.e., logout and login again.
+   1. https://gitlab.freedesktop.org/xorg/driver/xf86-input-libinput/-/merge_requests/12 - WIP: Add scroll distance scale setting
+   1. https://gitlab.freedesktop.org/libinput/libinput/-/issues/185 - Support setting scroll speed
+   1. https://askubuntu.com/questions/255890/how-can-i-adjust-the-mouse-scroll-speed/1278266#1278266
+
 
 ### Vim style cheat
 
@@ -473,15 +494,15 @@ pip3 install wheel python-language-server;
    1. Run `autokey-gtk --verbose &` for debugging it
 1. https://unix.stackexchange.com/questions/192048/mount-mtp-android-device-in-linux-mint-17-1
 1. https://unix.stackexchange.com/questions/389952/how-to-get-the-samsung-galaxy-s5-to-work-with-mtp-on-debian-9
-1. Run `imwheel -b "4 5"`on system start up
-   1. Create `~/.imwheelrc` with:
+1. ~Run `imwheel -b "4 5"`on system start up~
+   1. ~Create `~/.imwheelrc` with:~
       * [.imwheelrc](.imwheelrc)
-   1. https://wiki.archlinux.org/index.php/IMWheel
+   1. ~https://wiki.archlinux.org/index.php/IMWheel~
       * Use `imwheel -d --debug --kill` to list windows
-   1. Use `sudo killall -9 imwheel; sleep 2; imwheel -b "4 5"` to restart the service
-   1. https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
-   1. https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
-   1. Disable smooth scrolling on Google Chrome:
+   1. ~Use `sudo killall -9 imwheel; sleep 2; imwheel -b "4 5"` to restart the service~
+   1. ~https://askubuntu.com/questions/285689/increase-mouse-wheel-scroll-speed
+   1. ~https://mintguide.org/other/643-setup-the-mouse-scroll-wheel-speed.html#sel=13:4,13:14
+   1. ~Disable smooth scrolling on Google Chrome:~
       * `chrome://flags/#smooth-scrolling`
       * https://www.ghacks.net/2016/03/16/turn-off-smooth-scrolling-google-chrome/
 
