@@ -97,6 +97,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # The default branch is 4.14
    git clone https://github.com/evandroforks/xfce4-panel
    cd xfce4-panel
+   git checkout xfce-4.14
 
    sudo apt-get build-dep xfce4-panel
    ./autogen.sh
@@ -117,8 +118,10 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # The default branch is 4.14
    git clone https://github.com/evandroforks/xfce4-xfwm4
    cd xfce4-xfwm4
+   git checkout xfce-4.14
 
-   sudo apt-get build-dep xfce4-xfwm4
+   sudo apt-get install xfwm4
+   sudo apt-get build-dep xfwm4
    ./autogen.sh
    make
    sudo make install
