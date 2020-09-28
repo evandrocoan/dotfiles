@@ -11,11 +11,11 @@
         <value type="string" value="screensavers-fiberlamp"/>
       </property>
     </property>
-    <property name="enabled" type="bool" value="true"/>
+    <property name="enabled" type="bool" value="false"/>
   </property>
   <property name="lock" type="empty">
     <property name="saver-activation" type="empty">
-      <property name="enabled" type="bool" value="true"/>
+      <property name="enabled" type="bool" value="false"/>
     </property>
     <property name="embedded-keyboard" type="empty">
       <property name="enabled" type="bool" value="false"/>
