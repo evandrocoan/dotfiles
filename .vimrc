@@ -27,7 +27,11 @@ if v:version >= 740
   endif
 
   if !empty(glob('~/.vim/autoload/plug.vim'))
-    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+    " Run PlugInstall if there are missing plugins
+    " https://github.com/junegunn/vim-plug/issues/1018
+    if len(filter(values(g:plugs), '!isdirectory(v:val.dir)'))
+      autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+    endif
 
     " https://github.com/junegunn/vim-plug/issues/896
     let g:plug_home = $HOME . '/.vim/plugged'
