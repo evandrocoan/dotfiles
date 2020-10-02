@@ -120,9 +120,9 @@ history() {                  #5
 }
 
 export HISTTIMEFORMAT="%y/%m/%d %H:%M:%S   "
-PROMPT_COMMAND='history 1 >> ${HOME}/.bash_eternal_history'
-PROMPT_COMMAND=_bash_history_sync;$PROMPT_COMMAND
-
+# PROMPT_COMMAND='history 1 >> ${HOME}/.bash_eternal_history'
+# PROMPT_COMMAND=_bash_history_sync;$PROMPT_COMMAND
+PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
 
 # https://unix.stackexchange.com/questions/73498/how-to-cycle-through-reverse-i-search-in-bash
 # https://stackoverflow.com/questions/24623021/getting-stty-standard-input-inappropriate-ioctl-for-device-when-using-scp-thro
