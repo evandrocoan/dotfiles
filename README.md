@@ -386,6 +386,11 @@ Never use `dm-tool lock`!
    ...
    ```
 
+### Disable suspend on lock screen
+
+1. `sudo -u gdm dbus-launch gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'`
+1. https://askubuntu.com/questions/1101043/prevent-sleep-suspend-when-not-logged-in-to-a-specific-account
+
 
 ### Extension Swap Partition/File
 
