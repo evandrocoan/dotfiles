@@ -34,7 +34,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 1. First backup your settings, only then, clone this repository using this command:
    ```
-   git clone --recursive https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
+   git clone https://github.com/evandrocoan/MyLinuxSettings.git ~/Downloads/MyLinuxSettings
    ```
 
    And move them to your main's user folder replacing your own settings:
