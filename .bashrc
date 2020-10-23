@@ -46,7 +46,7 @@ else
     printf '%s\n' '    # # linux@linux:(master)/root$ echo hi' >> "$PER_COMPUTER_SETTINGS"
 
     # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
-    printf '%s\n' '    # export PS1='"'"'${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' '    # export PS1='"'"'\D{%H:%M:%S} ${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'' >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' 'EndOfMessage'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' ')'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
@@ -367,9 +367,9 @@ if [ "$color_prompt" = yes ];
 then
     # linux@linux:(master)/root$ echo hi
     # https://www.tecmint.com/customize-bash-colors-terminal-prompt-linux/
-    export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '
+    export PS1='\D{%H:%M:%S} ${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
-    export PS1='${debian_chroot:+($debian_chroot)}\u@\h:$(__git_ps1 "(%s)")\w\$ '
+    export PS1='\D{%H:%M:%S} ${debian_chroot:+($debian_chroot)}\u@\h:$(__git_ps1 "(%s)")\w\$ '
 fi
 unset color_prompt force_color_prompt
 
