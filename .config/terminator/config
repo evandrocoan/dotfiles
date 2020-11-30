@@ -53,7 +53,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''set +x; sshlogin="root@10.3.50.183"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''set +x; sshlogin="root@10.3.50.183"; local counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[Debian7Profile]]
@@ -67,7 +67,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''set +x; sshlogin="root@10.3.50.180"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''set +x; sshlogin="root@10.3.50.180"; local counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[Debian8Profile]]
@@ -81,7 +81,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''set +x; sshlogin="root@10.3.50.181"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''set +x; sshlogin="root@10.3.50.181"; local counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[Debian9Profile]]
@@ -95,7 +95,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''set +x; sshlogin="root@10.3.50.182"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''set +x; sshlogin="root@10.3.50.182"; local counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
   [[RootProfile]]
@@ -123,7 +123,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''set +x; sshlogin="@10.5.0.16"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''set +x; sshlogin="@10.5.0.16"; local counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     encoding = WINDOWS-1252
     split_to_group = True
@@ -138,7 +138,7 @@
     exit_action = restart
     login_shell = True
     use_custom_command = True
-    custom_command = '''set +x; sshlogin="root@10.3.50.192"; counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
+    custom_command = '''set +x; sshlogin="root@10.3.50.192"; local counter=0; while [[ true ]]; do counter=$((counter+1)); sleeptime=$(( (RANDOM % 20 + 1) * counter  )); if (( counter < 2  )); then printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine)... ' "$(date)" "$sshlogin"; ssh -C -o ConnectTimeout=10 "$sshlogin" && counter=0; else ssh -q -o ConnectTimeout=10 "$sshlogin" 2> /dev/null && counter=0; fi; printf '%s/%s seconds. ' "$counter" "$sleeptime"; answer=""; read -t "$sleeptime" answer; if [[ "w$answer" != "w" ]]; then break; fi; done; bash;'''
     use_system_font = False
     split_to_group = True
 [layouts]
