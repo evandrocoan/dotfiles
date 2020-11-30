@@ -35,6 +35,8 @@ globalTextComponent:
     - {language: VHDL '93, pattern: '*.vhd, *.vhdl'}
     - {language: XML, pattern: '*.mxml, *.storyboard, *.xib, *.xml'}
     - {language: Yaml, pattern: '*.yaml, *.yml'}
+    - {language: Nim, pattern: '*.nim'}
+    - {language: V, pattern: '*.v'}
   colors.light: {color-annotation: 11564032, color-attrib-name: 255, color-attrib-value: 32768,
     color-comment: 8421504, color-declaration: 0, color-keyword: 32768, color-literal: 255,
     color-no-code: 0, color-plain-text: 0, color-punctuation: 16721920, color-source: 0,
@@ -69,10 +71,15 @@ directoryCompare:
     encoding: {}
     showCompareSettingsOnRefresh: false
     displayFileTimeState: true
+  showEolChangedFiles: true
+  showRightOnlyFiles: false
+  showLeftOnlyFiles: false
+  showUnchangedFiles: false
+  recursiveView: true
 list32: {ePP: 1598322888486, eUT: -9223372036854775808, nRT: -9223372036854775808,
   eV: '4.1', uid: x29339198760}
-updateCheck: {mode: download, upgradeInstallation: false, prevCheckTime: 1598556384460,
-  checkedBuild: 4074}
+updateCheck: {mode: download, upgradeInstallation: false, prevCheckTime: 1604605174810,
+  checkedBuild: 4083}
 proxySettings: {enabled: false, autoDetect: true}
 proxyPassword: {}
 dateFormat: {datePattern: yyyy-MM-dd, timePattern: 'HH:mm', showTimeForLastDays: true}
