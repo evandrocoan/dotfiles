@@ -80,7 +80,7 @@ alias octave='octave --no-gui -i'
 source ~/.local/git-prompt.sh
 
 # https://askubuntu.com/questions/63424/how-to-change-tab-width-in-terminal-in-ubuntu-10-04
-tabs -4
+[[ $- == *i* ]] && tabs -4
 
 PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
