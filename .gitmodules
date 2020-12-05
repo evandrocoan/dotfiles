@@ -1,3 +1,6 @@
 [submodule "scripts/tmux-better-mouse-mode"]
 	path = scripts/tmux-better-mouse-mode
 	url = https://github.com/evandroforks/tmux-better-mouse-mode
+[submodule "scripts/tmux-sensible"]
+	path = scripts/tmux-sensible
+	url = https://github.com/evandroforks/tmux-sensible
