@@ -243,7 +243,7 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      last_active_term = 8ca41ee5-edf1-44a9-96e2-7e037328e363, a55e3dfc-0f37-4ab0-b6a7-9ecd63429b5f, b68ba1d6-e99a-4a8d-b7b4-31cad2c1a8f1, af5a53b6-cea2-468b-b8ad-02852825ba4e, 37161ae6-94b1-473a-8981-15e77adfbecb, d6225e88-270c-4ed7-b204-0fc0ec66a5d2, 2e1b90b4-6a08-484b-a6e2-c30022581319, de7fa03d-88ed-4360-a915-5615b639d801, 26561745-1bd7-4525-b1bf-b13060bdb0c6, 85d42d18-d9d2-491a-8406-ffaeb49ee864
       order = 0
       parent = child0
       type = Notebook
@@ -252,61 +252,61 @@
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+      uuid = 73b24f40-b744-4288-a7a1-85b618d0e8e7
     [[[terminal11]]]
       order = 9
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+      uuid = 4cad5dd3-2d68-4d6c-a074-50c56c095c10
     [[[terminal2]]]
       order = 0
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = 95d12408-835e-49c3-93c1-788838bca582
+      uuid = b809e1a1-334b-4094-a5aa-5818aab2f3c9
     [[[terminal3]]]
       order = 1
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+      uuid = 9d277b6b-b79e-4c31-a30a-076d205037f4
     [[[terminal4]]]
       order = 2
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+      uuid = 931a7998-1855-4cdc-b1e8-55a447930f4e
     [[[terminal5]]]
       order = 3
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+      uuid = 0691224f-8462-40c7-863c-c037764ec26c
     [[[terminal6]]]
       order = 4
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+      uuid = ad36cd8f-fbdc-4a3c-a743-bf48fd37f99f
     [[[terminal7]]]
       order = 5
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+      uuid = 2de975ab-ae97-4da1-abb3-9456f9500ded
     [[[terminal8]]]
       order = 6
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+      uuid = e7089112-9e3e-49aa-8812-b42d3fa91f5e
     [[[terminal9]]]
       order = 7
       parent = child1
       profile = Debian7Profile
       type = Terminal
-      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
+      uuid = 92522a2e-b57d-41aa-abba-461a59fc1e3b
   [[Debian8Layout]]
     [[[child0]]]
       fullscreen = False
@@ -321,7 +321,7 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      last_active_term = eff14fc4-7ccc-4aa7-9009-ab3d313e5167, e0ece6f7-ae55-48be-a33b-9fe44198960d, 22c4d9fb-0127-4d5d-91c7-8ccdf48ddee1, 462bc874-5b2d-44eb-b368-8bd0a734750c, 2d12c941-faa4-4689-ad99-ebf5cdf5fc1c, 56c456e1-3c10-49e7-9f30-cf6238cf114d, d9166042-2777-4c71-b922-8cbf13eab8e7, 2aba201d-cf69-415f-b87f-ae1df08858e8, c465a0d7-0717-430e-aa4a-5ce9725361b2, 55a740e3-43bd-4766-a976-57fc73ab8f1e
       order = 0
       parent = child0
       type = Notebook
@@ -330,61 +330,61 @@
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+      uuid = 38ccd0c5-b3cc-4e07-9626-87d73286e985
     [[[terminal11]]]
       order = 9
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+      uuid = 1d53c0a9-6066-4e10-9fca-280d3a3b8178
     [[[terminal2]]]
       order = 0
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 95d12408-835e-49c3-93c1-788838bca582
+      uuid = d6db4c20-e7ae-45b6-ad73-473e0363d770
     [[[terminal3]]]
       order = 1
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+      uuid = f3f669ef-c5fc-4bca-807c-4651819e0062
     [[[terminal4]]]
       order = 2
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+      uuid = 3a8a089d-842f-4ba4-b24b-0f2405546695
     [[[terminal5]]]
       order = 3
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+      uuid = 4e86a780-8691-4a83-a858-964a1944ef23
     [[[terminal6]]]
       order = 4
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+      uuid = a09c4a94-ef16-4199-bfdb-b021d5ea957c
     [[[terminal7]]]
       order = 5
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+      uuid = ee376838-11ae-424b-a94d-db3f192a0cf3
     [[[terminal8]]]
       order = 6
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+      uuid = cdfa096e-5d59-4996-b2a9-6d6e4e3a4db1
     [[[terminal9]]]
       order = 7
       parent = child1
       profile = Debian8Profile
       type = Terminal
-      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
+      uuid = 3190d4ea-de42-4423-916e-dfa266483e2c
   [[Debian9Layout]]
     [[[child0]]]
       fullscreen = False
@@ -399,7 +399,7 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      last_active_term = 50604365-2171-4a75-aae5-d47931b6b230, 199a08e1-e736-4da7-abdb-8627677ea951, 9cd5da29-6275-4479-adac-0e47c042db11, 37958066-e43d-4b73-9347-6e74d85c9b30, 506ac0f0-7ebd-4ae9-8c73-f217e1857f6e, 2613eae6-0f95-4169-bbe2-cdd7bec544cf, 5e9f2679-da07-4617-b2a5-2d5ad73a9e9d, 0e7149b2-be24-43c8-b221-7968df97e3d9, 879c954d-6a55-4426-9445-7b3d00627de8, 14750495-1468-4ca2-9f31-e3ffc2c70784
       order = 0
       parent = child0
       type = Notebook
@@ -408,61 +408,61 @@
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+      uuid = c583fa99-6060-46d1-8377-e2eb5ba788e7
     [[[terminal11]]]
       order = 9
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+      uuid = 6f5c0b8c-c501-45b8-a67c-3982cbf38610
     [[[terminal2]]]
       order = 0
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = 95d12408-835e-49c3-93c1-788838bca582
+      uuid = 53fd7ef8-55ea-4c37-8055-968d3ff3cfc9
     [[[terminal3]]]
       order = 1
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+      uuid = fa759d44-2c03-4fe7-ad70-b6f000b3be68
     [[[terminal4]]]
       order = 2
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+      uuid = 4cc4df62-b7cb-438c-80eb-98048b5eee65
     [[[terminal5]]]
       order = 3
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+      uuid = b45cbc64-4726-4398-9168-2c5e67da71bb
     [[[terminal6]]]
       order = 4
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+      uuid = 0a713876-7f8b-4726-b515-2b3f798d60bb
     [[[terminal7]]]
       order = 5
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+      uuid = 9cde32eb-62ff-4e4a-9f0a-ed00ea69e771
     [[[terminal8]]]
       order = 6
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+      uuid = 3c4264aa-ec76-44bc-b981-e9f0d4a9106c
     [[[terminal9]]]
       order = 7
       parent = child1
       profile = Debian9Profile
       type = Terminal
-      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
+      uuid = 4495fd34-7837-4b23-9cd9-efccc71025e1
   [[RootLayout]]
     [[[child0]]]
       fullscreen = False
@@ -477,7 +477,7 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      last_active_term = 41e45cfa-cfa7-4eeb-8543-196b40d0a22a, 05280286-f0cf-4002-901d-6651747e8afd, c2009543-dfa7-4467-bab3-ef60385fbc3c, a0242834-7341-4a54-bcaa-5c3196166a4b, 2a037ecc-f324-4521-8453-479e5cc43b42, 022cbe37-e0bf-4902-86c5-24eb1ee80da8, 25d0999b-fbe8-43ae-a66f-74c1e8afd0b0, b4b4a8e4-6d53-4c71-b351-0104646862ad, c86f79d9-12bc-4802-bd91-8422190c49b5, e2f12a54-7e7f-4b8d-b11a-1dae617971b7
       order = 0
       parent = child0
       type = Notebook
@@ -486,61 +486,61 @@
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+      uuid = 049edec6-176d-427d-b692-8a1aad03943e
     [[[terminal11]]]
       order = 9
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+      uuid = 7cef7a2a-12d2-4cd3-992a-e0322a21fe47
     [[[terminal2]]]
       order = 0
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = 95d12408-835e-49c3-93c1-788838bca582
+      uuid = b7574b1f-a495-461b-96fb-118567954651
     [[[terminal3]]]
       order = 1
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+      uuid = eb1ad963-a70a-4c12-a49a-22c57cd1cdbf
     [[[terminal4]]]
       order = 2
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+      uuid = 7b9dbab6-2c4e-44ce-afe3-63caa3e768be
     [[[terminal5]]]
       order = 3
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+      uuid = 7ba66fab-bae5-454d-a135-e4639eefe82c
     [[[terminal6]]]
       order = 4
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+      uuid = 7eae0b75-406a-4bdf-ba26-1038f4fb0c16
     [[[terminal7]]]
       order = 5
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+      uuid = 5a4aa23b-e729-4f3d-a77b-88b3899b4809
     [[[terminal8]]]
       order = 6
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+      uuid = 50d55a12-cc35-4c68-880e-939458e750f7
     [[[terminal9]]]
       order = 7
       parent = child1
       profile = RootProfile
       type = Terminal
-      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
+      uuid = da14b971-aa64-4c89-81e9-5d128d025cd5
   [[Ubuntu19Layout]]
     [[[child0]]]
       fullscreen = False
@@ -555,7 +555,7 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      last_active_term = 33694de0-095f-4848-a793-fdcd30eb3677, 0828dc53-ca23-4ec4-998e-639a6a2d81d0, 23053da1-8cbc-4e2b-9e53-0c27665c0b29, 8d02db84-8b86-40e2-aeb4-07977c75423d, 2d615abe-bb3b-4085-b6e4-3f85d023c996, 2e3376b2-5388-44c3-b7a6-363315b4d079, 7127d6d1-2195-438b-a5dd-143e81222a1d, 01174171-196a-4df6-be30-8ad1451e9372, 2707e182-13f2-46e5-b13d-a6bde360ab8d, 3111c40d-0464-488b-8615-247e170d2ea6
       order = 0
       parent = child0
       type = Notebook
@@ -564,61 +564,61 @@
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+      uuid = f2d9ae4f-3f63-4643-889a-bf5a87719bd2
     [[[terminal11]]]
       order = 9
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+      uuid = e5b92a43-b2b4-4509-aff2-9381fc55a82c
     [[[terminal2]]]
       order = 0
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = 95d12408-835e-49c3-93c1-788838bca582
+      uuid = 66fda826-dc0e-4e9c-99da-8af599e01370
     [[[terminal3]]]
       order = 1
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+      uuid = 665d0f4a-fea2-410b-a28a-4fbbf593e4ef
     [[[terminal4]]]
       order = 2
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+      uuid = d2f29b90-e25a-4e75-a90a-1bdd5433350b
     [[[terminal5]]]
       order = 3
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+      uuid = 80edffff-7f07-4efd-9baa-bd9c9ceca395
     [[[terminal6]]]
       order = 4
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+      uuid = 855b99bb-77b6-461c-93a6-9156f6be00a1
     [[[terminal7]]]
       order = 5
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+      uuid = 93f68c8a-89a1-4ca2-b105-4ddd5fbc74a9
     [[[terminal8]]]
       order = 6
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+      uuid = 839aba0c-b2a8-461e-aebe-149adb6b98dc
     [[[terminal9]]]
       order = 7
       parent = child1
       profile = Ubuntu19Profile
       type = Terminal
-      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
+      uuid = a3646139-3a71-42df-a514-886608cb8e64
   [[WindowsLayout]]
     [[[child0]]]
       fullscreen = False
@@ -633,7 +633,7 @@
     [[[child1]]]
       active_page = 0
       labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = d73989dc-61e6-45c8-a811-7a0089e99b2b, f9787419-6687-405e-be5b-6ccf449af68b, 8db9e082-852a-493d-9a63-af13b88aaf45, e70a4348-5bda-47e0-998f-a4f058924c4f, 29cbcdb0-52de-4434-bb1b-fc711ba30b83, 8df0b689-5b46-473a-aa94-45327b37e2f1, f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e, 77408cf2-deef-4ce7-8cd2-b12563581aa2, 0f0930f7-78aa-42b5-b8ff-d7132ee394b8, 95d12408-835e-49c3-93c1-788838bca582
+      last_active_term = 42496666-5e3e-41b3-afc0-364abbc12258, 5d80f84a-eb05-4054-98b2-f09f0115eaa5, 2893b87f-85cd-4643-811d-463acd0b28a7, 2db099a6-8b8c-496a-8a99-121ec98c747d, 9024191a-5b9d-4d74-b82f-42215ed97b2f, 5a61c02f-611d-4b20-924e-4ae254660c5b, fe1a435a-1744-4b46-8ade-eca80fcbab99, c339a61c-1dcb-49cb-b8b9-44e5c3707a76, 7ee1236e-9c60-4ac3-90ca-f889a8924233, 377d3160-57b3-48ab-a001-8c60e820e355
       order = 0
       parent = child0
       type = Notebook
@@ -642,59 +642,59 @@
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = 77408cf2-deef-4ce7-8cd2-b12563581aa2
+      uuid = 984952e7-88b4-4ac8-b490-e35502634bd1
     [[[terminal11]]]
       order = 9
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+      uuid = 3736e661-e7f0-4b8b-9abb-5991424f1607
     [[[terminal2]]]
       order = 0
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = 95d12408-835e-49c3-93c1-788838bca582
+      uuid = 44be6cb1-8e52-4774-8433-e4034bd6a12a
     [[[terminal3]]]
       order = 1
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = d73989dc-61e6-45c8-a811-7a0089e99b2b
+      uuid = 04884ee3-9e14-4626-8218-ca513b4c7afc
     [[[terminal4]]]
       order = 2
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = f9787419-6687-405e-be5b-6ccf449af68b
+      uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
     [[[terminal5]]]
       order = 3
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = 8db9e082-852a-493d-9a63-af13b88aaf45
+      uuid = 438f6d85-bf47-4126-b00e-cf53f3c7ab5a
     [[[terminal6]]]
       order = 4
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = e70a4348-5bda-47e0-998f-a4f058924c4f
+      uuid = a3b2e2d6-68bd-45bf-8022-bc4a217419b7
     [[[terminal7]]]
       order = 5
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = 29cbcdb0-52de-4434-bb1b-fc711ba30b83
+      uuid = 6e29645b-c8d4-4a13-9395-172fda8fcc8f
     [[[terminal8]]]
       order = 6
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = 8df0b689-5b46-473a-aa94-45327b37e2f1
+      uuid = ba648488-28af-4a46-b2a6-dcb64c51e331
     [[[terminal9]]]
       order = 7
       parent = child1
       profile = WindowsProfile
       type = Terminal
-      uuid = f8adb83a-7a52-4149-a6a6-f6ba1b4f0e1e
+      uuid = 2c26aadf-cb22-47fe-9462-29ae9ada18b1
 [plugins]
