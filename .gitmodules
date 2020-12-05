@@ -4,3 +4,6 @@
 [submodule "scripts/tmux-sensible"]
 	path = scripts/tmux-sensible
 	url = https://github.com/evandroforks/tmux-sensible
+[submodule "scripts/tmux-resurrect"]
+	path = scripts/tmux-resurrect
+	url = https://github.com/evandroforks/tmux-resurrect
