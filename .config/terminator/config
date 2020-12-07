@@ -35,6 +35,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -66,6 +67,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -106,6 +108,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -146,6 +149,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -186,6 +190,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -226,6 +231,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -257,6 +263,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
@@ -298,6 +305,7 @@
     font = Monospace 13
     foreground_color = "#ffffff"
     show_titlebar = False
+    scrollbar_position = hidden
     scrollback_lines = 10000000
     exit_action = restart
     login_shell = True
