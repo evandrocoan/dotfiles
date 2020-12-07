@@ -346,6 +346,7 @@ fi
 # set a fancy prompt (non-color, unless we know we "want" color)
 case "$TERM" in
     xterm-color) color_prompt=yes;;
+    screen-256color) color_prompt=yes;;
 esac
 
 # uncomment for a colored prompt, if the terminal has the capability; turned
@@ -366,6 +367,9 @@ fi
 
 if [ "$color_prompt" = yes ];
 then
+    # https://unix.stackexchange.com/questions/1045/getting-256-colors-to-work-in-tmux
+    export TERM=xterm-256color
+
     # linux@linux:(master)/root$ echo hi
     # https://www.tecmint.com/customize-bash-colors-terminal-prompt-linux/
     export PS1='\D{%j %H:%M:%S} ${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:$(__git_ps1 "(\[\033[01;35m\]%s\[\033[01;35m\]\[\033[00m\])")\[\033[01;34m\]\w\[\033[00m\]\$ '
