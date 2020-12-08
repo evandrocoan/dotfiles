@@ -358,7 +358,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = Debian 10
+      title = D10
       type = Window
     [[[child1]]]
       active_page = 0
@@ -436,7 +436,7 @@
       maximised = True
       fullscreen = False
       size = 1920, 1047
-      title = Debian 7
+      title = D7
       last_active_window = True
     [[[child1]]]
       type = Notebook
@@ -574,7 +574,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = Debian 8
+      title = D8
       type = Window
     [[[child1]]]
       active_page = 0
@@ -652,7 +652,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = Debian 9
+      title = D9
       type = Window
     [[[child1]]]
       active_page = 0
@@ -808,7 +808,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = Ubuntu 19
+      title = U19
       type = Window
     [[[child1]]]
       active_page = 0
