@@ -76,11 +76,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    @monthly            15                  cron.monthly    run-parts --report /etc/cron.monthly
    1                   1                   kill-twinkle    killall -9 twinkle
    1                   1                   kill-jami       killall -9 jami-gnome
+   1                   1                   disable-lid-events /bin/bash /home/yourusername/scripts/wakeup-events.sh
 
    # https://bigint.wordpress.com/2016/08/10/xfce-panel-hiding-maximized-window-title/
    # https://forum.xfce.org/viewtopic.php?id=10836 - change xfwm4-settings through command line
    # https://stackoverflow.com/questions/14612371/how-do-i-run-multiple-background-commands-in-bash-in-a-single-line
-   1                   1                   restart-xfwm4   sudo -u evandro_coan xfwm4 --replace & sleep 3 && xfconf-query -c xfwm4 -p /general/titleless_maximize -s false && sleep 2 && xfconf-query -c xfwm4 -p /general/titleless_maximize -s true
+   1                   1                   restart-xfwm4   sudo -u yourusername xfwm4 --replace & sleep 3 && xfconf-query -c xfwm4 -p /general/titleless_maximize -s false && sleep 2 && xfconf-query -c xfwm4 -p /general/titleless_maximize -s true
    ```
    1. https://www.thegeekdiary.com/centos-rhel-anacron-basics-what-is-anacron-and-how-to-configure-it/
    1. https://linux.die.net/man/5/anacrontab
