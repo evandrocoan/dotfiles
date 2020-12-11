@@ -705,82 +705,142 @@
       uuid = 3190d4ea-de42-4423-916e-dfa266483e2c
   [[Debian9Layout]]
     [[[child0]]]
-      fullscreen = False
-      last_active_window = True
-      maximised = True
-      order = 0
+      type = Window
       parent = ""
+      order = 0
       position = 0:0
+      maximised = True
+      fullscreen = False
       size = 1920, 1047
       title = D9
-      type = Window
+      last_active_window = True
     [[[child1]]]
-      active_page = 0
-      labels = None, None, None, None, None, None, None, None, None, None
-      last_active_term = 50604365-2171-4a75-aae5-d47931b6b230, 199a08e1-e736-4da7-abdb-8627677ea951, 9cd5da29-6275-4479-adac-0e47c042db11, 37958066-e43d-4b73-9347-6e74d85c9b30, 506ac0f0-7ebd-4ae9-8c73-f217e1857f6e, 2613eae6-0f95-4169-bbe2-cdd7bec544cf, 5e9f2679-da07-4617-b2a5-2d5ad73a9e9d, 0e7149b2-be24-43c8-b221-7968df97e3d9, 879c954d-6a55-4426-9445-7b3d00627de8, 14750495-1468-4ca2-9f31-e3ffc2c70784
-      order = 0
-      parent = child0
       type = Notebook
-    [[[terminal10]]]
-      order = 8
-      parent = child1
-      profile = Debian9Profile
-      type = Terminal
-      uuid = c583fa99-6060-46d1-8377-e2eb5ba788e7
-    [[[terminal11]]]
-      order = 9
-      parent = child1
-      profile = Debian9Profile
-      type = Terminal
-      uuid = 6f5c0b8c-c501-45b8-a67c-3982cbf38610
-    [[[terminal2]]]
+      parent = child0
       order = 0
+      labels = None, None, None, None, None, None, None, None, None, None
+      last_active_term = 53fd7ef8-55ea-4c37-8055-968d3ff3cfc9, 199a08e1-e736-4da7-abdb-8627677ea951, 9cd5da29-6275-4479-adac-0e47c042db11, 37958066-e43d-4b73-9347-6e74d85c9b30, 506ac0f0-7ebd-4ae9-8c73-f217e1857f6e, 2613eae6-0f95-4169-bbe2-cdd7bec544cf, 5e9f2679-da07-4617-b2a5-2d5ad73a9e9d, 0e7149b2-be24-43c8-b221-7968df97e3d9, 879c954d-6a55-4426-9445-7b3d00627de8, 6f5c0b8c-c501-45b8-a67c-3982cbf38610
+      active_page = 0
+    [[[child2]]]
+      type = HPaned
       parent = child1
-      profile = Debian9Profile
-      type = Terminal
-      uuid = 53fd7ef8-55ea-4c37-8055-968d3ff3cfc9
-    [[[terminal3]]]
-      order = 1
-      parent = child1
-      profile = Debian9Profile
-      type = Terminal
-      uuid = fa759d44-2c03-4fe7-ad70-b6f000b3be68
-    [[[terminal4]]]
-      order = 2
-      parent = child1
-      profile = Debian9Profile
-      type = Terminal
-      uuid = 4cc4df62-b7cb-438c-80eb-98048b5eee65
+      order = 0
+      position = 958
+      ratio = 0.5002610966057441
+    [[[child3]]]
+      type = VPaned
+      parent = child2
+      order = 0
+      position = 735
+      ratio = 0.7053742802303263
+    [[[child4]]]
+      type = VPaned
+      parent = child3
+      order = 0
+      position = 358
+      ratio = 0.4904109589041096
     [[[terminal5]]]
-      order = 3
-      parent = child1
-      profile = Debian9Profile
       type = Terminal
-      uuid = b45cbc64-4726-4398-9168-2c5e67da71bb
+      parent = child4
+      order = 0
+      profile = Debian9Profile
+      uuid = 53fd7ef8-55ea-4c37-8055-968d3ff3cfc9
     [[[terminal6]]]
-      order = 4
-      parent = child1
-      profile = Debian9Profile
       type = Terminal
-      uuid = 0a713876-7f8b-4726-b515-2b3f798d60bb
+      parent = child4
+      order = 1
+      profile = Debian9Profile
+      uuid = 36dc7c1e-1abb-42b1-bee3-5a2b6076a494
     [[[terminal7]]]
+      type = Terminal
+      parent = child3
+      order = 1
+      profile = Debian9Profile
+      uuid = 39e802cb-1304-40ae-a839-254875f91e78
+    [[[child8]]]
+      type = VPaned
+      parent = child2
+      order = 1
+      position = 733
+      ratio = 0.7034548944337812
+    [[[child9]]]
+      type = VPaned
+      parent = child8
+      order = 0
+      position = 359
+      ratio = 0.49313186813186816
+    [[[terminal10]]]
+      type = Terminal
+      parent = child9
+      order = 0
+      profile = Debian9Profile
+      uuid = 0399918c-23ec-44dd-858b-b9f4632f0889
+    [[[terminal11]]]
+      type = Terminal
+      parent = child9
+      order = 1
+      profile = Debian9Profile
+      uuid = 658b4c6d-8998-41ea-8b26-0f538ab66494
+    [[[terminal12]]]
+      type = Terminal
+      parent = child8
+      order = 1
+      profile = Debian9Profile
+      uuid = d1a0f12c-e547-480a-acc9-334248ff9d10
+    [[[terminal13]]]
+      type = Terminal
+      parent = child1
+      order = 1
+      profile = Debian9Profile
+      uuid = fa759d44-2c03-4fe7-ad70-b6f000b3be68
+    [[[terminal14]]]
+      type = Terminal
+      parent = child1
+      order = 2
+      profile = Debian9Profile
+      uuid = 4cc4df62-b7cb-438c-80eb-98048b5eee65
+    [[[terminal15]]]
+      type = Terminal
+      parent = child1
+      order = 3
+      profile = Debian9Profile
+      uuid = b45cbc64-4726-4398-9168-2c5e67da71bb
+    [[[terminal16]]]
+      type = Terminal
+      parent = child1
+      order = 4
+      profile = Debian9Profile
+      uuid = 0a713876-7f8b-4726-b515-2b3f798d60bb
+    [[[terminal17]]]
+      type = Terminal
+      parent = child1
       order = 5
-      parent = child1
       profile = Debian9Profile
-      type = Terminal
       uuid = 9cde32eb-62ff-4e4a-9f0a-ed00ea69e771
-    [[[terminal8]]]
+    [[[terminal18]]]
+      type = Terminal
+      parent = child1
       order = 6
-      parent = child1
       profile = Debian9Profile
-      type = Terminal
       uuid = 3c4264aa-ec76-44bc-b981-e9f0d4a9106c
-    [[[terminal9]]]
-      order = 7
-      parent = child1
-      profile = Debian9Profile
+    [[[terminal19]]]
       type = Terminal
+      parent = child1
+      order = 7
+      profile = Debian9Profile
       uuid = 4495fd34-7837-4b23-9cd9-efccc71025e1
+    [[[terminal20]]]
+      type = Terminal
+      parent = child1
+      order = 8
+      profile = Debian9Profile
+      uuid = c583fa99-6060-46d1-8377-e2eb5ba788e7
+    [[[terminal21]]]
+      type = Terminal
+      parent = child1
+      order = 9
+      profile = Debian9Profile
+      uuid = 6f5c0b8c-c501-45b8-a67c-3982cbf38610
   [[RootLayout]]
     [[[child0]]]
       fullscreen = False
