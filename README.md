@@ -320,6 +320,18 @@ And run `sudo systemctl enable wakeup-events`
 Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.service → /etc/systemd/system/wakeup-events.service.
 ```
 
+1. https://forums.linuxmint.com/viewtopic.php?t=290225 - How to disable wakeup on lid open event? [SOLVED]
+1. https://unix.stackexchange.com/questions/52643/how-to-disable-auto-suspend-when-i-close-laptop-lid/52645
+1. Use `sudo journalctl -u systemd-logind.service -f` to see login events
+   ```
+   dez 10 20:45:11 MOBDEV-016 systemd-logind[172521]: Lid closed.
+   dez 10 20:45:16 MOBDEV-016 systemd-logind[172521]: Lid opened.
+   dez 10 20:46:04 MOBDEV-016 systemd-logind[172521]: New session c1 of user root.
+   dez 10 20:53:47 MOBDEV-016 systemd-logind[172521]: Power key pressed.
+   dez 10 20:54:20 MOBDEV-016 systemd-logind[172521]: Operation 'sleep' finished.
+   dez 10 21:02:15 MOBDEV-016 systemd-logind[172521]: Power key pressed.
+   ```
+
 
 ### Disable systemctl power options
 
