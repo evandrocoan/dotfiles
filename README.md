@@ -311,7 +311,7 @@ Description=Disable wakeup events on startup
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash ~/scripts/wakeup-events.sh
+ExecStart=/bin/bash /home/yourusername/scripts/wakeup-events.sh
 
 [Install]
 WantedBy=multi-user.target

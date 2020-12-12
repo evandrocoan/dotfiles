@@ -29,13 +29,14 @@ echo LID0 | tee /proc/acpi/wakeup
 # To disable touch pad, because it may wakeup your computer too
 # http://forum.tinycorelinux.net/index.php?topic=23326.30 - Topic: how to completely disable lid switch?  (Read 5455 times)
 # http://forum.tinycorelinux.net/index.php?topic=23326.0 - Topic: how to completely disable lid switch?  (Read 5455 times)
-# echo serio1 | sudo tee /sys/bus/serio/drivers/psmouse/unbind
+echo serio1 | sudo tee /sys/bus/serio/drivers/psmouse/unbind
 
 # Use `ls /sys/bus/acpi/drivers/button -l` to see available devices to unbind
-echo PNP0C0C:00 | tee /sys/bus/acpi/drivers/button/driver/unbind
-echo PNP0C0D:00 | tee /sys/bus/acpi/drivers/button/driver/unbind
-echo PNP0C0E:00 | tee /sys/bus/acpi/drivers/button/driver/unbind
-echo LNXSYSTM:00 | sudo tee /sys/bus/acpi/drivers/button/driver/unbind
+cd /sys/bus/acpi/drivers/button
+echo PNP0C0C:00 | tee unbind
+echo PNP0C0D:00 | tee unbind
+echo PNP0C0E:00 | tee unbind
+echo LNXSYSTM:00 | sudo tee unbind
 
 
 # https://unix.stackexchange.com/questions/236127/acpi-wakeup-4-letters-code-meaning
