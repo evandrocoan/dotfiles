@@ -19,12 +19,21 @@
 # https://bbs.archlinux.org/viewtopic.php?id=225977 - [SOLVED]HandleLidSwitch ignored by logind
 # https://unix.stackexchange.com/questions/52643/how-to-disable-auto-suspend-when-i-close-laptop-lid
 #
-# Use `vim /proc/acpi/wakeup` to list the devices which can wakeup your computer and add them here!
+# Use `cat /proc/acpi/wakeup` to list the devices which can wakeup your computer and add them here!
 echo XHC | tee /proc/acpi/wakeup
 echo RP09 | tee /proc/acpi/wakeup
 echo RP13 | tee /proc/acpi/wakeup
 echo LID0 | tee /proc/acpi/wakeup
 # echo PBTN | tee /proc/acpi/wakeup
+
+# grep . /sys/bus/usb/devices/*/power/wakeup
+for filename in /sys/bus/usb/devices/*/power/wakeup; do
+    echo disabling $filename
+    echo disabled > ${filename}
+done
+
+# sudo apt install acpitool
+acpitool -w | grep enabled | grep -v 'PBTN' | /usr/bin/awk '{print $1}' | cut -d'.' -f1 | xargs -I{} acpitool -W {}
 
 # To disable touch pad, because it may wakeup your computer too
 # http://forum.tinycorelinux.net/index.php?topic=23326.30 - Topic: how to completely disable lid switch?  (Read 5455 times)
@@ -78,3 +87,5 @@ echo LNXSYSTM:00 | sudo tee unbind
 # USB1` and so on. I found the script, [written by user
 # toojays](https://askubuntu.com/a/308740/474925).
 #
+
+exit 0

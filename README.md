@@ -303,26 +303,28 @@ including the actual virtual memory already on the SWAP partition.
 ### Disable Suspention/Hibernation Wake Up
 
 By default almost any device can wake up your computer.
-To disable this,
-create the file `vim /etc/systemd/system/wakeup-events.service`
-```
-[Unit]
-Description=Disable wakeup events on startup
+To disable this:
 
-[Service]
-Type=oneshot
-ExecStart=/bin/bash /home/yourusername/scripts/wakeup-events.sh
+1. `sudo apt install acpitool`
+1, Create the file `vim /etc/systemd/system/wakeup-events.service`
+   ```
+   [Unit]
+   Description=Disable wakeup events on startup
 
-[Install]
-WantedBy=multi-user.target
-```
-And run `sudo systemctl enable wakeup-events`
-```
-Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.service → /etc/systemd/system/wakeup-events.service.
-```
+   [Service]
+   Type=oneshot
+   ExecStart=/bin/bash /home/yourusername/scripts/wakeup-events.sh
 
-1. https://forums.linuxmint.com/viewtopic.php?t=290225 - How to disable wakeup on lid open event? [SOLVED]
-1. https://unix.stackexchange.com/questions/52643/how-to-disable-auto-suspend-when-i-close-laptop-lid/52645
+   [Install]
+   WantedBy=multi-user.target
+   ```
+1. And run `sudo systemctl enable wakeup-events`
+   ```
+   Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.service → /etc/systemd/system/wakeup-events.service.
+   ```
+   1. https://forums.linuxmint.com/viewtopic.php?t=290225 - How to disable wakeup on lid open event? [SOLVED]
+   1. https://unix.stackexchange.com/questions/52643/how-to-disable-auto-suspend-when-i-close-laptop-lid/52645
+
 1. Use `sudo journalctl -u systemd-logind.service -f` to see login events
    ```
    dez 10 20:45:11 MOBDEV-016 systemd-logind[172521]: Lid closed.
@@ -332,6 +334,11 @@ Created symlink /etc/systemd/system/multi-user.target.wants/wakeup-events.servic
    dez 10 20:54:20 MOBDEV-016 systemd-logind[172521]: Operation 'sleep' finished.
    dez 10 21:02:15 MOBDEV-016 systemd-logind[172521]: Power key pressed.
    ```
+1. Edit `vim /etc/UPower/UPower.conf` and set `IgnoreLid=true`
+   1. `service upower restart`
+   1. https://askubuntu.com/questions/15520/how-can-i-tell-ubuntu-to-do-nothing-when-i-close-my-laptop-lid
+1. `grep . /sys/bus/usb/devices/*/power/wakeup`
+   1. `echo disabled > /sys/bus/usb/devices/usb8/power/wakeup`
 
 
 ### Disable systemctl power options
