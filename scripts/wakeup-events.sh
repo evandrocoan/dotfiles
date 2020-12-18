@@ -32,6 +32,7 @@ for filename in /sys/bus/usb/devices/*/power/wakeup; do
     echo disabled > ${filename}
 done
 
+# https://unix.stackexchange.com/questions/509865/disabling-all-devices-in-proc-acpi-wakeup-permanently
 # sudo apt install acpitool
 acpitool -w | grep enabled | grep -v 'PBTN' | /usr/bin/awk '{print $1}' | cut -d'.' -f1 | xargs -I{} acpitool -W {}
 
