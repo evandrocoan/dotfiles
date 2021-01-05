@@ -101,6 +101,46 @@
       bash;'''
     use_system_font = False
     split_to_group = True
+  [[Debian6Profile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollbar_position = hidden
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''set +x; \
+      export TERMINATOR_TMUX_UUID="$(printf '%s' "$TERMINATOR_UUID" | cut -c10-20)"; \
+      sshlogin="root@10.3.5.179"; \
+      runterminatorthingslocal() { \
+        local counter=0; \
+        while [[ true ]]; \
+        do \
+          counter=$(( (counter+1) % 30 )); \
+          sleeptime=$(( (RANDOM % 60 + 1) * 1 )); \
+          if (( counter < 2  )); \
+          then \
+            printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
+          else \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
+          fi; \
+          printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
+          answer=""; \
+          read -t "$sleeptime" answer; \
+          if [[ "w$answer" != "w" ]]; \
+          then \
+            break; \
+          fi; \
+        done; \
+      }; \
+      runterminatorthingslocal; \
+      bash;'''
+    use_system_font = False
   [[Debian7Profile]]
     background_darkness = 0.85
     background_type = transparent
@@ -488,6 +528,84 @@
       order = 9
       profile = Debian10Profile
       uuid = 0f0930f7-78aa-42b5-b8ff-d7132ee394b8
+  [[Debian6Layout]]
+    [[[child0]]]
+      fullscreen = False
+      last_active_window = True
+      maximised = True
+      order = 0
+      parent = ""
+      position = 0:0
+      size = 1920, 1047
+      title = D6
+      type = Window
+    [[[child1]]]
+      active_page = 0
+      labels = None, None, None, None, None, None, None, None, None, None
+      last_active_term = 41e45cfa-cfa7-4eeb-8543-196b40d0a22a, 05280286-f0cf-4002-901d-6651747e8afd, c2009543-dfa7-4467-bab3-ef60385fbc3c, a0242834-7341-4a54-bcaa-5c3196166a4b, 2a037ecc-f324-4521-8453-479e5cc43b42, 022cbe37-e0bf-4902-86c5-24eb1ee80da8, 25d0999b-fbe8-43ae-a66f-74c1e8afd0b0, b4b4a8e4-6d53-4c71-b351-0104646862ad, c86f79d9-12bc-4802-bd91-8422190c49b5, e2f12a54-7e7f-4b8d-b11a-1dae617971b7
+      order = 0
+      parent = child0
+      type = Notebook
+    [[[terminal10]]]
+      order = 8
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 049edec6-176d-427d-b692-8a1aad03943e
+    [[[terminal11]]]
+      order = 9
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 7cef7a2a-12d2-4cd3-992a-e0322a21fe47
+    [[[terminal2]]]
+      order = 0
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = b7574b1f-a495-461b-96fb-118567954651
+    [[[terminal3]]]
+      order = 1
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = eb1ad963-a70a-4c12-a49a-22c57cd1cdbf
+    [[[terminal4]]]
+      order = 2
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 7b9dbab6-2c4e-44ce-afe3-63caa3e768be
+    [[[terminal5]]]
+      order = 3
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 7ba66fab-bae5-454d-a135-e4639eefe82c
+    [[[terminal6]]]
+      order = 4
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 7eae0b75-406a-4bdf-ba26-1038f4fb0c16
+    [[[terminal7]]]
+      order = 5
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 5a4aa23b-e729-4f3d-a77b-88b3899b4809
+    [[[terminal8]]]
+      order = 6
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = 50d55a12-cc35-4c68-880e-939458e750f7
+    [[[terminal9]]]
+      order = 7
+      parent = child1
+      profile = Debian6Profile
+      type = Terminal
+      uuid = da14b971-aa64-4c89-81e9-5d128d025cd5
   [[Debian7Layout]]
     [[[child0]]]
       type = Window
