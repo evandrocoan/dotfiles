@@ -323,7 +323,9 @@ set nolist
 " Enable use of the mouse for all modes
 " In many terminal emulators the mouse works just fine, thus enable it.
 if has('mouse')
-  set mouse=v
+  " Fix scroll inside tmux. Use `:help 'mouse'` inside vim for help about `mouse=a` vs `mouse=v`
+  " https://superuser.com/questions/610114/tmux-enable-mouse-scrolling-in-vim-instead-of-history-buffer
+  set mouse=a
 endif
 
 set nobackup
