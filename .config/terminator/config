@@ -45,14 +45,14 @@
       cd "$(cat /tmp/last_used_pwd.txt)"; \
       pwd; \
       cd -; \
-      sudo -E su; \
+      bash; \
       pwd; \
       cd "$(cat /tmp/last_used_cd.txt)"; \
       pwd; \
       cd "$(cat /tmp/last_used_pwd.txt)"; \
       pwd; \
       cd -; \
-      bash; \
+      sudo -E su; \
       pwd; \
       cd "$(cat /tmp/last_used_cd.txt)"; \
       pwd; \
@@ -385,7 +385,7 @@
     [[[child1]]]
       command = ""
       parent = window0
-      profile = RootProfile
+      profile = default
       type = Terminal
     [[[window0]]]
       parent = ""
