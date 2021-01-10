@@ -85,6 +85,11 @@ then
     printf "Creating destine user %s\\n" "$DESTINE_USER"
     run sudo useradd --groups "${SOURCE_GROUPS}" --shell "${SOURCE_SHELL}" --create-home "${DESTINE_USER}"
     run sudo passwd "${DESTINE_USER}"
+
+    # Fix the new user not being able to access the files from other users
+    # https://www.digitalocean.com/community/tutorials/how-to-create-a-new-sudo-enabled-user-on-ubuntu-20-04-quickstart
+    run sudo usermod -aG sudo "$DESTINE_USER"
+
 else
     printf "Updating destine user '%s' with groups '%s' and shell '%s'\\n" "$DESTINE_USER" "$SOURCE_GROUPS" "$SOURCE_SHELL"
     run xhost "+si:localuser:$DESTINE_USER"
@@ -95,6 +100,10 @@ else
     run sudo usermod -a -G "$SOURCE_USER" "$DESTINE_USER"
     run sudo usermod -a -G "$SOURCE_GROUPS" "$DESTINE_USER"
     run sudo chsh -s "$SOURCE_SHELL" "$SOURCE_USER"
+
+    # Fix the new user not being able to access the files from other users
+    # https://www.digitalocean.com/community/tutorials/how-to-create-a-new-sudo-enabled-user-on-ubuntu-20-04-quickstart
+    run sudo usermod -aG sudo "$DESTINE_USER"
 fi
 
 
