@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# set -x
 
 pushd `dirname $0` > /dev/null
 SCRIPT_FOLDER_PATH=`pwd`

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# set -x
 
 # Reliable way for a bash script to get the full path to itself?
 # http://stackoverflow.com/questions/4774054/reliable-way-for-a-bash-script-to-get-the-full-path-to-itself

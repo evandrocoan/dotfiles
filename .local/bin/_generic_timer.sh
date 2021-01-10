@@ -1,4 +1,6 @@
 #!/bin/bash
+# set -x
+
 #
 # _generic_timer.sh
 # Copyright (c) 2019 Evandro Coan

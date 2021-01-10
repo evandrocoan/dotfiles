@@ -1,4 +1,6 @@
 #!/bin/bash
+# set -x
+
 # To list active windows use `wmctrl -lx`
 window_title="$1"
 key_to_send=$(printf '%q ' "${@:2}")

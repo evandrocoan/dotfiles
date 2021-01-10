@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# run it with open_maximized.sh "Sublime Text" /usr/bin/subl -n
+# set -x
 
+# run it with open_maximized.sh "Sublime Text" /usr/bin/subl -n
+#
 function maximize() {
     program_name="${1}";
     shift;
