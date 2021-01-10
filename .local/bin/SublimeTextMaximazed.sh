@@ -25,10 +25,10 @@ fi
 if pgrep -f "/opt/sublime_text/sublime_text" > /dev/null
 then
     printf "Sublime Text is running...\\n";
-    /opt/sublime_text/sublime_text -n "${command_line}";
+    /usr/bin/subl -n "${command_line}";
 else
     printf "Sublime Text is NOT running...\\n";
-    "${SCRIPT_FOLDER_PATH}/run_as_user.sh" sublime /opt/sublime_text_vanilla/sublime_text -n "${command_line}";
+    "${SCRIPT_FOLDER_PATH}/run_as_user.sh" sublime /usr/bin/subl -n "${command_line}";
 fi
 
 "${SCRIPT_FOLDER_PATH}/open_maximized.sh" "Sublime Text";
