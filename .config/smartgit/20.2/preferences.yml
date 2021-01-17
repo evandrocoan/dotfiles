@@ -46,7 +46,7 @@ logSettings:
     key-id: true
     key-message: true
     key-ref: true
-comparePreviewSettings: {compareType: working-tree-vs-index, selectCompareTypeAutomatically: true}
+comparePreviewSettings: {compareType: index-vs-head, selectCompareTypeAutomatically: true}
 dateFormat: {datePattern: yyyy/MM/dd, timePattern: 'HH:mm:ss', timeZone: '', showTimeForLastDays: true}
 defaultViewSettings:
   compareSettings:
@@ -70,7 +70,7 @@ hg:
 ssh: {useOwnSshClient: false}
 deepGit2: {followRenames: true, extendLineToBlock: true, optimizeCreationOrigins: true,
   ignoreWhitespaceOnlyChanges: true, showLineNumbers: true, highlightBlameChanges: false,
-  highlightOriginChanges: false, preferSimpleBlamePerspective: true, lineHistoryVisible: false}
+  highlightOriginChanges: false, preferSimpleBlamePerspective: false, lineHistoryVisible: false}
 globalTextComponentSettings:
   font: {family: Ubuntu Mono, size: 11}
   colors.light: {foregroundText: 0, foregroundGutter: 9868950, foregroundWhitespace: 12632256,
@@ -82,7 +82,8 @@ globalTextComponentSettings:
     color-no-code: 0, color-plain-text: 0, color-punctuation: 0, color-source: 0,
     color-string: 32768, color-tag: 128, color-type: 0, backgroundModified: 16763080,
     backgroundAdded: 12513470, backgroundRemoved: 13158655, backgroundModifiedCS: 16763080,
-    backgroundAddedCS: 12513470, backgroundRemovedCS: 13158655, backgroundConflict: 16755370}
+    backgroundAddedCS: 12513470, backgroundRemovedCS: 13158655, backgroundConflict: 16755370,
+    color-pragma: 8547840, color-invalid: 16727871, color-identifier: 0}
   colors.useDark: false
   actions: {smartHome: true, homeEndToLineNotDocument: true, cursorLeftRightLimitToLine: true,
     smartEnterAutoIndent: false, smartEnterDeleteWhitespace: true, smartEnterIgnoreEmptyLinesForIndentation: true,
@@ -134,38 +135,54 @@ globalTextComponentSettings:
     - {language: XSL, pattern: '*.xsl'}
     - {language: YAML, pattern: '*.yaml, *.yml'}
     - {pattern: '*.default-code, *.default-markup, *.in.tag, *.uq.val'}
+    - {language: ANTLR4, pattern: '*.g4'}
+    - {language: C(++), pattern: '*.c, *.cc, *.cpp, *.cxx, *.cyc, *.h, *.ino'}
+    - {language: CMake, pattern: '*.cmake'}
+    - {language: Cmd, pattern: '*.bat, *.cmd'}
+    - {language: Embedded Ruby Template, pattern: '*.erb'}
+    - {language: InnoSetup, pattern: '*.iss'}
+    - {language: JavaScript/TypeScript, pattern: '*.javascript, *.js, *.ts'}
+    - {language: Kotlin, pattern: '*.kt'}
+    - {language: Nim, pattern: '*.nim'}
+    - {language: Objective-C, pattern: '*.m'}
+    - {language: Properties, pattern: '*.properties'}
+    - {language: Swift, pattern: '*.swift'}
+    - {language: V, pattern: '*.v'}
+    - {language: Yaml, pattern: '*.yaml, *.yml'}
   colors.dark: {color-annotation: 13092749, color-attrib-name: 9291719, color-attrib-value: 12558303,
     color-comment: 8421504, color-declaration: 14002858, color-keyword: 10733475,
     color-literal: 11184853, color-no-code: 0, color-plain-text: 12566463, color-punctuation: 12561045,
-    color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807}
-listx: {ePP: 1600447840289, eUT: -9223372036854775808, nRT: -9223372036854775808,
-  eV: '20.1', uid: 1nhlo2qaortv}
-project: {reopenLastUsedRepositories: true, showWelcomeDialog: false, preferLogWindow: false}
+    color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807,
+    color-pragma: 13876905, color-invalid: 16744319, color-identifier: 12632256}
+listx: {ePP: 1610844260329, eUT: -9223372036854775808, nRT: -9223372036854775808,
+  eV: '20.2', uid: 1nhlo2qaortv}
+project: {reopenLastUsedRepositories: true, showWelcomeDialog: false, preferLogWindow: true}
 uiSettings: {useBackgroundColorInFileTable: true, fileSearchPatternType: 1, themeChanged: false,
   theme: auto}
-vcsRecords: {lastGitUsage: 1600452100894, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
-  lastDgUsage: 1598448918017}
-updateCheck: {mode: download, prevCheckTime: 1600450886231, checkedBuild: 15176, upgradeInstallation: false,
+vcsRecords: {lastGitUsage: 1610240641256, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
+  lastDgUsage: 1610730655398}
+updateCheck: {mode: download, prevCheckTime: 1610844274625, checkedBuild: 16136, upgradeInstallation: false,
   previewAlwaysCheckForLatestBuild: false}
 proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
 spellCheck:
   dictionaries:
+  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   - {name: Portuguese (Brazilian), file: /myfiles/Programs/SpellCheckDicts/Portuguese
       (Brazilian).dic}
-  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   personalFile: ${smartgit.settings}/my-words.dic
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
   useOnlyBestOfficial: false
   deleted: false
-  activeDictionary: 1
+  activeDictionary: 0
 warnForMissingMasterPassword: false
 askForMasterPasswordOnStartup: false
-sendStacktraces2: true
+sendStacktraces2: false
 sendStacktracesBeta: false
 machineId: f3f90f38
-lastUsedVersion: '20.1'
-tempDirs: [/tmp/smartgit15774006280725035718]
-updateCheckDg: {prevCheckTime: 1580489666669, checkedBuild: 5005}
-upgradedFromVersion: '19.1'
+lastUsedVersion: '20.2'
+tempDirs: [/tmp/smartgit6765097134330615947]
+updateCheckDg: {prevCheckTime: 1610730656622, checkedBuild: 6017, mode: download}
+upgradedFromVersion: '20.1'
 firstUsedTime: 1569505697899
+sendUsageStats: false

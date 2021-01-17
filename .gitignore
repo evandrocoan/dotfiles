@@ -22,17 +22,17 @@
 
 !/.config/
 !/.config/smartgit/
-!/.config/smartgit/20.1/
-!/.config/smartgit/20.1/bugtracker.yml
-!/.config/smartgit/20.1/logger.properties
-!/.config/smartgit/20.1/my-words.dic
-!/.config/smartgit/20.1/smartgit.properties
-!/.config/smartgit/20.1/ui-state.yml
-!/.config/smartgit/20.1/tools.yml
-!/.config/smartgit/20.1/preferences.yml
-!/.config/smartgit/20.1/notifications.yml
-!/.config/smartgit/20.1/accelerators.yml
-!/.config/smartgit/20.1/ui-config.yml
+!/.config/smartgit/20.2/
+!/.config/smartgit/20.2/bugtracker.yml
+!/.config/smartgit/20.2/logger.properties
+!/.config/smartgit/20.2/my-words.dic
+!/.config/smartgit/20.2/smartgit.properties
+!/.config/smartgit/20.2/ui-state.yml
+!/.config/smartgit/20.2/tools.yml
+!/.config/smartgit/20.2/preferences.yml
+!/.config/smartgit/20.2/notifications.yml
+!/.config/smartgit/20.2/accelerators.yml
+!/.config/smartgit/20.2/ui-config.yml
 
 !/.config/smartsynchronize/
 !/.config/smartsynchronize/4.1/

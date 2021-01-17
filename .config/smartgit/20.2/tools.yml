@@ -12,6 +12,12 @@ tools:
   useForOpen: false
   waitUntilFinished: true
   filePattern: '*'
+- id: formatPatch1
+  name: Format Patch
+  fileStarter: {command: '${smartGitDir}/lib/format-patch.sh', parameters: '${dirSelect}
+      ${commit}'}
+  useForOpen: false
+  waitUntilFinished: true
 - id: applyPatch
   name: Apply Patch
   fileStarter: {command: '${git}', parameters: 'apply ${fileOpen}'}
