@@ -485,7 +485,7 @@ Install stuff:
 ```
 sudo apt install build-essential autokey-gtk copyq mtp-tools gmtp imwheel openssh-server;
 sudo apt-get install nethogs python3 python-pip python3-pip;
-sudo apt-get install audacity gnome-gmail ksysguard wmctrl;
+sudo apt-get install audacity thunderbird ksysguard wmctrl;
 sudo apt-get install xdotool grsync unison-gtk indicator-multiload;
 sudo apt-get install vim vim-gtk3 ncdu nemo glogg qps nemo-fileroller;
 sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace;
@@ -507,7 +507,7 @@ pip3 install wheel python-language-server;
    1. `gsettings set org.cinnamon.desktop.default-applications.terminal exec 'xfce4-terminal'`
    1. https://github.com/linuxmint/nemo/issues/2091
    1. https://unix.stackexchange.com/questions/86875/determining-specific-file-responsible-for-high-i-o
-1. Open `Preferred Applications` and set mailto as `gnome-gmail`
+1. Open `Preferred Applications` and set mailto as `thunderbird`
 1. Open `Preferred Applications` and set File Manger as `nemo`
 1. Open `KSysGuard` & `System Monitor` and Install KSysGuard System Monitor Tabs:
    * Hard Disk Totals - https://store.kde.org/p/1198291
