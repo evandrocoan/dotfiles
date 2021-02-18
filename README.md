@@ -765,6 +765,72 @@ Categories=AudioVideo;
            configuration: ansiversion=5 guid=3fc710f6-7e35-4a0a-9142-73a813966c3b
     ```
 
+1. **`sudo smartctl --all /dev/nvme0n1`**
+    ```
+      smartctl 7.1 2019-12-30 r5022 [x86_64-linux-5.4.0-47-generic] (local build)
+      Copyright (C) 2002-19, Bruce Allen, Christian Franke, www.smartmontools.org
+
+      === START OF INFORMATION SECTION ===
+      Model Number:                       CL1-3D256-Q11 NVMe SSSTC 256GB
+      Serial Number:                      TW0TN2CC9DH0003I05HD
+      Firmware Version:                   22301115
+      PCI Vendor ID:                      0x1e95
+      PCI Vendor Subsystem ID:            0x126f
+      IEEE OUI Identifier:                0x38f601
+      Total NVM Capacity:                 256.060.514.304 [256 GB]
+      Unallocated NVM Capacity:           0
+      Controller ID:                      1
+      Number of Namespaces:               1
+      Namespace 1 Size/Capacity:          256.060.514.304 [256 GB]
+      Namespace 1 Formatted LBA Size:     512
+      Namespace 1 IEEE EUI-64:            002303 56303ac67b
+      Local Time is:                      Thu Feb 18 09:46:11 2021 -03
+      Firmware Updates (0x14):            2 Slots, no Reset required
+      Optional Admin Commands (0x0017):   Security Format Frmw_DL Self_Test
+      Optional NVM Commands (0x001f):     Comp Wr_Unc DS_Mngmt Wr_Zero Sav/Sel_Feat
+      Maximum Data Transfer Size:         32 Pages
+      Warning  Comp. Temp. Threshold:     83 Celsius
+      Critical Comp. Temp. Threshold:     85 Celsius
+
+      Supported Power States
+      St Op     Max   Active     Idle   RL RT WL WT  Ent_Lat  Ex_Lat
+       0 +     3.50W       -        -    0  0  0  0        0       0
+       1 +     2.10W       -        -    1  1  1  1        0       0
+       2 +     1.65W       -        -    2  2  2  2        0       0
+       3 -   0.0500W       -        -    3  3  3  3     5000    5000
+       4 -   0.0050W       -        -    4  4  4  4     5000   20000
+
+       Supported LBA Sizes (NSID 0x1)
+       Id Fmt  Data  Metadt  Rel_Perf
+        0 +     512       0         0
+
+       === START OF SMART DATA SECTION ===
+       SMART overall-health self-assessment test result: PASSED
+
+       SMART/Health Information (NVMe Log 0x02)
+       Critical Warning:                   0x00
+       Temperature:                        33 Celsius
+       Available Spare:                    100%
+       Available Spare Threshold:          50%
+       Percentage Used:                    5%
+       Data Units Read:                    9.964.234 [5,10 TB]
+       Data Units Written:                 8.399.441 [4,30 TB]
+       Host Read Commands:                 376.884.149
+       Host Write Commands:                364.516.648
+       Controller Busy Time:               12.058
+       Power Cycles:                       312
+       Power On Hours:                     1.492
+       Unsafe Shutdowns:                   62
+       Media and Data Integrity Errors:    0
+       Error Information Log Entries:      0
+       Warning  Comp. Temperature Time:    0
+       Critical Comp. Temperature Time:    0
+       Temperature Sensor 1:               33 Celsius
+
+       Error Information (NVMe Log 0x01, max 64 entries)
+       No Errors Logged
+    ```
+
 1. **`sudo apt-get install inxi dmidecode lshw`**
     ```
     $ sudo lshw -short -C memory
