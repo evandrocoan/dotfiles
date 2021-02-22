@@ -1,3 +1,4 @@
 global:
 - {action: tool-reveal, keyStroke: SHIFT+F3}
 - {action: tool-terminal, keyStroke: NUMPAD_DIVIDE}
+- {action: window-maximize, keyStroke: F10}
