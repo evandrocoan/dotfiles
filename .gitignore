@@ -78,6 +78,9 @@
 !/.config/autokey/
 !/.config/autokey/**
 
+!/.config/remmina/
+!/.config/remmina/remmina.pref
+
 !/scripts/
 !/scripts/**
 
