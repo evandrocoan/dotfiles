@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# set -x
+set -x
 
 # Reliable way for a bash script to get the full path to itself?
 # http://stackoverflow.com/questions/4774054/reliable-way-for-a-bash-script-to-get-the-full-path-to-itself
@@ -25,7 +25,8 @@ fi
 if pgrep -f "/opt/sublime_text/sublime_text" > /dev/null
 then
     printf "Sublime Text is running...\\n";
-    /usr/bin/subl -n "${command_line}";
+    # /usr/bin/subl -n "${command_line}";
+    /usr/bin/subl -n "${@}";
 else
     printf "Sublime Text is NOT running...\\n";
     "${SCRIPT_FOLDER_PATH}/run_as_user.sh" sublime /usr/bin/subl -n "${command_line}";
