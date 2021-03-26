@@ -23,7 +23,7 @@ ssh_parseconfig=true
 hide_toolbar=false
 small_toolbutton=false
 view_file_mode=0
-resolutions=640x480,800x600,1024x768,1152x864,1280x960,1400x1050,1920x1080
+resolutions=640x480,800x600,1024x768,1152x864,1280x960,1400x1050,1920x1080,1808x1017
 keystrokes=Send hello world§hello world\\n
 main_width=960
 main_height=573
@@ -99,8 +99,8 @@ periodic_usage_stats_last_sent=0
 periodic_usage_stats_uuid_prefix=
 
 [remmina_news]
-periodic_rmnews_last_get=1614796955
-periodic_rmnews_get_count=7
+periodic_rmnews_last_get=1616611384
+periodic_rmnews_get_count=10
 periodic_rmnews_uuid_prefix=659AL9JN9H0EJ9
 
 [remmina]
