@@ -26,7 +26,7 @@ git:
     - {id: merge}
     - {id: rebaseHeadTo}
     textBelowIcon: true
-    visible: true
+    visible: false
   logToolBar-18.2:
     items:
     - {id: fetch}
@@ -58,7 +58,7 @@ git:
     - {id: windowLayoutSetMain}
     - {id: windowLayoutSetReview}
     textBelowIcon: true
-    visible: true
+    visible: false
 filterConfiguration:
   patterns: []
   regularExpressions: false
