@@ -481,7 +481,7 @@
       parent = ""
       position = 0:0
       size = 1920, 1047
-      title = Windows
+      title = XWindows
       type = Window
     [[[child1]]]
       active_page = 0
