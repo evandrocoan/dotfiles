@@ -473,14 +473,47 @@
       parent = ""
       type = Window
   [[WindowsXLayout]]
+    [[[child0]]]
+      fullscreen = False
+      last_active_window = True
+      maximised = True
+      order = 0
+      parent = ""
+      position = 0:0
+      size = 1920, 1047
+      title = Windows
+      type = Window
     [[[child1]]]
-      command = ""
-      parent = window0
+      active_page = 0
+      labels = None, None, None, None, None, None, None, None, None, None
+      last_active_term = 42496666-5e3e-41b3-afc0-364abbc12258, 5d80f84a-eb05-4054-98b2-f09f0115eaa5, 2893b87f-85cd-4643-811d-463acd0b28a7, 2db099a6-8b8c-496a-8a99-121ec98c747d, 9024191a-5b9d-4d74-b82f-42215ed97b2f, 5a61c02f-611d-4b20-924e-4ae254660c5b, fe1a435a-1744-4b46-8ade-eca80fcbab99, c339a61c-1dcb-49cb-b8b9-44e5c3707a76, 7ee1236e-9c60-4ac3-90ca-f889a8924233, 377d3160-57b3-48ab-a001-8c60e820e355
+      order = 0
+      parent = child0
+      type = Notebook
+    [[[terminal10]]]
+      order = 8
+      parent = child1
       profile = WindowsXProfile
       type = Terminal
-    [[[window0]]]
-      parent = ""
-      type = Window
+      uuid = 984952e7-88b4-4ac8-b490-e35502634bd1
+    [[[terminal11]]]
+      order = 9
+      parent = child1
+      profile = WindowsXProfile
+      type = Terminal
+      uuid = 3736e661-e7f0-4b8b-9abb-5991424f1607
+    [[[terminal2]]]
+      order = 0
+      parent = child1
+      profile = WindowsXProfile
+      type = Terminal
+      uuid = 44be6cb1-8e52-4774-8433-e4034bd6a12a
+    [[[terminal3]]]
+      order = 1
+      parent = child1
+      profile = WindowsXProfile
+      type = Terminal
+      uuid = 04884ee3-9e14-4626-8218-ca513b4c7afc
   [[Debian10Layout]]
     [[[child0]]]
       type = Window
