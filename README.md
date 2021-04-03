@@ -42,6 +42,10 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    rsync -r -t -v -s ~/Downloads/MyLinuxSettings/ ~/
    ```
 
+1. Disable `Ctrl+Space` keybind to disable input!
+   1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []` 
+   1. https://askubuntu.com/questions/243639/ctrlspace-has-been-bound-to-invoke-some-input-method-and-does-not-work-in-ema
+
 1. Enable the `.gitignore_global` file with:
    1. **`git config --global core.excludesfile ~/.gitignore_global`**
    1. https://stackoverflow.com/questions/7335420/global-git-ignore
