@@ -514,6 +514,12 @@
       profile = WindowsXProfile
       type = Terminal
       uuid = 04884ee3-9e14-4626-8218-ca513b4c7afc
+    [[[terminal4]]]
+      order = 2
+      parent = child1
+      profile = WindowsProfile
+      type = Terminal
+      uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
   [[Debian10Layout]]
     [[[child0]]]
       type = Window
@@ -1360,4 +1366,10 @@
       profile = WindowsProfile
       type = Terminal
       uuid = 04884ee3-9e14-4626-8218-ca513b4c7afc
+    [[[terminal4]]]
+      order = 2
+      parent = child1
+      profile = WindowsProfile
+      type = Terminal
+      uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
 [plugins]
