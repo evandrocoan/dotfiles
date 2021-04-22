@@ -517,7 +517,7 @@
     [[[terminal4]]]
       order = 2
       parent = child1
-      profile = WindowsProfile
+      profile = WindowsXProfile
       type = Terminal
       uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
   [[Debian10Layout]]
