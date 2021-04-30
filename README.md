@@ -410,10 +410,20 @@ Never use `dm-tool lock`!
    ...
    ```
 
+
 ### Disable suspend on lock screen
 
 1. `sudo -u gdm dbus-launch gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'`
 1. https://askubuntu.com/questions/1101043/prevent-sleep-suspend-when-not-logged-in-to-a-specific-account
+
+
+### Turn builtin monitor on/off
+
+1. `xrandr --listmonitors` (to see monitors names)
+1. `xrandr --output eDP-1 -off` (turn `eDP-1` off)
+1. `xrandr --output eDP-1 --auto` (turn `eDP-1` on)
+1. https://askubuntu.com/questions/62858/turn-off-monitor-using-command-line
+1. https://askubuntu.com/questions/512192/turn-monitor-back-on-after-xrandr
 
 
 ### Extension Swap Partition/File
