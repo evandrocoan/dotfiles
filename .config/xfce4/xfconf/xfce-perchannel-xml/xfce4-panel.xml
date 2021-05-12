@@ -40,7 +40,6 @@
         <value type="int" value="8"/>
         <value type="int" value="7"/>
         <value type="int" value="10"/>
-        <value type="int" value="6"/>
         <value type="int" value="1"/>
         <value type="int" value="14"/>
       </property>
@@ -65,6 +64,7 @@
     <property name="plugin-2" type="string" value="tasklist">
       <property name="sort-order" type="uint" value="1"/>
       <property name="flat-buttons" type="bool" value="false"/>
+      <property name="window-scrolling" type="bool" value="false"/>
     </property>
     <property name="plugin-5" type="string" value="clock">
       <property name="items" type="empty"/>
@@ -81,6 +81,8 @@
     <property name="plugin-3" type="string" value="tasklist"/>
     <property name="plugin-13" type="string" value="systray">
       <property name="names-ordered" type="array">
+        <value type="string" value="mattermost-desktop"/>
+        <value type="string" value="qps"/>
         <value type="string" value="linphone"/>
         <value type="string" value="remmina"/>
         <value type="string" value="nemo"/>
@@ -104,12 +106,13 @@
       </property>
       <property name="square-icons" type="bool" value="false"/>
       <property name="names-hidden" type="array">
-        <value type="string" value="autokey"/>
-        <value type="string" value="skypeforlinux"/>
-        <value type="string" value="autokey-gtk"/>
         <value type="string" value="copyq"/>
+        <value type="string" value="autokey-gtk"/>
         <value type="string" value="flameshot"/>
+        <value type="string" value="anydesk"/>
         <value type="string" value="teamviewer"/>
+        <value type="string" value="skypeforlinux"/>
+        <value type="string" value="autokey"/>
       </property>
       <property name="show-frame" type="bool" value="false"/>
     </property>
@@ -121,10 +124,9 @@
       <property name="mpris-players" type="string" value="chrome.instance1795972;chrome.instance19621;chrome.instance2011951;chrome.instance2267337;chrome.instance321148;chrome.instance325435;chrome.instance497007;chrome.instance7580"/>
     </property>
     <property name="plugin-4" type="string" value="whiskermenu"/>
-    <property name="plugin-6" type="string" value="notification-plugin"/>
     <property name="plugin-7" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="mpris-players" type="string" value="chrome.instance1146307;chrome.instance1881524;chrome.instance21616;chrome.instance2315924;chrome.instance2793330;chrome.instance3755110;chrome.instance497007;chrome.instance540511;chrome.instance763670;chrome.instance808642"/>
+      <property name="mpris-players" type="string" value="chrome.instance1071126;chrome.instance1146307;chrome.instance1881524;chrome.instance21616;chrome.instance2315924;chrome.instance2378022;chrome.instance2589396;chrome.instance2793330;chrome.instance2809392;chrome.instance304710;chrome.instance3549040;chrome.instance3755110;chrome.instance497007;chrome.instance540511;chrome.instance595026;chrome.instance763670;chrome.instance808642;chrome.instance836948;chrome.instance8990"/>
     </property>
     <property name="plugin-8" type="string" value="systemload"/>
     <property name="plugin-9" type="string" value="separator">
