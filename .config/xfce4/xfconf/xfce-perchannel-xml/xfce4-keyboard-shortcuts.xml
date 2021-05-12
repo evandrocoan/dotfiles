@@ -37,7 +37,6 @@
       <property name="XF86WWW" type="string" value="exo-open --launch WebBrowser"/>
       <property name="override" type="bool" value="true"/>
       <property name="&lt;Super&gt;l" type="string" value="xflock4"/>
-      <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
       <property name="&lt;Alt&gt;&lt;Super&gt;KP_1" type="string" value="wmctrl -x -a minilyrics.exe.Wine"/>
       <property name="&lt;Alt&gt;&lt;Super&gt;KP_0" type="string" value="wmctrl -x -a aimp.exe.Wine"/>
       <property name="&lt;Super&gt;F3" type="string" value="xfce4-appfinder">
@@ -62,6 +61,7 @@
       <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
       <property name="&lt;Super&gt;Tab" type="string" value="xfdashboard"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;ccedilla" type="string" value="google-chrome --start-maximized --new-window"/>
+      <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
