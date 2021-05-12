@@ -7,7 +7,7 @@
     <property name="Acceleration" type="double" value="4.900000"/>
   </property>
   <property name="24G_Mouse" type="empty">
-    <property name="RightHanded" type="bool" value="true"/>
+    <property name="RightHanded" type="bool" value="false"/>
     <property name="Threshold" type="int" value="1"/>
     <property name="Acceleration" type="double" value="1.500000"/>
   </property>
