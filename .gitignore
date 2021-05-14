@@ -49,6 +49,7 @@
 !/.local/
 !/.local/git-prompt.sh
 !/.local/bin/
+!/.local/bin/changexfce4dpi.sh
 !/.local/bin/run_as_user.sh
 !/.local/bin/_generic_timer.sh
 !/.local/bin/_generic_installer.sh
