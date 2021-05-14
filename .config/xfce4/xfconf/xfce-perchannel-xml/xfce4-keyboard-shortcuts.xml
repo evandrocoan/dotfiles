@@ -59,7 +59,6 @@
       <property name="&lt;Primary&gt;&lt;Super&gt;Left" type="string" value="movescreen.py left"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;t" type="string" value="x-terminal-emulator"/>
       <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
-      <property name="&lt;Super&gt;Tab" type="string" value="xfdashboard"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;ccedilla" type="string" value="google-chrome --start-maximized --new-window"/>
       <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Down" type="string" value="changexfce4dpi.sh down"/>
