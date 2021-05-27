@@ -517,19 +517,19 @@
     [[[terminal4]]]
       order = 4
       parent = child1
-      profile = default
+      profile = WindowsProfile
       type = Terminal
       uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
     [[[terminal5]]]
       order = 5
       parent = child1
-      profile = default
+      profile = WindowsProfile
       type = Terminal
       uuid = 438f6d85-bf47-4126-b00e-cf53f3c7ab5a
     [[[terminal6]]]
       order = 6
       parent = child1
-      profile = default
+      profile = WindowsProfile
       type = Terminal
       uuid = a3b2e2d6-68bd-45bf-8022-bc4a217419b7
     [[[terminal7]]]
