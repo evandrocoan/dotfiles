@@ -491,35 +491,65 @@
       parent = child0
       type = Notebook
     [[[terminal10]]]
-      order = 8
-      parent = child1
-      profile = WindowsXProfile
-      type = Terminal
-      uuid = 984952e7-88b4-4ac8-b490-e35502634bd1
-    [[[terminal11]]]
-      order = 9
-      parent = child1
-      profile = WindowsXProfile
-      type = Terminal
-      uuid = 3736e661-e7f0-4b8b-9abb-5991424f1607
-    [[[terminal2]]]
-      order = 0
+      order = 10
       parent = child1
       profile = WindowsXProfile
       type = Terminal
       uuid = 44be6cb1-8e52-4774-8433-e4034bd6a12a
-    [[[terminal3]]]
-      order = 1
+    [[[terminal11]]]
+      order = 11
       parent = child1
       profile = WindowsXProfile
       type = Terminal
       uuid = 04884ee3-9e14-4626-8218-ca513b4c7afc
-    [[[terminal4]]]
+    [[[terminal2]]]
       order = 2
       parent = child1
       profile = WindowsXProfile
       type = Terminal
+      uuid = 984952e7-88b4-4ac8-b490-e35502634bd1
+    [[[terminal3]]]
+      order = 3
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 3736e661-e7f0-4b8b-9abb-5991424f1607
+    [[[terminal4]]]
+      order = 4
+      parent = child1
+      profile = default
+      type = Terminal
       uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
+    [[[terminal5]]]
+      order = 5
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 438f6d85-bf47-4126-b00e-cf53f3c7ab5a
+    [[[terminal6]]]
+      order = 6
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = a3b2e2d6-68bd-45bf-8022-bc4a217419b7
+    [[[terminal7]]]
+      order = 7
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 6e29645b-c8d4-4a13-9395-172fda8fcc8f
+    [[[terminal8]]]
+      order = 8
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = ba648488-28af-4a46-b2a6-dcb64c51e331
+    [[[terminal9]]]
+      order = 9
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 2c26aadf-cb22-47fe-9462-29ae9ada18b1
   [[Debian10Layout]]
     [[[child0]]]
       type = Window
@@ -1343,33 +1373,63 @@
       parent = child0
       type = Notebook
     [[[terminal10]]]
-      order = 8
-      parent = child1
-      profile = WindowsProfile
-      type = Terminal
-      uuid = 984952e7-88b4-4ac8-b490-e35502634bd1
-    [[[terminal11]]]
-      order = 9
-      parent = child1
-      profile = WindowsProfile
-      type = Terminal
-      uuid = 3736e661-e7f0-4b8b-9abb-5991424f1607
-    [[[terminal2]]]
-      order = 0
+      order = 10
       parent = child1
       profile = WindowsProfile
       type = Terminal
       uuid = 44be6cb1-8e52-4774-8433-e4034bd6a12a
-    [[[terminal3]]]
-      order = 1
+    [[[terminal11]]]
+      order = 11
       parent = child1
       profile = WindowsProfile
       type = Terminal
       uuid = 04884ee3-9e14-4626-8218-ca513b4c7afc
-    [[[terminal4]]]
+    [[[terminal2]]]
       order = 2
       parent = child1
       profile = WindowsProfile
       type = Terminal
+      uuid = 984952e7-88b4-4ac8-b490-e35502634bd1
+    [[[terminal3]]]
+      order = 3
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 3736e661-e7f0-4b8b-9abb-5991424f1607
+    [[[terminal4]]]
+      order = 4
+      parent = child1
+      profile = default
+      type = Terminal
       uuid = 4ea3fb17-9525-4dea-a428-f63c3ced7699
+    [[[terminal5]]]
+      order = 5
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 438f6d85-bf47-4126-b00e-cf53f3c7ab5a
+    [[[terminal6]]]
+      order = 6
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = a3b2e2d6-68bd-45bf-8022-bc4a217419b7
+    [[[terminal7]]]
+      order = 7
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 6e29645b-c8d4-4a13-9395-172fda8fcc8f
+    [[[terminal8]]]
+      order = 8
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = ba648488-28af-4a46-b2a6-dcb64c51e331
+    [[[terminal9]]]
+      order = 9
+      parent = child1
+      profile = default
+      type = Terminal
+      uuid = 2c26aadf-cb22-47fe-9462-29ae9ada18b1
 [plugins]
