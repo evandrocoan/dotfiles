@@ -1,5 +1,5 @@
 WebBrowser=google-chrome
 MailReader=thunderbird
-FileManager=custom-FileManager
+FileManager=Thunar
 TerminalEmulator=terminator
 
