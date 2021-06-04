@@ -63,6 +63,7 @@
       <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Down" type="string" value="changexfce4dpi.sh down"/>
       <property name="&lt;Primary&gt;&lt;Super&gt;Up" type="string" value="changexfce4dpi.sh up"/>
+      <property name="&lt;Shift&gt;Print" type="string" value="flameshot gui"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
