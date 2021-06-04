@@ -53,6 +53,11 @@
 !/.local/bin/run_as_user.sh
 !/.local/bin/_generic_timer.sh
 !/.local/bin/_generic_installer.sh
+!/.local/share
+!/.local/share/applications
+!/.local/share/applications/sublime_text_vanilla.desktop
+!/.local/share/xfce4
+!/.local/share/xfce4/helpers
 !/.local/share/xfce4/helpers/custom-FileManager.desktop
 !/.local/share/xfce4/helpers/custom-MailReader.desktop
 !/.local/share/nemo/actions/*
