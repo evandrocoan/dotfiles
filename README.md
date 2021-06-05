@@ -506,7 +506,7 @@ sudo apt-get install libc6-dbg gsmartcontrol iotop fatrace;
 sudo apt-get install gnome-disk-utility speedcrunch okular;
 sudo apt-get install terminator thunar-archive-plugin gparted p7zip-full;
 sudo apt-get install xfce4-power-manager xfce4-systemload-plugin xfce4-screenshooter;
-sudo apt-get install xfce4-terminal menulibre pinta;
+sudo apt-get install xfce4-terminal menulibre pinta catfish;
 pip install setuptools;
 pip3 install setuptools;
 pip install wheel;
