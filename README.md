@@ -97,18 +97,14 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 ### Install XFCE from sources
 
+1. **`xfce4-stuff`**
+   ```bash
+   cd ~/.scripts
+   bash build_xfce4.sh
+   ```
+
 1. **`xfce4-panel / whiskermenu`**
    ```bash
-   # The default branch is 4.14
-   git clone https://github.com/evandroforks/xfce4-panel
-   cd xfce4-panel
-   git checkout xfce-4.14
-
-   sudo apt-get build-dep xfce4-panel
-   ./autogen.sh
-   make
-   sudo make install
-
    # if: ls /usr/local/lib/xfce4/panel-plugins is a file
    # move it: mv /usr/local/lib/xfce4/panel-plugins{,old}
    xfce4-panel -q && PANEL_DEBUG=1 xfce4-panel
@@ -116,23 +112,6 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # May be install it from source: https://github.com/gottcode/xfce4-whiskermenu-plugin/blob/master/INSTALL
    sudo rsync -ar /usr/lib/x86_64-linux-gnu/xfce4/panel/plugins/ /usr/local/lib/xfce4/panel-plugins/
    sudo rsync -ar /usr/share/xfce4/panel/plugins/ /usr/local/share/xfce4/panel/plugins/
-   ```
-
-1. **`xfwm4`**
-   ```bash
-   # The default branch is 4.14
-   git clone https://github.com/evandroforks/xfce4-xfwm4
-   cd xfce4-xfwm4
-   git checkout xfce-4.14
-
-   sudo apt-get install xfwm4
-   sudo apt-get build-dep xfwm4
-   ./autogen.sh
-   make
-   sudo make install
-
-   xfwm4 --version
-   /usr/local/bin/xfwm4 --version
    ```
 
 1. **`xf86-input-libinput`** (Fix mouse scroll speed without using bugged has as imwheel!)
@@ -149,7 +128,6 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    ./configure --prefix=/usr
    make
    make install
-
    ```
    1. To these change take effect, restart your xorg session, i.e., logout and login again.
    1. https://gitlab.freedesktop.org/xorg/driver/xf86-input-libinput/-/merge_requests/12 - WIP: Add scroll distance scale setting
