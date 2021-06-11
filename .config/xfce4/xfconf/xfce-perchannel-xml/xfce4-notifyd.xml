@@ -5,7 +5,7 @@
   <property name="theme" type="string" value="Default"/>
   <property name="initial-opacity" type="double" value="0.910000"/>
   <property name="expire-timeout" type="int" value="22"/>
-  <property name="primary-monitor" type="uint" value="0"/>
+  <property name="primary-monitor" type="uint" value="1"/>
   <property name="do-fadeout" type="bool" value="false"/>
   <property name="applications" type="empty">
     <property name="known_applications" type="array">
