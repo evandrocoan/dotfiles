@@ -1219,13 +1219,13 @@
     [[[terminal10]]]
       order = 8
       parent = child1
-      profile = RootProfile
+      profile = Debian10Profile
       type = Terminal
       uuid = 049edec6-176d-427d-b692-8a1aad03943e
     [[[terminal11]]]
       order = 9
       parent = child1
-      profile = RootProfile
+      profile = Debian7Profile
       type = Terminal
       uuid = 7cef7a2a-12d2-4cd3-992a-e0322a21fe47
     [[[terminal2]]]
