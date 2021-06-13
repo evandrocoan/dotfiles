@@ -61,7 +61,9 @@
 !/.local/share/xfce4/helpers
 !/.local/share/xfce4/helpers/custom-FileManager.desktop
 !/.local/share/xfce4/helpers/custom-MailReader.desktop
-!/.local/share/nemo/actions/*
+!/.local/share/nemo/
+!/.local/share/nemo/actions
+!/.local/share/nemo/actions/**
 !/.config/xfce4/**
 /.config/xfce4/desktop
 

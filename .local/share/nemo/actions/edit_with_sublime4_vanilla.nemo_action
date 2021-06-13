@@ -1,9 +1,9 @@
 # https://github.com/linuxmint/nemo/blob/master/files/usr/share/nemo/actions/sample.nemo_action
 [Nemo Action]
 Active=true
-Name=Edit with Sublime Text Vanilla
-Comment=Edit with Sublime Text Vanilla
-Exec=run_as_user.sh sublime /myfiles/Programs/sublime_text/4107/sublime_text -n "%F"
+Name=Edit with Sublime Text 4 Vanilla
+Comment=Edit with Sublime Text 4 Vanilla
+Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/4107/sublime_text -n "%F"
 Selection=any
 Extensions=any;
 Icon-Name=sublime-text
