@@ -27,19 +27,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if [[ -z "${thing_name}" ]]; then
+if [[ -z "${thing_name+x}" ]]; then
     thing_name="toolname";
 fi;
 
-if [[ -z "${git_server}" ]]; then
+if [[ -z "${git_server+x}" ]]; then
     git_server="https://repo.url.git";
 fi;
 
-if [[ -z "${tags_columns_width}" ]]; then
+if [[ -z "${tags_columns_width+x}" ]]; then
     tags_columns_width="30";
 fi;
 
-if [[ -z "${branches_columns_width}" ]]; then
+if [[ -z "${branches_columns_width+x}" ]]; then
     branches_columns_width="30";
 fi;
 
