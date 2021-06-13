@@ -5,6 +5,7 @@ pushd `dirname $0` > /dev/null
 SCRIPT_FOLDER_PATH=`pwd`
 popd > /dev/null
 
+creating_user=no;
 source "${SCRIPT_FOLDER_PATH}/_generic_installer.sh";
 
 
@@ -45,12 +46,16 @@ then
 
         if command -v "$current_terminal" >/dev/null 2>&1; then
             $current_command "$full_command_line"
+            if [ "$?" != "0" ];
+            then
+                read -p "Error: Running command on new terminal. Press 'Enter' to continue...\\n" variable1
+                exit 1
+            fi
             exit 0
         fi
     done
 
-    printf "Error: No valid terminal found!\\n"
-    read -p "Press 'Enter' to continue..." variable1
+    read -p "Error: No valid terminal found! Press 'Enter' to continue..." variable1
     exit 1
 fi
 
@@ -77,11 +82,12 @@ fi
 SOURCE_GROUPS=$(id -Gn "${SOURCE_USER}" | sed "s/${SOURCE_USER} //g" | sed "s/ ${SOURCE_USER}//g" | sed "s/ /,/g")
 SOURCE_SHELL=$(awk -F : -v name="${SOURCE_USER}" '(name == $1) { print $7 }' /etc/passwd)
 
-id -u "$DESTINE_USER" > /dev/null 2>&1
 
+id -u "$DESTINE_USER" > /dev/null 2>&1
 
 if [ "$?" != "0" ]
 then
+    creating_user=yes;
     printf "Creating destine user %s\\n" "$DESTINE_USER"
     run sudo useradd --groups "${SOURCE_GROUPS}" --shell "${SOURCE_SHELL}" --create-home "${DESTINE_USER}"
     run sudo passwd "${DESTINE_USER}"
@@ -105,18 +111,37 @@ run sudo chsh -s "$SOURCE_SHELL" "$SOURCE_USER"
 # https://www.digitalocean.com/community/tutorials/how-to-create-a-new-sudo-enabled-user-on-ubuntu-20-04-quickstart
 run sudo usermod -aG sudo "$DESTINE_USER"
 
-
 runset command_line printf '%q ' "${@:3}"
 printf "%s command_line: '%s'\\n" "${0}" "${command_line}";
-
-# This one is not working when the command line had path names with `\ ` escaped spaces!
-# https://askubuntu.com/questions/294736/run-a-shell-script-as-another-user-that-has-no-password
-# run sudo -H -u "$DESTINE_USER" $command_line
 
 # read -p var;
 run sudo runuser "$DESTINE_USER" --command "$command_line"
 
-# read -p "Press 'Enter' to continue" variable1
+if [[ "w$creating_user" == "wyes" ]]
+then
+    # To allow a user directory to be accessed by other users
+    # https://askubuntu.com/questions/487527/give-specific-user-permission-to-write-to-a-folder-using-w-notation
+    newuserhome="$(getent passwd "$DESTINE_USER" | cut -d : -f 6)"
+    run sudo runuser "$DESTINE_USER" --command "sudo chmod -R g+rwx '$newuserhome'"
+    run sudo runuser "$DESTINE_USER" --command "sudo chmod -R go+rwx '$newuserhome'"
+    run sudo runuser "$SOURCE_USER" --command "sudo chmod -R g+rwx '$newuserhome'"
+    run sudo runuser "$SOURCE_USER" --command "sudo chmod -R go+rwx '$newuserhome'"
+
+    # Remove user and its group
+    # https://linuxize.com/post/how-to-delete-users-in-linux-using-the-userdel-command/
+    # https://askubuntu.com/questions/233668/rm-cannot-remove-run-user-root-gvfs-is-a-directory
+    # sudo umount /home/username/.cache/gvfs
+    # sudo umount /home/username/.cache/doc
+    # userdel -r username
+    # groupdel username
+    #
+    # To rename a user
+    # https://serverfault.com/questions/437342/how-can-i-rename-an-unix-user
+    # usermod --login newusername --move-home --home /home/newusername oldusername
+    # groupmod --new-name newusername oldusername
+    read -p "Created a new user successfully. Press 'Enter' to continue" variable1
+fi
+
 printf "Exiting %s...\\n" "$0"
 exit 0
 
