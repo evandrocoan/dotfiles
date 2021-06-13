@@ -289,10 +289,10 @@ function hiddeninstallationmodelhandlegeneralexception() {
         return 1;
     fi;
 
-    while [[ "w${fixcommand}" != "wq" ]];
+    while [[ "w${fixcommand}" != "wc" ]];
     do
         printf "\\n";
-        printf "Type 'q' and press 'Enter' to continue the main script execution...\\n";
+        printf "Type 'c' and press 'Enter' to continue the main script execution...\\n";
 
         if [[ "w${generalexceptiontype}" == "wset" ]];
         then
@@ -312,11 +312,11 @@ function hiddeninstallationmodelhandlegeneralexception() {
 
         while [[ "w${fixcommand}" == "w" ]];
         do
-            printf "ERROR: The fix command cannot be empty. Please, type 'q', 'r' or some other command.\\n";
+            printf "ERROR: The fix command cannot be empty. Please, type 'c', 'r' or some other command.\\n";
             read -e -r -p "Command: " fixcommand;
         done;
 
-        if [[ "w${fixcommand}" == "wq" ]];
+        if [[ "w${fixcommand}" == "wc" ]];
         then
             printf "\\n";
             printf "Continuing the main script execution on step '%sº'... (%s)\\n" "${g_installation_model_command_counter}" "$(pwd)";
@@ -544,7 +544,7 @@ function ask_to_run() {
         while [[ "w${shouldirun}" != "wy" ]] &&
             [[ "w${shouldirun}" != "wyes" ]] &&
             [[ "w${shouldirun}" != "wn" ]] &&
-            [[ "w${shouldirun}" != "wq" ]];
+            [[ "w${shouldirun}" != "wc" ]];
         do
             printf "\\n";
             printf "Type 'y' and press 'Enter' if yes. Otherwise, type 'n'...\\n";
@@ -558,7 +558,7 @@ function ask_to_run() {
                 read -e -r -p "Command: " shouldirun;
             done;
 
-            if [[ "w${shouldirun}" == "wq" ]];
+            if [[ "w${shouldirun}" == "wc" ]];
             then
                 printf "\\n";
                 printf "Continuing the main script execution on step '%sº'... (%s)\\n" "${g_installation_model_command_counter}" "$(pwd)";
