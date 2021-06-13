@@ -3,7 +3,6 @@
 <action>
 	<icon>Terminal</icon>
 	<name>Open in Terminal</name>
-	<submenu></submenu>
 	<unique-id>1552353974025192-1</unique-id>
 	<command>exo-open --working-directory %f --launch TerminalEmulator</command>
 	<description>Open terminal in the selected folder</description>
@@ -13,7 +12,6 @@
 <action>
 	<icon>folder</icon>
 	<name>Open as Root</name>
-	<submenu></submenu>
 	<unique-id>1552353974025480-2</unique-id>
 	<command>pkexec thunar %F</command>
 	<description>Open the folder with administration privileges</description>
@@ -23,7 +21,6 @@
 <action>
 	<icon>emblem-symbolic-link</icon>
 	<name>Create a Link</name>
-	<submenu></submenu>
 	<unique-id>1552353974025715-3</unique-id>
 	<command>ln -s %f  &apos;Link to %n&apos;</command>
 	<description>Create a symbolic link for each selected item</description>
@@ -34,7 +31,6 @@
 <action>
 	<icon>gnome-run</icon>
 	<name>Check SHA256</name>
-	<submenu></submenu>
 	<unique-id>1552353974025743-4</unique-id>
 	<command>mint-sha256sum %f</command>
 	<description>Computes SHA256 checksum for the selected file.</description>
@@ -48,7 +44,6 @@
 <action>
 	<icon>gtk-find</icon>
 	<name>Search</name>
-	<submenu></submenu>
 	<unique-id>1552353974026090-5</unique-id>
 	<command>catfish %f</command>
 	<description>Search for Files</description>
@@ -58,7 +53,6 @@
 <action>
 	<icon>gtk-find</icon>
 	<name>Search with Nemo</name>
-	<submenu></submenu>
 	<unique-id>1552353974026091-5</unique-id>
 	<command>open_nemo_search.sh %f</command>
 	<description>Search for Files with Nemo</description>
@@ -68,7 +62,6 @@
 <action>
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text</name>
-	<submenu></submenu>
 	<unique-id>1598282233323516-1</unique-id>
 	<command>/usr/bin/subl -n %F</command>
 	<description>Edit with Sublime Text</description>
@@ -83,7 +76,6 @@
 <action>
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text Vanilla</name>
-	<submenu></submenu>
 	<unique-id>1552616163094708-1</unique-id>
 	<command>run_as_user.sh sublime /myfiles/Programs/sublime_text/4107/sublime_text -n %F</command>
 	<description>Edit with Sublime Text Vanilla</description>
