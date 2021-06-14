@@ -126,7 +126,9 @@ set history=10000         " remember more commands and search history
 
 " http://vimdoc.sourceforge.net/htmldoc/change.html#registers
 " https://stackoverflow.com/questions/9166328/how-to-copy-selected-lines-to-clipboard-in-vim
-set clipboard=unnamedplus
+" breaks yank on Windows on Windows least, use " * y or " + y  to copy things to system clipboard instead
+" set clipboard=unnamedplus
+
 set formatoptions-=t
 
 " Best view with a 256 color terminal and Powerline fonts
