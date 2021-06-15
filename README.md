@@ -43,7 +43,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    ```
 
 1. Disable `Ctrl+Space` keybind to disable input!
-   1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []` 
+   1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []`
    1. https://askubuntu.com/questions/243639/ctrlspace-has-been-bound-to-invoke-some-input-method-and-does-not-work-in-ema
 
 1. Enable the `.gitignore_global` file with:
@@ -617,6 +617,8 @@ SystemAccount=true
 
 ### Install wine & others
 
+1. `sudo snap install remmina`
+   * https://askubuntu.com/questions/1227585/remmina-not-receiving-audio
 1. Software Manager -> Twinkle -> Install
 1. https://www.virtualbox.org/wiki/Linux_Downloads
 1. http://wiki.octave.org/Octave_for_Debian_systems
