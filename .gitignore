@@ -20,6 +20,19 @@
 !/scripts/backupanki.sh
 !/scripts/backupankihelper.sh
 
+!/snap/
+!/snap/remmina/
+!/snap/remmina/4924/
+!/snap/remmina/4924/.local/
+!/snap/remmina/4924/.local/share/
+!/snap/remmina/4924/.local/share/remmina/
+!/snap/remmina/4924/.local/share/remmina/group_rdp_professional_10-10-10-10.remmina
+!/snap/remmina/4924/.local/share/remmina/group_sftp_professional-download-files_10-10-10-10.remmina
+
+!/snap/remmina/4924/.config/
+!/snap/remmina/4924/.config/remmina/
+!/snap/remmina/4924/.config/remmina/remmina.pref
+
 !/.config/
 !/.config/smartgit/
 !/.config/smartgit/20.2/
