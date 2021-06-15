@@ -35,6 +35,8 @@ else
     printf '%s\n' '# PATH="$PATH:$(cygpath -u "$PROGRAMFILES")/Git:/cygdrive/l/someprogram"'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' '# PATH="~/.local/bin:$PATH"'  >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
+    printf '%s\n' >> '# export LOCAL_COMPUTER_SSH=user@computer'
+    printf '%s\n' >> "$PER_COMPUTER_SETTINGS"
     printf '%s\n' '# mkdir -p "$(cygpath -u "$USERPROFILE")/Downloads"'  >> "$PER_COMPUTER_SETTINGS"
 
     # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
