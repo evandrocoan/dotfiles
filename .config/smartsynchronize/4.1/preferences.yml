@@ -72,13 +72,13 @@ directoryCompare:
     showCompareSettingsOnRefresh: false
     displayFileTimeState: true
   showEolChangedFiles: true
-  showRightOnlyFiles: false
-  showLeftOnlyFiles: false
-  showUnchangedFiles: false
+  showRightOnlyFiles: true
+  showLeftOnlyFiles: true
+  showUnchangedFiles: true
   recursiveView: true
 list32: {ePP: 1598322888486, eUT: -9223372036854775808, nRT: -9223372036854775808,
   eV: '4.1', uid: x29339198760}
-updateCheck: {mode: download, upgradeInstallation: false, prevCheckTime: 1604605174810,
+updateCheck: {mode: download, upgradeInstallation: false, prevCheckTime: 1623423189388,
   checkedBuild: 4083}
 proxySettings: {enabled: false, autoDetect: true}
 proxyPassword: {}

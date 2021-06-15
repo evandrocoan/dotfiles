@@ -22,10 +22,30 @@ fileManager:
     lastDir: /home/evandro_coan
   checkSumColumnWidth: []
   lastUsedSide: left
-directory.fileTable: {}
+directory.fileTable:
+  columnNames: "Name\tState\tType\tChanges\tLeft Time\tRight Time\tRelative Directory"
+  visibleColumnNames: "Changes\tLeft Time\tName\tRelative Directory\tRight Time\t\
+    State\tType"
+  columnWidths:
+  - {id: Name, width: 452, width2x: 0}
+  - {id: State, width: 100, width2x: 0}
+  - {id: Type, width: 75, width2x: 0}
+  - {id: Changes, width: 100, width2x: 0}
+  - {id: Left Time, width: 100, width2x: 0}
+  - {id: Right Time, width: 137, width2x: 0}
+  - {id: Relative Directory, width: 1046, width2x: 0}
+  sortOrders:
+  - {id: State, reverse: false}
+  - {id: Relative Directory, reverse: false}
+  - {id: Type, reverse: false}
+  - {id: Name, reverse: false}
 confirmations: {}
 bounds:
 - {key: main, x: 240, y: 58, width: 1440, height: 872}
 - {key: welcome, x: 659, y: 213, width: 601, height: 620}
-- {key: fileCompare, x: 0, y: 0, width: 1440, height: 872, state: 1}
-tempDirs: [/tmp/smartsynchronize-4230007871641029580]
+- {key: fileCompare, x: 0, y: 0, width: 1204, height: 763, state: 1}
+- {key: directoryCompare, x: 0, y: 0, width: 1024, height: 640, state: 1}
+- {key: newDirectoryCompare}
+tempDirs: [/tmp/smartsynchronize-14398261720231394647]
+directory.layout: ([+192x471:directories ][+1725x471:files ])[+1920x472:preview ]
+compare.showCurrentLine: false

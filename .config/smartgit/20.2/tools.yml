@@ -18,6 +18,7 @@ tools:
       ${commit}'}
   useForOpen: false
   waitUntilFinished: true
+  filePattern: '*'
 - id: applyPatch
   name: Apply Patch
   fileStarter: {command: '${git}', parameters: 'apply ${fileOpen}'}

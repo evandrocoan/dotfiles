@@ -89,7 +89,7 @@
     <property name="plugin-4" type="string" value="whiskermenu"/>
     <property name="plugin-7" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="mpris-players" type="string" value="chrome.instance1071126;chrome.instance1146307;chrome.instance1881524;chrome.instance21616;chrome.instance2315924;chrome.instance2378022;chrome.instance2566315;chrome.instance2589396;chrome.instance2793330;chrome.instance2809392;chrome.instance304710;chrome.instance3549040;chrome.instance3755110;chrome.instance497007;chrome.instance540511;chrome.instance595026;chrome.instance763670;chrome.instance808642;chrome.instance836948;chrome.instance8990"/>
+      <property name="mpris-players" type="string" value="chrome.instance1071126;chrome.instance1146307;chrome.instance1881524;chrome.instance21616;chrome.instance2315924;chrome.instance2378022;chrome.instance2566315;chrome.instance2589396;chrome.instance2793330;chrome.instance2809392;chrome.instance304710;chrome.instance3549040;chrome.instance3595909;chrome.instance3755110;chrome.instance497007;chrome.instance540511;chrome.instance595026;chrome.instance6270;chrome.instance763670;chrome.instance808642;chrome.instance836948;chrome.instance8990"/>
     </property>
     <property name="plugin-8" type="string" value="systemload"/>
     <property name="plugin-9" type="string" value="separator">
