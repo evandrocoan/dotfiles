@@ -59,9 +59,9 @@
       <property name="&lt;Super&gt;m" type="string" value="xfce4-popup-whiskermenu"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;ccedilla" type="string" value="google-chrome --start-maximized --new-window"/>
       <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
-      <property name="&lt;Primary&gt;&lt;Super&gt;Down" type="string" value="changexfce4dpi.sh down"/>
-      <property name="&lt;Primary&gt;&lt;Super&gt;Up" type="string" value="changexfce4dpi.sh up"/>
       <property name="&lt;Shift&gt;Print" type="string" value="flameshot gui"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Down" type="string" value="changexfce4dpi.sh down"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="changexfce4dpi.sh up"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
