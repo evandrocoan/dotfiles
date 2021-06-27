@@ -42,6 +42,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    rsync -r -t -v -s ~/Downloads/MyLinuxSettings/ ~/
    ```
 
+1. Add yourself admin and sudo groups, for special privileges:
+   1. `sudo usermod -a -G adm yourusername` (to view system logs, etc)
+   1. `sudo usermod -a -G sudo yourusername`
+   1. Use `journalctl -o short-precise -k -b -1 -p 4` to view system logs errors (-p 4). It also use colors, so it is better than directly opening `/var/log/syslog`.
+   1. https://unix.stackexchange.com/questions/181067/how-to-read-dmesg-from-previous-session-dmesg-0   
+
 1. Disable `Ctrl+Space` keybind to disable input!
    1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []`
    1. https://askubuntu.com/questions/243639/ctrlspace-has-been-bound-to-invoke-some-input-method-and-does-not-work-in-ema
