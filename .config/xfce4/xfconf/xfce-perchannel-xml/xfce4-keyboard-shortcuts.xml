@@ -62,6 +62,8 @@
       <property name="&lt;Shift&gt;Print" type="string" value="flameshot gui"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Down" type="string" value="changexfce4dpi.sh down"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="changexfce4dpi.sh up"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Right" type="string" value="move_window_to_workspace.sh next"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Left" type="string" value="move_window_to_workspace.sh"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
@@ -155,10 +157,7 @@
       <property name="&lt;Primary&gt;&lt;Shift&gt;&lt;Alt&gt;Left" type="string" value="move_window_left_key"/>
       <property name="&lt;Alt&gt;&lt;Shift&gt;Tab" type="string" value="cycle_reverse_windows_key"/>
       <property name="&lt;Control&gt;&lt;Alt&gt;Down" type="string" value="down_workspace_key"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;End" type="string" value="move_window_next_workspace_key"/>
       <property name="Left" type="string" value="left_key"/>
-      <property name="&lt;Alt&gt;&lt;Control&gt;End" type="string" value="move_window_next_workspace_key"/>
-      <property name="&lt;Alt&gt;&lt;Control&gt;Home" type="string" value="move_window_prev_workspace_key"/>
       <property name="&lt;Control&gt;&lt;Shift&gt;&lt;Alt&gt;Right" type="string" value="move_window_right_key"/>
       <property name="&lt;Primary&gt;&lt;Shift&gt;&lt;Alt&gt;Right" type="string" value="move_window_right_key"/>
       <property name="Right" type="string" value="right_key"/>
@@ -177,7 +176,6 @@
       <property name="Up" type="string" value="up_key"/>
       <property name="&lt;Alt&gt;F12" type="string" value="above_key"/>
       <property name="&lt;Alt&gt;F11" type="string" value="fullscreen_key"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;Home" type="string" value="move_window_prev_workspace_key"/>
       <property name="Down" type="string" value="down_key"/>
       <property name="&lt;Alt&gt;space" type="string" value="popup_menu_key"/>
       <property name="override" type="bool" value="true"/>
