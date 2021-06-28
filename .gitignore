@@ -22,16 +22,16 @@
 
 !/snap/
 !/snap/remmina/
-!/snap/remmina/4924/
-!/snap/remmina/4924/.local/
-!/snap/remmina/4924/.local/share/
-!/snap/remmina/4924/.local/share/remmina/
-!/snap/remmina/4924/.local/share/remmina/group_rdp_professional_10-10-10-10.remmina
-!/snap/remmina/4924/.local/share/remmina/group_sftp_professional-download-files_10-10-10-10.remmina
+!/snap/remmina/4946/
+!/snap/remmina/4946/.local/
+!/snap/remmina/4946/.local/share/
+!/snap/remmina/4946/.local/share/remmina/
+!/snap/remmina/4946/.local/share/remmina/group_rdp_professional_192-168-0-8.remmina
+!/snap/remmina/4946/.local/share/remmina/group_sftp_professional-download-files_192-168-0-8.remmina
 
-!/snap/remmina/4924/.config/
-!/snap/remmina/4924/.config/remmina/
-!/snap/remmina/4924/.config/remmina/remmina.pref
+!/snap/remmina/4946/.config/
+!/snap/remmina/4946/.config/remmina/
+!/snap/remmina/4946/.config/remmina/remmina.pref
 
 !/.config/
 !/.config/smartgit/
