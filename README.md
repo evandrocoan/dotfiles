@@ -64,6 +64,41 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 1. To reset `terminator` terminal press `Ctrl+Shift+G` (it will fix `tmux` messing with input move after losing the `ssh` connection into a `tmux` session)
 
+1. Configuring tigervnc (for RDP)
+   1. https://serverspace.io/support/help/install-tigervnc-server-on-centos-8/
+      1. `yum install tigervnc-server`
+      1. `sudo vim /etc/tigervnc/vncserver.users`, `:2=yourusername` for access on port 5902, using Remmina VNC plugin (not RDP)
+      1. `sudo vim /etc/tigervnc/vncserver-config-defaults`, `session=plasma` (see the `.desktop` files on ` /usr/share/xsessions` for the session names)
+      1. `vncpasswd` after logging in as `yourusername`, to set the VNC password
+      1. `sudo systemctl enable --now vncserver@:2`, to enable the `systemd` service for the user `yourusername` on port `2=5902`
+   1. https://tigervnc.org/
+   1. https://wiki.archlinux.org/title/TigerVNC
+   1. https://stackoverflow.com/questions/15816/changing-the-resolution-of-a-vnc-session-in-linux#:~:text=In%20TigerVNC%2C%20when%20you%20are,the%20one%20that%20you%20like.
+   1. To add a custom resolution to the remotE machine running VNC server:
+      1. `cvt 1680 1000`
+         ```
+         $ cvt 1680 1000
+         # 1680x1000 59.89 Hz (CVT) hsync: 62.17 kHz; pclk: 139.25 MHz
+         Modeline "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync
+         ``` 
+      1. `xrandr --newmode "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync` 
+      1. `xrandr --addmode VNC-0 "1680x1000_60.00"` (`xrandr --addmode DP-1 "1680x1000_60.00"`)
+      1. https://www.tecmint.com/set-display-screen-resolution-in-ubuntu/
+   1. Fix anydesk on Linux (by disabling Wayland and using Xorg), `sudo vim /etc/gdm/custom.conf`
+      ```
+      # GDM configuration storage
+
+      [daemon]
+      # Uncoment the line below to force the login screen to use Xorg
+      WaylandEnable=false
+      #AutomaticLoginEnable=true
+      #AutomaticLogin=afonso     
+      ```     
+      1. `vim /etc/sddm.conf`
+      1. `vim /etc/sddm.conf.d/autologin.conf`
+      1. https://wiki.archlinux.org/title/SDDM
+      1. https://askubuntu.com/questions/1131921/anydesk-remote-server-display-not-supported-e-g-wayland
+
 1. After installing, reload the `XFCE` components, so the settings does not get overridden.
 
    This should reload the `XFCE` panel components:
