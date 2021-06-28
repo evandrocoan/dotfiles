@@ -67,6 +67,7 @@
 !/.local/bin/open_nemo_search.sh
 !/.local/bin/_generic_timer.sh
 !/.local/bin/_generic_installer.sh
+!/.local/bin/move_window_to_workspace.sh
 !/.local/share
 !/.local/share/applications
 !/.local/share/applications/sublime_text4.desktop
