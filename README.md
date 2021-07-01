@@ -80,7 +80,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
          $ cvt 1680 1000
          # 1680x1000 59.89 Hz (CVT) hsync: 62.17 kHz; pclk: 139.25 MHz
          Modeline "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync
-         ``` 
+         ```
       1. `xrandr --newmode "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync` 
       1. `xrandr --addmode VNC-0 "1680x1000_60.00"` (`xrandr --addmode DP-1 "1680x1000_60.00"`)
       1. https://www.tecmint.com/set-display-screen-resolution-in-ubuntu/
