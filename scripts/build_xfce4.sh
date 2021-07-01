@@ -31,10 +31,10 @@ function main {
 
         # Cannot compile any XFCE 4.14 project with `./configure --enable-debug=full`
         # https://gitlab.xfce.org/xfce/xfce4-panel/-/issues/351
-        ./autogen.sh --prefix=$PREFIX --enable-debug=full \
+        ./autogen.sh --prefix=$PREFIX --enable-debug=no \
                 && make \
                 && make install || { \
-            ./autogen.sh --prefix=$PREFIX --enable-debug=yes \
+            ./autogen.sh --prefix=$PREFIX --enable-debug=no \
                 && make \
                 && make install
             }
