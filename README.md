@@ -46,7 +46,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `sudo usermod -a -G adm yourusername` (to view system logs, etc)
    1. `sudo usermod -a -G sudo yourusername`
    1. Use `journalctl -o short-precise -k -b -1 -p 4` to view system logs errors (-p 4). It also use colors, so it is better than directly opening `/var/log/syslog`.
-   1. https://unix.stackexchange.com/questions/181067/how-to-read-dmesg-from-previous-session-dmesg-0   
+   1. https://unix.stackexchange.com/questions/181067/how-to-read-dmesg-from-previous-session-dmesg-0
 
 1. Disable `Ctrl+Space` keybind to disable input!
    1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []`
@@ -81,7 +81,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
          # 1680x1000 59.89 Hz (CVT) hsync: 62.17 kHz; pclk: 139.25 MHz
          Modeline "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync
          ```
-      1. `xrandr --newmode "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync` 
+      1. `xrandr --newmode "1680x1000_60.00"  139.25  1680 1784 1960 2240  1000 1003 1013 1038 -hsync +vsync`
       1. `xrandr --addmode VNC-0 "1680x1000_60.00"` (`xrandr --addmode DP-1 "1680x1000_60.00"`)
       1. https://www.tecmint.com/set-display-screen-resolution-in-ubuntu/
    1. Fix anydesk on Linux (by disabling Wayland and using Xorg), `sudo vim /etc/gdm/custom.conf`
@@ -92,8 +92,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       # Uncoment the line below to force the login screen to use Xorg
       WaylandEnable=false
       #AutomaticLoginEnable=true
-      #AutomaticLogin=afonso     
-      ```     
+      #AutomaticLogin=afonso
+      ```
       1. `vim /etc/sddm.conf`
       1. `vim /etc/sddm.conf.d/autologin.conf`
       1. https://wiki.archlinux.org/title/SDDM
@@ -785,6 +785,12 @@ Exec=wine "/home/evandro/.wine/dosdevices/c:/Program Files (x86)/MiniLyrics/Mini
 Actions=
 Categories=AudioVideo;
 ```
+
+
+### Install Remmina Desktops
+
+Run the script `~/scripts/create-remmina-desktops.sh` to create `.desktop` icons from saved Remmina connections and
+edit `~/.config/menus/xfce-applications.menu` with the results.
 
 
 ### Linux system information

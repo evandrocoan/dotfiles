@@ -80,6 +80,8 @@
 !/.local/share/nemo/
 !/.local/share/nemo/actions
 !/.local/share/nemo/actions/**
+!/.local/share/desktop-directories/
+!/.local/share/desktop-directories/menulibre-remminadesktops.directory
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
