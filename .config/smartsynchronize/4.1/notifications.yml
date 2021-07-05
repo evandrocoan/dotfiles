@@ -1,2 +1,3 @@
-readNotifications: [update-fetch-4.1.1.1-success]
-dontPublishNotifications: []
+readNotifications: [update-fetch-4.1.1.1-success, update-fetch-problem-null]
+dontPublishNotifications: [update-check-info4.2-rc-null]
+dontPublishUntil-update-check-info4.2-rc-null: 0
