@@ -379,6 +379,48 @@
     use_system_font = False
     encoding = WINDOWS-1252
     split_to_group = True
+  [[WindowsFProfile]]
+    background_darkness = 0.85
+    background_type = transparent
+    cursor_color = "#ffffff"
+    font = Monospace 13
+    foreground_color = "#ffffff"
+    show_titlebar = False
+    scrollbar_position = hidden
+    scrollback_lines = 10000000
+    exit_action = restart
+    login_shell = True
+    use_custom_command = True
+    custom_command = '''set +x; \
+      export TERMINATOR_TMUX_UUID="$(printf '%s' "$TERMINATOR_UUID" | cut -c10-20)"; \
+      sshlogin="user@10.0.0.1"; \
+      runterminatorthingslocal() { \
+        local counter=0; \
+        while [[ true ]]; \
+        do \
+          counter=$(( (counter+1) % 30 )); \
+          sleeptime=$(( (RANDOM % 60 + 1) * 1 )); \
+          if (( counter < 2  )); \
+          then \
+            printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
+            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
+          else \
+            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
+          fi; \
+          printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
+          answer=""; \
+          read -t "$sleeptime" answer; \
+          if [[ "w$answer" != "w" ]]; \
+          then \
+            break; \
+          fi; \
+        done; \
+      }; \
+      runterminatorthingslocal; \
+      bash;'''
+    use_system_font = False
+    encoding = WINDOWS-1252
+    split_to_group = True
   [[WindowsXProfile]]
     background_darkness = 0.85
     background_type = transparent
@@ -535,19 +577,19 @@
     [[[terminal7]]]
       order = 7
       parent = child1
-      profile = default
+      profile = WindowsFProfile
       type = Terminal
       uuid = 6e29645b-c8d4-4a13-9395-172fda8fcc8f
     [[[terminal8]]]
       order = 8
       parent = child1
-      profile = default
+      profile = WindowsFProfile
       type = Terminal
       uuid = ba648488-28af-4a46-b2a6-dcb64c51e331
     [[[terminal9]]]
       order = 9
       parent = child1
-      profile = default
+      profile = WindowsFProfile
       type = Terminal
       uuid = 2c26aadf-cb22-47fe-9462-29ae9ada18b1
   [[Debian10Layout]]
