@@ -25,6 +25,7 @@
   switch_to_tab_8 = <Primary>8
   switch_to_tab_9 = <Primary>9
   switch_to_tab_10 = <Primary>0
+  reset = None
   new_window = <Primary><Shift>n
   new_terminator = <Primary><Shift>i
 [profiles]
@@ -446,8 +447,10 @@
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
             passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
+                passh -p some ssh -C -o ConnectTimeout=10 -t "x@10.0.0.1" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
             passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
+                passh -p some ssh -q -o ConnectTimeout=10 -t "x@10.0.0.1" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -476,32 +479,32 @@
     login_shell = True
     use_custom_command = True
     custom_command = '''set +x; \
-    export TERMINATOR_TMUX_UUID="$(printf '%s' "$TERMINATOR_UUID" | cut -c10-20)"; \
-    sshlogin="root@10.3.50.192"; \
-    runterminatorthingslocal() { \
-      local counter=0; \
-      while [[ true ]]; \
-      do \
-        counter=$(( (counter+1) % 30 )); \
-        sleeptime=$(( (RANDOM % 60 + 1) * 1 )); \
-        if (( counter < 2  )); \
-        then \
-          printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-          ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
-        else \
-          ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
-        fi; \
-        printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
-        answer=""; \
-        read -t "$sleeptime" answer; \
-        if [[ "w$answer" != "w" ]]; \
-        then \
-          break; \
-        fi; \
-      done; \
-    }; \
-    runterminatorthingslocal; \
-    bash;'''
+      export TERMINATOR_TMUX_UUID="$(printf '%s' "$TERMINATOR_UUID" | cut -c10-20)"; \
+      sshlogin="root@10.3.50.192"; \
+      runterminatorthingslocal() { \
+        local counter=0; \
+        while [[ true ]]; \
+        do \
+          counter=$(( (counter+1) % 30 )); \
+          sleeptime=$(( (RANDOM % 60 + 1) * 1 )); \
+          if (( counter < 2  )); \
+          then \
+            printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
+          else \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
+          fi; \
+          printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
+          answer=""; \
+          read -t "$sleeptime" answer; \
+          if [[ "w$answer" != "w" ]]; \
+          then \
+            break; \
+          fi; \
+        done; \
+      }; \
+      runterminatorthingslocal; \
+      bash;'''
     use_system_font = False
     split_to_group = True
 [layouts]
