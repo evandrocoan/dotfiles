@@ -13,6 +13,7 @@ declare -a projects_to_build=(
     "xfce4-libxfce4ui"
     "xfce4-exo"
     "xfce4-thunar"
+    "xfce4-thunar-archive-plugin"
     "xfce4-panel"
     "xfce4-xfwm4"
 )
