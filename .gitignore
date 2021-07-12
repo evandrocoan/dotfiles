@@ -35,6 +35,10 @@
 !/snap/remmina/4946/.config/remmina/remmina.pref
 
 !/.config/
+
+!/.config/remmina/
+!/.config/remmina/remmina.pref
+
 !/.config/smartgit/
 !/.config/smartgit/20.2/
 !/.config/smartgit/20.2/bugtracker.yml
@@ -104,9 +108,6 @@
 !/.config/ksysguardrc
 !/.config/autokey/
 !/.config/autokey/**
-
-!/.config/remmina/
-!/.config/remmina/remmina.pref
 
 !/scripts/
 !/scripts/**
