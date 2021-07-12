@@ -664,14 +664,21 @@ SystemAccount=true
 
 1. https://www.teamviewer.com/pt-br/download/linux/
 1. https://community.teamviewer.com/English/discussion/95696/teamviewer-15-stopped-working-on-debian-buster
-1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication 
-1. Reboot your computer after `systemctl edit --full systemd-logind` 
+1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication
+1. Reboot your computer after `systemctl edit --full systemd-logind`
+
+
+### Install remmina from snap
+
+1. `sudo snap install remmina`
+1. Disable snap auto updates:
+   1. `sudo snap set system refresh.hold="$(date --date='today+300000 days' --iso-8601=seconds)"`
+   1. https://askubuntu.com/questions/930593/how-to-disable-autorefresh-in-snap
+1. https://askubuntu.com/questions/1227585/remmina-not-receiving-audio
 
 
 ### Install wine & others
 
-1. `sudo snap install remmina`
-   * https://askubuntu.com/questions/1227585/remmina-not-receiving-audio
 1. Software Manager -> Twinkle -> Install
 1. https://www.virtualbox.org/wiki/Linux_Downloads
 1. http://wiki.octave.org/Octave_for_Debian_systems
