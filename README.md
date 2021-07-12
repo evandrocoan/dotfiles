@@ -660,6 +660,14 @@ SystemAccount=true
 1. https://forums.linuxmint.com/viewtopic.php?t=212990
 
 
+### Fix teamviewer not opening anymore
+
+1. https://www.teamviewer.com/pt-br/download/linux/
+1. https://community.teamviewer.com/English/discussion/95696/teamviewer-15-stopped-working-on-debian-buster
+1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication 
+1. Reboot your computer after `systemctl edit --full systemd-logind` 
+
+
 ### Install wine & others
 
 1. `sudo snap install remmina`
@@ -675,7 +683,6 @@ SystemAccount=true
 1. http://www.aimp2.us/aimp3-download.php (install inside wine)
 1. https://www.last.fm/about/trackmymusic?platform=windows (install inside wine)
 1. https://askubuntu.com/questions/138908/how-to-execute-a-script-just-by-double-clicking-like-exe-files-in-windows
-1. https://www.teamviewer.com/pt-br/download/linux/
 1. Wireshark
    * https://askubuntu.com/questions/700712/how-to-install-wireshark
    * https://askubuntu.com/questions/74059/how-do-i-run-wireshark-with-root-privileges
