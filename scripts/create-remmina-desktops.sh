@@ -1,6 +1,6 @@
 set -x;
 destinedir="${HOME}/.local/share/applications";
-sourcedir="${HOME}/snap/remmina/4965/.local/share/remmina";
+sourcedir="${HOME}/snap/remmina/4978/.local/share/remmina";
 
 # clean up old desktop entries
 rm "$destinedir"/remmina-script-*.desktop

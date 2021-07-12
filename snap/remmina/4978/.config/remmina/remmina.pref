@@ -81,6 +81,8 @@ rdp_quality_9=80
 rdp_deviceScaleFactor=0
 rdp_desktopScaleFactor=0
 rdp_desktopOrientation=0
+rdp_disable_smooth_scrolling=0
+rdp_reconnect_attempts=
 
 [ssh_colors]
 background=rgb(213,204,186)
