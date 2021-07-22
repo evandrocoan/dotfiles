@@ -5,7 +5,7 @@
 # _generic_timer.sh
 # Copyright (c) 2019 Evandro Coan
 #
-# Version: 1.0.0
+# Version: 1.0.1
 # Always ensure you are using the latest version by checking:
 # wget https://raw.githubusercontent.com/evandrocoan/MyLinuxSettings/tree/master/.local/bin/_generic_timer.sh
 #
@@ -182,6 +182,9 @@ testIsFloatNumber13() { isFloatNumber 1d.d1;  assertEquals 1 $?; }
 testIsFloatNumber14() { isFloatNumber 1.d1;   assertEquals 1 $?; }
 testIsFloatNumber15() { isFloatNumber ;       assertEquals 1 $?; }
 
-if [[ "${1}" == "runTests" ]]; then
-    runTests;
+if [[ ! -z "${1+x}" ]]; then
+    if [[ "${1}" == "runTests" ]]; then
+        runTests;
+    fi
 fi
+
