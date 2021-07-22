@@ -5,7 +5,7 @@
 # _generic_installer.sh
 # Copyright (c) 2019 Evandro Coan
 #
-# Version: 1.0.0
+# Version: 1.1.0
 # Always ensure you are using the latest version by checking:
 # wget https://github.com/evandrocoan/MyLinuxSettings/blob/master/.local/bin/_generic_installer.sh
 #
@@ -44,6 +44,11 @@ if [[ -z "${branches_columns_width+x}" ]]; then
 fi;
 
 
+branch_or_tag=""
+g_installation_model_skip_commands="0"
+g_installation_model_skip_commands_higher="99999999"
+g_installation_model_run_only_commands=""
+
 # http://stackoverflow.com/questions/4774054/reliable-way-for-a-bash-script-to-get-the-full-path-to-itself
 # https://stackoverflow.com/questions/1178751/how-can-you-access-the-base-filename-of-a-file-you-are-sourcing-in-bash
 INSTALLATION_MODEL_SCRIPT_PATH="${BASH_SOURCE[0]}";
@@ -55,6 +60,8 @@ function print_help() {
     printf "     -n           to answer all questions as no\\n";
     printf "     -h           to show this help message\\n";
     printf "     -s number    to skip the first nº instructions\\n";
+    printf "     -l number    to skip the last nº instructions\\n";
+    printf "     -o n1,n2,n3  to run only that/those instruction(s)\\n";
     printf "     -v version   to install the selected version from git\\n";
     printf "\\n";
     printf "You can call this script with the following positional arguments:\\n";
@@ -209,6 +216,18 @@ function parse_command_line() {
                 shift;
                 ;;
 
+            -l|--last)
+                hiddeninstallationmodel_validateintegeroption "${1}" "${2}";
+                hiddeninstallationmodel_validateduplicateoptions g_installation_model_skip_commands_higher "${1}" "${2}";
+                g_installation_model_skip_commands_higher=$(( g_installation_model_skip_commands_higher - 1 ));
+                shift;
+                ;;
+
+            -o|--only)
+                g_installation_model_run_only_commands=",${2},";
+                shift;
+                ;;
+
             -v|--version)
                 hiddeninstallationmodel_validateduplicateoptions branch_or_tag "${1}" "${2}";
                 shift;
@@ -239,11 +258,6 @@ function parse_command_line() {
 
     g_installation_model_command_counter=0;
     clone_directory="./${thing_name}/${branch_or_tag}";
-
-    if [[ -z "${g_installation_model_skip_commands}" ]];
-    then
-        g_installation_model_skip_commands="0";
-    fi;
 }
 
 
@@ -409,9 +423,12 @@ function run() {
     commandline="$(printf '%q ' "${@}" | sed -e 's/[[:space:]]*$//')";
     g_installation_model_commands_ranarray+=("${g_installation_model_command_counter}º ${commandline};");
 
-    if [[ "${g_installation_model_skip_commands}" -gt 0 ]];
+    if ( [[ "${g_installation_model_skip_commands}" -gt 0 ]] \
+            || [[ "${g_installation_model_command_counter}" -gt "${g_installation_model_skip_commands_higher}" ]] ) \
+        || ( [[ ! -z "${g_installation_model_run_only_commands}" ]] \
+            && ! [[ "${g_installation_model_run_only_commands}" == *",${g_installation_model_command_counter},"* ]] ) ;
     then
-        printf "Skipping '%sº' required command '%s' (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
+        printf "\\nSkipping '%sº' required command '%s' (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
     else
         printf "\\n";
         printf "Running '%sº' required command '%s' (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
