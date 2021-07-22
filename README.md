@@ -126,6 +126,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1                   1                   kill-twinkle    killall -9 twinkle
    1                   1                   kill-jami       killall -9 jami-gnome
    1                   1                   disable-lid-events /bin/bash /home/yourusername/scripts/wakeup-events.sh
+   1                   1                   fixmonitorcolors sleep 50 && /bin/bash /home/yourusername/.xprofile
 
    # https://bigint.wordpress.com/2016/08/10/xfce-panel-hiding-maximized-window-title/
    # https://forum.xfce.org/viewtopic.php?id=10836 - change xfwm4-settings through command line
