@@ -1318,7 +1318,7 @@
     [[[terminal9]]]
       order = 7
       parent = child1
-      profile = RootProfile
+      profile = Debian9Profile
       type = Terminal
       uuid = da14b971-aa64-4c89-81e9-5d128d025cd5
   [[Ubuntu19Layout]]
