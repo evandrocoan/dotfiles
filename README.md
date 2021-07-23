@@ -63,6 +63,11 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 1. To detach any ssh anytime just press `Enter + ~~ + .` (press `~` twice to input a single `~`)
 
 1. To reset `terminator` terminal press `Ctrl+Shift+G` (it will fix `tmux` messing with input move after losing the `ssh` connection into a `tmux` session)
+   ```
+   git clone https://github.com/evandroforks/tmux-better-mouse-mode ~/scripts/tmux-better-mouse-mode/
+   git clone https://github.com/evandroforks/tmux-sensible ~/scripts/tmux-sensible/
+   git clone https://github.com/evandroforks/tmux-resurrect ~/scripts/tmux-resurrect/
+   ```
 
 1. Configuring tigervnc (for RDP)
    1. https://serverspace.io/support/help/install-tigervnc-server-on-centos-8/
