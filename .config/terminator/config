@@ -85,9 +85,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -126,9 +126,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "sudo bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "sudo tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "sudo bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "sudo tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -166,9 +166,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "sudo bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "sudo tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "sudo bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "sudo tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -206,9 +206,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -247,9 +247,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "sudo bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "sudo tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "sudo bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "sudo tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || sudo tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -288,9 +288,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -323,7 +323,7 @@
       cd "$(cat /tmp/last_used_pwd.txt)"; \
       pwd; \
       cd -; \
-      bash -c \"tmux a -t "evandro-$TERMINATOR_TMUX_UUID" || tmux new -s "evandro-$TERMINATOR_TMUX_UUID"\"; bash; \
+      tmux a -t "evandro-$TERMINATOR_TMUX_UUID" || tmux new -s "evandro-$TERMINATOR_TMUX_UUID"; bash; \
       pwd; \
       cd "$(cat /tmp/last_used_cd.txt)"; \
       pwd; \
@@ -362,9 +362,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -404,9 +404,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -446,11 +446,11 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
-                passh -p some ssh -C -o ConnectTimeout=10 -t "x@10.0.0.1" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            passh -p yourpasswd ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
+                passh -p some ssh -C -o ConnectTimeout=10 -t "x@10.0.0.1" ""tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
-                passh -p some ssh -q -o ConnectTimeout=10 -t "x@10.0.0.1" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            passh -p yourpasswd ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
+                passh -p some ssh -q -o ConnectTimeout=10 -t "x@10.0.0.1" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
@@ -490,9 +490,9 @@
           if (( counter < 2  )); \
           then \
             printf '%s - Connecting ssh "%s" (press something and enter to exit to the local machine %s)... \n' "$(date)" "$sshlogin" "$TERMINATOR_TMUX_UUID"; \
-            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash"; \
+            ssh -C -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash"; \
           else \
-            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "bash -c \"tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'\"; bash" 2> /dev/null; \
+            ssh -q -o ConnectTimeout=10 -t "$sshlogin" "tmux a -t 'evandro-$TERMINATOR_TMUX_UUID' || tmux new -s 'evandro-$TERMINATOR_TMUX_UUID'; bash" 2> /dev/null; \
           fi; \
           printf '%s/%s seconds. ' "$counter" "$sleeptime"; \
           answer=""; \
