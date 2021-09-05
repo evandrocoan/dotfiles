@@ -111,6 +111,10 @@ run sudo chsh -s "$SOURCE_SHELL" "$SOURCE_USER"
 # https://www.digitalocean.com/community/tutorials/how-to-create-a-new-sudo-enabled-user-on-ubuntu-20-04-quickstart
 run sudo usermod -aG sudo "$DESTINE_USER"
 
+# Fix new files permissions for new unzip files:
+# setfacl -R -d -m g::rwX /somedir
+# https://unix.stackexchange.com/questions/1314/how-to-set-default-file-permissions-for-all-folders-files-in-a-directory
+
 runset command_line printf '%q ' "${@:3}"
 printf "%s command_line: '%s'\\n" "${0}" "${command_line}";
 
