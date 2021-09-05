@@ -18,7 +18,7 @@ for remmina in "$sourcedir"/*; do
   printf '[Desktop Entry]
 Version=1.1
 Type=Application
-Name=%s Remmina
+Name=%s
 Comment=Connect to remote desktops
 Icon=org.remmina.Remmina
 Exec=env BAMF_DESKTOP_FILE_HINT=/var/lib/snapd/desktop/applications/remmina_remmina.desktop /snap/bin/remmina "%s"
