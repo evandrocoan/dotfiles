@@ -4,7 +4,7 @@ Type=Application
 Name=Sublime Text 4 Vanilla
 GenericName=Text Editor
 Comment=Sophisticated text vanilla editor for code, markup and prose
-Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/4107/sublime_text %F
+Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/current/sublime_text %F
 Terminal=false
 MimeType=text/plain;
 Icon=sublime-text
@@ -14,10 +14,10 @@ Actions=new-window;new-file;
 
 [Desktop Action new-window]
 Name=New Window
-Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/4107/sublime_text --launch-or-new-window
+Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/current/sublime_text --launch-or-new-window
 OnlyShowIn=Unity;
 
 [Desktop Action new-file]
 Name=New File
-Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/4107/sublime_text --command new_file
+Exec=run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/current/sublime_text --command new_file
 OnlyShowIn=Unity;

@@ -77,7 +77,7 @@
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text 4</name>
 	<unique-id>1552616163094708-1</unique-id>
-	<command>run_as_user.sh sublime4 /myfiles/Programs/sublime_text/4107/sublime_text -n %F</command>
+	<command>run_as_user.sh sublime4 /myfiles/Programs/sublime_text/current/sublime_text -n %F</command>
 	<description>Edit with Sublime Text 4</description>
 	<patterns>*</patterns>
 	<directories/>
@@ -91,7 +91,7 @@
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text 4 Vanilla</name>
 	<unique-id>1552616163094709-1</unique-id>
-	<command>run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/4107/sublime_text -n %F</command>
+	<command>run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/current/sublime_text -n %F</command>
 	<description>Edit with Sublime Text 4 Vanilla</description>
 	<patterns>*</patterns>
 	<directories/>
