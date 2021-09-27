@@ -121,16 +121,16 @@ printf "%s command_line: '%s'\\n" "${0}" "${command_line}";
 # read -p var;
 run sudo runuser "$DESTINE_USER" --command "$command_line"
 
+# To allow a user directory to be accessed by other users
+# https://askubuntu.com/questions/487527/give-specific-user-permission-to-write-to-a-folder-using-w-notation
+newuserhome="$(getent passwd "$DESTINE_USER" | cut -d : -f 6)"
+run sudo runuser "$DESTINE_USER" --command "sudo chmod -f -R g+rw '$newuserhome' || cd ."
+run sudo runuser "$DESTINE_USER" --command "sudo chmod -f -R go+rw '$newuserhome' || cd ."
+run sudo runuser "$SOURCE_USER" --command "sudo chmod -f -R g+rw '$newuserhome' || cd ."
+run sudo runuser "$SOURCE_USER" --command "sudo chmod -f -R go+rw '$newuserhome' || cd ."
+
 if [[ "w$creating_user" == "wyes" ]]
 then
-    # To allow a user directory to be accessed by other users
-    # https://askubuntu.com/questions/487527/give-specific-user-permission-to-write-to-a-folder-using-w-notation
-    newuserhome="$(getent passwd "$DESTINE_USER" | cut -d : -f 6)"
-    run sudo runuser "$DESTINE_USER" --command "sudo chmod -R g+rwx '$newuserhome'"
-    run sudo runuser "$DESTINE_USER" --command "sudo chmod -R go+rwx '$newuserhome'"
-    run sudo runuser "$SOURCE_USER" --command "sudo chmod -R g+rwx '$newuserhome'"
-    run sudo runuser "$SOURCE_USER" --command "sudo chmod -R go+rwx '$newuserhome'"
-
     # Remove user and its group
     # https://linuxize.com/post/how-to-delete-users-in-linux-using-the-userdel-command/
     # https://askubuntu.com/questions/233668/rm-cannot-remove-run-user-root-gvfs-is-a-directory
