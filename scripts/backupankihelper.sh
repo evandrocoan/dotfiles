@@ -11,6 +11,7 @@ then :
     exit 11
 else
     touch "${BACKUP_FLAG_FILE}"
+    trap "rm -f '${BACKUP_FLAG_FILE}'" EXIT
 fi
 
 while [[ "w${ANKIPID}" != "w" ]];

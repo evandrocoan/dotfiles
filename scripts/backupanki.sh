@@ -9,8 +9,9 @@ popd > /dev/null
 
 export MAXIMUM_BACKUPS=100
 export SRCDIR="/d/User/Documents/Anki2"
-export DESTDIR="/d/User/Documents/AnkiApp"
+export DESTDIR="/i/AnkiBackup"
 
+mkdir -p "${DESTDIR}"
 BACKUP_FILE_NAME="${SCRIPT_FOLDER_PATH}/ankibackup.log"
 
 # requires sudo apt-get install moreutils
