@@ -1,6 +1,9 @@
 set -x;
+defaultremmina="${HOME}/.local/share/remmina"
 destinedir="${HOME}/.local/share/applications";
 sourcedir="${HOME}/snap/remmina/4978/.local/share/remmina";
+
+cp --verbose --no-clobber "$defaultremmina"/* "$sourcedir"
 
 # clean up old desktop entries
 rm "$destinedir"/remmina-script-*.desktop
