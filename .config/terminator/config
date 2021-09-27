@@ -9,6 +9,7 @@
   zoom_in = <Primary>equal
   zoom_out = <Primary>minus
   zoom_normal = <Alt>equal
+  new_tab = None
   close_term = None
   close_window = None
   move_tab_right = <Primary><Shift>Page_Up
