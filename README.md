@@ -671,7 +671,8 @@ SystemAccount=true
 1. https://www.teamviewer.com/pt-br/download/linux/
 1. https://community.teamviewer.com/English/discussion/95696/teamviewer-15-stopped-working-on-debian-buster
 1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication
-1. Reboot your computer after `systemctl edit --full systemd-logind`
+1. Use `systemctl edit --full systemd-logind` to disable the network restrictions in systemd-logind, by removing the `IPAddressDeny=` and `RestrictAddressFamilies=` options. (And probably `SystemCallFilter=` as well).
+   1. Reboot your computer after `systemctl edit --full systemd-logind`
 
 
 ### Install remmina from snap
@@ -681,6 +682,10 @@ SystemAccount=true
    1. `sudo snap set system refresh.hold="$(date --date='today+300000 days' --iso-8601=seconds)"`
    1. https://askubuntu.com/questions/930593/how-to-disable-autorefresh-in-snap
 1. https://askubuntu.com/questions/1227585/remmina-not-receiving-audio
+
+Run the script `~/scripts/create-remmina-desktops.sh` to create `.desktop` icons from saved Remmina connections and
+edit `~/.config/menus/xfce-applications.menu` with the results.
+1. `sudo chmod ugo+rwx "$HOME/snap/remmina/" -R`
 
 
 ### Install wine & others
@@ -805,12 +810,6 @@ Exec=wine "/home/evandro/.wine/dosdevices/c:/Program Files (x86)/MiniLyrics/Mini
 Actions=
 Categories=AudioVideo;
 ```
-
-
-### Install Remmina Desktops
-
-Run the script `~/scripts/create-remmina-desktops.sh` to create `.desktop` icons from saved Remmina connections and
-edit `~/.config/menus/xfce-applications.menu` with the results.
 
 
 ### Linux system information
