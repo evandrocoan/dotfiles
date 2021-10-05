@@ -508,6 +508,20 @@ sudo passwd -l root
    1. https://askubuntu.com/questions/1059971/disable-updates-from-command-line-in-ubuntu-16-04
 
 
+### Disable pmproxy eating 100% CPU
+
+1. `tail -F /var/log/pcp/pmproxy/pmproxy.log`
+1. `sudo /usr/lib/pcp/bin/pmproxy stop`
+1. `sudo apt-get install systemd`
+1. `sudo systemctl disable pmcd.service`
+1. `sudo mv /usr/lib/pcp/bin/pmproxy{,old}`
+1. `sudo killall -9 pmproxy`
+1. https://github.com/systemd/systemd/pull/15928 - warn on KillMode=none, inform about left-over processes on stop and warn about sysv services
+1. https://linux.die.net/man/1/pmproxy
+1. https://man7.org/linux/man-pages/man1/pmproxy.1.html
+1. https://man7.org/linux/man-pages/man1/pcpintro.1.html
+
+
 ### Restart audio interface
 
 1. `pulseaudio -k && sudo alsa force-reload && sleep 2 && pulseaudio -k && sudo alsa force-reload`
