@@ -57,6 +57,9 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://stackoverflow.com/questions/7335420/global-git-ignore
 
 1. Fix `~/.ssh/config` permissions:
+   1. `chmod 755 ~/.ssh`
+     1. Fix not accepting ssh connections with authorized_keys
+     1. https://unix.stackexchange.com/questions/36540/why-am-i-still-getting-a-password-prompt-with-ssh-with-public-key-authentication
    1. `chmod 600 ~/.ssh/config`
    1. https://serverfault.com/questions/253313/ssh-returns-bad-owner-or-permissions-on-ssh-config
 
