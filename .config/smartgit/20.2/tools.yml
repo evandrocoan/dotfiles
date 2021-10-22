@@ -73,6 +73,11 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: false
+- name: Delete Directory
+  fileStarter: {command: rm, parameters: '-rf ${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
 - name: Open with File Manager (nemo)
   fileStarter: {command: nemo, parameters: '${filePath}'}
   useForOpen: false
