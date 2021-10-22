@@ -7,7 +7,7 @@ dontPublishNotifications: [credential.helper-null, fileMonitor.directoriesExclud
   linux.theme-null, log-may-be-used-as-main-window-null, refresh-performance-repository-on-symlink-null,
   repositories-no-favorites-null, update-check-infosmartgit-19.1-rc-null, update-check-infosmartgit-20.2-rc-null,
   svn-integration-end-of-life-null, update-check-infotwitter-follow-us-2021-null,
-  update-check-infosmartgit-21.1-rc-null]
+  update-check-infosmartgit-21.1-rc-null, support-will-expire-21-08-27-null, support-expired-21-08-27-null]
 dontPublishUntil-credential.helper-null: 0
 dontPublishUntil-fileMonitor.directoriesExcluded-null: 0
 dontPublishUntil-gc.autoDetach-null: 0
@@ -22,3 +22,5 @@ dontPublishUntil-update-check-infosmartgit-20.2-rc-null: 0
 dontPublishUntil-svn-integration-end-of-life-null: 0
 dontPublishUntil-update-check-infotwitter-follow-us-2021-null: 0
 dontPublishUntil-update-check-infosmartgit-21.1-rc-null: 0
+dontPublishUntil-support-will-expire-21-08-27-null: 0
+dontPublishUntil-support-expired-21-08-27-null: 0

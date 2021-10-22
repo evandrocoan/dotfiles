@@ -8,6 +8,7 @@ actions:
       compareType: 0
       externalFileCompare: {}
     compareWithWorkingTree: false
+    showChooser: false
   conflictSolver:
     conflictSolvers:
     - filePattern: '*'
@@ -83,11 +84,12 @@ globalTextComponentSettings:
     color-string: 32768, color-tag: 128, color-type: 0, backgroundModified: 16763080,
     backgroundAdded: 12513470, backgroundRemoved: 13158655, backgroundModifiedCS: 16763080,
     backgroundAddedCS: 12513470, backgroundRemovedCS: 13158655, backgroundConflict: 16755370,
-    color-pragma: 8547840, color-invalid: 16727871, color-identifier: 0}
+    color-pragma: 8547840, color-invalid: 16727871, color-identifier: 0, backgroundModifiedLight: 16772589,
+    backgroundAddedLight: 15399658, backgroundRemovedLight: 15592959, backgroundConflictLight: 16770019}
   colors.useDark: false
   actions: {smartHome: true, homeEndToLineNotDocument: true, cursorLeftRightLimitToLine: true,
     smartEnterAutoIndent: false, smartEnterDeleteWhitespace: true, smartEnterIgnoreEmptyLinesForIndentation: true,
-    focusNextChangeAfterTakingChange: true}
+    focusNextChangeAfterTakingChange: true, tabToSpaces: false}
   syntaxHighlightingSettings:
     entries:
     - {language: Basic, pattern: '*.basic, *.cbm, *.vb, *.vbs'}
@@ -131,35 +133,35 @@ globalTextComponentSettings:
     color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807,
     color-pragma: 13876905, color-invalid: 16744319, color-identifier: 12632256}
 listx: {ePP: 1610844260329, eUT: -9223372036854775808, nRT: -9223372036854775808,
-  eV: '20.2', uid: 1nhlo2qaortv, lLCT: 1623539422079}
+  eV: '20.2', uid: 1nhlo2qaortv, lLCT: 1633968654962}
 project: {reopenLastUsedRepositories: true, showWelcomeDialog: false, preferLogWindow: true,
   preferLogWindow.auto: true}
 uiSettings: {useBackgroundColorInFileTable: true, fileSearchPatternType: 1, themeChanged: false,
   theme: auto}
-vcsRecords: {lastGitUsage: 1624976738917, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
-  lastDgUsage: 1624568384683}
-updateCheck: {mode: download, prevCheckTime: 1625448284000, checkedBuild: 16168, upgradeInstallation: false,
+vcsRecords: {lastGitUsage: 1630823079962, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
+  lastDgUsage: 1633961252946}
+updateCheck: {mode: download, prevCheckTime: 1634847662673, checkedBuild: 17152, upgradeInstallation: false,
   previewAlwaysCheckForLatestBuild: false}
 proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
 spellCheck:
   dictionaries:
-  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   - {name: Portuguese (Brazilian), file: /myfiles/Programs/SpellCheckDicts/Portuguese
       (Brazilian).dic}
+  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   personalFile: ${smartgit.settings}/my-words.dic
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
   useOnlyBestOfficial: false
   deleted: false
-  activeDictionary: 0
+  activeDictionary: 1
 warnForMissingMasterPassword: false
 askForMasterPasswordOnStartup: false
 sendStacktraces2: false
 sendStacktracesBeta: false
 machineId: f3f90f38
-lastUsedVersion: '20.2'
-tempDirs: [/tmp/smartgit10601370879957400267]
-updateCheckDg: {prevCheckTime: 1624568386072, checkedBuild: 7006, mode: download}
-upgradedFromVersion: '20.1'
+lastUsedVersion: '21.1'
+tempDirs: [/tmp/smartgit15612005444454379152]
+updateCheckDg: {prevCheckTime: 1633961254219, checkedBuild: 7006, mode: download}
+upgradedFromVersion: '20.2'
 firstUsedTime: 1569505697899
 sendUsageStats: false

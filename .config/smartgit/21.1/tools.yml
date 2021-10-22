@@ -1,10 +1,24 @@
 tools:
 - name: Open File
-  fileStarter: {command: xdg-open, parameters: '${filePath}'}
+  fileStarter: {command: /usr/bin/gio, parameters: 'open ${filePath}'}
   useForOpen: true
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: true
+- id: revealInNemo
+  name: Reveal in Nemo
+  fileStarter: {command: /usr/bin/nemo, parameters: '${fileUri}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+- id: openGnomeTerminal
+  name: Open Terminal
+  fileStarter: {command: /usr/bin/gnome-terminal, parameters: '--working-directory
+      ${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: false
 - id: formatPatch
   name: Format Patch
   fileStarter: {command: '${smartGitDir}/lib/format-patch.sh', parameters: '${dirSelect}
