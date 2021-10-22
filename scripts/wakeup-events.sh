@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# https://askubuntu.com/questions/930593/how-to-disable-autorefresh-in-snap
+snap set system refresh.hold="$(date --date='today+300000 days' --iso-8601=seconds)"
+
 # https://askubuntu.com/questions/252743/how-do-i-prevent-mouse-movement-from-waking-up-a-suspended-computer
 # Run `cat /proc/acpi/wakeup`
 #
