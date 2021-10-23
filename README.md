@@ -71,6 +71,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    git clone https://github.com/evandroforks/tmux-sensible ~/scripts/tmux-sensible/
    git clone https://github.com/evandroforks/tmux-resurrect ~/scripts/tmux-resurrect/
    ```
+1. To install tmux on Windows (msys2) use: https://github.com/Alexpux/MSYS2-pacman/issues/50#issuecomment-602141995 - Manually Install Pacman Binaries
 
 1. Configuring tigervnc (for RDP)
    1. https://serverspace.io/support/help/install-tigervnc-server-on-centos-8/
