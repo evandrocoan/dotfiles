@@ -336,6 +336,71 @@ including the actual virtual memory already on the SWAP partition.
 1. https://askubuntu.com/questions/180730/how-do-i-restore-a-swap-partition-i-accidentally-deleted
 1. https://www.cyberciti.biz/faq/linux-add-a-swap-file-howto/
 
+#### Ubuntu 20.04 (with encrypted root partition and swap file)
+
+1. `findmnt -no UUID -T /swapfile30GB`
+1. `sudo filefrag -v /swapfile30GB` (take the first `1626112`)
+   ```
+   Filesystem type is: ef53
+   File size of /swapfile is 8589934592 (2097152 blocks of 4096 bytes)
+    ext:     logical_offset:        physical_offset: length:   expected: flags:
+      0:        0..    6143:    1626112..   4980735:   6144:            
+      1:     6144..    8191:    4982784..   4984831:   2048:    4980736:
+   ```
+1. `sudo vim /etc/default/grub`
+   ```
+   GRUB_CMDLINE_LINUX_DEFAULT="..... resume=UUID=8a45acb0-cc70-4a0d-a41c-f39e1676148f resume_offset=1626112"
+   ```
+1. `sudo update-grub`
+1. `sudo vim /etc/initramfs-tools/conf.d/resume`
+   ```
+   RESUME=UUID=8a45acb0-cc70-4a0d-a41c-f39e1676148f resume_offset=1626112
+   ```
+1. `sudo update-initramfs -c -k all`
+1. `sudo reboot`
+1. `sudo systemctl hibernate`
+1. `sudo systemctl status systemd-hibernate.service`
+1. https://www.linuxuprising.com/2021/08/how-to-enable-hibernation-on-ubuntu.html
+
+1. `sudo vim /etc/polkit-1/localauthority/50-local.d/com.ubuntu.desktop.pkla`
+   ```
+   [Enable hibernate in upower]
+   Identity=unix-user:*
+   Action=org.freedesktop.upower.hibernate
+   ResultActive=yes
+
+   [Enable hibernate in logind]
+   Identity=unix-user:*
+   Action=org.freedesktop.login1.hibernate;org.freedesktop.login1.handle-hibernate-key;org.freedesktop.login1;org.freedesktop.login1.hibernate-multiple-sessions;org.freedesktop.login1.hibernate-ignore-inhibit
+   ResultActive=yes
+   ```
+1. `vim ~/.local/share/applications/hibernate.desktop`
+   ```
+   [Desktop Entry]
+   Type=Application
+   Name=Hibernate desktop
+   GenericName=Hibernate desktop
+   Comment=Enter hibernation
+   NoDisplay=false
+   Icon=drive-multidisk
+   Exec=systemctl hibernate
+   Terminal=true
+   Categories=System;Utility;Settings;
+   ```
+1. `sudo vim /etc/systemd/sleep.conf`
+   ```
+   [Sleep]
+   # suspend=hybrid-sleep
+   SuspendMode=suspend
+   SuspendState=disk
+   # hibernate=hybrid-sleep
+   HibernateMode=suspend
+   HibernateState=disk
+   ```
+   1. `sudo systemctl hybrid-sleep` suspends the system both to RAM and disk, so a complete power loss does not result in lost data. This mode is also called suspend to both.
+   1. `sudo systemctl suspend-then-hibernate` initially suspends the system to RAM and if it is not interrupted within the delay specified by HibernateDelaySec in systemd-sleep.conf(5), then the system will be woken using an RTC alarm and hibernated.
+   1. https://wiki.archlinux.org/title/Power_management#Suspend_and_hibernate
+
 
 ### Disable Suspention/Hibernation Wake Up
 
