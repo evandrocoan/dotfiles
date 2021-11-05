@@ -63,6 +63,15 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `chmod 600 ~/.ssh/config`
    1. https://serverfault.com/questions/253313/ssh-returns-bad-owner-or-permissions-on-ssh-config
 
+1. Fix ssh cleaning up terminal output:
+   1. `vim /etc/bash.bash_logout`
+     ```bash
+     if [ "$SHLVL" = 1 ]; then
+         [ -x /usr/bin/clear ] && /usr/bin/clear
+     fi
+     ``` 
+   1. https://superuser.com/questions/186037/how-to-prevent-clearing-of-terminal-output-when-i-exit-an-ssh-session
+
 1. To detach any ssh anytime just press `Enter + ~~ + .` (press `~` twice to input a single `~`)
 
 1. To reset `terminator` terminal press `Ctrl+Shift+G` (it will fix `tmux` messing with input move after losing the `ssh` connection into a `tmux` session)
