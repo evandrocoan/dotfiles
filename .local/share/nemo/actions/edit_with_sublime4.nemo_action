@@ -1,8 +1,8 @@
 # https://github.com/linuxmint/nemo/blob/master/files/usr/share/nemo/actions/sample.nemo_action
 [Nemo Action]
 Active=true
-Name=Edit with Sublime Text 4
-Comment=Edit with Sublime Text 4
+Name=Edit with Sublime Text Logs
+Comment=Edit with Sublime Text Logs
 Exec=run_as_user.sh sublime4 /myfiles/Programs/sublime_text/4107/sublime_text -n "%F"
 Selection=any
 Extensions=any;

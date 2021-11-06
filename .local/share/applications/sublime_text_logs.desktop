@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Sublime Text 4
+Name=Sublime Text Logs
 GenericName=Text Editor
 Comment=Sophisticated text vanilla editor for code, markup and prose
 Exec=run_as_user.sh sublime4 /myfiles/Programs/sublime_text/current/sublime_text %F

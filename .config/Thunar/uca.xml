@@ -75,10 +75,10 @@
 </action>
 <action>
 	<icon>sublime-text</icon>
-	<name>Edit with Sublime Text 4</name>
+	<name>Edit with Sublime Text Logs</name>
 	<unique-id>1552616163094708-1</unique-id>
 	<command>run_as_user.sh sublime4 /myfiles/Programs/sublime_text/current/sublime_text -n %F</command>
-	<description>Edit with Sublime Text 4</description>
+	<description>Edit with Sublime Text Logs</description>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>
@@ -89,10 +89,10 @@
 </action>
 <action>
 	<icon>sublime-text</icon>
-	<name>Edit with Sublime Text 4 Vanilla</name>
+	<name>Edit with Sublime Text Vanilla</name>
 	<unique-id>1552616163094709-1</unique-id>
 	<command>run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/current/sublime_text -n %F</command>
-	<description>Edit with Sublime Text 4 Vanilla</description>
+	<description>Edit with Sublime Text Vanilla</description>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>

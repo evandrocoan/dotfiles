@@ -76,8 +76,8 @@
 !/.local/bin/fix_windows_zip_paths.py
 !/.local/share
 !/.local/share/applications
-!/.local/share/applications/sublime_text4.desktop
-!/.local/share/applications/sublime_text4_vanilla.desktop
+!/.local/share/applications/sublime_text_logs.desktop
+!/.local/share/applications/sublime_text_vanilla.desktop
 !/.local/share/xfce4
 !/.local/share/xfce4/helpers
 !/.local/share/xfce4/helpers/custom-FileManager.desktop
