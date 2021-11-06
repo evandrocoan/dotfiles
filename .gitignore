@@ -35,6 +35,7 @@
 !/snap/remmina/5073/.config/remmina/remmina.pref
 
 !/.config/
+!/.config/screenkey.json
 
 !/.config/remmina/
 !/.config/remmina/remmina.pref

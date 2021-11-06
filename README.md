@@ -560,6 +560,15 @@ Instead of expanding a SWAP partition, just create a swap file instead!
 1. https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/
 
 
+### Screenkey/peek recorder
+
+1. `sudo apt install peek`
+1. `git clone https://gitlab.com/screenkey/screenkey`
+1. `cd screenkey`
+1. `sudo ./setup.py install`
+1. `screenkey; peek`
+
+
 ### ksuperkey
 
 1. Clone and install https://github.com/hanschen/ksuperkey with `make` and `sudo make install`
