@@ -35,6 +35,10 @@
 !/snap/remmina/5073/.config/remmina/remmina.pref
 
 !/.config/
+
+!/.config/apport
+!/.config/apport/*
+
 !/.config/screenkey.json
 
 !/.config/remmina/

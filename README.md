@@ -48,6 +48,11 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. Use `journalctl -o short-precise -k -b -1 -p 4` to view system logs errors (-p 4). It also use colors, so it is better than directly opening `/var/log/syslog`.
    1. https://unix.stackexchange.com/questions/181067/how-to-read-dmesg-from-previous-session-dmesg-0
 
+1. Enable core dump generation on `/var/crash/` by with `sudo systemctl enable apport`
+   1. `ulimit -c`
+   1. ` cat /proc/sys/kernel/core_pattern`
+   1. https://askubuntu.com/questions/966407/where-do-i-find-the-core-dump-in-ubuntu-16-04lts
+
 1. Disable `Ctrl+Space` keybind to disable input!
    1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []`
    1. https://askubuntu.com/questions/243639/ctrlspace-has-been-bound-to-invoke-some-input-method-and-does-not-work-in-ema
