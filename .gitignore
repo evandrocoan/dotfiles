@@ -92,6 +92,9 @@
 !/.local/share/nemo/actions/**
 !/.local/share/desktop-directories/
 !/.local/share/desktop-directories/menulibre-remminadesktops.directory
+!/.local/share/themes/
+!/.local/share/themes/border-only/
+!/.local/share/themes/border-only/**
 !/.config/xfce4/**
 /.config/xfce4/desktop
 
