@@ -16,7 +16,8 @@ fi
 
 while [[ "w${ANKIPID}" != "w" ]];
 do :
-    ANKIPID="$(ps axf | grep anki | grep -v grep | awk '{print $1}')"
+    # https://superuser.com/questions/751688/is-there-a-way-to-show-windows-processes-in-cygwin-constantly
+    ANKIPID="$(ps -W | grep anki | grep -v grep | awk '{print $1}')"
     printf 'Checking if "anki=%s" is running...\n' "${ANKIPID}"
 
     if [[ "w${ANKIPID}" != "w" ]];
