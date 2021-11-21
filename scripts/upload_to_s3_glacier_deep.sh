@@ -1,11 +1,11 @@
 #!/bin/bash
 set -x
-set -eo pipefail
+set -eu -o pipefail
 
 parallel_uploads="4"
-s3_bucket_name="disk-backup"
 s3_main_logfile="/d/Backups/amazon_s3_glacier_deep_logs.txt"
 
+bucket_directory_separator=";"
 directories_and_buckets_to_upload=(
 "/i/My Backups/Local Disk C;disk-c-backup"
 "/i/My Backups/Local Disk F;disk-f-backup"
@@ -35,12 +35,32 @@ function main()
                 get_all_the_files "$item"
             else
                 file_name_on_s3="${item#"$base_directory"}";
-                file_name_on_s3="${file_name_on_s3#/}"; # remove trailing /
+                file_name_on_s3="${file_name_on_s3#/}"; # remove possible leading /
+
                 # https://unix.stackexchange.com/questions/163810/grep-on-a-variable
                 # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
-                if ! grep -q "^$file_name_on_s3\$" <<< "$uploaded_files";
+                uploaded_file="$(grep "^$file_name_on_s3$bucket_directory_separator" <<< "$uploaded_files")" \
+                        || printf '%s File "%s" not yet uploaded!\n' "$(date)" "$file_name_on_s3";
+
+                if [[ "w$uploaded_file" == "w" ]];
                 then
                     all_files+=("$base_directory;$file_name_on_s3;$bucket");
+                else
+                    OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
+                    read file_name remote_file_size <<< "${uploaded_file}"; IFS="$OLD_IFS";
+
+                    local_file_size="$(stat --printf="%s" "$item")"
+                    if [[ "$local_file_size" != "$remote_file_size" ]];
+                    then
+                        printf '%s Error: The local file "%s" mismatch "%s != %s" the remote file size!\n' \
+                                "$(date)" \
+                                "$file_name_on_s3" \
+                                "$local_file_size" \
+                                "$remote_file_size";
+                        exit 1;
+                    else
+                        printf '%s "%s" already uploaded!\n' "$(date)" "$file_name_on_s3";
+                    fi
                 fi
             fi
         done
@@ -49,16 +69,26 @@ function main()
     # https://stackoverflow.com/questions/9713104/loop-over-tuples-in-bash
     for items in "${directories_and_buckets_to_upload[@]}"
     do
-        OLD_IFS="$IFS"; IFS=";";
+        OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
         read directory bucket <<< "${items}"; IFS="$OLD_IFS";
 
         # https://bobbyhadz.com/blog/aws-cli-list-all-files-in-bucket
         # https://unix.stackexchange.com/questions/176477/why-is-the-end-of-line-anchor-not-working-with-the-grep-command-even-though-t
-        uploaded_files="$(aws s3api list-objects --bucket "$bucket" --output text --query "Contents[].{Key: Key}" | dos2unix)"
+        # https://stackoverflow.com/questions/1723440/how-can-i-find-all-matches-to-a-regular-expression-in-perl
+        # https://stackoverflow.com/questions/13927672/how-do-i-match-across-newlines-in-a-perl-regex
+        # https://stackoverflow.com/questions/4495791/how-to-match-a-newline-n-in-a-perl-regex]
+        # https://superuser.com/questions/848315/make-perl-regex-search-exit-with-failure-if-not-found
+        uploaded_files="$(aws s3api list-objects \
+                --bucket "$bucket" \
+                --query "Contents[].{Key: Key, Size: Size}" \
+                | dos2unix \
+                | perl -0777 -pe 's/,\s*"/, "/igm' \
+                | grep '"Key"' \
+                | perl -nle 'print "$1'"$bucket_directory_separator"'$2" if m/"Key"\s*:\s*"(.*)",\s*"Size"\s*:\s*(\d+)/g or die("Error: Size key not found!")' \
+            )"
         base_directory="$directory"
         get_all_the_files "$directory";
     done
-
 
     # Workaround for the posix shell bug they call it feature
     # https://unix.stackexchange.com/questions/65532/why-does-set-e-not-work-inside-subshells-with-parenthesis-followed-by-an-or
@@ -66,7 +96,7 @@ function main()
     {
         set -x;
         set -eu -o pipefail;
-        OLD_IFS="$IFS"; IFS=";";
+        OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
         read base_directory file_name_on_s3 s3_bucket_name <<< "${1}"; IFS="$OLD_IFS";
 
         file_to_upload="$base_directory/$file_name_on_s3";
@@ -111,7 +141,7 @@ function main()
         )";
         # https://stackoverflow.com/questions/25087919/command-line-s-span-multiple-lines-in-perl
         # https://stackoverflow.com/questions/3532718/extract-string-from-string-using-regex-in-the-terminal
-        s3_ETag="$(printf '%s' "$return_value" | perl -0777 -nle 'm/"ETag"\s*\:\s*"\\"(.*)\\""/; print $1')";
+        s3_ETag="$(printf '%s' "$return_value" | perl -0777 -nle 'print "$1" if m/"ETag"\s*\:\s*"\\"(.*)\\""/')";
 
         if [[ -n "$s3_ETag" ]] && [[ "$s3_ETag" == "$file_md5sum" ]];
         then
@@ -134,6 +164,7 @@ function main()
     {
         export -f upload_to_s3;
         export -f acually_upload_to_s3;
+        export bucket_directory_separator;
 
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
         # https://stackoverflow.com/questions/11003418/calling-shell-functions-with-xargs
@@ -151,6 +182,6 @@ function main()
         || printf '%s Error: Could not upload some files\n'  "$(date)";
 }
 
-printf '\n\n\n\n\n\n\n\n\n' >> "$s3_main_logfile";
+printf '\n\n\n\n\n\n\n\n%s Starting upload...\n' "$(date)" >> "$s3_main_logfile";
 main 2>&1 | tee -a "$s3_main_logfile";
 
