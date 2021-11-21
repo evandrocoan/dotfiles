@@ -123,6 +123,7 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         file_to_upload="$base_directory/$file_name_on_s3";
         lockfile="/tmp/upload_to_s3_md5sum_computation.lock";
+
         while ! mkdir "$lockfile" 2>/dev/null;
         do
             sleeptime="$(( RANDOM % 5 + 1 ))";
@@ -138,6 +139,9 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
         md5_sum_base64="$(openssl md5 -binary "${file_to_upload}" | base64)";
         file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
 
+        # Update the upload count when we still have a lock
+        printf '%s' "$(( $(cat "$upload_counter_file") + 1 ))" > "$upload_counter_file";
+
         # Remove the trap to not release someone else's lock on exit
         # https://bash.cyberciti.biz/guide/How_to_clear_trap
         rm -rf "$lockfile";
@@ -145,7 +149,11 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading file "%s"...\n' "$(date)" "${file_name_on_s3}";
+        printf '%s Uploading file "%s" (%s of %s)...\n' \
+                "$(date)" \
+                "${file_name_on_s3}" \
+                "$(cat "$upload_counter_file")" \
+                "$all_files_count";
 
         # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
         # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
@@ -163,7 +171,7 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         if [[ -n "$s3_ETag" ]] && [[ "$s3_ETag" == "$file_md5sum" ]];
         then
-            printf '%s GOOD: ETag "%s" does match, "%s"!\n\n' "$(date)" "$s3_ETag" "$file_to_upload";
+            printf '%s GOOD: ETag "%s" does match, "%s"!\n' "$(date)" "$s3_ETag" "$file_to_upload";
         else
             printf '%s BAD: ETag "%s != %s" does not match, "%s"!\n\n' "$(date)" "$s3_ETag" "$file_md5sum" "$file_to_upload";
             exit 1;
@@ -181,6 +189,8 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
     {
         export -f upload_to_s3;
         export -f acually_upload_to_s3;
+        export all_files_count="${#all_files[@]}";
+        export upload_counter_file;
         export bucket_directory_separator;
 
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
@@ -196,7 +206,7 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
     time upload_all \
         && printf '%s Successfully uploaded all files\n' "$(date)" \
-        || printf '%s Error: Could not upload some files\n'  "$(date)";
+        || { printf '%s Error: Could not upload some files\n'  "$(date)"; exit 1; }
 }
 
 if shopt -qo xtrace;
@@ -207,5 +217,9 @@ fi
 printf '\n\n\n\n\n\n\n\n' >> "$s3_main_logfile";
 printf '%s Starting upload with %s threads (%s)...\n' \
         "$(date)" "$parallel_uploads" "$s3_main_logfile" 2>&1 | tee -a "$s3_main_logfile";
+
+upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
+printf '0' > "$upload_counter_file";
+
 main 2>&1 | tee -a "$s3_main_logfile";
 
