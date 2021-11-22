@@ -103,7 +103,7 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
             local_file_name="$directory/$remote_file_name";
             if [[ -f "$local_file_name" ]];
             then :
-                printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
+                # printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
             else
                 printf '%s Error: The remote file "%s" does not exist locally!\n' \
                         "$(date)" \
@@ -197,11 +197,14 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
         # https://stackoverflow.com/questions/11003418/calling-shell-functions-with-xargs
         # https://stackoverflow.com/questions/6441509/how-to-write-a-process-pool-bash-shell
         # https://stackoverflow.com/questions/356100/how-to-wait-in-bash-for-several-subprocesses-to-finish-and-return-exit-code-0
-        printf "'%s'\n" "${all_files[@]}" | xargs \
-                --max-procs="$parallel_uploads" \
-                --max-args=1 \
-                --replace={} \
-                /bin/bash -c 'time upload_to_s3 "{}"';
+        if [[ "$all_files_count" -gt 0 ]];
+        then
+            printf "'%s'\\n" "${all_files[@]}" | xargs \
+                    --max-procs="$parallel_uploads" \
+                    --max-args=1 \
+                    --replace={} \
+                    /bin/bash -c 'time upload_to_s3 "{}"';
+        fi;
     }
 
     time upload_all \
@@ -221,5 +224,4 @@ printf '%s Starting upload with %s threads (%s)...\n' \
 upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
 printf '0' > "$upload_counter_file";
 
-main 2>&1 | tee -a "$s3_main_logfile";
-
+time main 2>&1 | tee -a "$s3_main_logfile";
