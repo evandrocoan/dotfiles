@@ -88,29 +88,36 @@ function main()
 import sys;
 import json;
 with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
-    for item in json.load(stdin_binary):
+    jsonlist = json.load(stdin_binary)
+    if not jsonlist: sys.exit(0)
+    for item in jsonlist:
         print(item["Key"] + "'"$bucket_directory_separator"'" + str(item["Size"]))'
             )";
         base_directory="$directory";
         get_all_the_files "$directory";
 
-        printf '%s Checking if all remote files "%s" exist locally for "%s"...\n' "$(date)" "$bucket" "$directory";
-        while IFS= read -r item;
-        do
-            OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-            read -r remote_file_name remote_file_size <<< "${item}"; IFS="$OLD_IFS";
+        if [[ -n "$uploaded_files" ]];
+        then
+            printf '%s Checking if all remote files "%s" exist locally for "%s"...\n' "$(date)" "$bucket" "$directory";
+            while IFS= read -r item;
+            do
+                OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
+                read -r remote_file_name remote_file_size <<< "${item}"; IFS="$OLD_IFS";
 
-            local_file_name="$directory/$remote_file_name";
-            if [[ -f "$local_file_name" ]];
-            then :
-                # printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
-            else
-                printf '%s Error: The remote file "%s" does not exist locally!\n' \
-                        "$(date)" \
-                        "$local_file_name";
-                exit 1;
-            fi
-        done <<< "$uploaded_files";
+                local_file_name="$directory/$remote_file_name";
+                if [[ -f "$local_file_name" ]];
+                then :
+                    # printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
+                else
+                    printf '%s Error: The remote file "%s" does not exist locally!\n' \
+                            "$(date)" \
+                            "$local_file_name";
+                    exit 1;
+                fi
+            done <<< "$uploaded_files";
+        else
+            printf '%s No files exist yet on the remote "%s" for "%s"...\n' "$(date)" "$bucket" "$directory";
+        fi;
     done;
 
     # Workaround for the posix shell bug they call it feature
@@ -149,11 +156,12 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading file "%s" (%s of %s)...\n' \
+        printf '%s Uploading %s of %s, file "%s|%s" ()...\n' \
                 "$(date)" \
-                "${file_name_on_s3}" \
                 "$(cat "$upload_counter_file")" \
-                "$all_files_count";
+                "$all_files_count" \
+                "${file_name_on_s3}" \
+                "$file_md5sum";
 
         # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
         # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
