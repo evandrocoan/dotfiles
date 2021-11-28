@@ -98,13 +98,13 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         if [[ -n "$uploaded_files" ]];
         then
-            printf '%s Checking if all remote files "%s" exist locally for "%s"...\n' "$(date)" "$bucket" "$directory";
+            printf '%s Checking if all remote files "%s" exist locally for "%s"...\n' "$(date)" "$bucket" "$base_directory";
             while IFS= read -r item;
             do
                 OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
                 read -r remote_file_name remote_file_size <<< "${item}"; IFS="$OLD_IFS";
 
-                local_file_name="$directory/$remote_file_name";
+                local_file_name="$base_directory/$remote_file_name";
                 if [[ -f "$local_file_name" ]];
                 then :
                     # printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
