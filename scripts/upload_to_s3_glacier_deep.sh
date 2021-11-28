@@ -148,6 +148,7 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         # Update the upload count when we still have a lock
         printf '%s' "$(( $(cat "$upload_counter_file") + 1 ))" > "$upload_counter_file";
+        upload_count="$(cat "$upload_counter_file")"
 
         # Remove the trap to not release someone else's lock on exit
         # https://bash.cyberciti.biz/guide/How_to_clear_trap
@@ -156,11 +157,11 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading %s of %s, file "%s|%s" ()...\n' \
+        printf '%s Uploading %s of %s, file "%s|%s"...\n' \
                 "$(date)" \
-                "$(cat "$upload_counter_file")" \
+                "$upload_count" \
                 "$all_files_count" \
-                "${file_name_on_s3}" \
+                "$file_name_on_s3" \
                 "$file_md5sum";
 
         # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
@@ -179,9 +180,20 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
 
         if [[ -n "$s3_ETag" ]] && [[ "$s3_ETag" == "$file_md5sum" ]];
         then
-            printf '%s GOOD: ETag "%s" does match, "%s"!\n' "$(date)" "$s3_ETag" "$file_to_upload";
+            printf '%s %s of %s, GOOD: ETag "%s" does match, "%s"!\n' \
+                    "$(date)" \
+                    "$upload_count" \
+                    "$all_files_count" \
+                    "$s3_ETag" \
+                    "$file_to_upload";
         else
-            printf '%s BAD: ETag "%s != %s" does not match, "%s"!\n\n' "$(date)" "$s3_ETag" "$file_md5sum" "$file_to_upload";
+            printf '%s %s of %s, BAD: ETag "%s != %s" does not match, "%s"!\n\n' \
+                    "$(date)" \
+                    "$upload_count" \
+                    "$all_files_count" \
+                    "$s3_ETag" \
+                    "$file_md5sum" \
+                    "$file_to_upload";
             exit 1;
         fi;
     }
