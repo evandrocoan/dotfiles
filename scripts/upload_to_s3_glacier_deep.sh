@@ -37,9 +37,17 @@ function main()
                 file_name_on_s3="${item#"$base_directory"}";
                 file_name_on_s3="${file_name_on_s3#/}";  # remove possible leading /
 
+                file_name_on_s3_url="$(python3 -c "#!/usr/bin/env python3
+import sys
+import urllib.parse
+print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
+                    )";
+
                 # https://unix.stackexchange.com/questions/163810/grep-on-a-variable
                 # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
-                uploaded_file="$(grep "^$file_name_on_s3$bucket_directory_separator" <<< "$uploaded_files")" \
+                uploaded_file="$(grep -e "^$file_name_on_s3$bucket_directory_separator" \
+                            -e "^$file_name_on_s3_url$bucket_directory_separator" \
+                            <<< "$uploaded_files")" \
                         || printf '%s Not yet uploaded file "%s"!\n' "$(date)" "$file_name_on_s3";
 
                 if [[ "w$uploaded_file" == "w" ]];
@@ -47,7 +55,7 @@ function main()
                     all_files+=("$base_directory;$file_name_on_s3;$bucket");
                 else
                     OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-                    read -r file_name remote_file_size <<< "${uploaded_file}"; IFS="$OLD_IFS";
+                    read -r file_name remote_file_name_url remote_file_size <<< "${uploaded_file}"; IFS="$OLD_IFS";
 
                     local_file_size="$(stat --printf="%s" "$item")";
                     if [[ "$local_file_size" != "$remote_file_size" ]];
@@ -84,15 +92,26 @@ function main()
         uploaded_files="$(aws s3api list-objects \
                 --bucket "$bucket" \
                 --query "Contents[].{Key: Key, Size: Size}" \
+                | dos2unix
+            )";
+
+        uploaded_files="$(printf '%s' "$uploaded_files" \
                 | python3 -c '#!/usr/bin/env python3
 import sys;
 import json;
-with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
+import urllib.parse
+with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdin_binary:
     jsonlist = json.load(stdin_binary)
     if not jsonlist: sys.exit(0)
     for item in jsonlist:
-        print(item["Key"] + "'"$bucket_directory_separator"'" + str(item["Size"]))'
+        print(item["Key"] \
+                + "'"$bucket_directory_separator"'" \
+                + urllib.parse.unquote_plus(item["Key"]) \
+                + "'"$bucket_directory_separator"'" \
+                + str(item["Size"]))' \
+                | dos2unix
             )";
+
         base_directory="$directory";
         get_all_the_files "$directory";
 
@@ -102,16 +121,18 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
             while IFS= read -r item;
             do
                 OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-                read -r remote_file_name remote_file_size <<< "${item}"; IFS="$OLD_IFS";
+                read -r remote_file_name remote_file_name_url remote_file_size <<< "${item}"; IFS="$OLD_IFS";
 
                 local_file_name="$base_directory/$remote_file_name";
-                if [[ -f "$local_file_name" ]];
+                local_file_name_url="$base_directory/$remote_file_name_url";
+                if [[ -f "$local_file_name" ]] || [[ -f "$local_file_name_url" ]];
                 then :
                     # printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
                 else
-                    printf '%s Error: The remote file "%s" does not exist locally!\n' \
+                    printf '%s Error: The remote file "%s <%s>" does not exist locally!\n' \
                             "$(date)" \
                             "$local_file_name";
+                            "$local_file_name_url";
                     exit 1;
                 fi
             done <<< "$uploaded_files";
@@ -155,20 +176,27 @@ with open(sys.stdin.fileno(), mode="rb", closefd=False) as stdin_binary:
         rm -rf "$lockfile";
         trap - INT TERM EXIT;
 
+        file_name_on_s3_url="$(python3 -c "#!/usr/bin/env python3
+import sys
+import urllib.parse
+print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
+            )";
+
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading %s of %s, file "%s|%s"...\n' \
+        printf '%s Uploading %s of %s, file "%s <%s> | %s"...\n' \
                 "$(date)" \
                 "$upload_count" \
                 "$all_files_count" \
                 "$file_name_on_s3" \
+                "$file_name_on_s3_url" \
                 "$file_md5sum";
 
         # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
         # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
         return_value="$(aws s3api put-object \
             --bucket "$s3_bucket_name" \
-            --key "$file_name_on_s3" \
+            --key "$file_name_on_s3_url" \
             --body "$file_to_upload" \
             --content-md5 " $md5_sum_base64" \
             --storage-class "DEEP_ARCHIVE" \
