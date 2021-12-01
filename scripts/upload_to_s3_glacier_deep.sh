@@ -131,7 +131,7 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
                 else
                     printf '%s Error: The remote file "%s <%s>" does not exist locally!\n' \
                             "$(date)" \
-                            "$local_file_name";
+                            "$local_file_name" \
                             "$local_file_name_url";
                     exit 1;
                 fi
@@ -161,9 +161,12 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         trap "rm -rf '${lockfile}'" INT TERM EXIT;
         printf '%s' "$file_name_on_s3" > "$lockfile/data.txt";
 
+        local_file_size="$(stat --printf="%s" "$file_to_upload")";
+        local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
+
         # https://www.ti-enxame.com/pt/bash/como-codificar-soma-md5-em-base64-em-bash/970218127/
         # https://stackoverflow.com/questions/32940878/how-to-base64-encode-a-md5-binary-string-using-shell-commands
-        printf '%s Calculating md5 for "%s"...\n' "$(date)" "${file_name_on_s3}";
+        printf '%s Calculating md5 for "%s" %s KB...\n' "$(date)" "${file_name_on_s3}" "${local_file_size_formatted}";
         md5_sum_base64="$(openssl md5 -binary "${file_to_upload}" | base64)";
         file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
 
@@ -184,12 +187,13 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading %s of %s, file "%s <%s> | %s"...\n' \
+        printf '%s Uploading %s of %s, file "%s <%s> %s KB | %s"...\n' \
                 "$(date)" \
                 "$upload_count" \
                 "$all_files_count" \
                 "$file_name_on_s3" \
                 "$file_name_on_s3_url" \
+                "$local_file_size_formatted" \
                 "$file_md5sum";
 
         # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
@@ -208,12 +212,13 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
 
         if [[ -n "$s3_ETag" ]] && [[ "$s3_ETag" == "$file_md5sum" ]];
         then
-            printf '%s %s of %s, GOOD: ETag "%s" does match, "%s"!\n' \
+            printf '%s %s of %s, GOOD: ETag "%s" does match, "%s" %s KB!\n' \
                     "$(date)" \
                     "$upload_count" \
                     "$all_files_count" \
                     "$s3_ETag" \
-                    "$file_to_upload";
+                    "$file_to_upload" \
+                    "$local_file_size_formatted";
         else
             printf '%s %s of %s, BAD: ETag "%s != %s" does not match, "%s"!\n\n' \
                     "$(date)" \
