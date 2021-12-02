@@ -224,7 +224,7 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading %s of %s, %s KB of %s KB, file "%s <%s> %s KB | %s"...\n' \
+        printf '%s Uploading %s of %s, %s KB of %s KB, file "%s <%s> %s KB"...\n' \
                 "$(date)" \
                 "$upload_counter" \
                 "$all_files_count" \
@@ -232,8 +232,7 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
                 "$upload_total_size_formatted" \
                 "$file_to_upload" \
                 "$file_name_on_s3" \
-                "$local_file_size_formatted" \
-                "$file_md5sum";
+                "$local_file_size_formatted";
 
         # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
         # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
