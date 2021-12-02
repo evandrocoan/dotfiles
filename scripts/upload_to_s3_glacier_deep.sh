@@ -149,7 +149,14 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
         uploaded_file="$(grep -F "${bdsep}$local_file_name${bdsep}" \
                     <<< "$all_uploaded_files")" \
-                || printf '%s Not yet uploaded file "%s"!\n' "$(date)" "$base_directory/$local_file_name";
+                || {
+                file_to_upload="$base_directory/$local_file_name";
+                local_file_size="$(stat --printf="%s" "$file_to_upload")";
+                printf '%s' "$(( $(cat "$upload_total_size_file") + local_file_size ))" > "$upload_total_size_file";
+
+                local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
+                printf '%s Not yet uploaded file "%s" %s KB!\n' "$(date)" "$file_to_upload" "$local_file_size_formatted";
+            }
 
         if [[ "w$uploaded_file" == "w" ]];
         then
@@ -179,19 +186,25 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         trap "rm -rf '$lockfile'" INT TERM EXIT;
         printf '%s' "$file_to_upload" > "$lockfile/data.txt";
 
-        local_file_size="$(stat --printf="%s" "$file_to_upload")";
-        local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
-
         # Update the upload count when we still have a lock
         printf '%s' "$(( $(cat "$upload_counter_file") + 1 ))" > "$upload_counter_file";
-        upload_count="$(cat "$upload_counter_file")"
+        upload_counter="$(cat "$upload_counter_file")"
+
+        local_file_size="$(stat --printf="%s" "$file_to_upload")";
+        printf '%s' "$(( $(cat "$upload_size_file") + local_file_size ))" > "$upload_size_file";
+        local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
+
+        upload_size_formatted="$(cat "$upload_size_file" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
+        upload_total_size_formatted="$(cat "$upload_total_size_file" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
 
         # https://www.ti-enxame.com/pt/bash/como-codificar-soma-md5-em-base64-em-bash/970218127/
         # https://stackoverflow.com/questions/32940878/how-to-base64-encode-a-md5-binary-string-using-shell-commands
-        printf '%s Calculating hash %s of %s, file "%s" %s KB...\n' \
+        printf '%s Calculating hash %s of %s, %s KB of %s KB, file "%s" %s KB...\n' \
                 "$(date)" \
-                "$upload_count" \
+                "$upload_counter" \
                 "$all_files_count" \
+                "$upload_size_formatted" \
+                "$upload_total_size_formatted" \
                 "$file_to_upload" \
                 "$local_file_size_formatted";
 
@@ -211,10 +224,12 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
         # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading %s of %s, file "%s <%s> %s KB | %s"...\n' \
+        printf '%s Uploading %s of %s, %s KB of %s KB, file "%s <%s> %s KB | %s"...\n' \
                 "$(date)" \
-                "$upload_count" \
+                "$upload_counter" \
                 "$all_files_count" \
+                "$upload_size_formatted" \
+                "$upload_total_size_formatted" \
                 "$file_to_upload" \
                 "$file_name_on_s3" \
                 "$local_file_size_formatted" \
@@ -238,7 +253,7 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
         then
             printf '%s %s of %s, GOOD: ETag "%s" does match, "%s" %s KB!\n' \
                     "$(date)" \
-                    "$upload_count" \
+                    "$upload_counter" \
                     "$all_files_count" \
                     "$s3_ETag" \
                     "$file_to_upload" \
@@ -246,7 +261,7 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
         else
             printf '%s %s of %s, BAD: ETag "%s != %s" does not match, "%s"!\n\n' \
                     "$(date)" \
-                    "$upload_count" \
+                    "$upload_counter" \
                     "$all_files_count" \
                     "$s3_ETag" \
                     "$file_md5sum" \
@@ -267,7 +282,10 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
         export -f upload_to_s3;
         export -f acually_upload_to_s3;
         export all_files_count="${#all_upload_files[@]}";
+
         export upload_counter_file;
+        export upload_size_file;
+        export upload_total_size_file;
         export bdsep;
 
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
@@ -300,5 +318,11 @@ printf '%s Starting upload with %s threads (%s)...\n' \
 
 upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
 printf '0' > "$upload_counter_file";
+
+upload_size_file="/tmp/upload_to_s3_upload_size.txt";
+printf '0' > "$upload_size_file";
+
+upload_total_size_file="/tmp/upload_to_s3_upload_total_size.txt";
+printf '0' > "$upload_total_size_file";
 
 time main 2>&1 | tee -a "$s3_main_logfile";
