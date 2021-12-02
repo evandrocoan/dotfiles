@@ -19,7 +19,7 @@ directories_and_buckets_to_upload=(
 
 function main()
 {
-    all_files=()
+    all_upload_files=()
 
     # https://stackoverflow.com/questions/51191766/how-can-i-creates-array-that-contains-the-names-of-all-the-files-in-a-folder
     function get_all_the_files()
@@ -52,7 +52,7 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
 
                 if [[ "w$uploaded_file" == "w" ]];
                 then
-                    all_files+=("$base_directory;$file_name_on_s3;$bucket");
+                    all_upload_files+=("$base_directory;$file_name_on_s3;$bucket");
                 else
                     OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
                     read -r file_name remote_file_name_url remote_file_size <<< "${uploaded_file}"; IFS="$OLD_IFS";
@@ -242,7 +242,7 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
     {
         export -f upload_to_s3;
         export -f acually_upload_to_s3;
-        export all_files_count="${#all_files[@]}";
+        export all_files_count="${#all_upload_files[@]}";
         export upload_counter_file;
         export bucket_directory_separator;
 
@@ -252,7 +252,7 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
         # https://stackoverflow.com/questions/356100/how-to-wait-in-bash-for-several-subprocesses-to-finish-and-return-exit-code-0
         if [[ "$all_files_count" -gt 0 ]];
         then
-            printf "'%s'\\n" "${all_files[@]}" | xargs \
+            printf "'%s'\\n" "${all_upload_files[@]}" | xargs \
                     --max-procs="$parallel_uploads" \
                     --max-args=1 \
                     --replace={} \
