@@ -5,21 +5,23 @@ set -eu${VERBOSE-} -o pipefail
 parallel_uploads="6"
 s3_main_logfile="/d/Backups/amazon_s3_glacier_deep_logs.txt"
 
-bucket_directory_separator=";"
+bdsep=":"  # bucket_directory_separator
 directories_and_buckets_to_upload=(
-"/i/My Backups/Local Disk C;disk-c-backup"
-"/i/My Backups/Local Disk F;disk-f-backup"
-"/i/My Backups/Local Disk D;disk-d-backup"
-"/i/My Backups/Local Disk E;disk-e-backup"
-"/i/My Backups/Local Disk G;disk-g-backup"
-"/i/My Backups/Local Disk H;disk-h-backup"
-"/i/My Backups/Local Disk J;disk-j-backup"
-"/i/My Backups/Local Disk K;disk-k-backup"
+"/i/My Backups/Local Disk C${bdsep}disk-c-backup"
+"/i/My Backups/Local Disk F${bdsep}disk-f-backup"
+"/i/My Backups/Local Disk D${bdsep}disk-d-backup"
+"/i/My Backups/Local Disk E${bdsep}disk-e-backup"
+"/i/My Backups/Local Disk G${bdsep}disk-g-backup"
+"/i/My Backups/Local Disk H${bdsep}disk-h-backup"
+"/i/My Backups/Local Disk J${bdsep}disk-j-backup"
+"/i/My Backups/Local Disk K${bdsep}disk-k-backup"
 )
 
 function main()
 {
+    all_local_files=()
     all_upload_files=()
+    all_uploaded_files=""
 
     # https://stackoverflow.com/questions/51191766/how-can-i-creates-array-that-contains-the-names-of-all-the-files-in-a-folder
     function get_all_the_files()
@@ -34,51 +36,37 @@ function main()
             then
                 get_all_the_files "$item";
             else
-                file_name_on_s3="${item#"$base_directory"}";
-                file_name_on_s3="${file_name_on_s3#/}";  # remove possible leading /
-
-                file_name_on_s3_url="$(python3 -c "#!/usr/bin/env python3
-import sys
-import urllib.parse
-print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
-                    )";
-
-                # https://unix.stackexchange.com/questions/163810/grep-on-a-variable
-                # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
-                uploaded_file="$(grep -e "^$file_name_on_s3$bucket_directory_separator" \
-                            -e "^$file_name_on_s3_url$bucket_directory_separator" \
-                            <<< "$uploaded_files")" \
-                        || printf '%s Not yet uploaded file "%s"!\n' "$(date)" "$file_name_on_s3";
-
-                if [[ "w$uploaded_file" == "w" ]];
-                then
-                    all_upload_files+=("$base_directory;$file_name_on_s3;$bucket");
-                else
-                    OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-                    read -r file_name remote_file_name_url remote_file_size <<< "${uploaded_file}"; IFS="$OLD_IFS";
-
-                    local_file_size="$(stat --printf="%s" "$item")";
-                    if [[ "$local_file_size" != "$remote_file_size" ]];
-                    then
-                        printf '%s Error: The local file "%s" mismatch "%s != %s" the remote file size!\n' \
-                                "$(date)" \
-                                "$file_name_on_s3" \
-                                "$local_file_size" \
-                                "$remote_file_size";
-                        exit 1;
-                    else :
-                        # printf '%s Already uploaded file "%s" !\n' "$(date)" "$file_name_on_s3";
-                    fi;
-                fi;
+                local_file_name="${item#"$base_directory"}";
+                local_file_name="${local_file_name#/}";  # remove possible leading /
+                all_local_files+=("$base_directory${bdsep}$local_file_name${bdsep}$bucket");
             fi;
         done;
+    }
+
+    function check_if_file_size_match()
+    {
+        local_file_name="$1";
+        remote_file_size="$2";
+        local_file_size="$(stat --printf="%s" "$local_file_name")";
+
+        if [[ "$local_file_size" != "$remote_file_size" ]];
+        then
+            printf '%s Error: The local file "%s" mismatch "%s != %s" the remote file size!\n' \
+                    "$(date)" \
+                    "$local_file_name" \
+                    "$local_file_size" \
+                    "$remote_file_size";
+            exit 1;
+        else :
+            # printf '%s Already uploaded file "%s" !\n' "$(date)" "$local_file_name";
+        fi;
     }
 
     # https://stackoverflow.com/questions/9713104/loop-over-tuples-in-bash
     for items in "${directories_and_buckets_to_upload[@]}"
     do
-        OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-        read -r directory bucket <<< "${items}"; IFS="$OLD_IFS";
+        OLD_IFS="$IFS"; IFS="$bdsep";
+        read -r directory bucket <<< "$items"; IFS="$OLD_IFS";
         printf '%s Downloading "%s" list of files for "%s"...\n' "$(date)" "$bucket" "$directory";
 
         # https://bobbyhadz.com/blog/aws-cli-list-all-files-in-bucket
@@ -104,30 +92,40 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
     jsonlist = json.load(stdin_binary)
     if not jsonlist: sys.exit(0)
     for item in jsonlist:
-        print(item["Key"] \
-                + "'"$bucket_directory_separator"'" \
-                + urllib.parse.unquote_plus(item["Key"]) \
-                + "'"$bucket_directory_separator"'" \
-                + str(item["Size"]))' \
+        print("'"$bdsep"'"
+                + item["Key"]
+                + "'"$bdsep"'"
+                + urllib.parse.unquote_plus(item["Key"])
+                + "'"$bdsep"'"
+                + str(item["Size"])
+        )
+    print("")' \
                 | dos2unix
             )";
 
         base_directory="$directory";
+        printf '%s Listing all local files for "%s"...\n' "$(date)" "$base_directory";
         get_all_the_files "$directory";
 
         if [[ -n "$uploaded_files" ]];
         then
-            printf '%s Checking if all remote files "%s" exist locally for "%s"...\n' "$(date)" "$bucket" "$base_directory";
-            while IFS= read -r item;
+            printf '%s Checking if all "%s" remote files exist locally for "%s"...\n' "$(date)" "$bucket" "$base_directory";
+            all_uploaded_files="$all_uploaded_files$uploaded_files";
+
+            while IFS= read -r items;
             do
-                OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-                read -r remote_file_name remote_file_name_url remote_file_size <<< "${item}"; IFS="$OLD_IFS";
+                OLD_IFS="$IFS"; IFS="$bdsep";
+                read -r nothing remote_file_name remote_file_name_url remote_file_size <<< "$items"; IFS="$OLD_IFS";
 
                 local_file_name="$base_directory/$remote_file_name";
                 local_file_name_url="$base_directory/$remote_file_name_url";
-                if [[ -f "$local_file_name" ]] || [[ -f "$local_file_name_url" ]];
-                then :
-                    # printf '%s The file was successfully found locally "%s"!\n' "$(date)" "$local_file_name";
+
+                if [[ -f "$local_file_name" ]];
+                then
+                    check_if_file_size_match "$local_file_name" "$remote_file_size";
+                elif [[ -f "$local_file_name_url" ]];
+                then
+                    check_if_file_size_match "$local_file_name_url" "$remote_file_size";
                 else
                     printf '%s Error: The remote file "%s <%s>" does not exist locally!\n' \
                             "$(date)" \
@@ -141,48 +139,74 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         fi;
     done;
 
+    printf '%s Building list of files to upload...\n' "$(date)";
+    for items in "${all_local_files[@]}"
+    do
+        OLD_IFS="$IFS"; IFS="$bdsep";
+        read -r base_directory local_file_name bucket <<< "$items"; IFS="$OLD_IFS";
+
+        # https://unix.stackexchange.com/questions/163810/grep-on-a-variable
+        # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
+        uploaded_file="$(grep -F "${bdsep}$local_file_name${bdsep}" \
+                    <<< "$all_uploaded_files")" \
+                || printf '%s Not yet uploaded file "%s"!\n' "$(date)" "$base_directory/$local_file_name";
+
+        if [[ "w$uploaded_file" == "w" ]];
+        then
+            all_upload_files+=("$base_directory${bdsep}$local_file_name${bdsep}$bucket");
+        else :
+            # printf '%s Already uploaded file "%s" !\n' "$(date)" "$base_directory/$local_file_name";
+        fi;
+    done;
+
     # Workaround for the posix shell bug they call it feature
     # https://unix.stackexchange.com/questions/65532/why-does-set-e-not-work-inside-subshells-with-parenthesis-followed-by-an-or
     function acually_upload_to_s3()
     {
         set -eu${VERBOSE-} -o pipefail;
-        OLD_IFS="$IFS"; IFS="$bucket_directory_separator";
-        read -r base_directory file_name_on_s3 s3_bucket_name <<< "${1}"; IFS="$OLD_IFS";
+        OLD_IFS="$IFS"; IFS="$bdsep";
+        read -r base_directory local_file_name s3_bucket_name <<< "$1"; IFS="$OLD_IFS";
 
-        file_to_upload="$base_directory/$file_name_on_s3";
+        file_to_upload="$base_directory/$local_file_name";
         lockfile="/tmp/upload_to_s3_md5sum_computation.lock";
 
         while ! mkdir "$lockfile" 2>/dev/null;
         do
             sleeptime="$(( RANDOM % 5 + 1 ))";
-            # printf '%s MD5 is already running for %s, sleeping %s seconds for %s...\n' "$(date)" "$(cat "$lockfile/data.txt")" "$sleeptime" "$file_name_on_s3" >&2;
+            # printf '%s MD5 is already running for %s, sleeping %s seconds for %s...\n' "$(date)" "$(cat "$lockfile/data.txt")" "$sleeptime" "$file_to_upload" >&2;
             sleep "$sleeptime";
         done;
-        trap "rm -rf '${lockfile}'" INT TERM EXIT;
-        printf '%s' "$file_name_on_s3" > "$lockfile/data.txt";
+        trap "rm -rf '$lockfile'" INT TERM EXIT;
+        printf '%s' "$file_to_upload" > "$lockfile/data.txt";
 
         local_file_size="$(stat --printf="%s" "$file_to_upload")";
         local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
 
-        # https://www.ti-enxame.com/pt/bash/como-codificar-soma-md5-em-base64-em-bash/970218127/
-        # https://stackoverflow.com/questions/32940878/how-to-base64-encode-a-md5-binary-string-using-shell-commands
-        printf '%s Calculating md5 for "%s" %s KB...\n' "$(date)" "${file_name_on_s3}" "${local_file_size_formatted}";
-        md5_sum_base64="$(openssl md5 -binary "${file_to_upload}" | base64)";
-        file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
-
         # Update the upload count when we still have a lock
         printf '%s' "$(( $(cat "$upload_counter_file") + 1 ))" > "$upload_counter_file";
         upload_count="$(cat "$upload_counter_file")"
+
+        # https://www.ti-enxame.com/pt/bash/como-codificar-soma-md5-em-base64-em-bash/970218127/
+        # https://stackoverflow.com/questions/32940878/how-to-base64-encode-a-md5-binary-string-using-shell-commands
+        printf '%s Calculating hash %s of %s, file "%s" %s KB...\n' \
+                "$(date)" \
+                "$upload_count" \
+                "$all_files_count" \
+                "$file_to_upload" \
+                "$local_file_size_formatted";
+
+        md5_sum_base64="$(openssl md5 -binary "$file_to_upload" | base64)";
+        file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
 
         # Remove the trap to not release someone else's lock on exit
         # https://bash.cyberciti.biz/guide/How_to_clear_trap
         rm -rf "$lockfile";
         trap - INT TERM EXIT;
 
-        file_name_on_s3_url="$(python3 -c "#!/usr/bin/env python3
+        file_name_on_s3="$(python3 -c '#!/usr/bin/env python3
 import sys
 import urllib.parse
-print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
+print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
             )";
 
         # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
@@ -191,8 +215,8 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
                 "$(date)" \
                 "$upload_count" \
                 "$all_files_count" \
+                "$file_to_upload" \
                 "$file_name_on_s3" \
-                "$file_name_on_s3_url" \
                 "$local_file_size_formatted" \
                 "$file_md5sum";
 
@@ -200,7 +224,7 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
         # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
         return_value="$(aws s3api put-object \
             --bucket "$s3_bucket_name" \
-            --key "$file_name_on_s3_url" \
+            --key "$file_name_on_s3" \
             --body "$file_to_upload" \
             --content-md5 " $md5_sum_base64" \
             --storage-class "DEEP_ARCHIVE" \
@@ -244,7 +268,7 @@ print(urllib.parse.quote_plus('$file_name_on_s3'), end='')"
         export -f acually_upload_to_s3;
         export all_files_count="${#all_upload_files[@]}";
         export upload_counter_file;
-        export bucket_directory_separator;
+        export bdsep;
 
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
         # https://stackoverflow.com/questions/11003418/calling-shell-functions-with-xargs
