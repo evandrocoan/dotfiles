@@ -17,6 +17,11 @@ directories_and_buckets_to_upload=(
 "/i/My Backups/Local Disk K${bdsep}disk-k-backup"
 )
 
+files_to_ignore=(
+"desktop.ini"
+"Thumbs.db"
+)
+
 function main()
 {
     all_local_files=()
@@ -36,6 +41,14 @@ function main()
             then
                 get_all_the_files "$item";
             else
+                for ignore_file in "${files_to_ignore[@]}"
+                do
+                    if [[ "$ignore_file" == "$(basename "$item")" ]];
+                    then
+                        printf '%s Ignoring item %s...\n' "$(date)" "$item";
+                        continue;
+                    fi;
+                done;
                 local_file_name="${item#"$base_directory"}";
                 local_file_name="${local_file_name#/}";  # remove possible leading /
                 all_local_files+=("$base_directory${bdsep}$local_file_name${bdsep}$bucket");
