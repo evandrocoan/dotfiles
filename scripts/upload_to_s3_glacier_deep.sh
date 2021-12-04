@@ -26,7 +26,6 @@ function main()
 {
     all_local_files=()
     all_upload_files=()
-    all_uploaded_files=""
 
     # https://stackoverflow.com/questions/51191766/how-can-i-creates-array-that-contains-the-names-of-all-the-files-in-a-folder
     function get_all_the_files()
@@ -122,7 +121,7 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         if [[ -n "$uploaded_files" ]];
         then
             printf '%s Checking if all "%s" remote files exist locally for "%s"...\n' "$(date)" "$bucket" "$base_directory";
-            all_uploaded_files="$all_uploaded_files$uploaded_files";
+            printf '%s' "$uploaded_files" >> "$all_uploaded_files_file";
 
             while IFS= read -r items;
             do
@@ -147,7 +146,7 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
                 fi
             done <<< "$uploaded_files";
         else
-            printf '%s No files exist yet on the remote "%s" for "%s"...\n' "$(date)" "$bucket" "$directory";
+            printf '%s No files exist yet on the remote "%s" for "%s"...\n' "$(date)" "$bucket" "$base_directory";
         fi;
     done;
 
@@ -161,8 +160,7 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
 
         # https://unix.stackexchange.com/questions/163810/grep-on-a-variable
         # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
-        uploaded_file="$(grep -F "${bdsep}$local_file_name${bdsep}" \
-                    <<< "$all_uploaded_files")" \
+        uploaded_file="$(grep -F "${bdsep}$local_file_name${bdsep}" "$all_uploaded_files_file")" \
                 || {
                 file_to_upload="$base_directory/$local_file_name";
                 local_file_size="$(stat --printf="%s" "$file_to_upload")";
@@ -386,5 +384,8 @@ printf '0' > "$upload_total_size_file";
 
 export upload_total_size_complete_file="/tmp/upload_to_s3_upload_total_size_complete.txt";
 printf '0' > "$upload_total_size_complete_file";
+
+export all_uploaded_files_file="/tmp/upload_to_s3_all_uploaded_files.txt";
+printf '' > "$all_uploaded_files_file";
 
 time main 2>&1 | tee -a "$s3_main_logfile";
