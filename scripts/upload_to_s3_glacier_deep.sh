@@ -5,7 +5,7 @@ set -eu${VERBOSE-} -o pipefail
 parallel_uploads="6"
 s3_main_logfile="/d/Backups/amazon_s3_glacier_deep_logs.txt"
 
-bdsep=":"  # bucket_directory_separator
+export bdsep=":"  # bucket_directory_separator
 directories_and_buckets_to_upload=(
 "/i/My Backups/Local Disk C${bdsep}disk-c-backup"
 "/i/My Backups/Local Disk F${bdsep}disk-f-backup"
@@ -99,9 +99,8 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
                 + "'"$bdsep"'"
                 + str(item["Size"])
         )
-    print("")' \
-                | dos2unix
-            )";
+    print("")' | dos2unix
+        )";
 
         base_directory="$directory";
         printf '%s Listing all local files for "%s"...\n' "$(date)" "$base_directory";
@@ -139,7 +138,9 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         fi;
     done;
 
+    upload_counter="0";
     printf '%s Building list of files to upload...\n' "$(date)";
+
     for items in "${all_local_files[@]}"
     do
         OLD_IFS="$IFS"; IFS="$bdsep";
@@ -154,8 +155,14 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
                 local_file_size="$(stat --printf="%s" "$file_to_upload")";
                 printf '%s' "$(( $(cat "$upload_total_size_file") + local_file_size ))" > "$upload_total_size_file";
 
+                upload_counter="$(( upload_counter + 1 ))";
                 local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
-                printf '%s Not yet uploaded file "%s" %s KB!\n' "$(date)" "$file_to_upload" "$local_file_size_formatted";
+
+                printf '%s Not yet uploaded file "%s" %s KB, %s!\n' \
+                        "$(date)" \
+                        "$file_to_upload" \
+                        "$local_file_size_formatted" \
+                        "$upload_counter";
             }
 
         if [[ "w$uploaded_file" == "w" ]];
@@ -199,14 +206,14 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
 
         # https://www.ti-enxame.com/pt/bash/como-codificar-soma-md5-em-base64-em-bash/970218127/
         # https://stackoverflow.com/questions/32940878/how-to-base64-encode-a-md5-binary-string-using-shell-commands
-        printf '%s Calculating hash %s of %s, %s KB of %s KB, file "%s" %s KB...\n' \
+        printf '%s Calculating hash %s of %s files, %s KB of %s KB, file "%s", %s KB...\n' \
                 "$(date)" \
                 "$upload_counter" \
                 "$all_files_count" \
+                "$local_file_size_formatted" \
                 "$upload_size_formatted" \
-                "$upload_total_size_formatted" \
                 "$file_to_upload" \
-                "$local_file_size_formatted";
+                "$upload_total_size_formatted";
 
         md5_sum_base64="$(openssl md5 -binary "$file_to_upload" | base64)";
         file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
@@ -216,34 +223,70 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdi
         rm -rf "$lockfile";
         trap - INT TERM EXIT;
 
+        upload_attempts="0"
         file_name_on_s3="$(python3 -c '#!/usr/bin/env python3
 import sys
 import urllib.parse
-print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
-            )";
+print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")
+        ')";
 
-        # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
-        # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-        printf '%s Uploading %s of %s, %s KB of %s KB, file "%s <%s> %s KB"...\n' \
-                "$(date)" \
-                "$upload_counter" \
-                "$all_files_count" \
-                "$upload_size_formatted" \
-                "$upload_total_size_formatted" \
-                "$file_to_upload" \
-                "$file_name_on_s3" \
-                "$local_file_size_formatted";
+        while true;
+        do
+            upload_remaning_time="$(python3 -c '#!/usr/bin/env python3
+import datetime
+timenow = datetime.datetime.now().timestamp()
+elapsed_time = timenow - '"$(cat "$upload_start_time_file")"'
+upload_total_size = '"$(cat "$upload_total_size_file")"'
+upload_total_size_complete = '"$(cat "$upload_total_size_complete_file")"'
+upload_speed = upload_total_size_complete / elapsed_time
+if upload_speed:
+    remaining_upload = upload_total_size - upload_total_size_complete
+    remaining_time = datetime.timedelta(seconds=remaining_upload / upload_speed)
+    elapsed_time = datetime.timedelta(seconds=elapsed_time)
+    print(f", {str(remaining_time)[:-4]} of {str(elapsed_time)[:-4]}...")
+else:
+    print(f"...")
+            ')";
 
-        # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
-        # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
-        return_value="$(aws s3api put-object \
-            --bucket "$s3_bucket_name" \
-            --key "$file_name_on_s3" \
-            --body "$file_to_upload" \
-            --content-md5 " $md5_sum_base64" \
-            --storage-class "DEEP_ARCHIVE" \
-            --server-side-encryption "AES256" \
-        )";
+            # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
+            # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
+            printf '%s Uploading %s of %s files, %s KB of %s KB, file "%s <%s>", %s KB%s\n' \
+                    "$(date)" \
+                    "$upload_counter" \
+                    "$all_files_count" \
+                    "$local_file_size_formatted" \
+                    "$upload_size_formatted" \
+                    "$file_to_upload" \
+                    "$file_name_on_s3" \
+                    "$upload_total_size_formatted" \
+                    "$upload_remaning_time";
+
+            # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
+            # https://github.com/bmatzelle/gow/issues/196 - bash breaks Windows tools by replacing forward slash with a directory path
+            return_value="$(aws s3api put-object \
+                --bucket "$s3_bucket_name" \
+                --key "$file_name_on_s3" \
+                --body "$file_to_upload" \
+                --content-md5 " $md5_sum_base64" \
+                --storage-class "DEEP_ARCHIVE" \
+                --server-side-encryption "AES256" \
+            )" || {
+                if [[ "$upload_attempts" -gt 10 ]];
+                then
+                    printf '%s Error uploading %s, stopping after %s attempts...\n' "$(date)" "$file_to_upload" "$upload_attempts";
+                    exit 1;
+                fi
+                upload_attempts="$((upload_attempts + 1))";
+                sleeptime="$(( (RANDOM % 60) * upload_attempts ))";
+
+                printf '%s Error uploading %s, retrying after %s seconds...\n' "$(date)" "$file_to_upload" "$sleeptime";
+                sleep "$sleeptime";
+                continue;
+            };
+            break;
+        done;
+        printf '%s' "$(( $(cat "$upload_total_size_complete_file") + local_file_size ))" > "$upload_total_size_complete_file";
+
         # https://stackoverflow.com/questions/25087919/command-line-s-span-multiple-lines-in-perl
         # https://stackoverflow.com/questions/3532718/extract-string-from-string-using-regex-in-the-terminal
         s3_ETag="$(printf '%s' "$return_value" | perl -0777 -nle 'print "$1" if m/"ETag"\s*\:\s*"\\"(.*)\\""/')";
@@ -282,22 +325,23 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")'
         export -f acually_upload_to_s3;
         export all_files_count="${#all_upload_files[@]}";
 
-        export upload_counter_file;
-        export upload_size_file;
-        export upload_total_size_file;
-        export bdsep;
-
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
         # https://stackoverflow.com/questions/11003418/calling-shell-functions-with-xargs
         # https://stackoverflow.com/questions/6441509/how-to-write-a-process-pool-bash-shell
         # https://stackoverflow.com/questions/356100/how-to-wait-in-bash-for-several-subprocesses-to-finish-and-return-exit-code-0
         if [[ "$all_files_count" -gt 0 ]];
         then
-            printf "'%s'\\n" "${all_upload_files[@]}" | xargs \
+            # https://unix.stackexchange.com/questions/280430/are-the-null-string-and-the-same-string
+            # https://stackoverflow.com/questions/67952154/how-can-i-avoid-printing-anything-in-bash-printf-with-an-empty-array
+            # https://stackoverflow.com/questions/6570531/assign-string-containing-null-character-0-to-a-variable-in-bash
+            # https://stackoverflow.com/questions/60113944/0-and-printf-in-c
+            # https://askubuntu.com/questions/1106805/xargs-unmatched-single-quote-by-default-quotes-are-special-to-xargs-unless-you
+            printf "%s\\000" "${all_upload_files[@]}" | xargs \
+                    --null \
                     --max-procs="$parallel_uploads" \
                     --max-args=1 \
                     --replace={} \
-                    /bin/bash -c 'time upload_to_s3 "{}"';
+                    /bin/bash -c "time upload_to_s3 \"{}\"";
         fi;
     }
 
@@ -315,13 +359,19 @@ printf '\n\n\n\n\n\n\n\n' >> "$s3_main_logfile";
 printf '%s Starting upload with %s threads (%s)...\n' \
         "$(date)" "$parallel_uploads" "$s3_main_logfile" 2>&1 | tee -a "$s3_main_logfile";
 
-upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
+export upload_start_time_file="/tmp/upload_to_s3_upload_start_time.txt";
+printf "%s" "$(date +%s.%N)" > "$upload_start_time_file";
+
+export upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
 printf '0' > "$upload_counter_file";
 
-upload_size_file="/tmp/upload_to_s3_upload_size.txt";
+export upload_size_file="/tmp/upload_to_s3_upload_size.txt";
 printf '0' > "$upload_size_file";
 
-upload_total_size_file="/tmp/upload_to_s3_upload_total_size.txt";
+export upload_total_size_file="/tmp/upload_to_s3_upload_total_size.txt";
 printf '0' > "$upload_total_size_file";
+
+export upload_total_size_complete_file="/tmp/upload_to_s3_upload_total_size_complete.txt";
+printf '0' > "$upload_total_size_complete_file";
 
 time main 2>&1 | tee -a "$s3_main_logfile";
