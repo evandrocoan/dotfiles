@@ -40,14 +40,13 @@ function main()
         # https://stackoverflow.com/questions/4495791/how-to-match-a-newline-n-in-a-perl-regex]
         # https://superuser.com/questions/848315/make-perl-regex-search-exit-with-failure-if-not-found
         # https://stackoverflow.com/questions/1955505/parsing-json-with-unix-tools
-        uploaded_files="$(aws s3api list-objects \
+        aws s3api list-objects \
                 --bucket "$bucket" \
                 --query "Contents[].{Key: Key, Size: Size}" \
-                | dos2unix
-            )";
+                | dos2unix > "$uploaded_files_file";
 
-        all_upload_files_string="$(printf '%s' "$uploaded_files" \
-                | python3 -c '#!/usr/bin/env python3
+        # https://stackoverflow.com/questions/70238215/bulding-python-3-command-from-bash-gives-unicodeencodeerror-utf-8-codec-cant
+        all_upload_files_string="$(printf '%s' '#!/usr/bin/env python3
 import os
 import sys
 import json
@@ -63,6 +62,7 @@ base_directory = "'"$base_directory"'"
 
 uploaded_files_set = set()
 files_to_ignore = set("""'"$files_to_ignore"'""".splitlines())
+uploaded_files_file = "'"$uploaded_files_file"'"
 
 # https://stackoverflow.com/questions/56791917/how-to-format-datetime-in-python-as-date-is-doing/56794800
 locale.setlocale(locale.LC_ALL, "")
@@ -96,8 +96,8 @@ def to_KB(size_bytes, factor=0, postfix="B"):
 
 # https://stackoverflow.com/questions/18394147/how-to-do-a-recursive-sub-folder-search-and-return-files-in-a-list
 # https://stackoverflow.com/questions/53026131/how-to-prevent-unicodedecodeerror-when-reading-piped-input-from-sys-stdin
-with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as uploaded_files_stdin_binary:
-    uploaded_files = json.load(uploaded_files_stdin_binary)
+with open(uploaded_files_file, mode="rb") as uploaded_files_binary:
+    uploaded_files = json.load(uploaded_files_binary)
 
     if uploaded_files:
         log(f"{now()} Checking if all \"{bucket}\" remote files exist locally for \"{base_directory}\"...")
@@ -175,7 +175,7 @@ add_to_file("'"$local_total_size_file"'", files_local_size)
 add_to_file("'"$local_files_counter_file"'", files_counter)
 
 log(f"{now()}        Directory uploading {upload_counter} files of {files_counter} with {to_KB(upload_total_size)} of {to_KB(files_local_size)}...")
-' | dos2unix)";
+' | python3 | dos2unix)";
 
         if [[ -n "$all_upload_files_string" ]];
         then
@@ -206,7 +206,6 @@ log(f"{now()}        Directory uploading {upload_counter} files of {files_counte
         do
             sleeptime="$(( RANDOM % 5 + 1 ))";
             # printf '%s MD5 is already running for %s, sleeping %s seconds for %s...\n' "$(date)" "$(cat "$lockfile/data.txt")" "$sleeptime" "$locker_name" >&2;
-            printf '.';
             sleep "$sleeptime";
         done;
 
@@ -251,14 +250,16 @@ log(f"{now()}        Directory uploading {upload_counter} files of {files_counte
 
         md5_sum_base64="$(openssl md5 -binary "$file_to_upload" | base64)";
         file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
-        rm -rf "$lockfile"; trap - INT TERM EXIT;
 
+        rm -rf "$lockfile"; trap - INT TERM EXIT;
         upload_attempts="0"
-        file_name_on_s3="$(python3 -c '#!/usr/bin/env python3
+
+        # https://stackoverflow.com/questions/70238215/bulding-python-3-command-from-bash-gives-unicodeencodeerror-utf-8-codec-cant
+        file_name_on_s3="$(printf '%s' '#!/usr/bin/env python3
 import sys
 import urllib.parse
-print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")
-        ')";
+print(urllib.parse.quote_plus(r"'"$local_file_name"'"), end="")
+' | python)";
 
         while true;
         do
@@ -401,6 +402,9 @@ printf '%s Starting upload with %s threads (%s)...\n' \
 
 export upload_start_time_file="/tmp/upload_to_s3_upload_start_time.txt";
 printf "%s" "$(date +%s.%N)" > "$upload_start_time_file";
+
+export uploaded_files_file="/tmp/upload_to_s3_uploaded_files.txt";
+printf '' > "$uploaded_files_file";
 
 export upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
 printf '0' > "$upload_counter_file";
