@@ -79,10 +79,9 @@ def check_if_file_size_match(path, size):
         raise RuntimeError(f"{now()} Error: The local file \"{path}\" mismatch {size} != {local_size} for remote file size!")
 
 def check_invalid_characther(file_path):
-    if "\n" in file_name:
-        raise RuntimeError(f"{now()} It is not allowed new lines on file names \"{file_name}\"!")
-    if "\\" in file_name:
-        raise RuntimeError(f"{now()} It is not allowed \\ on file names \"{file_name}\"!")
+    for thing in ("\\", "\n"):
+        if thing in file_path:
+            raise RuntimeError(f"It is not allowed {thing} on \"{file_path}\"!")
 
 # https://stackoverflow.com/questions/5194057/better-way-to-convert-file-sizes-in-python
 def to_B(size_bytes, factor=0, postfix="B"):
@@ -197,6 +196,26 @@ log(f"{now()}        Directory uploading {upload_counter} files of {files_counte
             "$upload_total_size_formatted" \
             "$local_total_size_formatted";
 
+    function get_file_lock()
+    {
+        lockfile="$1";
+        locker_name="$2";
+
+        # https://stackoverflow.com/questions/185451/quick-and-dirty-way-to-ensure-only-one-instance-of-a-shell-script-is-running-at
+        while ! mkdir "$lockfile" 2>/dev/null;
+        do
+            sleeptime="$(( RANDOM % 5 + 1 ))";
+            # printf '%s MD5 is already running for %s, sleeping %s seconds for %s...\n' "$(date)" "$(cat "$lockfile/data.txt")" "$sleeptime" "$locker_name" >&2;
+            printf '.';
+            sleep "$sleeptime";
+        done;
+
+        # Remove the trap later to not release someone else's lock on exit
+        # https://bash.cyberciti.biz/guide/How_to_clear_trap
+        trap "rm -rf '$lockfile'" INT TERM EXIT;
+        printf '%s' "$locker_name" > "$lockfile/data.txt";
+    }
+
     # Workaround for the posix shell bug they call it feature
     # https://unix.stackexchange.com/questions/65532/why-does-set-e-not-work-inside-subshells-with-parenthesis-followed-by-an-or
     function acually_upload_to_s3()
@@ -207,15 +226,7 @@ log(f"{now()}        Directory uploading {upload_counter} files of {files_counte
 
         file_to_upload="$base_directory/$local_file_name";
         lockfile="/tmp/upload_to_s3_md5sum_computation.lock";
-
-        while ! mkdir "$lockfile" 2>/dev/null;
-        do
-            sleeptime="$(( RANDOM % 5 + 1 ))";
-            # printf '%s MD5 is already running for %s, sleeping %s seconds for %s...\n' "$(date)" "$(cat "$lockfile/data.txt")" "$sleeptime" "$file_to_upload" >&2;
-            sleep "$sleeptime";
-        done;
-        trap "rm -rf '$lockfile'" INT TERM EXIT;
-        printf '%s' "$file_to_upload" > "$lockfile/data.txt";
+        get_file_lock "$lockfile" "$file_to_upload";
 
         # Update the upload count when we still have a lock
         printf '%s' "$(( $(cat "$upload_counter_file") + 1 ))" > "$upload_counter_file";
@@ -240,11 +251,7 @@ log(f"{now()}        Directory uploading {upload_counter} files of {files_counte
 
         md5_sum_base64="$(openssl md5 -binary "$file_to_upload" | base64)";
         file_md5sum="$(printf '%s\n' "$md5_sum_base64" | openssl enc -base64 -d | xxd -ps -l 16)";
-
-        # Remove the trap to not release someone else's lock on exit
-        # https://bash.cyberciti.biz/guide/How_to_clear_trap
-        rm -rf "$lockfile";
-        trap - INT TERM EXIT;
+        rm -rf "$lockfile"; trap - INT TERM EXIT;
 
         upload_attempts="0"
         file_name_on_s3="$(python3 -c '#!/usr/bin/env python3
@@ -255,6 +262,8 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")
 
         while true;
         do
+            # TODO: Here, `upload_total_size_complete_file` is not protected against concurrent
+            # access with `get_file_lock`. Protect it, if it causes problems in the future!
             upload_remaning_time="$(python3 -c '#!/usr/bin/env python3
 import datetime
 timenow = datetime.datetime.now().timestamp()
@@ -301,15 +310,22 @@ else:
                     exit 1;
                 fi
                 upload_attempts="$((upload_attempts + 1))";
-                sleeptime="$(( (RANDOM % 60) * upload_attempts ))";
+                sleeptime="$(( (RANDOM % 60 + 1) * upload_attempts ))";
 
-                printf '%s Error uploading %s, retrying after %s seconds...\n' "$(date)" "$file_to_upload" "$sleeptime";
+                printf '%s Error uploading %s, retrying %s times after %s seconds...\n' \
+                        "$(date)" \
+                        "$file_to_upload" \
+                        "$upload_attempts" \
+                        "$sleeptime";
                 sleep "$sleeptime";
                 continue;
             };
             break;
         done;
+
+        get_file_lock "$lockfile" "$file_to_upload";
         printf '%s' "$(( $(cat "$upload_total_size_complete_file") + local_file_size ))" > "$upload_total_size_complete_file";
+        rm -rf "$lockfile"; trap - INT TERM EXIT;
 
         # https://stackoverflow.com/questions/25087919/command-line-s-span-multiple-lines-in-perl
         # https://stackoverflow.com/questions/3532718/extract-string-from-string-using-regex-in-the-terminal
@@ -338,14 +354,15 @@ else:
 
     function upload_to_s3()
     {
-        set -eu${VERBOSE-} -o pipefail;
         # https://superuser.com/questions/403263/how-to-pass-bash-script-arguments-to-a-subshell
+        set -eu${VERBOSE-} -o pipefail;
         /bin/bash -c "acually_upload_to_s3 $(printf "${1+ %q}" "$@")" || exit 255;
     }
 
     function upload_all()
     {
         export -f upload_to_s3;
+        export -f get_file_lock;
         export -f acually_upload_to_s3;
 
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
