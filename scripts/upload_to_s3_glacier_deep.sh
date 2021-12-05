@@ -40,7 +40,6 @@ function main()
         # https://stackoverflow.com/questions/4495791/how-to-match-a-newline-n-in-a-perl-regex]
         # https://superuser.com/questions/848315/make-perl-regex-search-exit-with-failure-if-not-found
         # https://stackoverflow.com/questions/1955505/parsing-json-with-unix-tools
-        # https://stackoverflow.com/questions/53026131/how-to-prevent-unicodedecodeerror-when-reading-piped-input-from-sys-stdin
         uploaded_files="$(aws s3api list-objects \
                 --bucket "$bucket" \
                 --query "Contents[].{Key: Key, Size: Size}" \
@@ -61,7 +60,6 @@ import locale
 bdsep = "'"$bdsep"'"
 bucket = "'"$bucket"'"
 base_directory = "'"$base_directory"'"
-upload_total_size_file = "'"$upload_total_size_file"'"
 
 uploaded_files_set = set()
 files_to_ignore = set("""'"$files_to_ignore"'""".splitlines())
@@ -87,13 +85,21 @@ def check_invalid_characther(file_path):
         raise RuntimeError(f"{now()} It is not allowed \\ on file names \"{file_name}\"!")
 
 # https://stackoverflow.com/questions/5194057/better-way-to-convert-file-sizes-in-python
-def to_B(size_bytes):
+def to_B(size_bytes, factor=0, postfix="B"):
     if size_bytes == 0:
-        return "0"
-    return f"{size_bytes:,} B".replace(",", ".")
+        return "0 B"
+    if factor:
+        size_bytes = size_bytes / factor
+    return f"{int(size_bytes):,} {postfix}".replace(",", ".")
 
+def to_KB(size_bytes, factor=0, postfix="B"):
+    return to_B(size_bytes, factor=1024, postfix="KB")
+
+# https://stackoverflow.com/questions/18394147/how-to-do-a-recursive-sub-folder-search-and-return-files-in-a-list
+# https://stackoverflow.com/questions/53026131/how-to-prevent-unicodedecodeerror-when-reading-piped-input-from-sys-stdin
 with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as uploaded_files_stdin_binary:
     uploaded_files = json.load(uploaded_files_stdin_binary)
+
     if uploaded_files:
         log(f"{now()} Checking if all \"{bucket}\" remote files exist locally for \"{base_directory}\"...")
 
@@ -118,6 +124,8 @@ with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as uplo
     else:
         log(f"{now()} No files exist yet on the remote \"{bucket}\" for \"{base_directory}\"...")
 
+files_counter = 0
+files_local_size = 0
 upload_counter = 0
 upload_total_size = 0
 log(f"{now()} Listing all local files for \"{base_directory}\"...")
@@ -137,31 +145,37 @@ for directory, directories, files in os.walk(base_directory):
         local_file_name = convert_absolute_path_to_relative(base_directory, local_file_path)
         local_file_name_url = urllib.parse.quote_plus(local_file_name)
 
+        # log(f"local_file_name {local_file_name}, local_file_name_url {local_file_name_url}.")
         check_invalid_characther(local_file_name)
+        local_size = os.path.getsize(local_file_path)
+
         if file in files_to_ignore:
             log(f"{now()} Ignoring item {local_file_path}...")
             continue
 
-        local_size = os.path.getsize(local_file_path)
-        local_size_formatted = to_B(local_size)
-
-        # log(f"local_file_name {local_file_name}, local_file_name_url {local_file_name_url}.")
         if uploaded_files and (local_file_name in uploaded_files_set or local_file_name_url in uploaded_files_set):
-            # log(f"{now()} Already uploaded file \"{local_file_name}\" {local_size_formatted}!")
-            pass
+            files_counter += 1
+            files_local_size += local_size
+            # log(f"{now()} {files_counter:6} Already uploaded file \"{local_file_name}\" {to_B(local_size)}!")
         else:
             upload_counter += 1
             upload_total_size += local_size
             print(f"{base_directory}{bdsep}{local_file_name}{bdsep}{bucket}")
-            log(f"{now()} {upload_counter:6} Not yet uploaded file \"{local_file_name}\" {local_size_formatted}!")
+            log(f"{now()} {upload_counter:6} Not yet uploaded file \"{local_file_name}\" {to_B(local_size)}!")
 
 # https://stackoverflow.com/questions/6648493/how-to-open-a-file-for-both-reading-and-writing/
-with open(upload_total_size_file, "r") as file:
-    contents = file.read()
-    upload_total_size += int(contents)
+def add_to_file(file_path, add):
+    with open(file_path, "r") as file:
+        total_size = add + int(file.read())
+    with open(file_path, "w") as file:
+        file.write(f"{total_size}")
+    return total_size
 
-with open(upload_total_size_file, "w") as file:
-    file.write(f"{upload_total_size}")
+add_to_file("'"$upload_total_size_file"'", upload_total_size)
+add_to_file("'"$local_total_size_file"'", files_local_size)
+add_to_file("'"$local_files_counter_file"'", files_counter)
+
+log(f"{now()}        Directory uploading {upload_counter} files of {files_counter} with {to_KB(upload_total_size)} of {to_KB(files_local_size)}...")
 ' | dos2unix)";
 
         if [[ -n "$all_upload_files_string" ]];
@@ -171,6 +185,17 @@ with open(upload_total_size_file, "w") as file:
             all_upload_files+=("${temp[@]}");
         fi;
     done;
+
+    export all_files_count="${#all_upload_files[@]}";
+    export local_total_size_formatted="$(cat "$local_total_size_file" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
+    export upload_total_size_formatted="$(cat "$upload_total_size_file" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
+
+    printf '\n%s Starting to upload %s files of %s with %s KB of %s KB...\n' \
+            "$(date)" \
+            "$all_files_count" \
+            "$(cat "$local_files_counter_file")" \
+            "$upload_total_size_formatted" \
+            "$local_total_size_formatted";
 
     # Workaround for the posix shell bug they call it feature
     # https://unix.stackexchange.com/questions/65532/why-does-set-e-not-work-inside-subshells-with-parenthesis-followed-by-an-or
@@ -198,10 +223,9 @@ with open(upload_total_size_file, "w") as file:
 
         local_file_size="$(stat --printf="%s" "$file_to_upload")";
         printf '%s' "$(( $(cat "$upload_size_file") + local_file_size ))" > "$upload_size_file";
-        local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
 
+        local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
         upload_size_formatted="$(cat "$upload_size_file" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
-        upload_total_size_formatted="$(cat "$upload_total_size_file" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
 
         # https://www.ti-enxame.com/pt/bash/como-codificar-soma-md5-em-base64-em-bash/970218127/
         # https://stackoverflow.com/questions/32940878/how-to-base64-encode-a-md5-binary-string-using-shell-commands
@@ -234,10 +258,12 @@ print(urllib.parse.quote_plus("'"$local_file_name"'"), end="")
             upload_remaning_time="$(python3 -c '#!/usr/bin/env python3
 import datetime
 timenow = datetime.datetime.now().timestamp()
+
 elapsed_time = timenow - '"$(cat "$upload_start_time_file")"'
 upload_total_size = '"$(cat "$upload_total_size_file")"'
 upload_total_size_complete = '"$(cat "$upload_total_size_complete_file")"'
 upload_speed = upload_total_size_complete / elapsed_time
+
 if upload_speed:
     remaining_upload = upload_total_size - upload_total_size_complete
     remaining_time = datetime.timedelta(seconds=remaining_upload / upload_speed)
@@ -249,7 +275,7 @@ else:
 
             # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
             # STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS
-            printf '%s Uploading %s of %s files, %s KB of %s KB, file "%s <%s>", %s KB%s\n' \
+            printf '%s Uploading %s of %s files, %s KB of %s KB, file "%s <%s>"%s\n' \
                     "$(date)" \
                     "$upload_counter" \
                     "$all_files_count" \
@@ -257,7 +283,6 @@ else:
                     "$upload_size_formatted" \
                     "$file_to_upload" \
                     "$file_name_on_s3" \
-                    "$upload_total_size_formatted" \
                     "$upload_remaning_time";
 
             # Add a space before " $md5_sum_base64" to fix msys converting a hash starting with / to \
@@ -322,7 +347,6 @@ else:
     {
         export -f upload_to_s3;
         export -f acually_upload_to_s3;
-        export all_files_count="${#all_upload_files[@]}";
 
         # https://unix.stackexchange.com/questions/566834/xargs-does-not-quit-on-error
         # https://stackoverflow.com/questions/11003418/calling-shell-functions-with-xargs
@@ -364,8 +388,14 @@ printf "%s" "$(date +%s.%N)" > "$upload_start_time_file";
 export upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
 printf '0' > "$upload_counter_file";
 
+export local_files_counter_file="/tmp/upload_to_s3_local_files_counter.txt";
+printf '0' > "$local_files_counter_file";
+
 export upload_size_file="/tmp/upload_to_s3_upload_size.txt";
 printf '0' > "$upload_size_file";
+
+export local_total_size_file="/tmp/upload_to_s3_local_total_size.txt";
+printf '0' > "$local_total_size_file";
 
 export upload_total_size_file="/tmp/upload_to_s3_upload_total_size.txt";
 printf '0' > "$upload_total_size_file";
