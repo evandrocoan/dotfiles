@@ -7,79 +7,31 @@ s3_main_logfile="/d/Backups/amazon_s3_glacier_deep_logs.txt"
 
 export bdsep=":"  # bucket_directory_separator
 directories_and_buckets_to_upload=(
-"/i/My Backups/Local Disk C${bdsep}disk-c-backup"
-"/i/My Backups/Local Disk F${bdsep}disk-f-backup"
-"/i/My Backups/Local Disk D${bdsep}disk-d-backup"
-"/i/My Backups/Local Disk E${bdsep}disk-e-backup"
-"/i/My Backups/Local Disk G${bdsep}disk-g-backup"
-"/i/My Backups/Local Disk H${bdsep}disk-h-backup"
-"/i/My Backups/Local Disk J${bdsep}disk-j-backup"
-"/i/My Backups/Local Disk K${bdsep}disk-k-backup"
+'/i/My Backups/Local Disk C'"${bdsep}"'disk-c-backup'
+'/i/My Backups/Local Disk F'"${bdsep}"'disk-f-backup'
+'/i/My Backups/Local Disk D'"${bdsep}"'disk-d-backup'
+'/i/My Backups/Local Disk E'"${bdsep}"'disk-e-backup'
+'/i/My Backups/Local Disk G'"${bdsep}"'disk-g-backup'
+'/i/My Backups/Local Disk H'"${bdsep}"'disk-h-backup'
+'/i/My Backups/Local Disk J'"${bdsep}"'disk-j-backup'
+'/i/My Backups/Local Disk K'"${bdsep}"'disk-k-backup'
 )
 
-files_to_ignore=(
-"desktop.ini"
-"Thumbs.db"
-)
+files_to_ignore='
+desktop.ini
+Thumbs.db
+'
 
 function main()
 {
-    all_local_files=()
     all_upload_files=()
-
-    # https://stackoverflow.com/questions/51191766/how-can-i-creates-array-that-contains-the-names-of-all-the-files-in-a-folder
-    function get_all_the_files()
-    {
-        directory="$1";
-
-        # https://stackoverflow.com/questions/51191766/how-can-i-creates-array-that-contains-the-names-of-all-the-files-in-a-folder
-        # https://stackoverflow.com/questions/2437452/how-to-get-the-list-of-files-in-a-directory-in-a-shell-script
-        for item in "$directory"/*;
-        do
-            if [[ -d "$item" ]];
-            then
-                get_all_the_files "$item";
-            else
-                for ignore_file in "${files_to_ignore[@]}"
-                do
-                    if [[ "$ignore_file" == "$(basename "$item")" ]];
-                    then
-                        printf '%s Ignoring item %s...\n' "$(date)" "$item";
-                        continue;
-                    fi;
-                done;
-                local_file_name="${item#"$base_directory"}";
-                local_file_name="${local_file_name#/}";  # remove possible leading /
-                all_local_files+=("$base_directory${bdsep}$local_file_name${bdsep}$bucket");
-            fi;
-        done;
-    }
-
-    function check_if_file_size_match()
-    {
-        local_file_name="$1";
-        remote_file_size="$2";
-        local_file_size="$(stat --printf="%s" "$local_file_name")";
-
-        if [[ "$local_file_size" != "$remote_file_size" ]];
-        then
-            printf '%s Error: The local file "%s" mismatch "%s != %s" the remote file size!\n' \
-                    "$(date)" \
-                    "$local_file_name" \
-                    "$local_file_size" \
-                    "$remote_file_size";
-            exit 1;
-        else :
-            # printf '%s Already uploaded file "%s" !\n' "$(date)" "$local_file_name";
-        fi;
-    }
 
     # https://stackoverflow.com/questions/9713104/loop-over-tuples-in-bash
     for items in "${directories_and_buckets_to_upload[@]}"
     do
         OLD_IFS="$IFS"; IFS="$bdsep";
-        read -r directory bucket <<< "$items"; IFS="$OLD_IFS";
-        printf '%s Downloading "%s" list of files for "%s"...\n' "$(date)" "$bucket" "$directory";
+        read -r base_directory bucket <<< "$items"; IFS="$OLD_IFS";
+        printf '%s Downloading "%s" list of files for "%s"...\n' "$(date)" "$bucket" "$base_directory";
 
         # https://bobbyhadz.com/blog/aws-cli-list-all-files-in-bucket
         # https://unix.stackexchange.com/questions/176477/why-is-the-end-of-line-anchor-not-working-with-the-grep-command-even-though-t
@@ -95,92 +47,128 @@ function main()
                 | dos2unix
             )";
 
-        uploaded_files="$(printf '%s' "$uploaded_files" \
+        all_upload_files_string="$(printf '%s' "$uploaded_files" \
                 | python3 -c '#!/usr/bin/env python3
-import sys;
-import json;
+import os
+import sys
+import json
+import time
+
+import math
 import urllib.parse
-with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as stdin_binary:
-    jsonlist = json.load(stdin_binary)
-    if not jsonlist: sys.exit(0)
-    for item in jsonlist:
-        print("'"$bdsep"'"
-                + item["Key"]
-                + "'"$bdsep"'"
-                + urllib.parse.unquote_plus(item["Key"])
-                + "'"$bdsep"'"
-                + str(item["Size"])
-        )
-    print("")' | dos2unix
-        )";
+import locale
 
-        base_directory="$directory";
-        printf '%s Listing all local files for "%s"...\n' "$(date)" "$base_directory";
-        get_all_the_files "$directory";
+bdsep = "'"$bdsep"'"
+bucket = "'"$bucket"'"
+base_directory = "'"$base_directory"'"
+upload_total_size_file = "'"$upload_total_size_file"'"
 
-        if [[ -n "$uploaded_files" ]];
+uploaded_files_set = set()
+files_to_ignore = set("""'"$files_to_ignore"'""".splitlines())
+
+# https://stackoverflow.com/questions/56791917/how-to-format-datetime-in-python-as-date-is-doing/56794800
+locale.setlocale(locale.LC_ALL, "")
+
+def now():
+    return str(time.strftime("%c"))
+
+def log(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+def check_if_file_size_match(path, size):
+    local_size = os.path.getsize(path)
+    if os.path.getsize(path) != size:
+        raise RuntimeError(f"{now()} Error: The local file \"{path}\" mismatch {size} != {local_size} for remote file size!")
+
+def check_invalid_characther(file_path):
+    if "\n" in file_name:
+        raise RuntimeError(f"{now()} It is not allowed new lines on file names \"{file_name}\"!")
+    if "\\" in file_name:
+        raise RuntimeError(f"{now()} It is not allowed \\ on file names \"{file_name}\"!")
+
+# https://stackoverflow.com/questions/5194057/better-way-to-convert-file-sizes-in-python
+def to_B(size_bytes):
+    if size_bytes == 0:
+        return "0"
+    return f"{size_bytes:,} B".replace(",", ".")
+
+with open(sys.stdin.fileno(), mode="r", closefd=False, errors="replace") as uploaded_files_stdin_binary:
+    uploaded_files = json.load(uploaded_files_stdin_binary)
+    if uploaded_files:
+        log(f"{now()} Checking if all \"{bucket}\" remote files exist locally for \"{base_directory}\"...")
+
+        for item in uploaded_files:
+            file_name = item["Key"]
+            file_name_unquoted = urllib.parse.unquote_plus(item["Key"])
+            file_size = item["Size"]
+
+            uploaded_files_set.add(file_name)
+            check_invalid_characther(file_name)
+            check_invalid_characther(file_name_unquoted)
+
+            file_path = os.path.join(base_directory, file_name)
+            file_path_unquoted = os.path.join(base_directory, file_name_unquoted)
+
+            if os.path.exists(file_path):
+                check_if_file_size_match(file_path, file_size)
+            elif os.path.exists(file_path_unquoted):
+                check_if_file_size_match(file_path_unquoted, file_size)
+            else:
+                raise RuntimeError(f"{now()} Error: Remote file \"{file_path} <{file_path_unquoted}>\" does not exist locally!")
+    else:
+        log(f"{now()} No files exist yet on the remote \"{bucket}\" for \"{base_directory}\"...")
+
+upload_counter = 0
+upload_total_size = 0
+log(f"{now()} Listing all local files for \"{base_directory}\"...")
+
+def convert_absolute_path_to_relative(base_directory, file_path):
+    relative_path = os.path.commonprefix( [ base_directory, file_path ] )
+    relative_path = os.path.normpath( file_path.replace( relative_path, "" ) )
+    relative_path = relative_path.replace("\\", "/")
+    if relative_path.startswith( "/" ):
+        relative_path = relative_path[1:]
+    return relative_path
+
+# https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
+for directory, directories, files in os.walk(base_directory):
+    for file in files:
+        local_file_path = os.path.join(directory, file)
+        local_file_name = convert_absolute_path_to_relative(base_directory, local_file_path)
+        local_file_name_url = urllib.parse.quote_plus(local_file_name)
+
+        check_invalid_characther(local_file_name)
+        if file in files_to_ignore:
+            log(f"{now()} Ignoring item {local_file_path}...")
+            continue
+
+        local_size = os.path.getsize(local_file_path)
+        local_size_formatted = to_B(local_size)
+
+        # log(f"local_file_name {local_file_name}, local_file_name_url {local_file_name_url}.")
+        if uploaded_files and (local_file_name in uploaded_files_set or local_file_name_url in uploaded_files_set):
+            # log(f"{now()} Already uploaded file \"{local_file_name}\" {local_size_formatted}!")
+            pass
+        else:
+            upload_counter += 1
+            upload_total_size += local_size
+            print(f"{base_directory}{bdsep}{local_file_name}{bdsep}{bucket}")
+            log(f"{now()} {upload_counter:6} Not yet uploaded file \"{local_file_name}\" {local_size_formatted}!")
+
+# https://stackoverflow.com/questions/6648493/how-to-open-a-file-for-both-reading-and-writing/
+with open(upload_total_size_file, "r") as file:
+    contents = file.read()
+    upload_total_size += int(contents)
+
+with open(upload_total_size_file, "w") as file:
+    file.write(f"{upload_total_size}")
+' | dos2unix)";
+
+        if [[ -n "$all_upload_files_string" ]];
         then
-            printf '%s Checking if all "%s" remote files exist locally for "%s"...\n' "$(date)" "$bucket" "$base_directory";
-            printf '%s' "$uploaded_files" >> "$all_uploaded_files_file";
-
-            while IFS= read -r items;
-            do
-                OLD_IFS="$IFS"; IFS="$bdsep";
-                read -r nothing remote_file_name remote_file_name_url remote_file_size <<< "$items"; IFS="$OLD_IFS";
-
-                local_file_name="$base_directory/$remote_file_name";
-                local_file_name_url="$base_directory/$remote_file_name_url";
-
-                if [[ -f "$local_file_name" ]];
-                then
-                    check_if_file_size_match "$local_file_name" "$remote_file_size";
-                elif [[ -f "$local_file_name_url" ]];
-                then
-                    check_if_file_size_match "$local_file_name_url" "$remote_file_size";
-                else
-                    printf '%s Error: The remote file "%s <%s>" does not exist locally!\n' \
-                            "$(date)" \
-                            "$local_file_name" \
-                            "$local_file_name_url";
-                    exit 1;
-                fi
-            done <<< "$uploaded_files";
-        else
-            printf '%s No files exist yet on the remote "%s" for "%s"...\n' "$(date)" "$bucket" "$base_directory";
-        fi;
-    done;
-
-    upload_counter="0";
-    printf '%s Building list of files to upload...\n' "$(date)";
-
-    for items in "${all_local_files[@]}"
-    do
-        OLD_IFS="$IFS"; IFS="$bdsep";
-        read -r base_directory local_file_name bucket <<< "$items"; IFS="$OLD_IFS";
-
-        # https://unix.stackexchange.com/questions/163810/grep-on-a-variable
-        # https://stackoverflow.com/questions/11287861/how-to-check-if-a-file-contains-a-specific-string-using-bash
-        uploaded_file="$(grep -F "${bdsep}$local_file_name${bdsep}" "$all_uploaded_files_file")" \
-                || {
-                file_to_upload="$base_directory/$local_file_name";
-                local_file_size="$(stat --printf="%s" "$file_to_upload")";
-                printf '%s' "$(( $(cat "$upload_total_size_file") + local_file_size ))" > "$upload_total_size_file";
-
-                upload_counter="$(( upload_counter + 1 ))";
-                local_file_size_formatted="$(printf '%s' "$local_file_size" | numfmt --grouping --to-unit 1000 | sed 's/,/./g')";
-
-                printf '%s Not yet uploaded file "%s" %s KB, %s!\n' \
-                        "$(date)" \
-                        "$file_to_upload" \
-                        "$local_file_size_formatted" \
-                        "$upload_counter";
-            }
-
-        if [[ "w$uploaded_file" == "w" ]];
-        then
-            all_upload_files+=("$base_directory${bdsep}$local_file_name${bdsep}$bucket");
-        else :
-            # printf '%s Already uploaded file "%s" !\n' "$(date)" "$base_directory/$local_file_name";
+            # https://stackoverflow.com/questions/10586153/how-to-split-a-string-into-an-array-in-bash
+            readarray -t temp <<< "$all_upload_files_string";
+            all_upload_files+=("${temp[@]}");
         fi;
     done;
 
@@ -384,8 +372,5 @@ printf '0' > "$upload_total_size_file";
 
 export upload_total_size_complete_file="/tmp/upload_to_s3_upload_total_size_complete.txt";
 printf '0' > "$upload_total_size_complete_file";
-
-export all_uploaded_files_file="/tmp/upload_to_s3_all_uploaded_files.txt";
-printf '' > "$all_uploaded_files_file";
 
 time main 2>&1 | tee -a "$s3_main_logfile";
