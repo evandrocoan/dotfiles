@@ -200,6 +200,7 @@ log(f"{now()}        Directory uploading {upload_counter} files of {files_counte
     {
         lockfile="$1";
         locker_name="$2";
+        printf '%s Getting lock %s for %s...\n' "$(date)" "$lockfile" "$locker_name";
 
         # https://stackoverflow.com/questions/185451/quick-and-dirty-way-to-ensure-only-one-instance-of-a-shell-script-is-running-at
         while ! mkdir "$lockfile" 2>/dev/null;
@@ -357,7 +358,7 @@ else:
     {
         # https://superuser.com/questions/403263/how-to-pass-bash-script-arguments-to-a-subshell
         set -eu${VERBOSE-} -o pipefail;
-        /bin/bash -c "acually_upload_to_s3 $(printf "${1+ %q}" "$@")" || exit 255;
+        /bin/bash -c 'acually_upload_to_s3 '"$(printf "${1+ %q}" "$@")" || exit 255;
     }
 
     function upload_all()
@@ -377,12 +378,12 @@ else:
             # https://stackoverflow.com/questions/6570531/assign-string-containing-null-character-0-to-a-variable-in-bash
             # https://stackoverflow.com/questions/60113944/0-and-printf-in-c
             # https://askubuntu.com/questions/1106805/xargs-unmatched-single-quote-by-default-quotes-are-special-to-xargs-unless-you
-            printf "%s\\000" "${all_upload_files[@]}" | xargs \
+            printf '%q\000' "${all_upload_files[@]}" | xargs \
                     --null \
                     --max-procs="$parallel_uploads" \
                     --max-args=1 \
                     --replace={} \
-                    /bin/bash -c "time upload_to_s3 \"{}\"";
+                    /bin/bash -c 'time upload_to_s3 {};';
         fi;
     }
 
