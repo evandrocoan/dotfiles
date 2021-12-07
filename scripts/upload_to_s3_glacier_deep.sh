@@ -64,6 +64,9 @@ uploaded_files_set = set()
 files_to_ignore = set("""'"$files_to_ignore"'""".splitlines())
 uploaded_files_file = "'"$uploaded_files_file"'"
 
+# https://aws.amazon.com/s3/faqs
+maximum_s3_size = 5000000000
+
 # https://stackoverflow.com/questions/56791917/how-to-format-datetime-in-python-as-date-is-doing/56794800
 locale.setlocale(locale.LC_ALL, "")
 
@@ -151,6 +154,9 @@ for directory, directories, files in os.walk(base_directory):
         if file in files_to_ignore:
             log(f"{now()} Ignoring item {local_file_path}...")
             continue
+
+        if local_size > maximum_s3_size:
+            raise RuntimeError(f"{now()} Error: The file \"{local_file_path} <{to_KB(local_size)}>\" exceeded {to_KB(maximum_s3_size)}!")
 
         if uploaded_files and (local_file_name in uploaded_files_set or local_file_name_url in uploaded_files_set):
             files_counter += 1
