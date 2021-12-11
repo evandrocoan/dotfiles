@@ -74,7 +74,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
      if [ "$SHLVL" = 1 ]; then
          [ -x /usr/bin/clear ] && /usr/bin/clear
      fi
-     ``` 
+     ```
    1. https://superuser.com/questions/186037/how-to-prevent-clearing-of-terminal-output-when-i-exit-an-ssh-session
 
 1. To detach any ssh anytime just press `Enter + ~~ + .` (press `~` twice to input a single `~`)
@@ -359,7 +359,7 @@ including the actual virtual memory already on the SWAP partition.
    Filesystem type is: ef53
    File size of /swapfile is 8589934592 (2097152 blocks of 4096 bytes)
     ext:     logical_offset:        physical_offset: length:   expected: flags:
-      0:        0..    6143:    1626112..   4980735:   6144:            
+      0:        0..    6143:    1626112..   4980735:   6144:
       1:     6144..    8191:    4982784..   4984831:   2048:    4980736:
    ```
 1. `sudo vim /etc/default/grub`
@@ -780,6 +780,36 @@ SystemAccount=true
 1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication
 1. Use `systemctl edit --full systemd-logind` to disable the network restrictions in systemd-logind, by removing the `IPAddressDeny=` and `RestrictAddressFamilies=` options. (And probably `SystemCallFilter=` as well).
    1. Reboot your computer after `systemctl edit --full systemd-logind`
+
+
+### Fix networking not connecting (after coming out from system sleep)
+
+```
+sudo su
+history
+grep 'enp1s0' /var/log/syslog
+/etc/init.d/network restart
+/etc/init.d/networking restart
+systemctl status networking.service
+ip addr flush dev wlo1
+ip addr flush dev enp1s0
+ifdown enp1s0
+ifdown wlo1
+ip a s
+```
+1. https://askubuntu.com/questions/293827/error-rtnetlink-answers-file-exists
+1. https://raspberrypi.stackexchange.com/questions/13895/solving-rtnetlink-answers-file-exists-when-running-ifup
+1. https://unix.stackexchange.com/questions/100588/using-ip-addr-instead-of-ifconfig-reports-rtnetlink-answers-file-exists-on-de
+
+If commands like `docker run -it debian:11 apt update` cannot connect to internet:
+```
+sudo su
+ip link delete docker0
+service docker restart
+```
+1. https://github.com/docker/for-linux/issues/312 - Accidently deleted docker0 bridge. How do i get docker running again?
+1. https://forums.docker.com/t/network-bridge-docker0-cant-connect-to-local-network/78175
+1. https://stackoverflow.com/questions/58641541/why-docker0-bridge-is-showing-down-in-a-kubernetes-cluster-with-flannel
 
 
 ### Install remmina from snap
