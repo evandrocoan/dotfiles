@@ -340,7 +340,7 @@ function hiddeninstallationmodelhandlegeneralexception() {
         then
             printf "\\n";
             printf "Repeating the last '%sº' command '%s'... (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
-            eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
+            eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}" "nope";
             return 0;
 
         elif [[ "w${fixcommand}" == "we" ]] && [[ "w${generalexceptiontype}" == "wrun" ]];
@@ -351,7 +351,7 @@ function hiddeninstallationmodelhandlegeneralexception() {
             read -e -r -p "Edit command: " -i "${commandline}" commandline;
 
             printf "Running the fix comand '%sº' command '%s'... (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
-            eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
+            eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}" "nope";
             return 0;
 
         elif [[ "w${fixcommand}" == "wr" ]] && [[ "w${generalexceptiontype}" == "wset" ]];
@@ -432,7 +432,7 @@ function run() {
     else
         printf "\\n";
         printf "Running '%sº' required command '%s' (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
-        eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
+        eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}" "nope";
     fi;
 }
 
@@ -452,7 +452,7 @@ function runalways() {
 
     printf "\\n";
     printf "Running the '%sº' always command '%s' (%s)\\n" "${g_installation_model_command_counter}" "${commandline}" "$(pwd)";
-    eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
+    eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}" "nope";
 }
 
 
@@ -584,7 +584,7 @@ function ask_to_run() {
             elif [[ "w${shouldirun}" == "wy" ]] || [[ "w${shouldirun}" == "wyes" ]];
             then
                 printf "Running the '%sº' optional command '%s'...\\n" "${g_installation_model_command_counter}" "${commandline}";
-                eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}";
+                eval "${commandline}" || hiddeninstallationmodelhandlegeneralexception "run" "${commandline}" "${?}" "nope";
 
             elif [[ "w${shouldirun}" == "wn" ]];
             then
