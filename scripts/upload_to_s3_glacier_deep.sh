@@ -140,6 +140,8 @@ def convert_absolute_path_to_relative(base_directory, file_path):
         relative_path = relative_path[1:]
     return relative_path
 
+big_files_found = []
+
 # https://stackoverflow.com/questions/13454164/os-walk-without-hidden-folders
 for directory, directories, files in os.walk(base_directory):
     for file in files:
@@ -156,7 +158,7 @@ for directory, directories, files in os.walk(base_directory):
             continue
 
         if local_size > maximum_s3_size:
-            raise RuntimeError(f"{now()} Error: The file \"{local_file_path} <{to_KB(local_size)}>\" exceeded {to_KB(maximum_s3_size)}!")
+            big_files_found.append(f"{now()} Error: The file \"{local_file_path} <{to_KB(local_size)}>\" exceeded {to_KB(maximum_s3_size)}!")
 
         if uploaded_files and (local_file_name in uploaded_files_set or local_file_name_url in uploaded_files_set):
             files_counter += 1
@@ -167,6 +169,9 @@ for directory, directories, files in os.walk(base_directory):
             upload_total_size += local_size
             print(f"{base_directory}{bdsep}{local_file_name}{bdsep}{bucket}")
             log(f"{now()} {upload_counter:6} Not yet uploaded file \"{local_file_name}\" {to_B(local_size)}!")
+
+if big_files_found:
+    raise RuntimeError("\n".join(big_files_found))
 
 # https://stackoverflow.com/questions/6648493/how-to-open-a-file-for-both-reading-and-writing/
 def add_to_file(file_path, add):
