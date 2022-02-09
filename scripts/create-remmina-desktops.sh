@@ -1,7 +1,7 @@
 set -x;
 defaultremmina="${HOME}/.local/share/remmina"
 destinedir="${HOME}/.local/share/applications";
-sourcedir="${HOME}/snap/remmina/5073/.local/share/remmina";
+sourcedir="${HOME}/snap/remmina/5130/.local/share/remmina";
 
 cp --verbose --no-clobber "$defaultremmina"/* "$sourcedir"
 
