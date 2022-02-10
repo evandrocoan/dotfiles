@@ -816,8 +816,11 @@ service docker restart
 
 1. `sudo snap install remmina`
 1. Disable snap auto updates:
-   1. `sudo snap set system refresh.hold="$(date --date='today+300000 days' --iso-8601=seconds)"`
    1. https://askubuntu.com/questions/930593/how-to-disable-autorefresh-in-snap
+   1. `sudo snap set system refresh.hold="$(date --date='today+300000 days' --iso-8601=seconds)"`
+   1. `sudo snap set system refresh.metered=hold`
+   1. `sudo systemctl disable snapd.service`
+   1. `sudo vim /etc/hosts` (add `127.0.0.1 api.snapcraft.io`)
 1. https://askubuntu.com/questions/1227585/remmina-not-receiving-audio
 
 Run the script `~/scripts/create-remmina-desktops.sh` to create `.desktop` icons from saved Remmina connections and
