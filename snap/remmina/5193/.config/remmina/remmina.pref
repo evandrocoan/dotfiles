@@ -1,6 +1,6 @@
 [remmina_pref]
 secret=
-datadir_path=/home/evandro_coan/snap/remmina/5130/.local/share/remmina
+datadir_path=/home/evandro_coan/snap/remmina/5193/.local/share/remmina
 remmina_file_name=%G_%P_%N_%h
 screenshot_path=/home/evandro_coan/Pictures
 screenshot_name=remmina_%p_%h_%Y%m%d-%H%M%S

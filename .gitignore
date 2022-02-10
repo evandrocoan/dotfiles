@@ -23,16 +23,16 @@
 
 !/snap/
 !/snap/remmina/
-!/snap/remmina/5130/
-!/snap/remmina/5130/.local/
-!/snap/remmina/5130/.local/share/
-!/snap/remmina/5130/.local/share/remmina/
-!/snap/remmina/5130/.local/share/remmina/group_rdp_professional_192-168-0-8.remmina
-!/snap/remmina/5130/.local/share/remmina/group_sftp_professional-download-files_192-168-0-8.remmina
+!/snap/remmina/5193/
+!/snap/remmina/5193/.local/
+!/snap/remmina/5193/.local/share/
+!/snap/remmina/5193/.local/share/remmina/
+!/snap/remmina/5193/.local/share/remmina/group_rdp_professional_192-168-0-8.remmina
+!/snap/remmina/5193/.local/share/remmina/group_sftp_professional-download-files_192-168-0-8.remmina
 
-!/snap/remmina/5130/.config/
-!/snap/remmina/5130/.config/remmina/
-!/snap/remmina/5130/.config/remmina/remmina.pref
+!/snap/remmina/5193/.config/
+!/snap/remmina/5193/.config/remmina/
+!/snap/remmina/5193/.config/remmina/remmina.pref
 
 !/.config/
 
