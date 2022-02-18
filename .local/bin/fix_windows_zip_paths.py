@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 import os
 
 # already created directories, walk works topdown, so a child dir
@@ -16,7 +16,7 @@ for root, dir_names, file_names in os.walk('.'):
         print( 'alt_dir', alt_dir_name )
         full_dir_name = os.path.join(root, alt_dir_name)
         if full_dir_name not in made_dirs:
-            os.makedirs(full_dir_name)  # only create if not done yet
+            os.makedirs(full_dir_name, exist_ok=True)  # only create if not done yet
             made_dirs.add(full_dir_name)
         os.rename(os.path.join(root, file_name),
                   os.path.join(root, alt_file_name))
