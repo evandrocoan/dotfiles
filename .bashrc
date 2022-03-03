@@ -67,6 +67,16 @@ function start() {
 }
 
 
+XPROFILE_FILE=~/.xprofile
+IS_X_PROFILE_LOADED_ON_FIRST_BOOT=/tmp/is_x_profile_loaded_on_first_boot.txt
+
+if [[ -f "$XPROFILE_FILE" ]] && [[ ! -f "$IS_X_PROFILE_LOADED_ON_FIRST_BOOT" ]];
+then
+    source "$XPROFILE_FILE";
+    printf 'yes' > "$IS_X_PROFILE_LOADED_ON_FIRST_BOOT";
+fi;
+
+
 if ! command -v "sudo" >/dev/null 2>&1; then
     alias sudo="printf 'Warning: Running as current user\n';"
 fi
