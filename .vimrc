@@ -1,4 +1,9 @@
 
+" Fix vim adding new lines CR ou LF to the end of the files
+" https://stackoverflow.com/questions/4133501/vim-no-end-of-line-on-last-line-or-eof
+set binary
+set noeol
+
 " :echo v:version
 " https://stackoverflow.com/questions/9193066/how-do-i-inspect-vim-variables
 
