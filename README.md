@@ -134,6 +134,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    For other components, research how it could be done, or just install the settings by using another
    user account or desktop environment as KDE Plasma, Mate, Cinnamon, etc.
 
+1. Set your Android WIFI as a metered connection:
+   1. `iwgetid` to list WIFI/wireless connection SSID
+   1. `nmcli -f connection.metered connection show YOUR_WIFI_SSID`
+   1. `nmcli connection modify YOUR_WIFI_SSID connection.metered yes`
+   1. https://askubuntu.com/questions/711949/set-wifi-as-metered-connection
+
 1. `sudo apt-get install anacron && sudo vim /etc/anacrontab`
    ```sh
    # the maximal random minutes delay added to the base delay of the jobs
@@ -789,14 +795,31 @@ sudo su
 history
 grep 'enp1s0' /var/log/syslog
 /etc/init.d/network restart
-/etc/init.d/networking restart
 systemctl status networking.service
+systemctl restart NetworkManager
+
 ip addr flush dev wlo1
 ip addr flush dev enp1s0
 ifdown enp1s0
 ifdown wlo1
+ifup enp1s0
+ifup wlo1
 ip a s
+
+# assegure vim /etc/network/interfaces com o seguinte e execute ifdown/ifup em seguida
+# Verifique se a conexão está ok com `ping 8.8.8.8` ou `ping 1.1.1.1`
+auto lo
+iface lo inet loopback
+
+#auto enp1s0
+allow-hotplug enp1s0
+iface enp1s0 inet dhcp
+
+auto wlo1
+allow-hotplug wlo1
+iface wlo1 inet dhcp
 ```
+1. https://routerctrl.com/ubuntu-wi-fi-connected-but-no-internet-access/
 1. https://askubuntu.com/questions/293827/error-rtnetlink-answers-file-exists
 1. https://raspberrypi.stackexchange.com/questions/13895/solving-rtnetlink-answers-file-exists-when-running-ifup
 1. https://unix.stackexchange.com/questions/100588/using-ip-addr-instead-of-ifconfig-reports-rtnetlink-answers-file-exists-on-de
