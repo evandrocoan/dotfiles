@@ -878,7 +878,6 @@ edit `~/.config/menus/xfce-applications.menu` with the results.
    $ xrandr -q
    HDMI-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 510mm x 290mm
    DP-1 connected 1920x1080+1920+0 (normal left inverted right x axis y axis) 510mm x 290mm
-
    $ xrandr --output DP-1 --brightness 0.7
    $ xrandr --output DP-1 --gamma 0.9:0.9:0.9
    ```
@@ -898,12 +897,21 @@ edit `~/.config/menus/xfce-applications.menu` with the results.
 1. How do I save my new resolution setting with xrandr?
    * Create the `$HOME/.xprofile` and set it as executable `chmod +x "$HOME/.xprofile"`:
    ```sh
+   #!/bin/bash
    xrandr --output DP-1 --brightness 1.0
    xrandr --output DP-1 --gamma 0.85:0.85:0.85
    ```
    * https://askubuntu.com/questions/754231/how-do-i-save-my-new-resolution-setting-with-xrandr
    * https://wiki.archlinux.org/index.php/Xprofile
 
+My old settings:
+```
+xrandr --output eDP-1 --brightness 0.6
+xrandr --output eDP-1 --gamma 0.85:0.85:0.85
+
+xrandr --output eDP-1 --brightness 0.9
+xrandr --output eDP-1 --gamma 0.65:0.65:0.65
+```
 
 ### Disable line wrap
 
