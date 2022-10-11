@@ -1,2 +1,2 @@
--Xmx2048M
--Xms128M
+-Xmx8192M
+-Xms1024M
