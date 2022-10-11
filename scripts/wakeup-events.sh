@@ -6,6 +6,8 @@ snap set system refresh.hold="$(date --date='today+300000 days' --iso-8601=secon
 IS_X_PROFILE_LOADED_ON_FIRST_BOOT=/tmp/is_x_profile_loaded_on_first_boot.txt;
 rm -rf "$IS_X_PROFILE_LOADED_ON_FIRST_BOOT";
 
+exit 0
+
 # https://askubuntu.com/questions/252743/how-do-i-prevent-mouse-movement-from-waking-up-a-suspended-computer
 # Run `cat /proc/acpi/wakeup`
 #
