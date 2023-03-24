@@ -83,6 +83,7 @@
 !/.local/share/applications
 !/.local/share/applications/sublime_text_logs.desktop
 !/.local/share/applications/sublime_text_vanilla.desktop
+!/.local/share/applications/menulibre-ahgora.desktop
 !/.local/share/xfce4
 !/.local/share/xfce4/helpers
 !/.local/share/xfce4/helpers/custom-FileManager.desktop

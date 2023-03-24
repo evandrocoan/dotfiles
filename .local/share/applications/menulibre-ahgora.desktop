@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.1
+Type=Application
+Name=Ahgora
+Comment=A small descriptive blurb about this application.
+Icon=ac-adapter-symbolic
+Exec=google-chrome --profile-directory="Ahgora" --user-data-dir="/home/evandro_coan/chrome-ahgora"
+Path=/home/evandro_coan/chrome-ahgora
+Actions=
+Categories=X-XFCE;X-Xfce-Toplevel;
