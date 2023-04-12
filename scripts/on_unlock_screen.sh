@@ -67,6 +67,11 @@ do
     shift;
 done;
 
+function run_google_chrome() {
+    home_dir="$HOME/chrome-ahgora";
+    google-chrome --profile-directory="Ahgora" --user-data-dir="$home_dir";
+}
+
 # https://unix.stackexchange.com/questions/28181/how-to-run-a-script-on-screen-lock-unlock
 dbus-monitor --session "type='signal',interface='org.xfce.ScreenSaver'" | \
 ( while true
@@ -75,8 +80,7 @@ dbus-monitor --session "type='signal',interface='org.xfce.ScreenSaver'" | \
         echo "locking at $(date)"
     elif echo $X | grep "boolean false" &> /dev/null; then
         echo "unlocking at $(date)";
-        home_dir="$HOME/chrome-ahgora";
-        google-chrome --profile-directory="Ahgora" --user-data-dir="$home_dir";
+        run_google_chrome;
         # running_processes="$(ps -ef | grep "$home_dir" | grep -v "grep" | wc -l)";
         # if [[ $running_processes -lt 2 ]];
         # then
@@ -86,5 +90,7 @@ dbus-monitor --session "type='signal',interface='org.xfce.ScreenSaver'" | \
 done ) &
 export foo_pid=$!
 trap 'kill $foo_pid' EXIT
+
+run_google_chrome;
 
 sudo openfortivpn --persistent 5
