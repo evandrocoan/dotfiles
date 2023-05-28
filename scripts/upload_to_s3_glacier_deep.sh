@@ -97,6 +97,8 @@ def to_B(size_bytes, factor=0, postfix="B"):
 def to_KB(size_bytes, factor=0, postfix="B"):
     return to_B(size_bytes, factor=1024, postfix="KB")
 
+missing_files_found = []
+
 # https://stackoverflow.com/questions/18394147/how-to-do-a-recursive-sub-folder-search-and-return-files-in-a-list
 # https://stackoverflow.com/questions/53026131/how-to-prevent-unicodedecodeerror-when-reading-piped-input-from-sys-stdin
 with open(uploaded_files_file, mode="rb") as uploaded_files_binary:
@@ -122,9 +124,12 @@ with open(uploaded_files_file, mode="rb") as uploaded_files_binary:
             elif os.path.exists(file_path_unquoted):
                 check_if_file_size_match(file_path_unquoted, file_size)
             else:
-                raise RuntimeError(f"{now()} Error: Remote file \"{file_path} <{file_path_unquoted}>\" does not exist locally!")
+                missing_files_found.append(f"{now()} Error: Remote file \"{file_path} <{file_path_unquoted}>\" does not exist locally!")
     else:
         log(f"{now()} No files exist yet on the remote \"{bucket}\" for \"{base_directory}\"...")
+
+if missing_files_found:
+    raise RuntimeError("\n".join(missing_files_found))
 
 files_counter = 0
 files_local_size = 0
