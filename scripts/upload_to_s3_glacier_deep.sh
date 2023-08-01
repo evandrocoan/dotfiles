@@ -79,7 +79,7 @@ def log(*args, **kwargs):
 def check_if_file_size_match(path, size):
     local_size = os.path.getsize(path)
     if os.path.getsize(path) != size:
-        raise RuntimeError(f"{now()} Error: The local file \"{path}\" mismatch {size} != {local_size} for remote file size!")
+        return f"{now()} Error: The local file \"{path}\" mismatch {size} != {local_size} for remote file size!"
 
 def check_invalid_characther(file_path):
     for thing in ("\\", "\n"):
@@ -97,7 +97,7 @@ def to_B(size_bytes, factor=0, postfix="B"):
 def to_KB(size_bytes, factor=0, postfix="B"):
     return to_B(size_bytes, factor=1024, postfix="KB")
 
-missing_files_found = []
+problem_files_found = []
 
 # https://stackoverflow.com/questions/18394147/how-to-do-a-recursive-sub-folder-search-and-return-files-in-a-list
 # https://stackoverflow.com/questions/53026131/how-to-prevent-unicodedecodeerror-when-reading-piped-input-from-sys-stdin
@@ -120,16 +120,17 @@ with open(uploaded_files_file, mode="rb") as uploaded_files_binary:
             file_path_unquoted = os.path.join(base_directory, file_name_unquoted)
 
             if os.path.exists(file_path):
-                check_if_file_size_match(file_path, file_size)
+                error = check_if_file_size_match(file_path, file_size)
+                if error:
+                    problem_files_found.append(error)
             elif os.path.exists(file_path_unquoted):
-                check_if_file_size_match(file_path_unquoted, file_size)
+                error = check_if_file_size_match(file_path_unquoted, file_size)
+                if error:
+                    problem_files_found.append(error)
             else:
-                missing_files_found.append(f"{now()} Error: Remote file \"{file_path} <{file_path_unquoted}>\" does not exist locally!")
+                problem_files_found.append(f"{now()} Error: Remote file \"{file_path} <{file_path_unquoted}>\" does not exist locally!")
     else:
         log(f"{now()} No files exist yet on the remote \"{bucket}\" for \"{base_directory}\"...")
-
-if missing_files_found:
-    raise RuntimeError("\n".join(missing_files_found))
 
 files_counter = 0
 files_local_size = 0
@@ -189,6 +190,11 @@ def add_to_file(file_path, add):
 add_to_file("'"$upload_total_size_file"'", upload_total_size)
 add_to_file("'"$local_total_size_file"'", files_local_size)
 add_to_file("'"$local_files_counter_file"'", files_counter)
+
+if problem_files_found:
+    with open("'"$problem_files_found"'", "w") as file:
+        file.write("\n".join(problem_files_found))
+        file.write("\n")
 
 log(f"{now()}        Directory uploading {upload_counter} files of {files_counter} with {to_KB(upload_total_size)} of {to_KB(files_local_size)}...")
 ' | python3 | dos2unix)";
@@ -404,8 +410,8 @@ else:
     }
 
     time upload_all \
-        && printf '%s Successfully uploaded all files\n' "$(date)" \
-        || { printf '%s Error: Could not upload some files\n'  "$(date)"; exit 1; }
+        && { printf '%s Successfully uploaded all files\n' "$(date)"; (set -x; cat "$problem_files_found"); } \
+        || { printf '%s Error: Could not upload some files\n'  "$(date)"; (set -x; cat "$problem_files_found"); exit 1; }
 }
 
 if shopt -qo xtrace;
@@ -422,6 +428,9 @@ printf "%s" "$(date +%s.%N)" > "$upload_start_time_file";
 
 export uploaded_files_file="/tmp/upload_to_s3_uploaded_files.txt";
 printf '' > "$uploaded_files_file";
+
+export problem_files_found="/tmp/upload_to_s3_problem_files_found.txt";
+printf '' > "$problem_files_found";
 
 export upload_counter_file="/tmp/upload_to_s3_upload_counter.txt";
 printf '0' > "$upload_counter_file";
