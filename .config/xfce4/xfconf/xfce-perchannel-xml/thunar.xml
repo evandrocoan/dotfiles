@@ -10,8 +10,8 @@
   <property name="last-separator-position" type="int" value="170"/>
   <property name="last-show-hidden" type="bool" value="true"/>
   <property name="misc-exec-shell-scripts-by-default" type="bool" value="true"/>
-  <property name="last-details-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_38_PERCENT"/>
-  <property name="last-details-view-column-widths" type="string" value="50,130,130,50,1348,50,1407,72,162,71,50,141"/>
+  <property name="last-details-view-zoom-level" type="string" value="THUNAR_ZOOM_LEVEL_25_PERCENT"/>
+  <property name="last-details-view-column-widths" type="string" value="50,130,130,50,1348,50,1144,72,162,79,50,396"/>
   <property name="last-sort-column" type="string" value="THUNAR_COLUMN_DATE_MODIFIED"/>
   <property name="last-sort-order" type="string" value="GTK_SORT_DESCENDING"/>
   <property name="misc-single-click" type="bool" value="false"/>

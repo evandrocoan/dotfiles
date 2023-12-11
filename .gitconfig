@@ -32,3 +32,12 @@
 	changed = green
 	untracked = cyan
 
+[gui]
+	pruneduringfetch = true
+[smartgit "submodule"]
+	fetchalways = false
+	update = false
+	initializenew = false
+[push]
+	recurseSubmodules = on-demand
+[taggrouping]

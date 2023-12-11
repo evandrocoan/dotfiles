@@ -1,6 +1,8 @@
 #!/bin/bash
 run_more_quietly="v"
 
+exit 0
+
 pushd `dirname $0` > /dev/null
 SCRIPT_FOLDER_PATH=`pwd`
 popd > /dev/null
