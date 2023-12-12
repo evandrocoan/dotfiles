@@ -519,7 +519,10 @@ Never use `dm-tool lock`!
    # "dm-tool switch-to-greeter" \
    # "light-locker-command --lock" \
    # Remove 'xfce4-screensaver-command' because it does not turn screen off as xscreensaver-command -lock!
-       # "xfce4-screensaver-command --lock" \
+   #    "xfce4-screensaver-command --lock" \
+   # turn the screen off continually because xfce4-screensaver-command does not turn it off again
+   # xfce4-screensaver-command --lock && { while true; do xset dpms force off; sleep 50; done; }
+
    for lock_cmd in \
        "$LOCK_CMD" \
        "xscreensaver-command -lock" \
