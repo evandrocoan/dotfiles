@@ -17,10 +17,6 @@
 !README.md
 !.nojekyll
 
-!/scripts/
-!/scripts/backupanki.sh
-!/scripts/backupankihelper.sh
-
 !/snap/
 !/snap/remmina/
 !/snap/remmina/5237/
@@ -121,6 +117,11 @@
 
 !/scripts/
 !/scripts/**
+!/scripts/backupanki.sh
+!/scripts/backupankihelper.sh
+!/scripts/monitor-ps-aux.sh
+
+# temp clone
 /scripts/xfce4
 
 !/.ssh/

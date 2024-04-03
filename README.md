@@ -169,6 +169,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://askubuntu.com/questions/761658/manually-run-an-anacron-job
    1. https://www.certdepot.net/rhel7-how-get-started-anacron/
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
+1. Configure ps aux monitoring:
+   1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
+   1. `sudo systemctl daemon-reload`
+   1. `sudo systemctl enable monitor-ps-aux.service`
+   1. `sudo systemctl start monitor-ps-aux.service`
+   1. `sudo systemctl status monitor-ps-aux.service`
 
 
 ### Install XFCE from sources
