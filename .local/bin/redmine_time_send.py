@@ -44,10 +44,10 @@ def parse_time_line(state, line):
         activity_id = match.group('activity_id')
         comment = match.group('comment')
 
-        if not state.first_date: raise RuntimeError(f"Invalid data {state.first_date}")
-        if not hours: raise RuntimeError(f"Invalid data {hours}")
-        if not issue_id: raise RuntimeError(f"Invalid data {issue_id}")
-        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data {activity_id}")
+        if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}")
+        if not hours: raise RuntimeError(f"Invalid data hours {hours}")
+        if not issue_id: raise RuntimeError(f"Invalid data issue_id {issue_id}")
+        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data activity_id {activity_id}")
 
         entry = {
             "issue_id": int(issue_id),
