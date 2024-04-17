@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import json
+import datetime
 import argparse
 import requests
 
@@ -20,6 +21,9 @@ class State(object):
         self.entries = []
         self.first_date = ""
         self.last_date = ""
+        self.total_time = 0
+        self.actual_date = datetime.datetime.strptime("1990/01/01", "%Y/%m/%d")
+        self.warnings = []
 
 
 def parse_time_line(state, line):
@@ -27,6 +31,9 @@ def parse_time_line(state, line):
     if not line:
         state.first_date = ""
         state.last_date = ""
+        if state.total_time and state.total_time < 6 or state.total_time > 10:
+            state.warnings.append(f"Invalid total time {state.total_time}, {state.entries[-1]}.")
+        state.total_time = 0
 
     match = state.regex.search(line)
 
@@ -36,18 +43,19 @@ def parse_time_line(state, line):
         if not state.last_date:
             state.last_date = state.first_date
 
-        if state.first_date != state.last_date: raise RuntimeError("Each line group must be from the same date")
+        if state.first_date != state.last_date: raise RuntimeError(f"Each line group must be from the same date {line}.")
         state.last_date = state.first_date
 
         hours = match.group('hours')
         issue_id = match.group('issue_id')
         activity_id = match.group('activity_id')
         comment = match.group('comment')
+        state.total_time += float(hours)
 
-        if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}")
-        if not hours: raise RuntimeError(f"Invalid data hours {hours}")
-        if not issue_id: raise RuntimeError(f"Invalid data issue_id {issue_id}")
-        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data activity_id {activity_id}")
+        if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}, {line}.")
+        if not hours: raise RuntimeError(f"Invalid data hours {hours}, {line}.")
+        if not issue_id: raise RuntimeError(f"Invalid data issue_id {issue_id}, {line}.")
+        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data activity_id {activity_id}, {line}.")
 
         entry = {
             "issue_id": int(issue_id),
@@ -56,6 +64,11 @@ def parse_time_line(state, line):
             "activity_id": activity_id,
         }
         if comment: entry['comments'] = comment
+        next_date = datetime.datetime.strptime(state.first_date, "%Y/%m/%d")
+
+        if state.actual_date > next_date: raise RuntimeError(f"Invalid date {state.actual_date}, should always be >= {line}.")
+        state.actual_date = next_date
+
         state.entries.append(entry)
 
     elif line:
@@ -87,7 +100,14 @@ def main():
         last_date = data['spent_on']
         print(data)
 
+    if state.warnings:
+        for warning in state.warnings:
+            print("warning", warning, '\n')
+
     input("Press enter to send data...")
+    input("Press enter to send data...")
+    input("Press enter to send data...")
+    errors = []
     for data in state.entries:
         data_json = json.dumps({ "time_entry": data })
         response = requests.post(f'{url}/time_entries.json', headers=headers, data=data_json)
@@ -96,7 +116,10 @@ def main():
             print("Response was successful.", repr(response.text))
         else:
             print("Response was not successful:", response.status_code, repr(response.text))
-            break
+            errors.append((data, response.status_code, response.text))
+
+    if errors:
+        print("The following requests resulted in errors:", errors)
 
 
 def test_basic_load():
@@ -105,7 +128,7 @@ def test_basic_load():
 1. Add 1.0 hours/8 (2023/04/12) #80661 fishlike sc
 1. Add 5.0 hours/8 (2023/04/12) #89081 roughet overintellectual bureaucratization s
 
-1. Add 5.0 hours/8 (2023/04/15) #89081 deciduously the
+1. Add 6.0 hours/8 (2023/04/15) #89081 deciduously the
 
 1. Add 1.0 hours/8 (2023/04/16) #81352 bifocal somers repr
 1. Add 1.0 hours/8 (2023/04/16) #81236 assaying pneumotherapy perceptibleness
@@ -123,7 +146,7 @@ def test_mixed_data_raise_runtime_error():
 1. Add 1.0 hours/8 (2023/04/12) #80661 grasslike Monomya
 1. Add 5.0 hours/8 (2023/04/12) #89081 unavailing fasciculus cursorary sca
 
-1. Add 5.0 hours/8 (2023/04/15) #89081 abranchious Kokoona unprincipledness poluphloisboiotic ideolo
+1. Add 6.0 hours/8 (2023/04/15) #89081 abranchious Kokoona unprincipledness poluphloisboiotic ideolo
 
 1. Add 1.0 hours/8 (2023/04/16) #81352 Guttera enfila
 1. Add 1.0 hours/8 (2023/04/15) #81236 Welf overbearing yeomanwis
@@ -174,6 +197,67 @@ def test_invalid_line_parse_raises_runtime_error():
     with pytest.raises(RuntimeError, match=r"Line with invalid data"):
         for line in lines.split('\n'):
             parse_time_line(state, line)
+
+
+def test_invalid_date_raises_runtime_error():
+    lines = """
+1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
+1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
+1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
+
+1. Add 2.0 hours/8 (2023/04/15) #89081 Jacaltec sepi
+1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
+
+1. Add 1.0 hours/8 (2023/04/14) #81352 Serapis unwomanlike prominency ba
+1. Add 1.0 hours/8 (2023/04/14) #81236 mesomorphy scandalizer u
+1. Add 5.0 hours/8 (2023/04/14) #89081 emanatory radiolocator
+    """
+
+    state = State()
+    with pytest.raises(RuntimeError, match=r"Invalid date 2023-04-15 00:00:00, should always be >="):
+        for line in lines.split('\n'):
+            parse_time_line(state, line)
+
+
+def test_too_much_hours_raises_runtime_error():
+    lines = """
+1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
+1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
+1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
+
+1. Add 2.0 hours/8 (2023/04/15) #89081 Jacaltec sepi
+1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
+
+1. Add 5.0 hours/8 (2023/04/16) #81352 Serapis unwomanlike prominency ba
+1. Add 1.0 hours/8 (2023/04/16) #81236 mesomorphy scandalizer u
+1. Add 5.0 hours/8 (2023/04/16) #89081 emanatory radiolocator
+    """
+
+    state = State()
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+
+    assert "Invalid total time 11.0" in str(state.warnings)
+
+
+def test_too_less_hours_raises_runtime_error():
+    lines = """
+1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
+1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
+1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
+
+1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
+
+1. Add 5.0 hours/8 (2023/04/16) #81352 Serapis unwomanlike prominency ba
+1. Add 1.0 hours/8 (2023/04/16) #81236 mesomorphy scandalizer u
+1. Add 5.0 hours/8 (2023/04/16) #89081 emanatory radiolocator
+    """
+
+    state = State()
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+
+    assert "Invalid total time 5.0" in str(state.warnings)
 
 
 g_argumentParser = argparse.ArgumentParser(
