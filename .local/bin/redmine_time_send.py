@@ -22,13 +22,15 @@ class State(object):
         self.first_date = ""
         self.last_date = ""
         self.total_time = 0
-        self.actual_date = datetime.datetime.strptime("1990/01/01", "%Y/%m/%d")
+        self.actual_date = datetime.datetime.strptime("1990/01/02", "%Y/%m/%d")
+        self.last_block_date = datetime.datetime.strptime("1990/01/01", "%Y/%m/%d")
         self.warnings = []
 
 
 def parse_time_line(state, line):
     line = line.strip()
     if not line:
+        state.last_block_date = state.actual_date
         state.first_date = ""
         state.last_date = ""
         if state.total_time and state.total_time < 6 or state.total_time > 10:
@@ -68,6 +70,9 @@ def parse_time_line(state, line):
 
         if state.actual_date > next_date: raise RuntimeError(f"Invalid date {state.actual_date}, should always be >= {line}.")
         state.actual_date = next_date
+
+        if datetime.datetime.strptime(state.first_date, "%Y/%m/%d") <= state.last_block_date:
+            raise RuntimeError(f"The next block must be from higher date {line}.")
 
         state.entries.append(entry)
 
@@ -215,6 +220,26 @@ def test_invalid_date_raises_runtime_error():
 
     state = State()
     with pytest.raises(RuntimeError, match=r"Invalid date 2023-04-15 00:00:00, should always be >="):
+        for line in lines.split('\n'):
+            parse_time_line(state, line)
+
+
+def test_same_date_different_blocks_raises_runtime_error():
+    lines = """
+1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
+1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
+1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
+
+1. Add 2.0 hours/8 (2023/04/15) #89081 Jacaltec sepi
+1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
+
+1. Add 1.0 hours/8 (2023/04/15) #81352 Serapis unwomanlike prominency ba
+1. Add 1.0 hours/8 (2023/04/15) #81236 mesomorphy scandalizer u
+1. Add 5.0 hours/8 (2023/04/15) #89081 emanatory radiolocator
+    """
+
+    state = State()
+    with pytest.raises(RuntimeError, match=r"The next block must be from higher date"):
         for line in lines.split('\n'):
             parse_time_line(state, line)
 
