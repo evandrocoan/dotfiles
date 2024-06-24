@@ -623,6 +623,7 @@ sudo passwd -l root
 1. `sudo /usr/lib/pcp/bin/pmproxy stop`
 1. `sudo apt-get install systemd`
 1. `sudo systemctl disable pmcd.service`
+1. `sudo systemctl disable pmlogger.service`
 1. `sudo mv /usr/lib/pcp/bin/pmproxy{,old}`
 1. `sudo killall -9 pmproxy`
 1. https://github.com/systemd/systemd/pull/15928 - warn on KillMode=none, inform about left-over processes on stop and warn about sysv services
