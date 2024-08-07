@@ -15,20 +15,20 @@ rotation_time=$(( 60 * 60 * 48 / sleep_time ))
 while true
 do 
     counter=$((counter+1));
-	if [[ $((counter % rotation_time)) -eq 0 ]];
+    if [[ $((counter % rotation_time)) -eq 0 ]];
     then
         counter=0;
         printf '%s Clean up space on %s...\n' "$(date)" "${OUTFILE}";
 
-        rm -v "${OUTFILE_OLD}";
+        rm -vf "${OUTFILE_OLD}";
         mv -v "${OUTFILE}" "${OUTFILE_OLD}";
         chown $USER:$GROUP "${OUTFILE_OLD}";
     fi;
 
-	# ps aux --sort=-pcpu
-	printf "%s\n%s\n\n" "$(date)" "$(ps aux --sort -rss)" >> "${OUTFILE}";
+    # ps aux --sort=-pcpu
+    printf "%s\n%s\n\n" "$(date)" "$(ps aux --sort -rss)" >> "${OUTFILE}";
     chown $USER:$GROUP "${OUTFILE}";
-	sleep $sleep_time;
+    sleep $sleep_time;
 done
 
 # sudo vim /etc/systemd/system/monitor-ps-aux.service
