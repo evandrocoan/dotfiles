@@ -26,6 +26,12 @@ class State(object):
         self.last_block_date = datetime.datetime.strptime("1990/01/01", "%Y/%m/%d")
         self.warnings = []
 
+    def __str__(self):
+        return f"entries {self.entries}, first_date {self.first_date}, last_date {self.last_date}, total_time {self.total_time}, actual_date {self.actual_date}, last_block_date {self.last_block_date}, warnings {self.warnings}."
+
+    def __repr__(self):
+        return str(self)
+
 
 def parse_time_line(state, line):
     line = line.strip()
@@ -53,6 +59,11 @@ def parse_time_line(state, line):
         activity_id = match.group('activity_id')
         comment = match.group('comment')
         state.total_time += float(hours)
+
+        if comment:
+            begin = match.start('comment')
+            remaining = line[begin-1:]
+            comment = extract_outermost_parenthesis_content(remaining)
 
         if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}, {line}.")
         if not hours: raise RuntimeError(f"Invalid data hours {hours}, {line}.")
@@ -143,6 +154,52 @@ def test_basic_load():
     state = State()
     for line in lines.split('\n'):
         parse_time_line(state, line)
+
+
+def extract_outermost_parenthesis_content(input_data):
+    stack = []
+    result = []
+    has_parentheses = False
+    for i, char in enumerate(input_data):
+        if char == '(':
+            has_parentheses = True
+            stack.append(i)
+        elif char == ')':
+            has_parentheses = True
+            if not stack:
+                raise RuntimeError(f"Unbalanced parentheses on input: {input_data}.")
+            start = stack.pop()
+            if not stack:
+                result.append(input_data[start + 1: i])
+    if has_parentheses and not result:
+        raise RuntimeError(f"Unbalanced parentheses on input: {input_data}.")
+    return " ".join(result)
+
+
+def test_comment_with_parentheses_1():
+    state = State()
+    parse_time_line(state,
+        "1. Add 1.0 hours/8 (2023/04/12) #80661 (some comment with (parentheses) inside) fusilier Octocorallia reprovingly Rickettsiales m"
+    )
+    assert state.entries[0]['comments'] == "some comment with (parentheses) inside"
+
+
+def test_comment_with_parentheses_2():
+    state = State()
+    with pytest.raises(RuntimeError, match="Unbalanced parentheses on input"):
+        parse_time_line(state,
+            "1. Add 1.0 hours/8 (2023/04/12) #80661 (some comment with (parentheses inside) fusilier Octocorallia reprovingly Rickettsiales m"
+        )
+        assert not state
+
+
+def test_comment_with_parentheses_3():
+    state = State()
+    with pytest.raises(RuntimeError, match="Unbalanced parentheses on input"):
+        parse_time_line(state,
+            "1. Add 1.0 hours/8 (2023/04/12) #80661 (some comment with parentheses) inside) fusilier Octocorallia reprovingly Rickettsiales m"
+        )
+        assert not state
 
 
 def test_mixed_data_raise_runtime_error():
