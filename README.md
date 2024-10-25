@@ -175,6 +175,15 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `sudo systemctl enable monitor-ps-aux.service`
    1. `sudo systemctl start monitor-ps-aux.service`
    1. `sudo systemctl status monitor-ps-aux.service`
+1. Disable avahi-daemon missing up DHCP configuration:
+   1. `sudo systemctl stop avahi-daemon.socket`
+   1. `sudo systemctl disable avahi-daemon.socket`
+   1. `sudo systemctl mask avahi-daemon.socket`
+   1. `sudo systemctl stop avahi-daemon.service`
+   1. `sudo systemctl disable avahi-daemon.service`
+   1. `sudo systemctl mask avahi-daemon.service`
+   1. https://ubuntuforums.org/showthread.php?t=2425530 How to stop avahi-daemon?
+   1. https://askubuntu.com/questions/205937/how-can-i-disable-avahi-daemon
 
 
 ### Install XFCE from sources
