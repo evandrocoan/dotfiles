@@ -110,10 +110,23 @@ def main():
         'X-Redmine-API-Key': api_key,
     }
 
+    total = 0
     last_date = ""
-    for data in state.entries:
-        if last_date and last_date != data['spent_on']: print()
+
+    for data in state.entries + [{
+        "issue_id": 0,
+        "hours": 0,
+        "spent_on": None,
+        "activity_id": "",
+    }]:
+        if last_date and last_date != data['spent_on'] or data['hours'] == 0:
+            print('total', total)
+            print()
+            total = 0
+        if data['hours'] == 0:
+            break
         last_date = data['spent_on']
+        total += data['hours']
         print(data)
 
     if state.warnings:
