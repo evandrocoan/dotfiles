@@ -78,7 +78,7 @@ def parse_time_line(state, line):
             "activity_id": activity_id,
         }
         if comment and len(comment) > 1000:
-            print(f"Warning: Comment {len(comment)} is too big for entry {entry}!\n")
+            state.warnings.append(f"Warning: Comment {len(comment)} is too big for entry {entry}!")
 
         if comment: entry['comments'] = comment[:1000]
 
