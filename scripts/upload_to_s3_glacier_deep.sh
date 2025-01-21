@@ -400,12 +400,14 @@ else:
             # https://stackoverflow.com/questions/6570531/assign-string-containing-null-character-0-to-a-variable-in-bash
             # https://stackoverflow.com/questions/60113944/0-and-printf-in-c
             # https://askubuntu.com/questions/1106805/xargs-unmatched-single-quote-by-default-quotes-are-special-to-xargs-unless-you
-            printf '%q\000' "${all_upload_files[@]}" | xargs \
-                    --null \
-                    --max-procs="$parallel_uploads" \
-                    --max-args=1 \
-                    --replace={} \
-                    /bin/bash -c 'time upload_to_s3 {};';
+            for file in "${all_upload_files[@]}"; do
+                printf '%q\000' "$file"
+            done | xargs \
+                --null \
+                --max-procs="$parallel_uploads" \
+                --max-args=1 \
+                --replace={} \
+                /bin/bash -c 'time upload_to_s3 {};'
         fi;
     }
 
