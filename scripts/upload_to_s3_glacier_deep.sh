@@ -400,14 +400,21 @@ else:
             # https://stackoverflow.com/questions/6570531/assign-string-containing-null-character-0-to-a-variable-in-bash
             # https://stackoverflow.com/questions/60113944/0-and-printf-in-c
             # https://askubuntu.com/questions/1106805/xargs-unmatched-single-quote-by-default-quotes-are-special-to-xargs-unless-you
+            current_chunk=()
             for file in "${all_upload_files[@]}"; do
-                printf '%q\000' "$file"
-            done | xargs \
-                --null \
-                --max-procs="$parallel_uploads" \
-                --max-args=1 \
-                --replace={} \
-                /bin/bash -c 'time upload_to_s3 {};'
+                current_chunk+=("$file")
+
+                if [ "${#current_chunk[@]}" -eq "100" ];
+                then
+                    printf '%q\000' "${current_chunk[@]}" | xargs \
+                            --null \
+                            --max-procs="$parallel_uploads" \
+                            --max-args=1 \
+                            --replace={} \
+                            /bin/bash -c 'time upload_to_s3 {};';
+                    current_chunk=();
+                fi;
+            done;
         fi;
     }
 
