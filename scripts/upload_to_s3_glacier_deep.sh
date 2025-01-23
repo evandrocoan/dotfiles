@@ -331,7 +331,8 @@ else:
                 if [[ "$upload_attempts" -gt 10 ]];
                 then
                     printf '%s Error uploading %s, stopping after %s attempts...\n' "$(date)" "$file_to_upload" "$upload_attempts";
-                    exit 1;
+                    printf '%s Error uploading %s, stopping after %s attempts...\n' "$(date)" "$file_to_upload" "$upload_attempts"; >> "$problem_files_found";
+                    exit 0;
                 fi
                 upload_attempts="$((upload_attempts + 1))";
                 sleeptime="$(( (RANDOM % 60 + 1) * upload_attempts ))";
@@ -372,7 +373,14 @@ else:
                     "$s3_ETag" \
                     "$file_md5sum" \
                     "$file_to_upload";
-            exit 1;
+            printf '%s %s of %s, BAD: ETag "%s != %s" does not match, "%s"!\n\n' \
+                    "$(date)" \
+                    "$upload_counter" \
+                    "$all_files_count" \
+                    "$s3_ETag" \
+                    "$file_md5sum" \
+                    "$file_to_upload" >> "$problem_files_found";
+            exit 0;
         fi;
     }
 
