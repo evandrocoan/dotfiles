@@ -1,0 +1,25 @@
+#!/bin/bash
+# Create crontab scrip `crontab -e`
+# 0 * * * * bash -l /home/yourusername/scripts/check-ci
+# * * * * * command-to-execute
+# - - - - -
+# | | | | |
+# | | | | +--- Day of the week (0-7) (Sunday is both 0 and 7)
+# | | | +----- Month (1 - 12)
+# | | +------- Day of the month (1 - 31)
+# | +--------- Hour (0 - 23)
+# +----------- Minute (0 - 59)
+
+local ip_list=(
+    "192.168.0.1"
+    "192.168.0.2"
+)
+
+for ip in "${ip_list[@]}"; do
+    if nc -zv "$ip" 22; then
+        echo "Successfully connected to $ip on port 22"
+    else
+        notify-send "$(realpath $0)" "Connection to $ip on port 22 failed"
+    fi
+done
+

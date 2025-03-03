@@ -169,6 +169,19 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://askubuntu.com/questions/761658/manually-run-an-anacron-job
    1. https://www.certdepot.net/rhel7-how-get-started-anacron/
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
+1. Create crontab scrip `crontab -e`:
+   ```bash
+   0 * * * * bash -l /home/yourusername/scripts/check-ci
+
+   # * * * * * command-to-execute
+   # - - - - -
+   # | | | | |
+   # | | | | +--- Day of the week (0-7) (Sunday is both 0 and 7)
+   # | | | +----- Month (1 - 12)
+   # | | +------- Day of the month (1 - 31)
+   # | +--------- Hour (0 - 23)
+   # +----------- Minute (0 - 59)
+   ```
 1. Configure ps aux monitoring:
    1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
    1. `sudo systemctl daemon-reload`
