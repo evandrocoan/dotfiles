@@ -104,6 +104,9 @@ def main():
         for line in file:
             parse_time_line(state, line)
 
+    # flush current day for warnings check
+    parse_time_line(state, '')
+
     with open( os.path.expanduser('~/Documents/redmine_api_key.json') ) as file:
         data = json.load(file)
 
