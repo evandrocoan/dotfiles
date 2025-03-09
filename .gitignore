@@ -128,4 +128,7 @@
 !/.ssh/
 !/.ssh/config
 
+!/Documents
+!/Documents/check_clock_punches_playwright.py
+
 *.log
