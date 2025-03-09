@@ -1,9 +1,11 @@
 import asyncio
-from playwright.async_api import async_playwright
 import os
+import random
 import playwright
 
 from datetime import datetime, time, timedelta
+
+from playwright.async_api import async_playwright
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -12,6 +14,8 @@ load_dotenv()
 logger.level("TRACE")
 
 TIME_BETWEEN_CHECKINGS = 600
+VARIATION_BETWEEN_CHECKINGS = 200
+
 USER_NAME = os.environ["USER_NAME"]
 USER_PASSWORD = os.environ["USER_PASSWORD"]
 
@@ -136,8 +140,10 @@ async def ensure_time_after_7am():
         await asyncio.sleep(sleep_duration)
 
     else:
-        logger.debug(f"Waiting for {TIME_BETWEEN_CHECKINGS} seconds before the next check...")
-        await asyncio.sleep(TIME_BETWEEN_CHECKINGS)
+        sleep_duration = random.randint(TIME_BETWEEN_CHECKINGS - VARIATION_BETWEEN_CHECKINGS, TIME_BETWEEN_CHECKINGS + VARIATION_BETWEEN_CHECKINGS)
+
+        logger.debug(f"Waiting for {sleep_duration} seconds before the next check...")
+        await asyncio.sleep(sleep_duration)
 
 
 asyncio.run(check_elements())
