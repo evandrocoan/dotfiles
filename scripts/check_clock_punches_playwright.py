@@ -1,8 +1,9 @@
 import asyncio
 from playwright.async_api import async_playwright
 import os
-import time
 import playwright
+
+from datetime import datetime, time, timedelta
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -109,7 +110,34 @@ async def check_elements():
                 logger.exception(f"Exiting")
                 break
 
-            logger.debug(f"Waiting for {TIME_BETWEEN_CHECKINGS} seconds before the next check...")
-            time.sleep(TIME_BETWEEN_CHECKINGS)
+            await ensure_time_after_7am()
+
+
+async def ensure_time_after_7am():
+    now = datetime.now()
+    current_time = now.time()
+
+    # Define the night time range
+    night_start = time(22, 0)  # 22:00 or 10 PM
+    morning_end = time(7, 0)   # 07:00 or 7 AM
+
+    # Check if current time is during the night
+    if current_time >= night_start or current_time < morning_end:
+        # Calculate how much time until 07:00
+        if current_time >= night_start:
+            # It's currently between 22:00 and 23:59
+            tomorrow_morning = (now + timedelta(days=1)).replace(hour=7, minute=0, second=0, microsecond=0)
+        else:
+            # It's currently between 00:00 and 06:59
+            tomorrow_morning = now.replace(hour=7, minute=0, second=0, microsecond=0)
+
+        sleep_duration = (tomorrow_morning - now).total_seconds()
+        logger.debug(f"Sleeping for {sleep_duration} seconds until 07:00.")
+        await asyncio.sleep(sleep_duration)
+
+    else:
+        logger.debug(f"Waiting for {TIME_BETWEEN_CHECKINGS} seconds before the next check...")
+        await asyncio.sleep(TIME_BETWEEN_CHECKINGS)
+
 
 asyncio.run(check_elements())
