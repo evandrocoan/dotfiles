@@ -169,7 +169,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://askubuntu.com/questions/761658/manually-run-an-anacron-job
    1. https://www.certdepot.net/rhel7-how-get-started-anacron/
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
-1. Create crontab scrip `crontab -e`:
+1. ~Create crontab scrip `crontab -e`~: Not used because crontab throws `Cannot autolaunch D-Bus without X11 $DISPLAY`
    ```bash
    0 * * * * bash -l /home/yourusername/scripts/check-ci
 
@@ -182,6 +182,27 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # | +--------- Hour (0 - 23)
    # +----------- Minute (0 - 59)
    ```
+1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
+   ```
+   [Unit]
+   Description=Run /home/user_user/scripts/check_ci
+   After=network.target
+   StartLimitIntervalSec=0
+
+   [Service]
+   Type=simple
+   Restart=always
+   RestartSec=3600
+   WorkingDirectory=/home/user_user/scripts/
+   ExecStart=/bin/bash --login /home/user_user/scripts/check_ci
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   1. `systemctl --user daemon-reload`
+   1. `systemctl --user enable check_ci.service`
+   1. `systemctl --user start check_ci.service`
+   1. `journalctl --user -u check_ci.service -f`
 1. Configure ps aux monitoring:
    1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
    1. `sudo systemctl daemon-reload`
