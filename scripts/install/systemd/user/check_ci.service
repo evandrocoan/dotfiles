@@ -1,0 +1,14 @@
+[Unit]
+Description=Run scripts/check_ci
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3600
+WorkingDirectory=%h/scripts/
+ExecStart=/bin/bash --login %h/scripts/check_ci
+
+[Install]
+WantedBy=multi-user.target

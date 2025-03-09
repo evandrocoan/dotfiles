@@ -31,52 +31,16 @@ USER_NAME=''
 USER_PASSWORD=''
 ```
 
-mkdir -p ~/.config/systemd/user/
-vim ~/.config/systemd/user/check_clock_punches_playwright.service
-```
-[Unit]
-Description=Run check_clock_punches_playwright.py
-After=network.target
-StartLimitIntervalSec=0
-
-[Service]
-Type=simple
-Restart=always
-RestartSec=3600
-WorkingDirectory=/home/your_username/Documents/
-ExecStart=/bin/bash --login -c 'set -x; /usr/bin/python3 /home/your_username/Documents/check_clock_punches_playwright.py'
-
-[Install]
-WantedBy=multi-user.target
-```
-
+cp -rv ./install/* ~/.config/
 systemctl --user daemon-reload
+
 systemctl --user enable check_clock_punches_playwright.service
-systemctl --user start check_clock_punches_playwright.service
-journalctl --user -u check_clock_punches_playwright.service -f
-
-
-vim ~/.config/systemd/user/supervise_clock_punches_playwright.service
-```
-[Unit]
-Description=Supervise if is running /home/your_username/Documents/check_clock_punches_playwright.py
-After=network.target
-StartLimitIntervalSec=0
-
-[Service]
-Type=simple
-Restart=always
-RestartSec=600
-WorkingDirectory=/home/your_username/Documents/
-ExecStart=/bin/bash --login -c 'if [[ "w$(ps aux | grep chromium-unstable | grep chrome-ahgora-playwright | grep -v "chrome-ahgora-playwright process is not running" )" == "w" ]] ; then notify-send "Alert" "The chrome-ahgora-playwright process is not running!"; fi;'
-
-[Install]
-WantedBy=multi-user.target
-```
-
-systemctl --user daemon-reload
 systemctl --user enable supervise_clock_punches_playwright.service
+
+systemctl --user start check_clock_punches_playwright.service
 systemctl --user start supervise_clock_punches_playwright.service
+
+journalctl --user -u check_clock_punches_playwright.service -f
 journalctl --user -u supervise_clock_punches_playwright.service -f
 
 """
@@ -85,28 +49,23 @@ async def check_elements():
 
     async with async_playwright() as playcontext:
 
-        # Launch persistent context using an existing Chrome installation
-        context = await playcontext.chromium.launch_persistent_context(
-            r"/home/your_username/chrome-ahgora-playwright/",  # Path to your custom profile
-            headless=False,
-            executable_path=r"/usr/bin/chromium-browser-unstable",
-            args=[
-                # '--start-maximized',
-                # '--profile-directory=/home/your_username/chrome-ahgora-playwright',
-            ]
-        )
+        browser = await playcontext.firefox.launch(headless=False, args=[
+            '--check_clock_punches_playwright',
+        ] )
+        context = await browser.new_context(viewport={'width': 1900, 'height': 900})
 
         await context.grant_permissions(["notifications"], origin='https://app.ahgora.com.br')
 
         # Open a new page
-        # page = await context.new_page()
-        page = context.pages[0]
+        page = await context.new_page()
+        # page = context.pages[0]
 
+        page.set_default_timeout(30000)
         while True:
             try:
                 # Navigate to your desired URL
-                await page.goto('https://www.ahgora.com.br/externo/index/empresakhomp')
-                await page.wait_for_load_state('networkidle')
+                await page.goto('https://www.ahgora.com.br/externo/index/empresakhomp', wait_until='domcontentloaded')
+                # await page.wait_for_load_state('networkidle')
 
                 if "dashboard" not in page.url:
                     # click login button
