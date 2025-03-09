@@ -117,10 +117,9 @@
 !/.config/autokey/**
 
 !/scripts/
-!/scripts/backupanki.sh
-!/scripts/backupankihelper.sh
-!/scripts/monitor-ps-aux.sh
-!/scripts/check_clock_punches_playwright.py
+!/scripts/*
+
+/scripts/.env*
 !/scripts/install/
 !/scripts/install/**
 
