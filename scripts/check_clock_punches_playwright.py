@@ -93,6 +93,10 @@ async def check_elements():
                 iframe_handle = await page.wait_for_selector("#mirror")
                 iframe = await iframe_handle.content_frame()
 
+                know_more_selector = 'a[href="https://seusucesso.ahgora.com.br/kb/pt-br/article/82881"]'
+                await iframe.wait_for_selector(know_more_selector)
+                await iframe.wait_for_load_state('networkidle')
+
                 # Select elements by class
                 elements = await iframe.query_selector_all('.v-tooltip.batida.v-tooltip--top.original.exibirHora.exibirPrevista.exibirContratual')
                 elementsCount = len(elements)
