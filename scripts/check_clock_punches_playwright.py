@@ -4,6 +4,7 @@ import asyncio
 import os
 import random
 import playwright
+import subprocess
 
 from datetime import datetime, time, timedelta
 
@@ -122,7 +123,7 @@ async def check_elements():
 
             await wait_some_time()
 
-            while not should_run_function():
+            while not should_run_function() or is_screen_locked():
                 await wait_some_time()
 
 
@@ -139,6 +140,14 @@ def should_run_function():
             logger.debug("Current time is outside the permitted hours (07:00-22:00).")
     else:
         logger.debug("Today is Sunday, the function will not run.")
+
+
+def is_screen_locked():
+    result = subprocess.run(["xscreensaver-command", "-time"], capture_output=True, text=True, check=True)
+    output = result.stdout.strip().lower()
+    is_locked = "screen locked since" in output
+    logger.debug(f"{is_locked}, {output}")
+    return is_locked
 
 
 async def wait_some_time():
