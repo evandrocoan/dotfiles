@@ -1,0 +1,14 @@
+[Unit]
+Description=Run scripts/hypervisor_clock_punches_playwright.py
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=600
+WorkingDirectory=%h/scripts/
+ExecStart=/bin/bash --login -c '/usr/bin/python3.8 %h/scripts/hypervisor_clock_punches_playwright.py || /usr/bin/notify-send "hypervisor_clock_punches_playwright" "failed running python script"'
+
+[Install]
+WantedBy=multi-user.target
