@@ -182,6 +182,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # | +--------- Hour (0 - 23)
    # +----------- Minute (0 - 59)
    ```
+1. Configure [`./Documents/check_clock_punches_playwright.py`](./Documents/check_clock_punches_playwright.py)
 1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
    ```
    [Unit]
