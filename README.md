@@ -171,7 +171,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. https://serverfault.com/questions/52335/job-scheduling-using-crontab-what-will-happen-when-computer-is-shutdown-during
 1. ~Create crontab scrip `crontab -e`~: Not used because crontab throws `Cannot autolaunch D-Bus without X11 $DISPLAY`
    ```bash
-   0 * * * * bash -l /home/yourusername/scripts/check-ci
+   0 * * * * bash -l /home/yourusername/scripts/check_ci
 
    # * * * * * command-to-execute
    # - - - - -
@@ -182,13 +182,34 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # | +--------- Hour (0 - 23)
    # +----------- Minute (0 - 59)
    ```
-1. Configure [`./Documents/check_clock_punches_playwright.py`](./Documents/check_clock_punches_playwright.py)
-1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
+1. Configure [`./scripts/check_ci`](./scripts/check_ci)
+   1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
    1. `cp -rv ./scripts/install/* ~/.config/`
    1. `systemctl --user daemon-reload`
    1. `systemctl --user enable check_ci.service`
    1. `systemctl --user start check_ci.service`
    1. `journalctl --user -u check_ci.service -f`
+1. Configure [`./scripts/check_clock_punches_playwright.py`](./scripts/check_clock_punches_playwright.py)
+   1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
+   1. `cp -rv ./scripts/install/* ~/.config/`
+   1. `systemctl --user daemon-reload`
+   1. `systemctl --user enable check_clock_punches_playwright.service`
+   1. `systemctl --user start check_clock_punches_playwright.service`
+   1. `journalctl --user -u check_clock_punches_playwright.service -f`
+1. Configure service **`supervise_clock_punches_playwright.service`**:
+   1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
+   1. `cp -rv ./scripts/install/* ~/.config/`
+   1. `systemctl --user daemon-reload`
+   1. `systemctl --user enable supervise_clock_punches_playwright.service`
+   1. `systemctl --user start supervise_clock_punches_playwright.service`
+   1. `journalctl --user -u supervise_clock_punches_playwright.service -f`
+1. Configure [`./scripts/hypervisor_clock_punches_playwright.py`](./scripts/hypervisor_clock_punches_playwright.py)
+   1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
+   1. `cp -rv ./scripts/install/* ~/.config/`
+   1. `systemctl --user daemon-reload`
+   1. `systemctl --user enable hypervisor_clock_punches_playwright.service`
+   1. `systemctl --user start hypervisor_clock_punches_playwright.service`
+   1. `journalctl --user -u hypervisor_clock_punches_playwright.service -f`
 1. Configure ps aux monitoring:
    1. `cp -rv ./scripts/install/* ~/.config/`
    1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
