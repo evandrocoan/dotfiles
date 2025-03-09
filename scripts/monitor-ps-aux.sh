@@ -1,5 +1,5 @@
 #!/bin/bash
-set -TEeuo pipefail
+# set -TEeuo pipefail
 USERNAME="yourusername"
 
 USER=$(id -un $USERNAME)
@@ -47,7 +47,7 @@ done
 # Restart=always
 # RestartSec=60
 # User=root
-# ExecStart=/bin/bash /home/evandro_coan/scripts/monitor-ps-aux.sh
+# ExecStart=/bin/bash /home/yourusername/scripts/monitor-ps-aux.sh
 
 # [Install]
 # WantedBy=multi-user.target

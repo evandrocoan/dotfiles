@@ -117,18 +117,17 @@
 !/.config/autokey/**
 
 !/scripts/
-!/scripts/**
 !/scripts/backupanki.sh
 !/scripts/backupankihelper.sh
 !/scripts/monitor-ps-aux.sh
+!/scripts/check_clock_punches_playwright.py
+!/scripts/install/
+!/scripts/install/**
 
 # temp clone
 /scripts/xfce4
 
 !/.ssh/
 !/.ssh/config
-
-!/Documents
-!/Documents/check_clock_punches_playwright.py
 
 *.log

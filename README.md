@@ -184,27 +184,13 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    ```
 1. Configure [`./Documents/check_clock_punches_playwright.py`](./Documents/check_clock_punches_playwright.py)
 1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
-   ```
-   [Unit]
-   Description=Run /home/user_user/scripts/check_ci
-   After=network.target
-   StartLimitIntervalSec=0
-
-   [Service]
-   Type=simple
-   Restart=always
-   RestartSec=3600
-   WorkingDirectory=/home/user_user/scripts/
-   ExecStart=/bin/bash --login /home/user_user/scripts/check_ci
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
+   1. `cp -rv ./scripts/install/* ~/.config/`
    1. `systemctl --user daemon-reload`
    1. `systemctl --user enable check_ci.service`
    1. `systemctl --user start check_ci.service`
    1. `journalctl --user -u check_ci.service -f`
 1. Configure ps aux monitoring:
+   1. `cp -rv ./scripts/install/* ~/.config/`
    1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
    1. `sudo systemctl daemon-reload`
    1. `sudo systemctl enable monitor-ps-aux.service`

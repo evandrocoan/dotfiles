@@ -1,0 +1,15 @@
+[Unit]
+Description=Run scripts/check_clock_punches_playwright.py
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3600
+WorkingDirectory=%h/scripts/
+ExecStart=/bin/bash --login -c 'set -x; /usr/bin/python3 %h/scripts/check_clock_punches_playwright.py'
+
+[Install]
+WantedBy=multi-user.target
+
