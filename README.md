@@ -211,7 +211,6 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `systemctl --user start hypervisor_clock_punches_playwright.service`
    1. `journalctl --user -u hypervisor_clock_punches_playwright.service -f`
 1. Configure ps aux monitoring:
-   1. `cp -rv ./scripts/install/* ~/.config/`
    1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
    1. `sudo systemctl daemon-reload`
    1. `sudo systemctl enable monitor-ps-aux.service`

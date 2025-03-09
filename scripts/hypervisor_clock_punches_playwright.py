@@ -68,10 +68,18 @@ def should_run_function():
         print("Today is Sunday, the function will not run.")
 
 
+def is_screen_locked():
+    result = subprocess.run(["xscreensaver-command", "-time"], capture_output=True, text=True, check=True)
+    output = result.stdout.strip().lower()
+    is_locked = "screen locked since" in output
+    print(f"{is_locked}, {output}")
+    return is_locked
+
+
 if __name__ == "__main__":
     service_name = "check_clock_punches_playwright"
     try:
-        if should_run_function():
+        if should_run_function() and not is_screen_locked():
             time_range_to_search = 15
             log_lines = get_last_10_lines(service_name, time_range_to_search)
             extract_and_check_log_entry(log_lines, time_range_to_search)
