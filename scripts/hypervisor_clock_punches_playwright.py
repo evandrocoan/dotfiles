@@ -53,12 +53,28 @@ def extract_and_check_log_entry(log_lines, time_range_to_search):
         send_notification("hypervisor_clock_punches_playwright", "The log entry is NOT found within the last 15 minutes.")
 
 
+def should_run_function():
+    # Get current date and time
+    now = datetime.now()
+
+    # Check if it is not Sunday (weekday() returns 6 for Sunday)
+    if now.weekday() != 6:
+        # Check if the current time is between 07:00 and 22:00
+        if 7 <= now.hour < 22:
+            return True
+        else:
+            print("Current time is outside the permitted hours (07:00-22:00).")
+    else:
+        print("Today is Sunday, the function will not run.")
+
+
 if __name__ == "__main__":
     service_name = "check_clock_punches_playwright"
     try:
-        time_range_to_search = 15
-        log_lines = get_last_10_lines(service_name, time_range_to_search)
-        extract_and_check_log_entry(log_lines, time_range_to_search)
+        if should_run_function():
+            time_range_to_search = 15
+            log_lines = get_last_10_lines(service_name, time_range_to_search)
+            extract_and_check_log_entry(log_lines, time_range_to_search)
     except:
         send_notification("hypervisor_clock_punches_playwright", f"Failed checking service: {service_name}")
         sys.exit(1)
