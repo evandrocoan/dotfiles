@@ -137,22 +137,23 @@ async def check_elements():
                 # Select elements by class
                 elements = await iframe.query_selector_all('.v-tooltip.batida.v-tooltip--top.original.exibirHora.exibirPrevista.exibirContratual')
                 elementsCount = len(elements)
-                logger.debug(f"Found {elementsCount} clock punches.")
 
-                if elementsCount % 2 == 0:
+                logger.debug(f"Found {elementsCount} clock punches.")
+                texts = [await element.text_content() for element in elements]
+
+                if elementsCount % 2 == 0 and not is_screen_locked():
                     # Trigger notification
                     await page.evaluate(r'''() => {
                         new Notification('Playwright Notification', {
-                            body: `You are missing one clock punch! You have %s punches.`,
+                            body: `You are missing one clock punch! You have %s punches: %s`,
                             // icon: 'https://example.com/icon.png',  // Optionally use a URL to an icon image
                         });
-                    }''' % elementsCount)
+                    }''' % (elementsCount, ', '.join(texts)))
 
                 if elementsCount % 2 == 1 and is_screen_locked():
                     current_time = datetime.now().time()
                     formatted_time = current_time.strftime("%H:%M")
 
-                    texts = [await element.text_content() for element in elements]
                     message = f"You have {elementsCount} punches: {', '.join(texts)}"
                     response = send_pushover_notification(message, title=f"Missing punch {formatted_time}")
 
