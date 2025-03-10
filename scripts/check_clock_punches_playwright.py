@@ -2,7 +2,9 @@
 
 import asyncio
 import os
+import requests
 import random
+import http
 import playwright
 import subprocess
 
@@ -19,8 +21,14 @@ logger.level("TRACE")
 TIME_BETWEEN_CHECKINGS = 600
 VARIATION_BETWEEN_CHECKINGS = 200
 
-USER_NAME = os.environ["USER_NAME"]
-USER_PASSWORD = os.environ["USER_PASSWORD"]
+AHGORA_USER_NAME = os.environ["AHGORA_USER_NAME"]
+AHGORA_USER_PASSWORD = os.environ["AHGORA_USER_PASSWORD"]
+
+# Your application's API token from Pushover (from application created).
+PUSHOVER_API_TOKEN = os.environ["PUSHOVER_API_TOKEN"]  # https://pushover.net/
+
+# Your Pushover user key (from Android device).
+PUSHOVER_USER_NAME = os.environ["PUSHOVER_USER_NAME"]  # https://pushover.net/apps
 
 """
 In case o error, the script check_clock_punches_playwright.py exits
@@ -31,12 +39,15 @@ therefore, allows you to check why the processes stop,
 when it should never stop!
 
 sudo apt-get install libnotify-bin
-python3 -m pip install playwright loguru python-dotenv
+python3 -m pip install playwright loguru python-dotenv requests pytest
+pytest -vs check_clock_punches_playwright.py
 
 vim .env
 ```
-USER_NAME=''
-USER_PASSWORD=''
+AHGORA_USER_NAME=''
+AHGORA_USER_PASSWORD=''
+PUSHOVER_API_TOKEN=''
+PUSHOVER_USER_NAME=''
 ```
 
 cp -rv ./install/* ~/.config/
@@ -52,6 +63,29 @@ journalctl --user -u check_clock_punches_playwright.service -f
 journalctl --user -u supervise_clock_punches_playwright.service -f
 
 """
+
+
+def send_pushover_notification(message, title="Notification", priority=0):
+    """
+    Sends a notification to an Android device using Pushover.
+
+    :param message: The message to send.
+    :param title: The title of the message. Optional.
+    :param priority: Message priority. Optional.
+    :return: Response from the Pushover API.
+    """
+
+    url = "https://api.pushover.net/1/messages.json"
+
+    payload = {
+        "token": PUSHOVER_API_TOKEN,
+        "user": PUSHOVER_USER_NAME,
+        "message": message
+    }
+    response = requests.post(url, data=payload)
+    logger.debug(f"Status Code: {response.status_code}, {response.text}.")
+    return response
+
 
 async def check_elements():
 
@@ -80,8 +114,8 @@ async def check_elements():
                     button_selector = 'button[type="submit"].btn.btn-primary.pull-right'
                     await page.wait_for_selector(button_selector)
 
-                    await page.locator('[name="matricula"]').nth(1).fill(USER_NAME)
-                    await page.locator('[name="senha"]').fill(USER_PASSWORD)
+                    await page.locator('[name="matricula"]').nth(1).fill(AHGORA_USER_NAME)
+                    await page.locator('[name="senha"]').fill(AHGORA_USER_PASSWORD)
 
                     await page.click(button_selector)
                     await page.wait_for_load_state('networkidle')
@@ -112,6 +146,16 @@ async def check_elements():
                         });
                     }''' % elementsCount)
 
+                if elementsCount % 2 == 1 and is_screen_locked():
+                    message = f"You are missing one clock punch. You have {elementsCount} punches."
+                    response = send_pushover_notification(message, title="Missing clock punch")
+
+                    if response.status_code != http.HTTPStatus.OK:
+                        logger.error(f"Failed to send notification: {response.text}")
+                        # force the script to exit and restart so the error can be checked with
+                        # journalctl --user -u check_clock_punches_playwright.service -f
+                        raise RuntimeError(f"Failed to send notification: {response.text}")
+
             # except playwright._impl._errors.TargetClosedError:
             #     logger.exception(f"Exiting")
             #     break
@@ -123,7 +167,7 @@ async def check_elements():
 
             await wait_some_time()
 
-            while not should_run_function() or is_screen_locked():
+            while not should_run_function():
                 await wait_some_time()
 
 
@@ -157,4 +201,9 @@ async def wait_some_time():
     await asyncio.sleep(sleep_duration)
 
 
-asyncio.run(check_elements())
+def test_notification_push():
+    send_pushover_notification("Teste message", title="Missing clock punch")
+
+
+if __name__ == "__main__":
+    asyncio.run(check_elements())
