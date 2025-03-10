@@ -80,7 +80,9 @@ def send_pushover_notification(message, title="Notification", priority=0):
     payload = {
         "token": PUSHOVER_API_TOKEN,
         "user": PUSHOVER_USER_NAME,
-        "message": message
+        "title": title,
+        "message": message,
+        "priority": priority,
     }
     response = requests.post(url, data=payload)
     logger.debug(f"Status Code: {response.status_code}, {response.text}.")
@@ -147,8 +149,12 @@ async def check_elements():
                     }''' % elementsCount)
 
                 if elementsCount % 2 == 1 and is_screen_locked():
-                    message = f"You are missing one clock punch. You have {elementsCount} punches."
-                    response = send_pushover_notification(message, title="Missing clock punch")
+                    current_time = datetime.now().time()
+                    formatted_time = current_time.strftime("%H:%M")
+
+                    texts = [await element.text_content() for element in elements]
+                    message = f"You have {elementsCount} punches: {', '.join(texts)}"
+                    response = send_pushover_notification(message, title=f"Missing punch {formatted_time}")
 
                     if response.status_code != http.HTTPStatus.OK:
                         logger.error(f"Failed to send notification: {response.text}")
