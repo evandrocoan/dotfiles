@@ -11,4 +11,4 @@ WorkingDirectory=%h/scripts/
 ExecStart=/bin/bash --login %h/scripts/check_ci
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
