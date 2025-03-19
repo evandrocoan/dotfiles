@@ -96,7 +96,7 @@ async def check_elements():
         browser = await playcontext.firefox.launch(headless=False, args=[
             '--check_clock_punches_playwright',
         ] )
-        context = await browser.new_context(viewport={'width': 1900, 'height': 900})
+        context = await browser.new_context(viewport={'width': 1920, 'height': 910})
 
         await context.grant_permissions(["notifications"], origin='https://app.ahgora.com.br')
 
@@ -142,7 +142,8 @@ async def check_elements():
                 texts = [await element.text_content() for element in elements]
 
                 if elementsCount % 2 == 0 and not is_screen_locked():
-                    # Trigger notification
+                    send_android_notification(elementsCount, texts, "locked")
+
                     await page.evaluate(r'''() => {
                         new Notification('Playwright Notification', {
                             body: `You are missing one clock punch! You have %s punches: %s`,
@@ -150,18 +151,9 @@ async def check_elements():
                         });
                     }''' % (elementsCount, ', '.join(texts)))
 
+
                 if elementsCount % 2 == 1 and is_screen_locked():
-                    current_time = datetime.now().time()
-                    formatted_time = current_time.strftime("%H:%M")
-
-                    message = f"You have {elementsCount} punches: {', '.join(texts)}"
-                    response = send_pushover_notification(message, title=f"Missing punch {formatted_time}")
-
-                    if response.status_code != http.HTTPStatus.OK:
-                        logger.error(f"Failed to send notification: {response.text}")
-                        # force the script to exit and restart so the error can be checked with
-                        # journalctl --user -u check_clock_punches_playwright.service -f
-                        raise RuntimeError(f"Failed to send notification: {response.text}")
+                    send_android_notification(elementsCount, texts, "unlocked")
 
             # except playwright._impl._errors.TargetClosedError:
             #     logger.exception(f"Exiting")
@@ -176,6 +168,20 @@ async def check_elements():
 
             while not should_run_function():
                 await wait_some_time()
+
+
+def send_android_notification(elementsCount, texts, extra):
+    current_time = datetime.now().time()
+    formatted_time = current_time.strftime("%H:%M")
+
+    message = f"You have {elementsCount} punches: {', '.join(texts)} {extra}"
+    response = send_pushover_notification(message, title=f"Missing punch {formatted_time}")
+
+    if response.status_code != http.HTTPStatus.OK:
+        logger.error(f"Failed to send notification: {response.text}")
+        # force the script to exit and restart so the error can be checked with
+        # journalctl --user -u check_clock_punches_playwright.service -f
+        raise RuntimeError(f"Failed to send notification: {response.text}")
 
 
 def should_run_function():
