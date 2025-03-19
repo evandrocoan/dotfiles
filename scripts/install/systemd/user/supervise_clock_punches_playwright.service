@@ -11,4 +11,4 @@ WorkingDirectory=%h/scripts/
 ExecStart=/bin/bash --login -c 'set -euxo pipefail; if [[ "w$(ps aux | grep -- --check_clock_punches_playwright | grep -v "grep -- --check_clock_punches_playwright" )" == "w" ]] ; then notify-send "Alert" "The --check_clock_punches_playwright process is not running!"; fi;'
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
