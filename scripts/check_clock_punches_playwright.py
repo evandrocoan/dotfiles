@@ -142,7 +142,7 @@ async def check_elements():
                 texts = [await element.text_content() for element in elements]
 
                 if elementsCount % 2 == 0 and not is_screen_locked():
-                    send_android_notification(elementsCount, texts, "locked")
+                    send_android_notification(elementsCount, texts, "unlocked")
 
                     await page.evaluate(r'''() => {
                         new Notification('Playwright Notification', {
@@ -153,7 +153,7 @@ async def check_elements():
 
 
                 if elementsCount % 2 == 1 and is_screen_locked():
-                    send_android_notification(elementsCount, texts, "unlocked")
+                    send_android_notification(elementsCount, texts, "locked")
 
             # except playwright._impl._errors.TargetClosedError:
             #     logger.exception(f"Exiting")
