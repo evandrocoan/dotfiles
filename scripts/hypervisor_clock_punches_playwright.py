@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import traceback
+import locale
 import subprocess
 import re
 import sys
@@ -32,6 +33,8 @@ def extract_and_check_log_entry(log_lines, time_range_to_search):
 
     now = datetime.now()
     fifteen_minutes_ago = now - timedelta(minutes=time_range_to_search)
+
+    locale.setlocale(locale.LC_TIME, 'pt_BR.utf8')
 
     for line in log_lines:
         match = log_pattern.search(line)
@@ -83,6 +86,7 @@ if __name__ == "__main__":
             time_range_to_search = 15
             log_lines = get_last_10_lines(service_name, time_range_to_search)
             extract_and_check_log_entry(log_lines, time_range_to_search)
-    except:
-        send_notification("hypervisor_clock_punches_playwright", f"Failed checking service: {service_name}")
+    except Exception as error:
+        traceback_str = traceback.format_exc()
+        send_notification("hypervisor_clock_punches_playwright", f"Failed checking service: {service_name} due {error}, {traceback_str}.")
         sys.exit(1)
