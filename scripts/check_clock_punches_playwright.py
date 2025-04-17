@@ -146,7 +146,7 @@ async def check_elements():
 
                     await page.evaluate(r'''() => {
                         new Notification('Playwright Notification', {
-                            body: `You are missing one clock punch! You have %s punches: %s`,
+                            body: `WARNING!\n\n\nYou are missing one clock punch! You have %s punches: %s\n\n\nWARNING!\n\n\nWARNING!\n\n\nWARNING!\n\n\nWARNING!\n\n\nWARNING!`,
                             // icon: 'https://example.com/icon.png',  // Optionally use a URL to an icon image
                         });
                     }''' % (elementsCount, ', '.join(texts)))
