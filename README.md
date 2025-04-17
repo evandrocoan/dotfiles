@@ -211,11 +211,34 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `systemctl --user start hypervisor_clock_punches_playwright.service`
    1. `journalctl --user -u hypervisor_clock_punches_playwright.service -f`
 1. Configure ps aux monitoring:
-   1. `sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))
-   1. `sudo systemctl daemon-reload`
-   1. `sudo systemctl enable monitor-ps-aux.service`
-   1. `sudo systemctl start monitor-ps-aux.service`
-   1. `sudo systemctl status monitor-ps-aux.service`
+   1. Configure collectd monitoring
+      https://richard.downer.tech/2017/10/collectd-and-rrdtool/
+      ```
+      <Plugin rrdtool>
+         DataDir "/var/lib/collectd/rrd"
+         CreateFilesAsync false
+         CacheTimeout 120
+         CacheFlush   900
+         WritesPerSecond 50
+
+         # The default settings are optimised for plotting time-series graphs over pre-fixed
+         # time period, but are not very helpful for simply asking "what is my average memory
+         # usage for the last hour?", so we define some new ones.
+
+         # The first one is an anomaly, as it seems that the rrd plugin enforces some
+         # minimums. The result is a time-series 200 hours long with a granularity of 10s.
+         RRATimeSpan 3600
+         # This defines a time-series 20 hours long with a granularity of 1 minute.
+         RRATimeSpan 72000
+         # This defines a time-series 50 days long with a granularity of 1 hour.
+         RRATimeSpan 4320000
+      </Plugin>
+      ```
+   1. ~`sudo vim /etc/systemd/system/monitor-ps-aux.service` (with contents of [./scripts/monitor-ps-aux.sh](./scripts/monitor-ps-aux.sh))~
+   1. ~`sudo systemctl daemon-reload`~
+   1. ~`sudo systemctl enable monitor-ps-aux.service`~
+   1. ~`sudo systemctl start monitor-ps-aux.service`~
+   1. ~`sudo systemctl status monitor-ps-aux.service`~
 1. Disable avahi-daemon missing up DHCP configuration:
    1. `sudo systemctl stop avahi-daemon.socket`
    1. `sudo systemctl disable avahi-daemon.socket`
