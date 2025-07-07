@@ -96,7 +96,10 @@ async def check_elements():
         browser = await playcontext.firefox.launch(headless=False, args=[
             '--check_clock_punches_playwright',
         ] )
-        context = await browser.new_context(viewport={'width': 1920, 'height': 910})
+        context = await browser.new_context(
+            viewport={'width': 1920, 'height': 910}
+            , ignore_https_errors=True
+        )
 
         await context.grant_permissions(["notifications"], origin='https://app.ahgora.com.br')
 
