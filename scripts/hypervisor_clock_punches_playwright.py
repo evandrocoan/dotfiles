@@ -83,7 +83,7 @@ if __name__ == "__main__":
     service_name = "check_clock_punches_playwright"
     try:
         if should_run_function() and not is_screen_locked():
-            time_range_to_search = 15
+            time_range_to_search = 30
             log_lines = get_last_10_lines(service_name, time_range_to_search)
             extract_and_check_log_entry(log_lines, time_range_to_search)
     except Exception as error:
