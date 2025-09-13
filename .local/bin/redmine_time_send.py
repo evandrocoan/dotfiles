@@ -23,6 +23,7 @@ class State(object):
         self.first_date = ""
         self.last_date = ""
         self.total_time = 0
+        self.line_count = 0
         self.actual_date = datetime.datetime.strptime("1990/01/02", "%Y/%m/%d")
         self.last_block_date = datetime.datetime.strptime("1990/01/01", "%Y/%m/%d")
         self.warnings = []
@@ -41,9 +42,10 @@ def parse_time_line(state, line):
         state.first_date = ""
         state.last_date = ""
         if state.total_time and state.total_time < 6 or state.total_time > 10:
-            state.warnings.append(f"Invalid total time {state.total_time}, {state.entries[-1]}.")
+            state.warnings.append(f"Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
         state.total_time = 0
 
+    state.line_count += 1
     match = state.regex.search(line)
 
     if match:
@@ -52,7 +54,7 @@ def parse_time_line(state, line):
         if not state.last_date:
             state.last_date = state.first_date
 
-        if state.first_date != state.last_date: raise RuntimeError(f"Each line group must be from the same date {line}.")
+        if state.first_date != state.last_date: raise RuntimeError(f"Each line group must be from the same date! Line {state.line_count}: {line}.")
         state.last_date = state.first_date
 
         hours = match.group('hours')
@@ -64,12 +66,12 @@ def parse_time_line(state, line):
         if comment:
             begin = match.start('comment')
             remaining = line[begin-1:]
-            comment = extract_outermost_parenthesis_content(remaining)
+            comment = extract_outermost_parenthesis_content(state, remaining)
 
-        if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}, {line}.")
-        if not hours: raise RuntimeError(f"Invalid data hours {hours}, {line}.")
-        if not issue_id: raise RuntimeError(f"Invalid data issue_id {issue_id}, {line}.")
-        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data activity_id {activity_id}, {line}.")
+        if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}, Line {state.line_count}: {line}.")
+        if not hours: raise RuntimeError(f"Invalid data hours {hours}, Line {state.line_count}: {line}.")
+        if not issue_id: raise RuntimeError(f"Invalid data issue_id {issue_id}, Line {state.line_count}: {line}.")
+        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data activity_id {activity_id}, Line {state.line_count}: {line}.")
 
         entry = {
             "issue_id": int(issue_id),
@@ -78,22 +80,22 @@ def parse_time_line(state, line):
             "activity_id": activity_id,
         }
         if comment and len(comment) > 1000:
-            state.warnings.append(f"Warning: Comment {len(comment)} is too big for entry {entry}!")
+            state.warnings.append(f"Warning: Line {state.line_count}: Comment {len(comment)} is too big for entry {entry}!")
 
         if comment: entry['comments'] = comment[:1000]
 
         next_date = datetime.datetime.strptime(state.first_date, "%Y/%m/%d")
 
-        if state.actual_date > next_date: raise RuntimeError(f"Invalid date {state.actual_date}, should always be >= {line}.")
+        if state.actual_date > next_date: raise RuntimeError(f"Invalid date {state.actual_date}, should always be >= Line {state.line_count}: {line}.")
         state.actual_date = next_date
 
         if datetime.datetime.strptime(state.first_date, "%Y/%m/%d") <= state.last_block_date:
-            raise RuntimeError(f"The next block must be from higher date {line}.")
+            raise RuntimeError(f"The next block must be from higher date! Line {state.line_count}! Line {state.line_count}: {line}.")
 
         state.entries.append(entry)
 
     elif line:
-        raise RuntimeError(f"Line with invalid data {line}.")
+        raise RuntimeError(f"Line with invalid data! Line {state.line_count}: {line}.")
 
 
 def main():
@@ -181,7 +183,7 @@ def test_basic_load():
         parse_time_line(state, line)
 
 
-def extract_outermost_parenthesis_content(input_data):
+def extract_outermost_parenthesis_content(state, input_data):
     stack = []
     result = []
     has_parentheses = False
@@ -192,12 +194,12 @@ def extract_outermost_parenthesis_content(input_data):
         elif char == ')':
             has_parentheses = True
             if not stack:
-                raise RuntimeError(f"Unbalanced parentheses on input: {input_data}.")
+                raise RuntimeError(f"Unbalanced parentheses on input! Line {state.line_count}: {input_data}.")
             start = stack.pop()
             if not stack:
                 result.append(input_data[start + 1: i])
     if has_parentheses and not result:
-        raise RuntimeError(f"Unbalanced parentheses on input: {input_data}.")
+        raise RuntimeError(f"Unbalanced parentheses on input! Line {state.line_count}: {input_data}.")
     return " ".join(result)
 
 
