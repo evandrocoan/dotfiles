@@ -166,7 +166,7 @@ def main():
 
     if errors:
         print("\n\nWARNING\n\nThe following requests resulted in errors:")
-        pprint.pprint(example_list)
+        pprint.pprint(errors)
 
     else:
         print("\nSuccessfully sent all requests.")
