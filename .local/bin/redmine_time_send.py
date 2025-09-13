@@ -15,6 +15,13 @@ except:
     pytest = None
 
 
+def get_day_of_the_week(entry) -> str:
+    spent_on_str = entry['spent_on']
+    spent_on_date = datetime.datetime.strptime(spent_on_str, "%Y-%m-%d")
+    day_of_week = spent_on_date.strftime("%A")
+    return day_of_week
+
+
 class State(object):
     regex = re.compile(r"Add\s+(?P<hours>[\d.]+)\s+hours/(?P<activity_id>[\d.]+)\s+\((?P<date>\d{4}/\d{2}/\d{2})\)\s+#(?P<issue_id>[^\s]+)(\s+\((?P<comment>[^)]+)\))?")
 
@@ -42,7 +49,7 @@ def parse_time_line(state, line):
         state.first_date = ""
         state.last_date = ""
         if state.total_time and state.total_time < 6 or state.total_time > 10:
-            state.warnings.append(f"Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
+            state.warnings.append(f"on {get_day_of_the_week(state.entries[-1]):10} Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
         state.total_time = 0
 
     state.line_count += 1
@@ -80,7 +87,7 @@ def parse_time_line(state, line):
             "activity_id": activity_id,
         }
         if comment and len(comment) > 1000:
-            state.warnings.append(f"Warning: Line {state.line_count}: Comment {len(comment)} is too big for entry {entry}!")
+            state.warnings.append(f"on {get_day_of_the_week(entry):10} Line {state.line_count}: Comment {len(comment)} is too big for entry {entry}!")
 
         if comment: entry['comments'] = comment[:1000]
 
