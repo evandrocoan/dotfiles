@@ -1,7 +1,7 @@
 actions:
   cleanup: {gcIntervalDays: 0}
-  commit: {missing: true, untracked: false, monospaceFont: true, messageLineLimits: true,
-    preferStaged: false, trimMessage: true}
+  commit: {missing: true, untracked: false, messageLineLimits: true, preferStaged: false,
+    trimMessage: true}
   compare:
     fileComparators:
     - filePattern: '*'
@@ -17,7 +17,6 @@ actions:
     showExternalResolveDialog: true
     swapOursTheirsOnRebase: true
   stash: {stashAutomatically: true, includeUntrackedFiles: false}
-  initCommitMessage: initial commit
   alwaysConfigureTracking: true
   allowModificationOfPushedHistory: true
   pushTags: false
@@ -26,7 +25,7 @@ actions:
   refreshRenameDetectionUntrackedMissing: true
   refreshRenameDetectionWarnings: true
   refreshInspectEols: true
-  backgroundRefreshing: true
+  backgroundRefreshing: false
   backgroundScan: false
   backgroundPoll: true
   backgroundFetchClosed: false
@@ -127,20 +126,20 @@ globalTextComponentSettings:
     - {language: Swift, pattern: '*.swift'}
     - {language: V, pattern: '*.v'}
     - {language: Yaml, pattern: '*.yaml, *.yml'}
+    - {language: Crystal, pattern: '*.cr'}
+    - {language: Groovy, pattern: '*.gradle, *.groovy'}
+    - {language: Zig, pattern: '*.zig'}
   colors.dark: {color-annotation: 13092749, color-attrib-name: 9291719, color-attrib-value: 12558303,
     color-comment: 8421504, color-declaration: 14002858, color-keyword: 10733475,
     color-literal: 11184853, color-no-code: 0, color-plain-text: 12566463, color-punctuation: 12561045,
     color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807,
     color-pragma: 13876905, color-invalid: 16744319, color-identifier: 12632256}
-listx: {ePP: 1610844260329, eUT: -9223372036854775808, nRT: -9223372036854775808,
-  eV: '20.2', uid: 1nhlo2qaortv, lLCT: 1633968654962}
-project: {reopenLastUsedRepositories: true, showWelcomeDialog: false, preferLogWindow: true,
-  preferLogWindow.auto: true}
-uiSettings: {useBackgroundColorInFileTable: true, fileSearchPatternType: 1, themeChanged: false,
-  theme: auto}
-vcsRecords: {lastGitUsage: 1630823079962, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
-  lastDgUsage: 1633961252946}
-updateCheck: {mode: download, prevCheckTime: 1634847662673, checkedBuild: 17152, upgradeInstallation: false,
+listx: {uid: 1nhlo2qaortv, lLCT: 1767705356972}
+project: {reopenLastUsedRepositories: true, showWelcomeDialog: true, preferLogWindow: true}
+uiSettings: {fileSearchPatternType: 1, themeChanged: false, theme: auto}
+vcsRecords: {lastGitUsage: 1767895939721, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
+  lastDgUsage: 1755979308170}
+updateCheck: {mode: none, prevCheckTime: 1766174317205, checkedBuild: 19294, upgradeInstallation: false,
   previewAlwaysCheckForLatestBuild: false}
 proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
@@ -151,7 +150,7 @@ spellCheck:
   - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   personalFile: ${smartgit.settings}/my-words.dic
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
-  useOnlyBestOfficial: false
+  useOnlyBestOfficial: true
   deleted: false
   activeDictionary: 1
 warnForMissingMasterPassword: false
@@ -159,9 +158,9 @@ askForMasterPasswordOnStartup: false
 sendStacktraces2: false
 sendStacktracesBeta: false
 machineId: f3f90f38
-lastUsedVersion: '21.1'
-tempDirs: [/tmp/smartgit15612005444454379152]
-updateCheckDg: {prevCheckTime: 1633961254219, checkedBuild: 7006, mode: download}
-upgradedFromVersion: '20.2'
+lastUsedVersion: '22.1'
+tempDirs: [/tmp/smartgit7379093385771419041]
+updateCheckDg: {prevCheckTime: 1671215677505, checkedBuild: 9003, mode: none}
+upgradedFromVersion: '21.2'
 firstUsedTime: 1569505697899
 sendUsageStats: false
