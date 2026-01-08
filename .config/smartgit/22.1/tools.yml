@@ -1,5 +1,6 @@
 tools:
-- name: Open File
+- id: openFile
+  name: Open File
   fileStarter: {command: /usr/bin/gio, parameters: 'open ${filePath}'}
   useForOpen: true
   waitUntilFinished: false
@@ -19,20 +20,6 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: false
-- id: formatPatch
-  name: Format Patch
-  fileStarter: {command: '${smartGitDir}/lib/format-patch.sh', parameters: '${dirSelect}
-      ${commit} ${commit2}'}
-  useForOpen: false
-  waitUntilFinished: true
-  filePattern: '*'
-- id: formatPatch1
-  name: Format Patch
-  fileStarter: {command: '${smartGitDir}/lib/format-patch.sh', parameters: '${dirSelect}
-      ${commit}'}
-  useForOpen: false
-  waitUntilFinished: true
-  filePattern: '*'
 - id: applyPatch
   name: Apply Patch
   fileStarter: {command: '${git}', parameters: 'apply ${fileOpen}'}
@@ -45,14 +32,6 @@ tools:
   useForOpen: false
   waitUntilFinished: true
   filePattern: '*'
-- id: fastForwardMerge
-  name: Fast-Forward Merge
-  fileStarter: {command: '${smartGitDir}/lib/ff-merge.sh', parameters: '${commit}'}
-  useForOpen: false
-  waitUntilFinished: true
-  filePattern: '*'
-  forRefsNotShas: true
-  confirmationMessage: Do you want to fast forward '${commit}' to its tracking branch?
 - id: mergeDirectlyTo
   name: Merge Directly To
   fileStarter: {command: /usr/bin/python3, parameters: '"${smartGitDir}/lib/git-forward-merge.sh"
@@ -64,18 +43,6 @@ tools:
   requiresConfirmation: true
   confirmationMessage: Do you want to merge changes to ${commit2} *without* checking
     out?
-- id: gitVersion
-  name: Git Version
-  fileStarter: {command: '${git}', parameters: --version}
-  useForOpen: false
-  waitUntilFinished: true
-  filePattern: '*'
-- id: gitLfsVersion
-  name: Git-LFS Version
-  fileStarter: {command: '${git}', parameters: lfs --version}
-  useForOpen: false
-  waitUntilFinished: true
-  filePattern: '*'
 - name: Open in Terminal
   fileStarter: {command: terminator, parameters: '--working-directory ${filePath}'}
   useForOpen: false
@@ -138,4 +105,17 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: false
+- name: Create Patch (save file)
+  fileStarter: {command: bash, parameters: '-c "git format-patch --stdout ${commit}..${commit2}
+      > \"${fileSave}\""'}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+  forRefsNotShas: false
+- name: Format Patch
+  fileStarter: {command: '${git}', parameters: 'format-patch -o "${dirSelect}" -1
+      ${commit}'}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
 manuallyDeletedIds: []
