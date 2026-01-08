@@ -63,6 +63,8 @@
       <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Up" type="string" value="changexfce4dpi.sh up"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Right" type="string" value="move_window_to_workspace.sh next"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;&lt;Super&gt;Left" type="string" value="move_window_to_workspace.sh"/>
+      <property name="&lt;Alt&gt;c" type="string" value="copyq show"/>
+      <property name="&lt;Alt&gt;v" type="string" value="copyq show"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
