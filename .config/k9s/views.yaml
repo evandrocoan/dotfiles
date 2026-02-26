@@ -1,0 +1,14 @@
+views:
+  v1/pods:
+    columns:
+      - NAME
+      - AGE
+      - NAMESPACE
+      - READY
+      - STATUS
+      - RESTARTS
+      - IP
+      - NODE
+      - "NOMINATED NODE"
+      - "READINESS GATES"
+
