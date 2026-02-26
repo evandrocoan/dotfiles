@@ -40,6 +40,9 @@
 !/.config/remmina/
 !/.config/remmina/remmina.pref
 
+!/.config/k9s/
+!/.config/k9s/**
+
 !/.config/smartgit/
 !/.config/smartgit/22.1/
 !/.config/smartgit/22.1/bugtracker.yml

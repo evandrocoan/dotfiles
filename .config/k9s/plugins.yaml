@@ -1,0 +1,121 @@
+plugins:
+  # Leverage stern (https://github.com/stern/stern) to output logs.
+  stern:
+    shortCut: Ctrl-Y
+    confirm: false
+    description: "Logs <Stern>"
+    scopes:
+      - pods
+    command: stern
+    background: false
+    args:
+      - --tail
+      - 50
+      - $FILTER
+      - -n
+      - $NAMESPACE
+      - --context
+      - $CONTEXT
+
+  raw-logs-follow:
+    shortCut: Ctrl-G
+    description: logs -f
+    scopes:
+    - po
+    command: kubectl
+    background: false
+    args:
+    - logs
+    - -f
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+    - --kubeconfig
+    - $KUBECONFIG
+  log-less:
+    shortCut: Shift-K
+    description: "logs|less"
+    scopes:
+    - po
+    command: bash
+    background: false
+    args:
+    - -c
+    - '"$@" | less'
+    - dummy-arg
+    - kubectl
+    - logs
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+    - --kubeconfig
+    - $KUBECONFIG
+  log-less-container:
+    shortCut: Shift-L
+    description: "logs|less"
+    scopes:
+    - containers
+    command: bash
+    background: false
+    args:
+    - -c
+    - '"$@" | less'
+    - dummy-arg
+    - kubectl
+    - logs
+    - -c
+    - $NAME
+    - $POD
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+    - --kubeconfig
+    - $KUBECONFIG
+
+  #--- Create debug container for selected pod in current namespace
+  # See https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container
+  debug:
+    shortCut: Shift-D
+    description: Add debug container
+    dangerous: true
+    scopes:
+      - containers
+    command: bash
+    background: false
+    confirm: true
+    args:
+      - -c
+      - "kubectl debug -it --context $CONTEXT -n=$NAMESPACE $POD --target=$NAME --image=nicolaka/netshoot:v0.14 --profile=sysadmin --share-processes -- bash"
+
+  pod-events-time:
+    shortCut: Shift-E
+    confirm: false
+    description: "Events (Brazil Time)"
+    scopes:
+      - pods
+    command: sh
+    background: false
+    args:
+      - -c
+      - |
+        # Set Timezone to Sao Paulo (UTC-3)
+        export TZ=America/Sao_Paulo
+        
+        # Get events, extract raw fields, loop through them, and convert date
+        kubectl get events \
+          --context $CONTEXT \
+          --namespace $NAMESPACE \
+          --field-selector involvedObject.name=$NAME \
+          --sort-by=.lastTimestamp \
+          -o go-template='{{range .items}}{{.lastTimestamp}} {{.type}} {{.reason}} {{.message}}{{"\n"}}{{end}}' \
+        | while read -r time type reason message; do
+            # Convert ISO timestamp to local format
+            local_time=$(date -d "$time" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$time")
+            printf "%-20s %-10s %-20s %s\n" "$local_time" "$type" "$reason" "$message"
+        done | less -S
+
