@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=600
 WorkingDirectory=%h/scripts/
-ExecStart=/bin/bash --login -c 'set -x; /usr/bin/python3 %h/scripts/check_clock_punches_playwright.py'
+ExecStart=/bin/bash --login -c 'set -x; %h/scripts/.venv/bin/python3 %h/scripts/check_clock_punches_playwright.py'
 
 [Install]
 WantedBy=default.target

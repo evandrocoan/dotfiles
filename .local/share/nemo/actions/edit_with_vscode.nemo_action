@@ -1,0 +1,10 @@
+# https://github.com/linuxmint/nemo/blob/master/files/usr/share/nemo/actions/sample.nemo_action
+[Nemo Action]
+Active=true
+Name=Edit with VSCode
+Comment=Edit with VSCode
+Exec=code "%F"
+Selection=any
+Extensions=any;
+Icon-Name=visual-studio-code
+

@@ -6,6 +6,14 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: true
+- id: revealInDbusSend
+  name: Reveal in File Manager
+  fileStarter: {command: /usr/bin/dbus-send, parameters: '--type=method_call --dest=org.freedesktop.FileManager1
+      /org/freedesktop/FileManager1 org.freedesktop.FileManager1.ShowItems array:string:"${fileUri}"
+      string:""'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
 - id: revealInNemo
   name: Reveal in Nemo
   fileStarter: {command: /usr/bin/nemo, parameters: '${fileUri}'}
@@ -44,7 +52,7 @@ tools:
   confirmationMessage: Do you want to merge changes to ${commit2} *without* checking
     out?
 - name: Open in Terminal
-  fileStarter: {command: terminator, parameters: '--working-directory ${filePath}'}
+  fileStarter: {command: terminator, parameters: '--maximise --working-directory ${filePath}'}
   useForOpen: false
   waitUntilFinished: false
   filePattern: '*'
@@ -117,5 +125,16 @@ tools:
       ${commit}'}
   useForOpen: false
   waitUntilFinished: true
+  filePattern: '*'
+- name: Show Staged Diff
+  fileStarter: {command: '${git}', parameters: diff --cached}
+  useForOpen: false
+  waitUntilFinished: true
+  filePattern: '*'
+- name: Commit Staged with aicommits
+  fileStarter: {command: xfce4-terminal, parameters: --maximize --command "bash -c
+      'oco; echo Done - press Enter to close; read'"}
+  useForOpen: false
+  waitUntilFinished: false
   filePattern: '*'
 manuallyDeletedIds: []

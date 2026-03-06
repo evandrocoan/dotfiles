@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This script is used to move windows accross monitors, if the window manager
 # does not provide any shortcut.
