@@ -4,42 +4,42 @@
   <property name="Microsoft_Microsoft_24GHz_Transceiver_v70_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="4.900000"/>
+    <property name="Acceleration" type="double" value="4.9000000000000004"/>
   </property>
   <property name="24G_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="false"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="1.500000"/>
+    <property name="Acceleration" type="double" value="1.5"/>
   </property>
   <property name="ImPS2_Logitech_Wheel_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="1.500000"/>
+    <property name="Acceleration" type="double" value="1.5"/>
   </property>
   <property name="USB_USB_Keyboard_Consumer_Control" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="4"/>
-    <property name="Acceleration" type="double" value="2.000000"/>
+    <property name="Acceleration" type="double" value="2"/>
   </property>
   <property name="DELL08C800_04F330C3_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="5.100000"/>
+    <property name="Acceleration" type="double" value="5.0999999999999996"/>
   </property>
   <property name="Logitech_Wireless_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="false"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="1.600000"/>
+    <property name="Acceleration" type="double" value="1.6000000000000001"/>
   </property>
   <property name="Microsoft_Wired_Keyboard_600_Consumer_Control" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="4"/>
-    <property name="Acceleration" type="double" value="1.900000"/>
+    <property name="Acceleration" type="double" value="1.8999999999999999"/>
   </property>
   <property name="OM" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="4.100000"/>
+    <property name="Acceleration" type="double" value="4.0999999999999996"/>
   </property>
   <property name="DELL08C800_04F330C3_Touchpad" type="empty">
     <property name="Properties" type="empty">
@@ -58,32 +58,32 @@
   <property name="PixArt_Microsoft_USB_Optical_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="false"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="3.200000"/>
+    <property name="Acceleration" type="double" value="3.2000000000000002"/>
     <property name="ReverseScrolling" type="bool" value="false"/>
   </property>
   <property name="Logitech_USB_Optical_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="false"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="0.800000"/>
+    <property name="Acceleration" type="double" value="0.80000000000000004"/>
   </property>
   <property name="Microsoft_Wired_Keyboard_600" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="4"/>
-    <property name="Acceleration" type="double" value="2.000000"/>
+    <property name="Acceleration" type="double" value="2"/>
   </property>
   <property name="KYE_SYSTEMS_CORP_Wired_Mouse" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="2.800000"/>
+    <property name="Acceleration" type="double" value="2.7999999999999998"/>
   </property>
   <property name="INSTANT_USB_GAMING_MOUSE__Consumer_Control" type="empty">
     <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="4"/>
-    <property name="Acceleration" type="double" value="2.000000"/>
+    <property name="Acceleration" type="double" value="2"/>
   </property>
   <property name="INSTANT_USB_GAMING_MOUSE_" type="empty">
-    <property name="RightHanded" type="bool" value="false"/>
+    <property name="RightHanded" type="bool" value="true"/>
     <property name="Threshold" type="int" value="1"/>
-    <property name="Acceleration" type="double" value="4.000000"/>
+    <property name="Acceleration" type="double" value="3.9999999850988388"/>
   </property>
 </channel>

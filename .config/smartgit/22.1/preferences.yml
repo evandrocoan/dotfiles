@@ -134,10 +134,10 @@ globalTextComponentSettings:
     color-literal: 11184853, color-no-code: 0, color-plain-text: 12566463, color-punctuation: 12561045,
     color-source: 0, color-string: 14002901, color-tag: 10274701, color-type: 11513807,
     color-pragma: 13876905, color-invalid: 16744319, color-identifier: 12632256}
-listx: {uid: 1nhlo2qaortv, lLCT: 1767705356972}
+listx: {uid: 1nhlo2qaortv, lLCT: 1772817373888}
 project: {reopenLastUsedRepositories: true, showWelcomeDialog: true, preferLogWindow: true}
 uiSettings: {fileSearchPatternType: 1, themeChanged: false, theme: auto}
-vcsRecords: {lastGitUsage: 1767895939721, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
+vcsRecords: {lastGitUsage: 1773496251365, lastSvnUsage: 0, lastHgUsage: 0, lastReviewUsage: 0,
   lastDgUsage: 1755979308170}
 updateCheck: {mode: none, prevCheckTime: 1766174317205, checkedBuild: 19294, upgradeInstallation: false,
   previewAlwaysCheckForLatestBuild: false}
@@ -145,21 +145,21 @@ proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
 spellCheck:
   dictionaries:
+  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   - {name: Portuguese (Brazilian), file: /myfiles/Programs/SpellCheckDicts/Portuguese
       (Brazilian).dic}
-  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   personalFile: ${smartgit.settings}/my-words.dic
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
   useOnlyBestOfficial: true
   deleted: false
-  activeDictionary: 1
+  activeDictionary: 0
 warnForMissingMasterPassword: false
 askForMasterPasswordOnStartup: false
 sendStacktraces2: false
 sendStacktracesBeta: false
 machineId: f3f90f38
 lastUsedVersion: '22.1'
-tempDirs: [/tmp/smartgit7379093385771419041]
+tempDirs: [/tmp/smartgit7923325229633952085]
 updateCheckDg: {prevCheckTime: 1671215677505, checkedBuild: 9003, mode: none}
 upgradedFromVersion: '21.2'
 firstUsedTime: 1569505697899

@@ -571,3 +571,16 @@ xterm*|rxvt*)
 *)
     ;;
 esac
+
+if [ -f /usr/local/bin/kubectl ]; then
+    source <(/usr/local/bin/kubectl completion bash)
+    alias k=kubectl
+    alias kn='kubectl config set-context --current --namespace'
+    complete -F __start_kubectl k
+    export KUBE_EDITOR="code -w"
+fi
+
+export COMPOSE_MENU=0
+export BUILDKIT_PROGRESS=plain
+export COMPOSE_PROGRESS=plain
+

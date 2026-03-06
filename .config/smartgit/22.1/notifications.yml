@@ -1,0 +1,8 @@
+readNotifications: [hosting-provider-could-be-configured-github-null, fileMonitor.directoriesExcluded-null,
+  support-expired-23-12-02-null]
+dontPublishNotifications: [linux.theme-null, support-expired-23-12-02-null, fileMonitor.directoriesExcluded-null,
+  hosting-provider-could-be-configured-github-null]
+dontPublishUntil-linux.theme-null: 0
+dontPublishUntil-support-expired-23-12-02-null: 0
+dontPublishUntil-fileMonitor.directoriesExcluded-null: 0
+dontPublishUntil-hosting-provider-could-be-configured-github-null: 0

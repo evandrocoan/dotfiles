@@ -248,6 +248,45 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `sudo systemctl mask avahi-daemon.service`
    1. https://ubuntuforums.org/showthread.php?t=2425530 How to stop avahi-daemon?
    1. https://askubuntu.com/questions/205937/how-can-i-disable-avahi-daemon
+1. `npm install -g opencommit`
+   ```
+   /usr/local/lib/node_modules/opencommit
+   --- a/out/cli.cjs
+   +++ b/out/cli.cjs
+   @@ -67723,7 +67723,7 @@ init_dist2();
+    var config4 = getConfig();
+    var translation3 = i18n[config4.OCO_LANGUAGE || "en"];
+   -var IDENTITY = "You are to act as an author of a commit message in git.";
+   +var IDENTITY = "You are to act as an expert software engineer and author of a git commit message. Before writing the commit message, deeply analyze the context of the changes: understand what problem is being solved, identify any architectural decisions or structural changes, and reason about why those changes matter to the project.";
+    var GITMOJI_HELP = `Use GitMoji convention to preface the commit. Here are some help to choose the right emoji (emoji, description):
+   @@ -67799,7 +67799,7 @@ var FULL_GITMOJI_SPEC = `${GITMOJI_HELP}
+    \u{1F9BA}, Add or update code related to validation.`;
+   -var CONVENTIONAL_COMMIT_KEYWORDS = "Do not preface the commit with anything, except for the conventional commit keywords: fix, feat, build, chore, ci, docs, style, refactor, perf, test.";
+   +var CONVENTIONAL_COMMIT_KEYWORDS = "Do not preface the commit title with any conventional commit keywords (no fix:, feat:, chore:, build:, etc.). Write a plain, professional title that clearly describes the change in natural language.";
+    var getCommitConvention = (fullGitMojiSpec) => config4.OCO_EMOJI ? fullGitMojiSpec ? FULL_GITMOJI_SPEC : GITMOJI_HELP : CONVENTIONAL_COMMIT_KEYWORDS;
+   @@ -67813,12 +67813,15 @@ var INIT_MAIN_PROMPT2 = (language, fullGitMojiSpec, context) => ({
+      content: (() => {
+   -    const commitConvention = fullGitMojiSpec ? "GitMoji specification" : "Conventional Commit Convention";
+   -    const missionStatement = `${IDENTITY} Your mission is to create clean and comprehensive commit messages as per the ${commitConvention} and explain WHAT were the changes and mainly WHY the changes were done.`;
+   +    const commitConvention = fullGitMojiSpec ? "GitMoji specification" : "plain professional text";
+   +    const missionStatement = `${IDENTITY} Your mission is to create a professional git commit message that explains WHAT changed and, more importantly, WHY it changed. To do this: (1) analyze the full context of the diff to understand the intent behind the changes; (2) identify any architectural decisions, design patterns, or structural shifts; (3) reason about the impact and motivation of the changes before writing a single word.`;
+        const diffInstruction = "I'll send you an output of 'git diff --staged' command, and you are to convert it into a commit message.";
+        const conventionGuidelines = getCommitConvention(fullGitMojiSpec);
+   +    const formatGuidelines = `Write the commit message as plain text with no code block or markdown formatting. The title (first line) must be a concise, natural language summary with no conventional commit prefixes. Leave a blank line after the title, then write a body that explains the architectural context, the reasoning behind the changes, and why they matter. Hard-wrap all lines at 80 columns.`;
+        const descriptionGuideline = getDescriptionInstruction();
+        const oneLineCommitGuideline = getOneLineCommitInstruction();
+        const scopeInstruction = getScopeInstruction();
+   -    const generalGuidelines = `Use the present tense. Lines must not be longer than 74 characters. Use ${language} for the commit message.`;
+   +    const generalGuidelines = `Use the present tense. Lines must not be longer than 80 characters. Use ${language} for the commit message.`;
+        const userInputContext = userInputCodeContext(context);
+        return `${missionStatement}
+    ${diffInstruction}
+    ${conventionGuidelines}
+   +${formatGuidelines}
+    ${descriptionGuideline}
+    ${oneLineCommitGuideline}
+    ${scopeInstruction}
+   ```
 
 
 ### Install XFCE from sources

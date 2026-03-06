@@ -1,5 +1,5 @@
 MailReader=thunderbird
 FileManager=custom-FileManager
-TerminalEmulator=terminator
-
+TerminalEmulator=xfce4-terminal
 WebBrowser=google-chrome
+

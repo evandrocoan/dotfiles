@@ -9,8 +9,8 @@ gitProjectLayout.mainIsDefault: true
 gitLogRootLayout.main: (([+215x594:repositories ][+215x400:branches ])(([+783x726:graph
   ](([+750x331:details ][+163x331:output ])[+916x392:files ]))[+1702x268:changes ])[-166x346:comments
   ])[-1x1:debug-log ]
-gitLogRootLayout.review: ([+394x634:branches ][+339x634:files ]([+816x634:graph ][-816x144:comments
-  ])([+362x301:details ]([+133x330:output ][+226x330:repositories ])))[+1920x365:changes
+gitLogRootLayout.review: ([+394x653:branches ][+422x653:files ]([+733x653:graph ][-816x144:comments
+  ])([+362x310:details ]([+133x340:output ][+226x340:repositories ])))[+1920x376:changes
   ][-1x1:debug-log ]
 gitLogRootLayout.mainIsDefault: true
 gitLogSubtreeLayout.mainIsDefault: true
@@ -28,14 +28,14 @@ bounds:
 - {key: conflictSolver, x: 3286, y: 0, width: 1920, height: 1080, state: 1}
 - {key: customize, width: 600, height: 370}
 - {key: editMessage, width: 781, height: 449, x: -38, y: -52}
-- {key: git.commit, x: 2, y: 2, width: 1926, height: 1076}
+- {key: git.commit, x: 3, y: -12, width: 1924, height: 1076}
 - {key: git.commit.editMessage, width: 600, height: 370}
 - {key: git.commit.selectFromLog, x: 115, y: 8, width: 870, height: 766}
 - {key: git.discard, width: 576, height: 389, x: 131, y: -41}
 - {key: git.flow.configure, width: 400, height: 247}
 - {key: git.ignore.file, width: 512, height: 292, x: 33, y: 0}
 - {key: git.ignore.reveal, width: 600, height: 400}
-- {key: git.indexEditor, x: 1366, y: 0, width: 1916, height: 763, state: 1}
+- {key: git.indexEditor, x: 0, y: 0, width: 1920, height: 1080, state: 1}
 - {key: git.rebase, width: 850, height: 525}
 - {key: git.stage, width: 500, height: 309}
 - {key: git.stashRename, width: 500, height: 309, x: 0, y: -1}
@@ -43,7 +43,7 @@ bounds:
 - {key: git.tag, width: 400, height: 300, x: -418, y: -54}
 - {key: git.unstage, width: 500, height: 309}
 - {key: hostingProvider.gitlab.repository, x: -25, y: 18, width: 384, height: 233}
-- {key: log, x: 1366, y: 0, width: 1926, height: 1105, state: 1}
+- {key: log, x: 0, y: 0, width: 1926, height: 1109}
 - {key: preferences, width: 920, height: 566, x: 16, y: 19}
 - {key: project, x: 1366, y: 0, width: 1255, height: 763, state: 1}
 - {key: rebase.interactive, width: 955, height: 638, x: 156, y: 69}
@@ -250,7 +250,7 @@ git.log.showDirectories: false
 git.log.files.treeSashWeightHorizontal: 609
 git.log.files.tableSashWeightHorizontal: 381
 project.files.git.separateWtIndex: false
-lastRepositoryPath: /myfiles/analytics/sciphi-R2R
+lastRepositoryPath: /
 journal.columns.date: true
 log.files.git.separateWtIndex: true
 refmapping.config.dontShowAgain: true
@@ -259,7 +259,7 @@ git.log.viewIgnored: false
 git.log.viewSkipped: true
 git.log.viewUnchanged: false
 git.log.viewRenameSources: true
-git.log.viewUnchangedAssumed: true
+git.log.viewUnchangedAssumed: false
 git.remove.deleteLocalFile: false
 log.wtIndex.onDemand: false
 changesView.compact: false
@@ -269,8 +269,8 @@ log.dvcs.showAllRefs.subtreeLog: true
 log.git.columns.sha: true
 ignore.location: 1
 git.log.viewUnversioned: true
-gitLogSubtreeLayout: ([+239x521:branches ][+1118x521:graph ]([+557x224:details -1x1:output
-  details ][+557x294:files ]))[+1920x427:changes ]
+gitLogSubtreeLayout: ([+239x537:branches ][+1118x537:graph ]([+557x231:details -1x1:output
+  details ][+557x303:files ]))[+1920x441:changes ]
 repositoriesToReopen: []
 git.log.viewUnchangedDirectories: false
 branches.sortRefs.byDate: false
