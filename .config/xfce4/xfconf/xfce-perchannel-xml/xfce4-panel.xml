@@ -20,12 +20,11 @@
         <value type="int" value="6"/>
         <value type="int" value="7"/>
         <value type="int" value="8"/>
-        <value type="int" value="11"/>
-        <value type="int" value="13"/>
         <value type="int" value="3"/>
         <value type="int" value="10"/>
         <value type="int" value="4"/>
-        <value type="int" value="12"/>
+        <value type="int" value="16"/>
+        <value type="int" value="13"/>
       </property>
       <property name="span-monitors" type="bool" value="false"/>
       <property name="length-adjust" type="bool" value="true"/>
@@ -146,6 +145,8 @@
         <value type="string" value="TeamViewer"/>
       </property>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="localsend_app"/>
+        <value type="string" value="autokey-gtk"/>
         <value type="string" value="teamviewer"/>
         <value type="string" value="twinkle"/>
         <value type="string" value="tray.py"/>
@@ -165,6 +166,7 @@
       <property name="single-row" type="bool" value="true"/>
       <property name="hidden-legacy-items" type="array">
         <value type="string" value="xfce4-power-manager"/>
+        <value type="string" value="autokey-gtk"/>
         <value type="string" value="networkmanager applet"/>
         <value type="string" value="anydesk"/>
         <value type="string" value="twinkle"/>
@@ -189,8 +191,8 @@
         <property name="label" type="string" value=""/>
       </property>
     </property>
-    <property name="plugin-11" type="string" value="xapp-status-plugin"/>
-    <property name="plugin-12" type="string" value="notification-plugin">
+    <property name="plugin-11" type="empty"/>
+    <property name="plugin-12" type="empty">
       <property name="enable-keyboard-shortcuts" type="empty"/>
       <property name="enable-mpris" type="empty"/>
       <property name="mixer-command" type="empty"/>
@@ -203,5 +205,6 @@
       <property name="digital-time-font" type="string" value="Sans Bold 13"/>
     </property>
     <property name="plugin-14" type="empty"/>
+    <property name="plugin-16" type="string" value="genmon"/>
   </property>
 </channel>
