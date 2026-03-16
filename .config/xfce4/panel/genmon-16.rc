@@ -1,0 +1,6 @@
+Command=bash /home/someuser/scripts/highest_temp.sh
+UseLabel=0
+Text=
+UpdatePeriod=5000
+Font=Ubuntu 10
+

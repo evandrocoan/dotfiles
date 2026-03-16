@@ -1,5 +1,5 @@
 favorites=firefox.desktop,thunderbird.desktop,pix.desktop,org.gnome.Rhythmbox3.desktop,org.gnome.Calculator.desktop,mintinstall.desktop,xfce4-taskmanager.desktop
-recent=org.x.editor.desktop,xfce4-mime-settings.desktop,twinkle.desktop,xfce-display-settings.desktop,org.gnome.DiskUtility.desktop,xfce4-notifyd-config.desktop,mattermost-desktop.desktop,org.flameshot.Flameshot.desktop,com.teamviewer.TeamViewer.desktop
+recent=xfce4-sensors.desktop,xfce4-screenshooter.desktop,org.gnome.SystemMonitor.desktop,localsend_app.desktop,mintwelcome.desktop,org.bluesabre.Mugshot.desktop,autokey-gtk.desktop,twinkle.desktop,mattermost-desktop.desktop,timeshift-gtk.desktop
 button-icon=linuxmint-logo-ring-symbolic
 button-single-row=false
 show-button-title=false

@@ -1,8 +1,13 @@
-delay=5
-region=1
-action=4
+delay=3
+region=3
+action=2
 show_mouse=1
-screenshot_dir=file:/home/evandro_coan/Downloads
-app=eog
+screenshot_dir=file:///home/someuser/Pictures
+app=drawing
 last_user=
+custom_action_command=/usr/libexec/xfce4/screenshooter/scripts/imgur-upload.sh %f %imgur_client_id
+last_extension=png
+enable_imgur_upload=true
+show_in_folder=false
+show_border=1
 
