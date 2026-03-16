@@ -42,9 +42,6 @@
       </property>
       <property name="XF86WWW" type="string" value="exo-open --launch WebBrowser"/>
       <property name="XF86Mail" type="string" value="exo-open --launch MailReader"/>
-      <property name="&lt;Alt&gt;F3" type="string" value="xfce4-appfinder">
-        <property name="startup-notify" type="bool" value="true"/>
-      </property>
       <property name="Print" type="string" value="xfce4-screenshooter"/>
       <property name="&lt;Primary&gt;Escape" type="string" value="xfdesktop --menu"/>
       <property name="&lt;Shift&gt;Print" type="string" value="flameshot gui"/>
@@ -274,5 +271,8 @@
       <property name="&lt;Super&gt;Page_Down" type="string" value="tile_down_right_key"/>
     </property>
   </property>
-  <property name="providers" type="empty"/>
+  <property name="providers" type="array">
+    <value type="string" value="xfwm4"/>
+    <value type="string" value="commands"/>
+  </property>
 </channel>

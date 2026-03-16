@@ -33,17 +33,17 @@
         <property name="Y" type="double" value="1"/>
       </property>
     </property>
-    <property name="DP-1" type="string" value="Philips Consumer Electronics Company 23&quot;">
+    <property name="DP-1" type="string" value="Samsung Electric Company 23&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="EDID" type="string" value="0d2d1e9ffdb6a773c67603a29b0f5902053d122e"/>
+      <property name="EDID" type="string" value="f2bb99017a1c62aca0826c1f52f441671a74bc9f"/>
       <property name="Resolution" type="string" value="1920x1080"/>
       <property name="RefreshRate" type="double" value="60"/>
       <property name="Rotation" type="int" value="0"/>
       <property name="Reflection" type="string" value="0"/>
-      <property name="Primary" type="bool" value="false"/>
+      <property name="Primary" type="bool" value="true"/>
       <property name="Position" type="empty">
-        <property name="X" type="int" value="3840"/>
-        <property name="Y" type="int" value="0"/>
+        <property name="X" type="int" value="1920"/>
+        <property name="Y" type="int" value="24"/>
       </property>
       <property name="Scale" type="empty">
         <property name="X" type="double" value="1"/>
@@ -94,6 +94,40 @@
       </property>
       <property name="Position" type="empty">
         <property name="X" type="int" value="5760"/>
+        <property name="Y" type="int" value="0"/>
+      </property>
+    </property>
+    <property name="HDMI-0" type="string" value="Samsung Electric Company 23&quot;">
+      <property name="Active" type="bool" value="true"/>
+      <property name="EDID" type="string" value="2f5b7a9c8b94bf1d6956788273b6d25f91f03707"/>
+      <property name="Resolution" type="string" value="1920x1080"/>
+      <property name="RefreshRate" type="double" value="60"/>
+      <property name="Rotation" type="int" value="0"/>
+      <property name="Reflection" type="string" value="0"/>
+      <property name="Primary" type="bool" value="false"/>
+      <property name="Scale" type="empty">
+        <property name="X" type="double" value="1"/>
+        <property name="Y" type="double" value="1"/>
+      </property>
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0"/>
+        <property name="Y" type="int" value="0"/>
+      </property>
+    </property>
+    <property name="DP-5" type="string" value="Philips Consumer Electronics Company 23&quot;">
+      <property name="Active" type="bool" value="true"/>
+      <property name="EDID" type="string" value="0d2d1e9ffdb6a773c67603a29b0f5902053d122e"/>
+      <property name="Resolution" type="string" value="1920x1080"/>
+      <property name="RefreshRate" type="double" value="60"/>
+      <property name="Rotation" type="int" value="0"/>
+      <property name="Reflection" type="string" value="0"/>
+      <property name="Primary" type="bool" value="false"/>
+      <property name="Scale" type="empty">
+        <property name="X" type="double" value="1"/>
+        <property name="Y" type="double" value="1"/>
+      </property>
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="3840"/>
         <property name="Y" type="int" value="0"/>
       </property>
     </property>
@@ -129,17 +163,17 @@
         <property name="Y" type="double" value="1"/>
       </property>
     </property>
-    <property name="DP-1" type="string" value="Philips Consumer Electronics Company 23&quot;">
+    <property name="DP-1" type="string" value="Samsung Electric Company 23&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="EDID" type="string" value="0d2d1e9ffdb6a773c67603a29b0f5902053d122e"/>
+      <property name="EDID" type="string" value="f2bb99017a1c62aca0826c1f52f441671a74bc9f"/>
       <property name="Resolution" type="string" value="1920x1080"/>
       <property name="RefreshRate" type="double" value="60"/>
       <property name="Rotation" type="int" value="0"/>
       <property name="Reflection" type="string" value="0"/>
-      <property name="Primary" type="bool" value="false"/>
+      <property name="Primary" type="bool" value="true"/>
       <property name="Position" type="empty">
-        <property name="X" type="int" value="3840"/>
-        <property name="Y" type="int" value="0"/>
+        <property name="X" type="int" value="1920"/>
+        <property name="Y" type="int" value="24"/>
       </property>
       <property name="Scale" type="empty">
         <property name="X" type="double" value="1"/>
@@ -190,6 +224,40 @@
       </property>
       <property name="Position" type="empty">
         <property name="X" type="int" value="5760"/>
+        <property name="Y" type="int" value="0"/>
+      </property>
+    </property>
+    <property name="HDMI-0" type="string" value="Samsung Electric Company 23&quot;">
+      <property name="Active" type="bool" value="true"/>
+      <property name="EDID" type="string" value="2f5b7a9c8b94bf1d6956788273b6d25f91f03707"/>
+      <property name="Resolution" type="string" value="1920x1080"/>
+      <property name="RefreshRate" type="double" value="60"/>
+      <property name="Rotation" type="int" value="0"/>
+      <property name="Reflection" type="string" value="0"/>
+      <property name="Primary" type="bool" value="false"/>
+      <property name="Scale" type="empty">
+        <property name="X" type="double" value="1"/>
+        <property name="Y" type="double" value="1"/>
+      </property>
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0"/>
+        <property name="Y" type="int" value="0"/>
+      </property>
+    </property>
+    <property name="DP-5" type="string" value="Philips Consumer Electronics Company 23&quot;">
+      <property name="Active" type="bool" value="true"/>
+      <property name="EDID" type="string" value="0d2d1e9ffdb6a773c67603a29b0f5902053d122e"/>
+      <property name="Resolution" type="string" value="1920x1080"/>
+      <property name="RefreshRate" type="double" value="60"/>
+      <property name="Rotation" type="int" value="0"/>
+      <property name="Reflection" type="string" value="0"/>
+      <property name="Primary" type="bool" value="false"/>
+      <property name="Scale" type="empty">
+        <property name="X" type="double" value="1"/>
+        <property name="Y" type="double" value="1"/>
+      </property>
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="3840"/>
         <property name="Y" type="int" value="0"/>
       </property>
     </property>
