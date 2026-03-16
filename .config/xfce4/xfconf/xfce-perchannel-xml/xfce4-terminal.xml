@@ -11,4 +11,5 @@
   <property name="misc-bell" type="bool" value="false"/>
   <property name="misc-borders-default" type="bool" value="true"/>
   <property name="misc-menubar-default" type="bool" value="true"/>
+  <property name="scrolling-lines" type="uint" value="99999"/>
 </channel>

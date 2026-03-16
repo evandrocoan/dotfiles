@@ -338,6 +338,10 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
        [ -f "$so" ] && ln -sf "$so" ~/.local/lib/xfce4/panel-plugins/
    done
 
+   # Persist XFCE_PANEL_PLUGIN_PATH so it is set on every login
+   grep -q XFCE_PANEL_PLUGIN_PATH ~/.profile || \
+   echo 'export XFCE_PANEL_PLUGIN_PATH="$HOME/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins"' >> ~/.profile
+
    # Then restart the panel
    pkill xfce4-panel; sleep 1
    NO_AT_BRIDGE=1 \

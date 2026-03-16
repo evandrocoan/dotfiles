@@ -11,6 +11,7 @@ declare -a PACKAGES=(
     "xfce4-libxfce4util|https://gitlab.xfce.org/xfce/libxfce4util.git"
     "xfce4-libxfce4ui|https://gitlab.xfce.org/xfce/libxfce4ui.git"
     "xfce4-exo|https://gitlab.xfce.org/xfce/exo.git"
+    "xfce4-xfconf|https://gitlab.xfce.org/xfce/xfconf.git"
     "xfce4-thunar|https://gitlab.xfce.org/xfce/thunar.git"
     "xfce4-thunar-archive-plugin|https://gitlab.xfce.org/thunar-plugins/thunar-archive-plugin.git"
     "xfce4-panel|https://gitlab.xfce.org/xfce/xfce4-panel.git"
@@ -182,19 +183,34 @@ function main {
 
         pushd "${libname}"
 
-        if [[ "$DO_CONFIGURE" -eq 1 ]]; then
-            # Cannot compile any XFCE 4.14 project with `./configure --enable-debug=full`
-            # https://gitlab.xfce.org/xfce/xfce4-panel/-/issues/351
-            ./autogen.sh --prefix=$PREFIX --enable-debug=no
-        fi;
+        if [[ -f meson.build ]]; then
+            # Meson-based build (XFCE >= 4.17)
+            if [[ "$DO_CONFIGURE" -eq 1 ]]; then
+                meson setup build --prefix="$PREFIX" --buildtype=debugoptimized --wipe
+            fi;
 
-        if [[ "$DO_BUILD" -eq 1 ]]; then
-            make -j"$(nproc)" || make -j"$(nproc)"
+            if [[ "$DO_BUILD" -eq 1 ]]; then
+                ninja -C build -j"$(nproc)"
+            fi;
 
-        fi;
+            if [[ "$DO_INSTALL" -eq 1 ]]; then
+                ninja -C build install
+            fi;
+        else
+            # Autotools-based build (XFCE <= 4.16)
+            if [[ "$DO_CONFIGURE" -eq 1 ]]; then
+                # Cannot compile any XFCE 4.14 project with `./configure --enable-debug=full`
+                # https://gitlab.xfce.org/xfce/xfce4-panel/-/issues/351
+                ./autogen.sh --prefix="$PREFIX" --enable-debug=no
+            fi;
 
-        if [[ "$DO_INSTALL" -eq 1 ]]; then
-            make install
+            if [[ "$DO_BUILD" -eq 1 ]]; then
+                make -j"$(nproc)" || make -j"$(nproc)"
+            fi;
+
+            if [[ "$DO_INSTALL" -eq 1 ]]; then
+                make install
+            fi;
         fi;
 
         popd
