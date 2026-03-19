@@ -36,6 +36,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Install wine \& others](#install-wine--others)
     - [Configure Second Monitor](#configure-second-monitor)
     - [Disable line wrap](#disable-line-wrap)
+    - [Tilix settings](#tilix-settings)
     - [Remove Default XFCE 4 Keybinds](#remove-default-xfce-4-keybinds)
     - [Create Default Keybinds](#create-default-keybinds)
     - [Linux system information](#linux-system-information)
@@ -1083,6 +1084,19 @@ xrandr --output eDP-1 --gamma 0.65:0.65:0.65
 1. https://unix.stackexchange.com/questions/20493/how-to-disable-line-wrap-in-a-terminal/345492
 
 
+### Tilix settings
+
+Save current settings to file:
+```bash
+dconf dump /com/gexperts/Tilix/ > ~/scripts/tilix-backup.dconf
+```
+
+Restore settings from file:
+```bash
+dconf load /com/gexperts/Tilix/ < ~/scripts/tilix-backup.dconf
+```
+
+
 ### Remove Default XFCE 4 Keybinds
 
 1. All Settings -> Window Manger -> Keyboard ->
@@ -1305,6 +1319,3 @@ Categories=AudioVideo;
     Info:      Processes: 236 Uptime: 1h 13m Memory: 7.68 GiB used: 4.39 GiB (57.2%) Init: systemd runlevel: 5 Compilers:
                gcc: 7.3.0 Shell: bash v: 4.4.19 inxi: 3.0.27
     ```
-
-
-
