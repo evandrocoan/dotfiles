@@ -43,7 +43,7 @@ plugins:
     background: false
     args:
     - -c
-    - '"$@" | less'
+    - '"$@" | less; stty sane'
     - dummy-arg
     - kubectl
     - logs
@@ -63,7 +63,7 @@ plugins:
     background: false
     args:
     - -c
-    - '"$@" | less'
+    - '"$@" | less; stty sane'
     - dummy-arg
     - kubectl
     - logs
@@ -105,7 +105,7 @@ plugins:
       - |
         # Set Timezone to Sao Paulo (UTC-3)
         export TZ=America/Sao_Paulo
-        
+
         # Get events, extract raw fields, loop through them, and convert date
         kubectl get events \
           --context $CONTEXT \
