@@ -3,27 +3,33 @@
 <action>
 	<icon>Terminal</icon>
 	<name>Open in Terminal</name>
+	<submenu></submenu>
 	<unique-id>1552353974025192-1</unique-id>
 	<command>exo-open --working-directory %f --launch TerminalEmulator</command>
 	<description>Open terminal in the selected folder</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 </action>
 <action>
 	<icon>folder</icon>
 	<name>Open as Root</name>
+	<submenu></submenu>
 	<unique-id>1552353974025480-2</unique-id>
 	<command>pkexec thunar %F</command>
 	<description>Open the folder with administration privileges</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 </action>
 <action>
 	<icon>emblem-symbolic-link</icon>
 	<name>Create a Link</name>
+	<submenu></submenu>
 	<unique-id>1552353974025715-3</unique-id>
 	<command>ln -s %f  &apos;Link to %n&apos;</command>
 	<description>Create a symbolic link for each selected item</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 	<other-files/>
@@ -31,9 +37,11 @@
 <action>
 	<icon>gnome-run</icon>
 	<name>Check SHA256</name>
+	<submenu></submenu>
 	<unique-id>1552353974025743-4</unique-id>
 	<command>mint-sha256sum %f</command>
 	<description>Computes SHA256 checksum for the selected file.</description>
+	<range></range>
 	<patterns>*.iso;*.ISO</patterns>
 	<audio-files/>
 	<image-files/>
@@ -44,27 +52,33 @@
 <action>
 	<icon>gtk-find</icon>
 	<name>Search</name>
+	<submenu></submenu>
 	<unique-id>1552353974026090-5</unique-id>
 	<command>catfish %f</command>
 	<description>Search for Files</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 </action>
 <action>
 	<icon>gtk-find</icon>
 	<name>Search with Nemo</name>
+	<submenu></submenu>
 	<unique-id>1552353974026091-5</unique-id>
 	<command>open_nemo_search.sh %f</command>
 	<description>Search for Files with Nemo</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 </action>
 <action>
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text</name>
+	<submenu></submenu>
 	<unique-id>1598282233323516-1</unique-id>
 	<command>/usr/bin/subl -n %F</command>
 	<description>Edit with Sublime Text</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>
@@ -76,9 +90,11 @@
 <action>
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text Logs</name>
+	<submenu></submenu>
 	<unique-id>1552616163094708-1</unique-id>
 	<command>run_as_user.sh sublime4 /myfiles/Programs/sublime_text/current_logs/sublime_text -n %F</command>
 	<description>Edit with Sublime Text Logs</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>
@@ -90,9 +106,11 @@
 <action>
 	<icon>sublime-text</icon>
 	<name>Edit with Sublime Text Vanilla</name>
+	<submenu></submenu>
 	<unique-id>1552616163094709-1</unique-id>
 	<command>run_as_user.sh sublime4_vanilla /myfiles/Programs/sublime_text/current/sublime_text -n %F</command>
 	<description>Edit with Sublime Text Vanilla</description>
+	<range></range>
 	<patterns>*</patterns>
 	<directories/>
 	<audio-files/>
@@ -100,5 +118,17 @@
 	<other-files/>
 	<text-files/>
 	<video-files/>
+</action>
+<action>
+	<icon>visual-studio-code</icon>
+	<name>Edit with VSCode</name>
+	<submenu></submenu>
+	<unique-id>1773944579711407-1</unique-id>
+	<command>code %f</command>
+	<description></description>
+	<range>*</range>
+	<patterns>*</patterns>
+	<directories/>
+	<text-files/>
 </action>
 </actions>
