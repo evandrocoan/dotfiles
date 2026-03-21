@@ -24,4 +24,13 @@ fi
 
 # 4. Create the hover tooltip
 echo "<tool>All System Temperatures:
-${ALL_TEMPS}</tool>"
+${ALL_TEMPS}
+
+Sensor key:
+  Tctl    - Synthetic AMD CPU temp reported to the cooler; derived from die temps but may include a manufacturer offset to tune fan curves
+  Tccd1   - Actual temp of Core Complex Die 1 (one physical chiplet, typically 8 cores)
+  Tccd2   - Actual temp of Core Complex Die 2 (second physical chiplet, typically 8 cores); each die is measured separately as they can run at different temps
+  temp1   - Motherboard chipset or VRM sensor
+  Composite - NVMe SSD worst-case summary; reports whichever internal sensor is highest (used by OS for throttling)
+  Sensor 1  - NVMe SSD internal sensor, typically the NAND flash chips
+  Sensor 2  - NVMe SSD internal sensor, typically the controller chip</tool>"
