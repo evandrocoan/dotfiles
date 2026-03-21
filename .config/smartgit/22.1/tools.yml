@@ -131,7 +131,7 @@ tools:
   useForOpen: false
   waitUntilFinished: true
   filePattern: '*'
-- name: Commit Staged with aicommits
+- name: Commit Staged with oco
   fileStarter: {command: xfce4-terminal, parameters: --maximize --command "bash -c
       'oco; echo Done - press Enter to close; read'"}
   useForOpen: false

@@ -17,18 +17,15 @@
 !README.md
 !.nojekyll
 
-!/snap/
-!/snap/remmina/
-!/snap/remmina/5237/
-!/snap/remmina/5237/.local/
-!/snap/remmina/5237/.local/share/
-!/snap/remmina/5237/.local/share/remmina/
-!/snap/remmina/5237/.local/share/remmina/group_rdp_professional_192-168-0-8.remmina
-!/snap/remmina/5237/.local/share/remmina/group_sftp_professional-download-files_192-168-0-8.remmina
+/.local/
+/.local/share/
+/.local/share/remmina/
+/.local/share/remmina/group_rdp_professional_192-168-0-8.remmina
+/.local/share/remmina/group_sftp_professional-download-files_192-168-0-8.remmina
 
-!/snap/remmina/5237/.config/
-!/snap/remmina/5237/.config/remmina/
-!/snap/remmina/5237/.config/remmina/remmina.pref
+/.config/
+/.config/remmina/
+/.config/remmina/remmina.pref
 
 !/.config/
 
@@ -118,6 +115,7 @@
 !/.config/ksysguardrc
 !/.config/autokey/
 !/.config/autokey/**
+/.config/autokey/autokey.json~
 
 !/scripts/
 !/scripts/*
