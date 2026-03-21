@@ -3,7 +3,7 @@
 Active=true
 Name=Edit with VSCode
 Comment=Edit with VSCode
-Exec=code "%F"
+Exec=code %F
 Selection=any
 Extensions=any;
 Icon-Name=visual-studio-code
