@@ -115,6 +115,7 @@
     <property name="plugin-5" type="string" value="pulseaudio">
       <property name="items" type="empty"/>
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
+      <property name="known-players" type="string" value="Chrome"/>
     </property>
     <property name="plugin-6" type="empty">
       <property name="show-handle" type="empty"/>
@@ -147,6 +148,7 @@
         <value type="string" value="TeamViewer"/>
       </property>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="flameshot"/>
         <value type="string" value="localsend_app"/>
         <value type="string" value="autokey-gtk"/>
         <value type="string" value="teamviewer"/>

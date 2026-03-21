@@ -1,5 +1,5 @@
-favorites=firefox.desktop,thunderbird.desktop,pix.desktop,org.gnome.Rhythmbox3.desktop,org.gnome.Calculator.desktop,mintinstall.desktop,xfce4-taskmanager.desktop
-recent=xfce4-sensors.desktop,xfce4-screenshooter.desktop,org.gnome.SystemMonitor.desktop,localsend_app.desktop,mintwelcome.desktop,org.bluesabre.Mugshot.desktop,autokey-gtk.desktop,twinkle.desktop,mattermost-desktop.desktop,timeshift-gtk.desktop
+favorites=firefox.desktop,thunderbird.desktop,pix.desktop,org.gnome.Rhythmbox3.desktop,org.gnome.Calculator.desktop,mintinstall.desktop,xfce4-taskmanager.desktop,google-chrome.desktop,sublime_text.desktop,code.desktop,org.remmina.Remmina.desktop
+recent=xfce-wm-settings.desktop,xfce-wmtweaks-settings.desktop,xfce-keyboard-settings.desktop,org.remmina.Remmina.desktop,anydesk.desktop,nemo.desktop,gparted.desktop,syntevo-smartsynchronize.desktop,localsend_app.desktop,syntevo-smartgit.desktop
 button-icon=linuxmint-logo-ring-symbolic
 button-single-row=false
 show-button-title=false

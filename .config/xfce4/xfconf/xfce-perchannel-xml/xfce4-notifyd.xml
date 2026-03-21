@@ -17,6 +17,7 @@
       <value type="string" value="Mattermost"/>
       <value type="string" value="notify-send"/>
       <value type="string" value="org.freedesktop.network-manager-applet"/>
+      <value type="string" value="org.Nemo"/>
       <value type="string" value="org.xfce.Thunar"/>
       <value type="string" value="Xfce volume control"/>
       <value type="string" value="Xfce4-notifyd settings"/>
