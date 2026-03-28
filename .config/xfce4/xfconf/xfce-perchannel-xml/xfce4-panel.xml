@@ -148,6 +148,7 @@
         <value type="string" value="TeamViewer"/>
       </property>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="ferdium"/>
         <value type="string" value="flameshot"/>
         <value type="string" value="localsend_app"/>
         <value type="string" value="autokey-gtk"/>

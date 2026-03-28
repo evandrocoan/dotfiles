@@ -12,6 +12,8 @@
   <property name="applications" type="empty">
     <property name="known_applications" type="array">
       <value type="string" value="code"/>
+      <value type="string" value="ferdium"/>
+      <value type="string" value="Firefox"/>
       <value type="string" value="flameshot"/>
       <value type="string" value="google-chrome"/>
       <value type="string" value="Mattermost"/>
