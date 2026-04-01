@@ -137,4 +137,11 @@ tools:
   useForOpen: false
   waitUntilFinished: false
   filePattern: '*'
+- name: Create MR on GitLab
+  fileStarter: {command: xfce4-terminal, parameters: --maximize --command "bash -c
+      'source ~/scripts/.venv/bin/activate && python3 ~/scripts/smartgit_create_mr.py;
+      echo; echo Done - press Enter to close; read'"}
+  useForOpen: false
+  waitUntilFinished: false
+  filePattern: '*'
 manuallyDeletedIds: []

@@ -306,6 +306,27 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     ${oneLineCommitGuideline}
     ${scopeInstruction}
    ```
+   * .opencommit
+      ```
+      OCO_MODEL=anthropic/claude-sonnet-4-6
+      OCO_API_URL=https://openrouter.ai/api/v1
+      OCO_API_KEY=
+      OCO_API_CUSTOM_HEADERS=undefined
+      OCO_AI_PROVIDER=openai
+      OCO_TOKENS_MAX_INPUT=400000
+      OCO_TOKENS_MAX_OUTPUT=10000
+      OCO_DESCRIPTION=true
+      OCO_EMOJI=false
+      OCO_LANGUAGE=en
+      OCO_MESSAGE_TEMPLATE_PLACEHOLDER=$msg
+      OCO_PROMPT_MODULE=conventional-commit
+      OCO_ONE_LINE_COMMIT=false
+      OCO_TEST_MOCK_TYPE=commit-message
+      OCO_OMIT_SCOPE=false
+      OCO_GITPUSH=false
+      OCO_WHY=false
+      OCO_HOOK_AUTO_UNCOMMENT=false
+      ```
 
 
 ### Install XFCE from sources
