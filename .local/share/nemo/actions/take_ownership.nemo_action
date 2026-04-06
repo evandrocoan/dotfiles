@@ -1,0 +1,9 @@
+# https://github.com/linuxmint/nemo/blob/master/files/usr/share/nemo/actions/sample.nemo_action
+[Nemo Action]
+Active=true
+Name=Take Ownership
+Comment=Run chown R USER USER on the selected directory
+Exec=xfce4-terminal -e "bash -c '~/scripts/take_ownership.sh %F'"
+Selection=any
+Extensions=any;
+Icon-Name=dialog-password

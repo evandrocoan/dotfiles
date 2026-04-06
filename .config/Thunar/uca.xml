@@ -131,4 +131,15 @@
 	<directories/>
 	<text-files/>
 </action>
+<action>
+	<icon>dialog-password</icon>
+	<name>Take Ownership</name>
+	<submenu></submenu>
+	<unique-id>1775692800000000-1</unique-id>
+	<command>xfce4-terminal -e "bash -c '~/scripts/take_ownership.sh \"%f\"'"</command>
+	<description>Run chown -R $USER:$USER on the selected directory</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+</action>
 </actions>
