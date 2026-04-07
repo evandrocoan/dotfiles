@@ -100,8 +100,10 @@ def main():
     # --- 3. suggest a branch name ---
     suggested = slugify(commit_msg)
     logger.info("Suggested branch name: {}", suggested)
-    user_input = input("Branch name (Enter to accept, or type a new one): ").strip()
-    branch_name = user_input if user_input else suggested
+    branch_name = suggested
+
+    target_input = input(f"Target branch (Enter for '{DEFAULT_TARGET_BRANCH}', or type a new one): ").strip()
+    target_branch = target_input if target_input else DEFAULT_TARGET_BRANCH
 
     # --- 4. create branch from current branch and push ---
     source_branch = get_current_branch()
@@ -127,13 +129,16 @@ def main():
         token,
         {
             "source_branch": branch_name,
-            "target_branch": DEFAULT_TARGET_BRANCH,
+            "target_branch": target_branch,
             "title": commit_msg,
             "remove_source_branch": True,
         },
     )
 
     logger.success("MR created: {}", mr["web_url"])
+    input(f"Press Enter to open the MR in the browser {mr['web_url']}...")
+
+    subprocess.run(["xdg-open", mr["web_url"]])
 
 
 if __name__ == "__main__":
