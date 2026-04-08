@@ -1,0 +1,198 @@
+#!/home/someuser/scripts/.venv/bin/python
+"""
+Download all files from a Google Drive folder.
+
+Requires:
+  pip install google-api-python-client==2.193.0 google-auth-httplib2==0.3.1 google-auth-oauthlib==1.3.1
+
+Usage:
+  python gdrive_download.py <folder_id_or_url> [output_dir]
+
+Authentication:
+  This script uses Google OAuth 2.0 and requires two files:
+
+  1. ~/.gdrive_credentials.json  (you must create this once)
+     This identifies your application to Google. To get it:
+       a) Go to https://console.cloud.google.com
+       b) Create or select a project
+       c) Go to APIs & Services -> Library, search "Google Drive API", enable it
+       d) Go to APIs & Services -> Credentials -> Create Credentials -> OAuth client ID
+       e) Choose "Desktop app", click Create, then Download JSON
+       f) Save the downloaded file as ~/.gdrive_credentials.json
+
+  2. ~/.gdrive_token.json  (created automatically by this script)
+     Stores your personal Google account access token after you log in.
+     On first run a browser window opens asking you to sign in and grant
+     read access to Drive. The token is then saved and reused on every
+     subsequent run — no browser pop-up again unless the token expires.
+
+A file named .downloaded_files is saved in the output directory to track
+already downloaded files. Re-running the script skips those files.
+"""
+
+import io
+import json
+import os
+import re
+import sys
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+from loguru import logger
+
+SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+# Auto-generated on first run after browser login; stores your personal access token
+TOKEN_PATH = os.path.expanduser("~/.gdrive_token.json")
+# Downloaded manually from Google Cloud Console; identifies this app to Google
+CREDENTIALS_PATH = os.path.expanduser("~/.gdrive_credentials.json")
+DOWNLOADED_LIST_FILENAME = ".downloaded_files"
+
+
+def extract_folder_id(folder_id_or_url: str) -> str:
+    # Accept full URL like https://drive.google.com/drive/folders/<id>
+    match = re.search(r"/folders/([a-zA-Z0-9_-]+)", folder_id_or_url)
+    if match:
+        return match.group(1)
+    return folder_id_or_url
+
+
+def get_credentials() -> Credentials:
+    creds = None
+
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            if not os.path.exists(CREDENTIALS_PATH):
+                logger.error(
+                    f"OAuth credentials file not found at {CREDENTIALS_PATH}.\n"
+                    "Download it from Google Cloud Console > APIs & Services > Credentials\n"
+                    "and save it as ~/.gdrive_credentials.json"
+                )
+                sys.exit(1)
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            creds = flow.run_local_server(port=0)
+
+        with open(TOKEN_PATH, "w") as f:
+            f.write(creds.to_json())
+        logger.info(f"Credentials saved to {TOKEN_PATH}")
+
+    return creds
+
+
+def list_files_in_folder(service, folder_id: str) -> list[dict]:
+    files = []
+    page_token = None
+
+    while True:
+        response = (
+            service.files()
+            .list(
+                q=f"'{folder_id}' in parents and trashed = false",
+                spaces="drive",
+                fields="nextPageToken, files(id, name, mimeType, size)",
+                pageToken=page_token,
+            )
+            .execute()
+        )
+        files.extend(response.get("files", []))
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    return files
+
+
+def load_downloaded_list(output_dir: str) -> set[str]:
+    list_path = os.path.join(output_dir, DOWNLOADED_LIST_FILENAME)
+    if not os.path.exists(list_path):
+        return set()
+    with open(list_path, "r") as f:
+        return set(line.strip() for line in f if line.strip())
+
+
+def save_downloaded_list(output_dir: str, downloaded: set[str]) -> None:
+    list_path = os.path.join(output_dir, DOWNLOADED_LIST_FILENAME)
+    with open(list_path, "w") as f:
+        for file_id in sorted(downloaded):
+            f.write(file_id + "\n")
+
+
+def download_file(service, file_id: str, dest_path: str) -> None:
+    request = service.files().get_media(fileId=file_id)
+    with io.FileIO(dest_path, "wb") as fh:
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+            if status:
+                logger.info(f"  {int(status.progress() * 100)}%")
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <folder_id_or_url> [output_dir]")
+        sys.exit(1)
+
+    folder_id = extract_folder_id(sys.argv[1])
+
+    if len(sys.argv) > 2:
+        output_dir = sys.argv[2]
+    else:
+        default_dir = os.getcwd()
+        answer = input(f"Download directory [{default_dir}]: ").strip()
+        output_dir = answer if answer else default_dir
+
+    output_dir = os.path.abspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+
+    logger.info(f"Folder ID   : {folder_id}")
+    logger.info(f"Output dir  : {output_dir}")
+
+    creds = get_credentials()
+    service = build("drive", "v3", credentials=creds)
+
+    files = list_files_in_folder(service, folder_id)
+    logger.info(f"Found {len(files)} file(s) in folder")
+
+    downloaded = load_downloaded_list(output_dir)
+    skipped = 0
+    failed = 0
+
+    for file in files:
+        file_id = file["id"]
+        file_name = file["name"]
+        mime_type = file.get("mimeType", "")
+
+        # Skip Google Docs native formats (Docs, Sheets, Slides, etc.) — they require export
+        if mime_type.startswith("application/vnd.google-apps"):
+            logger.warning(f"Skipping Google Workspace file (not exportable as-is): {file_name}")
+            continue
+
+        if file_id in downloaded:
+            logger.info(f"Skipping (already downloaded): {file_name}")
+            skipped += 1
+            continue
+
+        dest_path = os.path.join(output_dir, file_name)
+        logger.info(f"Downloading: {file_name}")
+        try:
+            download_file(service, file_id, dest_path)
+            downloaded.add(file_id)
+            save_downloaded_list(output_dir, downloaded)
+            logger.success(f"Saved: {dest_path}")
+        except Exception as e:
+            logger.error(f"Failed to download {file_name}: {e}")
+            failed += 1
+
+    logger.info(f"Done. Downloaded: {len(downloaded) - skipped}, skipped: {skipped}, failed: {failed}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "scripts"
+version = "0.1.0"
+description = "Personal scripts"
+authors = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+google-api-python-client = "2.193.0"
+google-auth-httplib2 = "0.3.1"
+google-auth-oauthlib = "1.3.1"
+loguru = "*"
+python-dotenv = "*"
+fastapi = "*"
+playwright = "*"
+pydantic = "*"
+requests = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
