@@ -329,6 +329,45 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       ```
 
 
+### Python scripts environment
+
+Dependencies for scripts in `~/scripts/` are managed with [Poetry](https://python-poetry.org).
+
+#### Install Poetry (if not already installed)
+
+Do **not** use `pip install --user poetry` — it pollutes `~/.local/bin` with Poetry's own dependencies. Use the official installer instead:
+
+```bash
+sudo apt install python3-poetry
+```
+
+#### Create the virtual environment
+
+```bash
+cd ~/scripts
+poetry config virtualenvs.in-project true --local
+poetry install
+```
+
+This creates `~/scripts/.venv/` and installs all dependencies from `poetry.lock`.
+
+Scripts in `~/.local/bin/` that use this environment have their shebang pointing directly to `~/scripts/.venv/bin/python`, so they work without any manual activation.
+
+#### Add a new dependency
+
+```bash
+cd ~/scripts
+poetry add <package>
+```
+
+#### Update dependencies
+
+```bash
+cd ~/scripts
+poetry update
+```
+
+
 ### Install XFCE from sources
 
 1. **`xfce4-stuff`**

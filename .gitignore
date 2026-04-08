@@ -68,6 +68,16 @@
 !/.local/
 !/.local/git-prompt.sh
 !/.local/bin/
+!/.local/bin/*
+
+.local/bin/xfce4-panel
+.local/bin/xfconf-query
+.local/bin/xfce4-popup-applicationsmenu
+.local/bin/xfce4-popup-directorymenu
+.local/bin/xfce4-popup-whiskermenu
+.local/bin/xfce4-popup-windowmenu
+.local/bin/yamllint
+
 !/.local/bin/changexfce4dpi.sh
 !/.local/bin/run_as_user.sh
 !/.local/bin/open_nemo_search.sh
