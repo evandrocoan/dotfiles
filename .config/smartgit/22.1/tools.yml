@@ -62,11 +62,18 @@ tools:
   waitUntilFinished: false
   filePattern: '*'
   forFilesNotDirectories: false
+- name: Edit with Vscode
+  fileStarter: {command: code, parameters: '${filePath}'}
+  useForOpen: true
+  waitUntilFinished: false
+  filePattern: '*'
 - name: Delete Directory
   fileStarter: {command: rm, parameters: '-rf ${filePath}'}
   useForOpen: true
   waitUntilFinished: false
   filePattern: '*'
+  requiresConfirmation: true
+  confirmationMessage: Are you shure you want to delete?
 - name: Open with File Manager (nemo)
   fileStarter: {command: nemo, parameters: '${filePath}'}
   useForOpen: false
