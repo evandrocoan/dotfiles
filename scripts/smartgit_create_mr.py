@@ -87,8 +87,7 @@ def main():
     logger.info("Running oco to commit staged changes...")
     result = subprocess.run(["oco", "--yes"])
     if result.returncode != 0:
-        logger.error("oco exited with an error or was cancelled. Aborting.")
-        sys.exit(1)
+        logger.warning("oco exited with an error or was cancelled. Proceeding anyway.")
 
     # --- 2. read commit message from git log ---
     commit_msg = run(["git", "log", "-1", "--format=%s"]).stdout.strip()
