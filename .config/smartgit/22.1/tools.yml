@@ -67,6 +67,12 @@ tools:
   useForOpen: true
   waitUntilFinished: false
   filePattern: '*'
+- name: Open with File Manager (nemo)
+  fileStarter: {command: nemo, parameters: '${filePath}'}
+  useForOpen: false
+  waitUntilFinished: false
+  filePattern: '*'
+  forFilesNotDirectories: false
 - name: Delete Directory
   fileStarter: {command: rm, parameters: '-rf ${filePath}'}
   useForOpen: true
@@ -74,12 +80,6 @@ tools:
   filePattern: '*'
   requiresConfirmation: true
   confirmationMessage: Are you shure you want to delete?
-- name: Open with File Manager (nemo)
-  fileStarter: {command: nemo, parameters: '${filePath}'}
-  useForOpen: false
-  waitUntilFinished: false
-  filePattern: '*'
-  forFilesNotDirectories: false
 - id: gitConfigList
   name: Git Config
   fileStarter: {command: '${git}', parameters: config --list --show-origin}
@@ -140,14 +140,14 @@ tools:
   filePattern: '*'
 - name: Commit Staged with oco
   fileStarter: {command: xfce4-terminal, parameters: --maximize --command "bash -c
-      'oco --yes; echo Done - press Enter to close; read'"}
+      'oco --yes; echo Done - press Enter to close; read -t 30'"}
   useForOpen: false
   waitUntilFinished: false
   filePattern: '*'
 - name: Create MR on GitLab
   fileStarter: {command: xfce4-terminal, parameters: --maximize --command "bash -c
       'source ~/scripts/.venv/bin/activate && python3 ~/scripts/smartgit_create_mr.py;
-      echo; echo Done - press Enter to close; read'"}
+      echo; sleep 5;'"}
   useForOpen: false
   waitUntilFinished: false
   filePattern: '*'
