@@ -98,8 +98,9 @@ def main():
 
     # --- 3. suggest a branch name ---
     suggested = slugify(commit_msg)
-    logger.info("Suggested branch name: {}", suggested)
-    branch_name = suggested
+    branch_input = input(f"Branch name (Enter for '{suggested}', or type a new one): ").strip()
+    branch_name = branch_input if branch_input else suggested
+    logger.info("Branch name: {}", branch_name)
 
     target_input = input(f"Target branch (Enter for '{DEFAULT_TARGET_BRANCH}', or type a new one): ").strip()
     target_branch = target_input if target_input else DEFAULT_TARGET_BRANCH
