@@ -69,6 +69,8 @@
       <property name="&lt;Primary&gt;&lt;Alt&gt;h" type="string" value="ksysguard"/>
       <property name="&lt;Primary&gt;Print" type="string" value="flameshot gui"/>
       <property name="&lt;Alt&gt;v" type="string" value="copyq show"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Up" type="string" value="pactl set-sink-volume @DEFAULT_SINK@ +5%"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Down" type="string" value="pactl set-sink-volume @DEFAULT_SINK@ -5%"/>
       <property name="&lt;Super&gt;l" type="string" value="xflock4"/>
       <property name="&lt;Super&gt;F1" type="string" value="xfce4-popup-applicationsmenu"/>
       <property name="&lt;Super&gt;F2" type="string" value="xfce4-appfinder --collapsed">
@@ -227,7 +229,7 @@
     </property>
   </property>
   <property name="providers" type="array">
-    <value type="string" value="xfwm4"/>
     <value type="string" value="commands"/>
+    <value type="string" value="xfwm4"/>
   </property>
 </channel>
