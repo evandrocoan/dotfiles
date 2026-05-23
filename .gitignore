@@ -141,3 +141,8 @@
 !/.ssh/config
 
 *.log
+/.local/bin/rsynckmg
+/.local/bin/scpkmg
+/.local/bin/sshkmg
+/.local/bin/uv
+/.local/bin/uvx
