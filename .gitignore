@@ -150,6 +150,9 @@
 !/.claude/CLAUDE.md
 !/.claude/settings.json
 
+!/.github/
+!/.github/copilot-instructions.md
+
 *.log
 /.local/bin/rsynckmg
 /.local/bin/scpkmg

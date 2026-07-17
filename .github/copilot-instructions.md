@@ -1,0 +1,1 @@
+/home/someuser/.claude/CLAUDE.md
