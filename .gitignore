@@ -15,6 +15,7 @@
 !.gitconfig
 
 !README.md
+!CLAUDE.md
 !.nojekyll
 
 /.local/
@@ -139,6 +140,10 @@
 
 !/.ssh/
 !/.ssh/config
+
+!/.claude/
+!/.claude/CLAUDE.md
+!/.claude/settings.json
 
 *.log
 /.local/bin/rsynckmg
