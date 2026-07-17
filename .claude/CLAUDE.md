@@ -11,13 +11,31 @@ When the user requests a commit:
 3. Write a professional commit message as a plain text code block
 
 Commit message rules:
+- Always written in **English**
 - No conventional commit prefixes (no `feat:`, `fix:`, `chore:`, etc.)
 - Title line must be concise and descriptive, max 72 characters
 - Body lines must wrap at 80 columns
 - Explain *why* the change matters, not just what changed
 - Separate title from body with a blank line
 
-Example format:
+## Pull Requests
+
+Never create a pull request unless the user explicitly asks for it.
+
+When the user requests a pull request:
+
+1. Read each changed file to understand what was modified and why
+2. Analyze the architectural impact of the changes
+3. Write a professional pull request description as a plain text code block
+
+Pull request rules:
+- Always written in **Portuguese (Brazil)**
+- No emojis anywhere in the title or body
+- Title must be concise and descriptive
+- Body must explain *why* the change matters, not just what changed
+- Describe the architectural context and motivation behind the changes
+
+## Commit message example
 
 ```
 Allow git read-only commands without permission prompts
