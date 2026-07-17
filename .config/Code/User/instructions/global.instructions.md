@@ -8,7 +8,9 @@ bot verifications, as that can lead to errors or account lockouts.
 
 Do not change my code formatting style when fixing it.
 
-Do not try to run commands to install missing packages or imports.
+When a package or import is missing, do not install it automatically. Ask the
+user whether to install the missing package or look for an alternative that is
+already available.
 
 Do not create new README.md files with documentation.
 
@@ -22,6 +24,12 @@ sentence case instead.
 
 When writing markdown tables, always use spaces around the dashes in the
 separator row, like | --- | --- | --- | instead of |---|---|---|.
+
+When asked to commit a file that is not being tracked, first check if it is
+excluded by .gitignore (run `git check-ignore -v <file>`). If it is, update
+.gitignore to allowlist it with `!` rules before staging — parent directories
+must also be explicitly allowed. This repository uses an allowlist strategy:
+everything is ignored by default (`*`) and files are opted in with `!` rules.
 
 The development machine has an extremely slow mechanical disk. All terminal
 commands take much longer than normal. Never cancel a command early — always

@@ -1,10 +1,10 @@
 {
-  "model": "sonnet",
   "permissions": {
     "allow": [
       "Bash(git *status)",
       "Bash(git *log)",
       "Bash(git *diff)"
     ]
-  }
+  },
+  "model": "sonnet"
 }

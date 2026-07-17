@@ -1,5 +1,17 @@
 # Global Claude Instructions
 
+## General
+
+When browsing the web, if bot verification begins, wait for the user to complete
+the verification and then continue the task. Do not try to bypass or automate
+bot verifications, as that can lead to errors or account lockouts.
+
+Do not change my code formatting style when fixing it.
+
+When a package or import is missing, do not install it automatically. Ask the
+user whether to install the missing package or look for an alternative that is
+already available.
+
 ## Commits
 
 Never create a git commit unless the user explicitly asks for it.

@@ -105,3 +105,12 @@ XFCE_PANEL_PLUGIN_PATH=$HOME/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linu
 
 `~/.claude/CLAUDE.md` (global, not this file) — behavioral instructions for
 Claude: commit style, when to commit, etc.
+
+## Gitignore allowlist
+
+This home repository uses an allowlist strategy: `*` ignores everything by
+default and files are opted in with `!` rules. When asked to commit a file
+that is not tracked, first run `git check-ignore -v <file>` to check if it
+is excluded. If it is, add the necessary `!` rules to `.gitignore` before
+staging — parent directories must also be explicitly allowed before files
+within them can be unignored.
