@@ -25,6 +25,16 @@ sentence case instead.
 When writing markdown tables, always use spaces around the dashes in the
 separator row, like | --- | --- | --- | instead of |---|---|---|.
 
+When working in a project, keep CLAUDE.md and .github/copilot-instructions.md
+in sync:
+
+- If `.github/copilot-instructions.md` already exists: add
+  `@.github/copilot-instructions.md` at the top of `CLAUDE.md` so Claude
+  also reads those instructions.
+- If `.github/copilot-instructions.md` does not exist: create a symlink
+  pointing it to `CLAUDE.md` so Copilot reads the same instructions:
+  `ln -s CLAUDE.md .github/copilot-instructions.md`
+
 When asked to commit a file that is not being tracked, first check if it is
 excluded by .gitignore (run `git check-ignore -v <file>`). If it is, update
 .gitignore to allowlist it with `!` rules before staging — parent directories

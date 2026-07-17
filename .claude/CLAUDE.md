@@ -29,6 +29,7 @@ Commit message rules:
 - Body lines must wrap at 80 columns
 - Explain *why* the change matters, not just what changed
 - Separate title from body with a blank line
+- Never add `Co-Authored-By` trailers
 
 ## Pull Requests
 
@@ -46,6 +47,18 @@ Pull request rules:
 - Title must be concise and descriptive
 - Body must explain *why* the change matters, not just what changed
 - Describe the architectural context and motivation behind the changes
+
+## CLAUDE.md and .github/copilot-instructions.md sync
+
+When working in a project, keep CLAUDE.md and .github/copilot-instructions.md
+in sync using the following logic:
+
+- If `.github/copilot-instructions.md` **already exists**: add
+  `@.github/copilot-instructions.md` at the top of `CLAUDE.md` so Claude
+  also reads those instructions.
+- If `.github/copilot-instructions.md` **does not exist**: create a symlink
+  pointing it to `CLAUDE.md` so Copilot reads the same instructions:
+  `ln -s CLAUDE.md .github/copilot-instructions.md`
 
 ## Commit message example
 
