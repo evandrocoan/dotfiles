@@ -118,6 +118,11 @@
 
 !/.config/okularpartrc
 
+!/.config/Code/
+!/.config/Code/User/
+!/.config/Code/User/instructions/
+!/.config/Code/User/instructions/global.instructions.md
+
 !/.config/copyq/
 !/.config/copyq/copyq.conf
 
