@@ -55,16 +55,6 @@ def get_remote_project_path():
     sys.exit(1)
 
 
-def slugify(text):
-    # strip conventional commit type prefix (feat:, fix:, etc.) for branch name
-    text = re.sub(r"^[a-z]+(\([^)]+\))?!?:\s*", "", text)
-    text = text.lower()
-    text = re.sub(r"[^a-z0-9\s-]", "", text)
-    text = re.sub(r"\s+", "-", text.strip())
-    text = re.sub(r"-+", "-", text)
-    return text[:72]
-
-
 def gitlab_request(method, path, token, data=None):
     url = f"{GITLAB_URL}/api/v4{path}"
     headers = {
@@ -83,33 +73,34 @@ def gitlab_request(method, path, token, data=None):
 
 
 def main():
-    # --- 1. run oco interactively (user sees prompt and confirms) ---
+    # --- 1. ask for branch name and create it before committing ---
+    current_branch = get_current_branch()
+    raw_branch_input = input(f"Branch name (Enter or whitespace to keep '{current_branch}'): ")
+    if raw_branch_input.strip():
+        branch_name = raw_branch_input.strip()
+        logger.info("Creating branch '{}' from '{}'...", branch_name, current_branch)
+        subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+    else:
+        branch_name = current_branch
+        logger.info("Keeping current branch '{}'", branch_name)
+
+    target_input = input(f"Target branch (Enter for '{DEFAULT_TARGET_BRANCH}', or type a new one): ").strip()
+    target_branch = target_input if target_input else DEFAULT_TARGET_BRANCH
+
+    # --- 2. run oco interactively (user sees prompt and confirms) ---
     logger.info("Running oco to commit staged changes...")
     result = subprocess.run(["oco", "--yes"])
     if result.returncode != 0:
         logger.warning("oco exited with an error or was cancelled. Proceeding anyway.")
 
-    # --- 2. read commit message from git log ---
+    # --- 3. read commit message from git log (used as MR title) ---
     commit_msg = run(["git", "log", "-1", "--format=%s"]).stdout.strip()
     if not commit_msg:
         logger.error("Could not read the last commit message.")
         sys.exit(1)
     logger.info("Commit: {}", commit_msg)
 
-    # --- 3. suggest a branch name ---
-    suggested = slugify(commit_msg)
-    branch_input = input(f"Branch name (Enter for '{suggested}', or type a new one): ").strip()
-    branch_name = branch_input if branch_input else suggested
-    logger.info("Branch name: {}", branch_name)
-
-    target_input = input(f"Target branch (Enter for '{DEFAULT_TARGET_BRANCH}', or type a new one): ").strip()
-    target_branch = target_input if target_input else DEFAULT_TARGET_BRANCH
-
-    # --- 4. create branch from current branch and push ---
-    source_branch = get_current_branch()
-    logger.info("Creating branch '{}' from '{}'...", branch_name, source_branch)
-    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
-
+    # --- 4. push ---
     logger.info("Pushing '{}' to origin...", branch_name)
     subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
 
