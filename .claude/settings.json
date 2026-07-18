@@ -1,9 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git *status)",
-      "Bash(git *log)",
-      "Bash(git *diff)"
+      "Bash(kubectl get *)",
+      "Bash(kubectl describe *)",
+      "Bash(kubectl explain *)",
+      "Bash(kubectl api-resources*)",
+      "Bash(kubectl api-versions*)",
+      "Bash(kubectl logs *)",
+      "Bash(kubectl top *)",
+      "Bash(kubectl version*)",
+      "Bash(kubectl cluster-info*)",
+      "Bash(kubectl config get-contexts*)",
+      "Bash(kubectl config current-context*)",
+      "Bash(docker exec *)",
+      "Bash(git status*)",
+      "Bash(git * status*)",
+      "Bash(git log*)",
+      "Bash(git * log*)",
+      "Bash(git show*)",
+      "Bash(git * show*)",
+      "Bash(git diff*)",
+      "Bash(git * diff*)"
     ]
   },
   "model": "sonnet"
