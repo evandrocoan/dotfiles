@@ -1,5 +1,7 @@
 # Global Claude Instructions
 
+Never run commands with 2>/dev/null because hide errors.
+
 ## General
 
 When browsing the web, if bot verification begins, wait for the user to complete
