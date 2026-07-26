@@ -49,8 +49,14 @@ def parse_time_line(state, line):
         state.last_block_date = state.actual_date
         state.first_date = ""
         state.last_date = ""
-        if state.entries and (state.total_time and state.total_time < 6 or state.total_time > 10):
-            state.warnings.append(f"on {get_day_of_the_week(state.entries[-1]):10} Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
+        if state.entries:
+            day = get_day_of_the_week(state.entries[-1])
+            if day == 'Sunday' and state.total_time:
+                state.warnings.append(f"on {day:10} Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
+            elif day == 'Saturday' and state.total_time > 10:
+                state.warnings.append(f"on {day:10} Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
+            elif day not in ('Saturday', 'Sunday') and (state.total_time and state.total_time < 6 or state.total_time > 10):
+                state.warnings.append(f"on {day:10} Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
         state.total_time = 0
 
     state.line_count += 1
@@ -80,7 +86,19 @@ def parse_time_line(state, line):
                 state.errors.append(str(e))
                 return
             comment = raw[1:].strip()
-            title = remaining[:note_marker.start()].strip()
+            before_note = remaining[:note_marker.start()].strip()
+            depth = 0
+            end_pos = len(remaining)
+            for i, c in enumerate(remaining[note_marker.start():]):
+                if c == '(':
+                    depth += 1
+                elif c == ')':
+                    depth -= 1
+                    if depth == 0:
+                        end_pos = note_marker.start() + i + 1
+                        break
+            after_note = remaining[end_pos:].strip()
+            title = ' '.join(filter(None, [before_note, after_note]))
         else:
             comment = ''
             title = remaining.strip()
@@ -147,14 +165,14 @@ def verify_titles(entries, url, headers):
                 issue_cache[issue_id] = None
 
         remote_subject = issue_cache[issue_id]
-        key = (issue_id, local_title)
+        key = (issue_id, local_title.strip())
         if key in seen:
             continue
         seen.add(key)
 
         if remote_subject is None:
             mismatches.append((issue_id, local_title, f'<erro ao consultar #{issue_id}>'))
-        elif local_title != remote_subject:
+        elif local_title.strip() != remote_subject.strip():
             mismatches.append((issue_id, local_title, remote_subject))
 
     return mismatches
@@ -192,7 +210,8 @@ def main():
         "activity_id": "",
     }]:
         if last_date and last_date != data['spent_on'] or data['hours'] == 0:
-            print('total', total)
+            day = datetime.datetime.strptime(last_date, "%Y-%m-%d").strftime("%A")
+            print(f'total {total} ({day})')
             print()
             total = 0
         if data['hours'] == 0:
@@ -311,12 +330,13 @@ def test_comment_with_parentheses_3():
     assert any("Unbalanced parentheses on input" in e for e in state.errors)
 
 
-def test_comment_after_title():
+def test_comment_before_title():
     state = State()
     parse_time_line(state,
-        "1. Add 1.0 hours/8 (2023/04/12) #80661  (:some note)"
+        "1. Add 1.0 hours/8 (2023/04/12) #80661 (:some note) fusilier Octocorallia reprovingly"
     )
     assert state.entries[0]['comments'] == "some note"
+    assert state.entries[0]['title'] == "fusilier Octocorallia reprovingly"
 
 
 def test_mixed_data_raise_runtime_error():
@@ -424,12 +444,12 @@ def test_too_much_hours_raises_runtime_error():
 1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
 1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
 
-1. Add 2.0 hours/8 (2023/04/15) #89081 Jacaltec sepi
-1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
+1. Add 2.0 hours/8 (2023/04/14) #89081 Jacaltec sepi
+1. Add 5.0 hours/8 (2023/04/14) #89081 foremasthand ungeniu
 
-1. Add 5.0 hours/8 (2023/04/16) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/16) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/16) #89081 emanatory radiolocator
+1. Add 5.0 hours/8 (2023/04/17) #81352 Serapis unwomanlike prominency ba
+1. Add 1.0 hours/8 (2023/04/17) #81236 mesomorphy scandalizer u
+1. Add 5.0 hours/8 (2023/04/17) #89081 emanatory radiolocator
     """
 
     state = State()
@@ -445,11 +465,11 @@ def test_too_less_hours_raises_runtime_error():
 1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
 1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
 
-1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
+1. Add 5.0 hours/8 (2023/04/14) #89081 foremasthand ungeniu
 
-1. Add 5.0 hours/8 (2023/04/16) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/16) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/16) #89081 emanatory radiolocator
+1. Add 5.0 hours/8 (2023/04/17) #81352 Serapis unwomanlike prominency ba
+1. Add 1.0 hours/8 (2023/04/17) #81236 mesomorphy scandalizer u
+1. Add 5.0 hours/8 (2023/04/17) #89081 emanatory radiolocator
     """
 
     state = State()
@@ -457,6 +477,40 @@ def test_too_less_hours_raises_runtime_error():
         parse_time_line(state, line)
 
     assert "Invalid total time 5.0" in str(state.warnings)
+
+
+def test_saturday_allows_less_than_6h():
+    # 2023/04/15 is a Saturday — no minimum applies
+    lines = """
+1. Add 3.0 hours/8 (2023/04/15) #89081 some saturday work
+    """
+    state = State()
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert not state.warnings
+
+
+def test_saturday_warns_above_10h():
+    # 2023/04/15 is a Saturday — maximum of 10h still applies
+    lines = """
+1. Add 6.0 hours/8 (2023/04/15) #89081 some saturday work
+1. Add 5.0 hours/8 (2023/04/15) #81448 more saturday work
+    """
+    state = State()
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert "Invalid total time 11.0" in str(state.warnings)
+
+
+def test_sunday_warns_any_hours():
+    # 2023/04/16 is a Sunday — any logged hours generate a warning
+    lines = """
+1. Add 2.0 hours/8 (2023/04/16) #89081 should not work on sunday
+    """
+    state = State()
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert "Invalid total time 2.0" in str(state.warnings)
 
 
 g_argumentParser = argparse.ArgumentParser(
@@ -480,7 +534,7 @@ File to open and parse contents to send to redmine time api.
 <option value="9">Testing</option>
 <option value="15">Merge</option></select>
 # File format:
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
+1. Add 5.0 hours/8 (2023/04/12) #89081 (:nota opcional) collectibility cartmaker dropsied le
 
 1. Add 2.0 hours/8 (2023/04/15) #8xxxx Jacaltec sepi
 1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
