@@ -23,7 +23,7 @@ def get_day_of_the_week(entry) -> str:
 
 
 class State(object):
-    regex = re.compile(r"Add\s+(?P<hours>[\d.]+)\s+hours/(?P<activity_id>[\d.]+)\s+\((?P<date>\d{4}/\d{2}/\d{2})\)\s+#(?P<issue_id>[^\s]+)(\s+\((?P<comment>[^)]+)\))?")
+    regex = re.compile(r"Add\s+(?P<hours>[\d.]+)\s+hours/(?P<activity_id>[\d.]+)\s+\((?P<date>\d{4}/\d{2}/\d{2})\)\s+#(?P<issue_id>[^\s]+)")
 
     def __init__(self):
         self.entries = []
@@ -34,9 +34,10 @@ class State(object):
         self.actual_date = datetime.datetime.strptime("1990/01/02", "%Y/%m/%d")
         self.last_block_date = datetime.datetime.strptime("1990/01/01", "%Y/%m/%d")
         self.warnings = []
+        self.errors = []
 
     def __str__(self):
-        return f"entries {self.entries}, first_date {self.first_date}, last_date {self.last_date}, total_time {self.total_time}, actual_date {self.actual_date}, last_block_date {self.last_block_date}, warnings {self.warnings}."
+        return f"entries {self.entries}, first_date {self.first_date}, last_date {self.last_date}, total_time {self.total_time}, actual_date {self.actual_date}, last_block_date {self.last_block_date}, warnings {self.warnings}, errors {self.errors}."
 
     def __repr__(self):
         return str(self)
@@ -48,7 +49,7 @@ def parse_time_line(state, line):
         state.last_block_date = state.actual_date
         state.first_date = ""
         state.last_date = ""
-        if state.total_time and state.total_time < 6 or state.total_time > 10:
+        if state.entries and (state.total_time and state.total_time < 6 or state.total_time > 10):
             state.warnings.append(f"on {get_day_of_the_week(state.entries[-1]):10} Invalid total time {state.total_time}, Line {state.line_count}: {state.entries[-1]}.")
         state.total_time = 0
 
@@ -61,27 +62,44 @@ def parse_time_line(state, line):
         if not state.last_date:
             state.last_date = state.first_date
 
-        if state.first_date != state.last_date: raise RuntimeError(f"Each line group must be from the same date! Line {state.line_count}: {line}.")
+        if state.first_date != state.last_date:
+            state.errors.append(f"Each line group must be from the same date! Line {state.line_count}: {line}.")
+            return
         state.last_date = state.first_date
 
         hours = match.group('hours')
         issue_id = match.group('issue_id')
         activity_id = match.group('activity_id')
-        comment = match.group('comment')
-        state.total_time += float(hours)
 
-        if comment:
-            begin = match.start('comment')
-            remaining = line[begin-1:]
-            comment = extract_outermost_parenthesis_content(state, remaining)
+        remaining = line[match.end('issue_id'):]
+        note_marker = re.search(r'\(:', remaining)
+        if note_marker:
+            try:
+                raw = extract_outermost_parenthesis_content(state, remaining[note_marker.start():])
+            except RuntimeError as e:
+                state.errors.append(str(e))
+                return
+            comment = raw[1:].strip()
+            title = remaining[:note_marker.start()].strip()
+        else:
+            comment = ''
+            title = remaining.strip()
 
-        if not state.first_date: raise RuntimeError(f"Invalid data first_date {state.first_date}, Line {state.line_count}: {line}.")
-        if not hours: raise RuntimeError(f"Invalid data hours {hours}, Line {state.line_count}: {line}.")
-        if not issue_id: raise RuntimeError(f"Invalid data issue_id {issue_id}, Line {state.line_count}: {line}.")
-        if not activity_id or int(activity_id) not in (8, 9, 15): raise RuntimeError(f"Invalid data activity_id {activity_id}, Line {state.line_count}: {line}.")
+        try:
+            issue_id_int = int(issue_id)
+        except ValueError:
+            state.errors.append(f"Invalid data issue_id {issue_id!r}, Line {state.line_count}: {line}.")
+            return
+
+        try:
+            if int(activity_id) not in (8, 9, 15):
+                raise ValueError
+        except ValueError:
+            state.errors.append(f"Invalid data activity_id {activity_id}, Line {state.line_count}: {line}.")
+            return
 
         entry = {
-            "issue_id": int(issue_id),
+            "issue_id": issue_id_int,
             "hours": float(hours),
             "spent_on": state.first_date.replace('/', '-'),
             "activity_id": activity_id,
@@ -90,19 +108,56 @@ def parse_time_line(state, line):
             state.warnings.append(f"on {get_day_of_the_week(entry):10} Line {state.line_count}: Comment {len(comment)} is too big for entry {entry}!")
 
         if comment: entry['comments'] = comment[:1000]
+        if title: entry['title'] = title
 
         next_date = datetime.datetime.strptime(state.first_date, "%Y/%m/%d")
 
-        if state.actual_date > next_date: raise RuntimeError(f"Invalid date {state.actual_date}, should always be >= Line {state.line_count}: {line}.")
+        if state.actual_date > next_date:
+            state.errors.append(f"Invalid date {state.actual_date}, should always be >= Line {state.line_count}: {line}.")
+            return
         state.actual_date = next_date
 
         if datetime.datetime.strptime(state.first_date, "%Y/%m/%d") <= state.last_block_date:
-            raise RuntimeError(f"The next block must be from higher date! Line {state.line_count}! Line {state.line_count}: {line}.")
+            state.errors.append(f"The next block must be from higher date! Line {state.line_count}! Line {state.line_count}: {line}.")
+            return
 
+        state.total_time += float(hours)
         state.entries.append(entry)
 
     elif line:
-        raise RuntimeError(f"Line with invalid data! Line {state.line_count}: {line}.")
+        state.errors.append(f"Line with invalid data! Line {state.line_count}: {line}.")
+
+
+def verify_titles(entries, url, headers):
+    mismatches = []
+    issue_cache = {}
+    seen = set()
+
+    for entry in entries:
+        issue_id = entry['issue_id']
+        local_title = entry.get('title', '')
+        if not local_title:
+            continue
+
+        if issue_id not in issue_cache:
+            response = requests.get(f'{url}/issues/{issue_id}.json', headers=headers)
+            if response.status_code == 200:
+                issue_cache[issue_id] = response.json()['issue']['subject']
+            else:
+                issue_cache[issue_id] = None
+
+        remote_subject = issue_cache[issue_id]
+        key = (issue_id, local_title)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        if remote_subject is None:
+            mismatches.append((issue_id, local_title, f'<erro ao consultar #{issue_id}>'))
+        elif local_title != remote_subject:
+            mismatches.append((issue_id, local_title, remote_subject))
+
+    return mismatches
 
 
 def main():
@@ -150,19 +205,39 @@ def main():
         for warning in state.warnings:
             print("warning", warning, '\n')
 
+    title_mismatches = verify_titles(state.entries, url, headers)
+    if title_mismatches:
+        print("\nTítulos divergentes:")
+        for issue_id, local, remote in title_mismatches:
+            print(f"  #{issue_id} - {local}")
+            print(f"  #{issue_id} + {remote}")
+            print()
+
+    if state.errors:
+        print("\nErros de parse:")
+        for error in state.errors:
+            print(f"  {error}")
+        print("\nEnvio abortado.")
+        return
+
+    if arguments.dry_run:
+        print("\nDry run — nenhum dado enviado.")
+        return
+
     input("Press enter to send data...")
     input("Press enter to send data...")
     input("Press enter to send data...")
     errors = []
     for data in state.entries:
-        data_json = json.dumps({ "time_entry": data })
+        payload = {k: v for k, v in data.items() if k != 'title'}
+        data_json = json.dumps({ "time_entry": payload })
         response = requests.post(f'{url}/time_entries.json', headers=headers, data=data_json)
 
         if response.status_code in (200, 201):
             print("Response was successful.", repr(response.text))
         else:
             print("Response was not successful:", response.status_code, repr(response.text), data_json)
-            errors.append((data, response.status_code, response.text))
+            errors.append((payload, response.status_code, response.text))
 
     if errors:
         print("\n\nWARNING\n\nThe following requests resulted in errors:")
@@ -213,27 +288,35 @@ def extract_outermost_parenthesis_content(state, input_data):
 def test_comment_with_parentheses_1():
     state = State()
     parse_time_line(state,
-        "1. Add 1.0 hours/8 (2023/04/12) #80661 (some comment with (parentheses) inside) fusilier Octocorallia reprovingly Rickettsiales m"
+        "1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m (:some comment with (parentheses) inside)"
     )
     assert state.entries[0]['comments'] == "some comment with (parentheses) inside"
 
 
 def test_comment_with_parentheses_2():
     state = State()
-    with pytest.raises(RuntimeError, match="Unbalanced parentheses on input"):
-        parse_time_line(state,
-            "1. Add 1.0 hours/8 (2023/04/12) #80661 (some comment with (parentheses inside) fusilier Octocorallia reprovingly Rickettsiales m"
-        )
-        assert not state
+    parse_time_line(state,
+        "1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m (:some comment with (parentheses inside)"
+    )
+    assert not state.entries
+    assert any("Unbalanced parentheses on input" in e for e in state.errors)
 
 
 def test_comment_with_parentheses_3():
     state = State()
-    with pytest.raises(RuntimeError, match="Unbalanced parentheses on input"):
-        parse_time_line(state,
-            "1. Add 1.0 hours/8 (2023/04/12) #80661 (some comment with parentheses) inside) fusilier Octocorallia reprovingly Rickettsiales m"
-        )
-        assert not state
+    parse_time_line(state,
+        "1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m (:some comment with parentheses) inside)"
+    )
+    assert not state.entries
+    assert any("Unbalanced parentheses on input" in e for e in state.errors)
+
+
+def test_comment_after_title():
+    state = State()
+    parse_time_line(state,
+        "1. Add 1.0 hours/8 (2023/04/12) #80661  (:some note)"
+    )
+    assert state.entries[0]['comments'] == "some note"
 
 
 def test_mixed_data_raise_runtime_error():
@@ -250,9 +333,9 @@ def test_mixed_data_raise_runtime_error():
     """
 
     state = State()
-    with pytest.raises(RuntimeError, match="Each line group must be from the same date"):
-        for line in lines.split('\n'):
-            parse_time_line(state, line)
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert any("Each line group must be from the same date" in e for e in state.errors)
 
 
 def test_invalid_issue_id_raises_runtime_error():
@@ -270,9 +353,9 @@ def test_invalid_issue_id_raises_runtime_error():
     """
 
     state = State()
-    with pytest.raises(ValueError, match=r"invalid literal for int\(\) with base 10:"):
-        for line in lines.split('\n'):
-            parse_time_line(state, line)
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert any("Invalid data issue_id" in e for e in state.errors)
 
 
 def test_invalid_line_parse_raises_runtime_error():
@@ -290,9 +373,9 @@ def test_invalid_line_parse_raises_runtime_error():
     """
 
     state = State()
-    with pytest.raises(RuntimeError, match=r"Line with invalid data"):
-        for line in lines.split('\n'):
-            parse_time_line(state, line)
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert any("Line with invalid data" in e for e in state.errors)
 
 
 def test_invalid_date_raises_runtime_error():
@@ -310,9 +393,9 @@ def test_invalid_date_raises_runtime_error():
     """
 
     state = State()
-    with pytest.raises(RuntimeError, match=r"Invalid date 2023-04-15 00:00:00, should always be >="):
-        for line in lines.split('\n'):
-            parse_time_line(state, line)
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert any("Invalid date 2023-04-15 00:00:00, should always be >=" in e for e in state.errors)
 
 
 def test_same_date_different_blocks_raises_runtime_error():
@@ -330,9 +413,9 @@ def test_same_date_different_blocks_raises_runtime_error():
     """
 
     state = State()
-    with pytest.raises(RuntimeError, match=r"The next block must be from higher date"):
-        for line in lines.split('\n'):
-            parse_time_line(state, line)
+    for line in lines.split('\n'):
+        parse_time_line(state, line)
+    assert any("The next block must be from higher date" in e for e in state.errors)
 
 
 def test_too_much_hours_raises_runtime_error():
@@ -384,6 +467,9 @@ Run your code and your tests with a single file.
 """,
         formatter_class=argparse.RawTextHelpFormatter,
     )
+
+g_argumentParser.add_argument( "--dry-run", action="store_true", default=False,
+        help="Roda todas as validações sem enviar dados ao Redmine." )
 
 g_argumentParser.add_argument( "-f", "--file", action="store", default="test.txt",
         help=
