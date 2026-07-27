@@ -62,6 +62,14 @@ in sync using the following logic:
   pointing it to `CLAUDE.md` so Copilot reads the same instructions:
   `ln -s CLAUDE.md .github/copilot-instructions.md`
 
+## Memory policy
+
+Do not use the private memory system (`~/.claude/projects/`) to store
+decisions, preferences, or context learned during sessions. Instead, persist
+all relevant information directly in the project's `CLAUDE.md` or this global
+`~/.claude/CLAUDE.md` so that every user, machine, and AI session has access
+to the same up-to-date context via version control.
+
 ## Commit message example
 
 ```
