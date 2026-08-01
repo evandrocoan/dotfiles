@@ -1,6 +1,6 @@
 # Global Claude Instructions
 
-Never run commands with 2>/dev/null because hide errors.
+Never redirect stderr to /dev/null (2>/dev/null) in any command, because it hides errors and makes failures impossible to diagnose.
 
 ## General
 
@@ -9,6 +9,11 @@ the verification and then continue the task. Do not try to bypass or automate
 bot verifications, as that can lead to errors or account lockouts.
 
 Do not change my code formatting style when fixing it.
+
+When editing or adding content to an existing file, always match the language
+already used in that file. If the file is in English, write in English. If the
+file is in Portuguese, write in Portuguese. Never mix languages within the same
+file unless the existing content already does so.
 
 When a package or import is missing, do not install it automatically. Ask the
 user whether to install the missing package or look for an alternative that is
@@ -62,6 +67,24 @@ in sync using the following logic:
   pointing it to `CLAUDE.md` so Copilot reads the same instructions:
   `ln -s CLAUDE.md .github/copilot-instructions.md`
 
+## Documentation
+
+Never write documentation that embeds data which becomes stale as the
+code evolves. Specifically:
+
+- No hardcoded counts ("28 tools", "3 graphs", "11 entity types") —
+  omit the number or link to the authoritative source (code, CLAUDE.md
+  changelog anchor) instead.
+- No specific version numbers in prose unless they describe a historical
+  event ("removed in v2.1") rather than current state.
+- No snapshots of lists that are maintained in code (tool names, module
+  names, CLI subcommands, env var names) unless the list is reproduced
+  directly from the source and the file makes clear it must be kept in sync.
+
+When describing quantities, use qualitative language ("typed, tenant-scoped
+tools", "several cross-call rollup passes") so the description stays true
+even as the codebase grows.
+
 ## Memory policy
 
 Do not use the private memory system (`~/.claude/projects/`) to store
@@ -69,6 +92,23 @@ decisions, preferences, or context learned during sessions. Instead, persist
 all relevant information directly in the project's `CLAUDE.md` or this global
 `~/.claude/CLAUDE.md` so that every user, machine, and AI session has access
 to the same up-to-date context via version control.
+
+## Shell scripts
+
+Ao escrever ou editar scripts bash, consulte primeiro
+`~/.claude/guidelines/bash-scripts.md` para as convenções de estilo.
+
+## ExcaliDash / Excalidraw MCP workflow
+
+When asked to create, draw, or generate a diagram, follow this workflow using
+the registered MCP tools:
+
+1. `read_me` (excalidraw) — load the element format reference
+2. `create_view` (excalidraw) — author and render the elements JSON
+3. `read_checkpoint` (excalidraw) — extract elements using the returned checkpointId
+4. `save_to_excalidash` (excalidash) — persist the drawing; return the URL to the user
+
+Full tool reference: @/myfiles/Programs/ExcaliDash/mcp/README.md
 
 ## Commit message example
 
