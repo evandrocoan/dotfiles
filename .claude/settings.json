@@ -20,7 +20,13 @@
       "Bash(git show*)",
       "Bash(git * show*)",
       "Bash(git diff*)",
-      "Bash(git * diff*)"
+      "Bash(poetry run bin/embed.py query*)",
+      "Bash(git * diff*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "additionalDirectories": [
+      "/home/someuser/.local/bin"
     ]
   },
   "model": "sonnet"
