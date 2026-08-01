@@ -149,6 +149,8 @@
 !/.claude/
 !/.claude/CLAUDE.md
 !/.claude/settings.json
+!/.claude/guidelines/
+!/.claude/guidelines/**
 
 !/.github/
 !/.github/copilot-instructions.md
