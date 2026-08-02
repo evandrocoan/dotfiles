@@ -10,10 +10,14 @@ bot verifications, as that can lead to errors or account lockouts.
 
 Do not change my code formatting style when fixing it.
 
-When editing or adding content to an existing file, always match the language
-already used in that file. If the file is in English, write in English. If the
-file is in Portuguese, write in Portuguese. Never mix languages within the same
-file unless the existing content already does so.
+When editing or adding content to an existing file, match the language already
+used in that file. If the file is in English, write in English. If the file is
+in Portuguese, write in Portuguese.
+
+If the file already mixes languages, ask the user before proceeding:
+- Continue adding content in the dominant language?
+- Pick one language and apply it to the new content only?
+- Correct the entire file to a single language?
 
 When a package or import is missing, do not install it automatically. Ask the
 user whether to install the missing package or look for an alternative that is
@@ -84,6 +88,82 @@ code evolves. Specifically:
 When describing quantities, use qualitative language ("typed, tenant-scoped
 tools", "several cross-call rollup passes") so the description stays true
 even as the codebase grows.
+
+## Writing README.md and CLAUDE.md
+
+### Role split
+
+**README.md** is user-facing: setup, operational usage, runbooks. It
+answers "how do I run this?"
+
+**CLAUDE.md** is AI-facing: architectural context, cross-file
+invariants, non-obvious constraints, decisions and their rationale. It
+answers "why is the code structured this way, and what breaks if I
+change it?"
+
+### Staleness traps — never write these in either file
+
+**Lists maintained in code.** Every item you name will silently diverge
+as the code evolves. Never duplicate:
+
+- Module inventories ("the package contains loader.py, classifier.py…")
+- Entity/node-type or relationship tables copied from prompts or schemas
+- Config-constant tables copied from config.py
+- Env-var tables copied from .env.example
+- Specific model names, proxy aliases, or default values from config
+  files or code constants
+- Schema field names maintained in Pydantic models or YAML manifests
+- Tenant-specific data (IVR patterns, department tags, sub-bin names)
+
+**Hardcoded counts** — already covered in the Documentation section
+above. This rule applies to counts embedded inside narrative prose too,
+not only standalone numbers ("Five rollup passes", "three signal
+extractors").
+
+**Deployment-specific values** that differ per environment or tenant
+should never appear in shared docs, even as examples.
+
+### The pointer pattern
+
+Instead of duplicating, point to the authoritative source:
+
+| Instead of… | Write… |
+|---|---|
+| Listing entity types or relationships | "defined in `prompts.py` and `call_center_ontology.owl`" |
+| Listing config constants with defaults | "see `config.py` — each constant has an inline comment" |
+| Listing env vars with values | "see `.env.example` — annotated list" |
+| Listing module files | "source under `call_pipeline/`; see CLAUDE.md for per-module descriptions" |
+| "Five rollup passes: A, B, C…" | "multiple idempotent Cypher passes — see `rollup.py`" |
+| Hardcoded model names | "configurable via `litellm-config.yaml`" |
+| Specific concurrency defaults | "code-level cap in `signals.py` — tune together with `.env`" |
+
+### What belongs in CLAUDE.md (and not in code comments)
+
+CLAUDE.md should contain what Claude cannot derive by reading any single
+file — cross-file invariants and non-obvious "why":
+
+- **Data flow narrative**: what calls what, in what order, why the order
+  matters (e.g. "don't move env setup below `import cognee`")
+- **Load-bearing constraints**: things that would surprise a reader and
+  have non-local consequences (e.g. "EMBEDDING_MODEL must start with
+  `hosted_vllm/` — see KNOWN_ISSUES.md for why")
+- **Cross-file coupling**: shared state, shared constants, ordering
+  dependencies between modules
+- **Gotchas that span multiple files**: e.g. "throughput is capped in
+  three separate places; bumping only `.env` does not raise throughput"
+- **Architectural decisions with permanent consequences**: e.g. "URI
+  scheme is frozen — renaming the MCP server breaks every stored
+  citation"
+
+Specific values (concurrency numbers, default batch sizes, function
+names) belong in code comments, not in CLAUDE.md. CLAUDE.md should
+describe the invariant and point to the file — not replicate the value.
+
+### Changelog anchors are exempt
+
+Version anchor paragraphs (e.g. "v2.1.0 anchor — tagged…") describe
+what was true at a historical moment and are not subject to the
+staleness rules above. They must not be edited retroactively.
 
 ## Memory policy
 
