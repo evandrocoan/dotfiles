@@ -173,6 +173,14 @@ all relevant information directly in the project's `CLAUDE.md` or this global
 `~/.claude/CLAUDE.md` so that every user, machine, and AI session has access
 to the same up-to-date context via version control.
 
+## Dockerfile naming
+
+Alternative Dockerfiles must be named with the environment as a **prefix**
+before `.Dockerfile`, not as a suffix after `Dockerfile`:
+
+- Correct: `dev.Dockerfile`, `test.Dockerfile`
+- Wrong: `Dockerfile.dev`, `Dockerfile.test`
+
 ## Shell scripts
 
 Ao escrever ou editar scripts bash, consulte primeiro
