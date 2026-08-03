@@ -10,9 +10,12 @@ bot verifications, as that can lead to errors or account lockouts.
 
 Do not change my code formatting style when fixing it.
 
-When editing or adding content to an existing file, match the language already
-used in that file. If the file is in English, write in English. If the file is
-in Portuguese, write in Portuguese.
+CLAUDE.md files (both project-level and global) must always be written in
+English, regardless of the surrounding codebase language.
+
+When editing or adding content to any other existing file, match the language
+already used in that file. If the file is in English, write in English. If the
+file is in Portuguese, write in Portuguese.
 
 If the file already mixes languages, ask the user before proceeding:
 - Continue adding content in the dominant language?
