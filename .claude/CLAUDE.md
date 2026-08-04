@@ -2,6 +2,15 @@
 
 Never redirect stderr to /dev/null (2>/dev/null) in any command, because it hides errors and makes failures impossible to diagnose.
 
+## Reading CLAUDE.md before acting
+
+Before running any command or making any file edit, read the CLAUDE.md of
+every working directory in the session — both the primary directory and all
+additional working directories listed in the session context. Each project
+may have its own environment constraints, tool execution rules, and
+architectural decisions that override default behavior. Skipping any of them
+causes incorrect actions that cannot be undone safely.
+
 ## General
 
 When browsing the web, if bot verification begins, wait for the user to complete
