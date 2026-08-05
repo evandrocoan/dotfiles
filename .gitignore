@@ -146,6 +146,8 @@
 !/.ssh/
 !/.ssh/config
 
+!/.codex/
+!/.codex/AGENTS.md
 !/.claude/
 !/.claude/CLAUDE.md
 !/.claude/settings.json
