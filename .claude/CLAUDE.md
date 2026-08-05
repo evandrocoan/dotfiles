@@ -71,6 +71,22 @@ Pull request rules:
 - Body must explain *why* the change matters, not just what changed
 - Describe the architectural context and motivation behind the changes
 
+### GitLab merge requests through Git push options
+
+When GitLab CLI or an MCP server is unavailable, create a merge request by
+pushing the branch with GitLab push options. Set the target branch, title, and
+description explicitly along with `merge_request.create`.
+
+Push option values cannot contain literal newlines. For a multiline merge
+request description, use the literal `\\n` escape sequence; GitLab converts it
+to line breaks. Never URL-encode line breaks as `%0A`, because GitLab stores
+that text verbatim.
+
+`merge_request.title` and `merge_request.description` can also update an
+existing merge request when supplied with a later push. Prefer an ordinary
+branch update or the GitLab API/MCP for such edits; do not rewrite history
+solely to alter metadata unless explicitly necessary and safe.
+
 ## CLAUDE.md and .github/copilot-instructions.md sync
 
 When working in a project, keep CLAUDE.md and .github/copilot-instructions.md
