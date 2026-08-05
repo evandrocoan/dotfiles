@@ -1,1 +1,1 @@
-/home/someuser/.claude/CLAUDE.md
+../.claude/CLAUDE.md
