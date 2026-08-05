@@ -110,7 +110,17 @@ Claude: commit style, when to commit, etc.
 
 This home repository uses an allowlist strategy: `*` ignores everything by
 default and files are opted in with `!` rules. When asked to commit a file
-that is not tracked, first run `git check-ignore -v <file>` to check if it
-is excluded. If it is, add the necessary `!` rules to `.gitignore` before
-staging — parent directories must also be explicitly allowed before files
-within them can be unignored.
+that is not tracked or is ignored, follow this procedure before staging:
+
+1. Run `git check-ignore -v <file>` to identify the rule excluding it.
+2. If the file should be tracked, add specific `!` rules to `.gitignore`.
+   Explicitly allow parent directories when needed.
+3. Confirm the file is no longer ignored. Also verify that associated secrets
+   (for example, the real `.env` file) remain ignored with `git check-ignore
+   -v <secret-file>` and `git status --short --ignored <directory>`.
+4. Stage the file with ordinary `git add <file>`.
+5. Before committing, inspect the staged content with `git diff --cached --
+   <file>`.
+
+Never use `git add -f` to bypass `.gitignore`. The only exception requires an
+explicit user request confirming that `.gitignore` must remain unchanged.
