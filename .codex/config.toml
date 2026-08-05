@@ -1,0 +1,23 @@
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+project_doc_fallback_filenames = ["CLAUDE.md", "claude.md"]
+service_tier = "default"
+developer_instructions = """
+For GitLab repositories, merge requests, issues, reviews, or pipelines, use the
+GitLab MCP tools before shell commands, GitHub tools, curl, or local credential
+lookups. Infer GitLab from a GitLab remote URL. Use shell or HTTP fallbacks only
+when the GitLab MCP tool is unavailable or returns an error, and state why.
+"""
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[mcp_servers.gitlab-mcp]
+command = "docker"
+args = ["run", "-i", "--rm", "-e", "GITLAB_PERSONAL_ACCESS_TOKEN", "-e", "GITLAB_API_URL", "zereight050/gitlab-mcp"]
+env_vars = ["GITLAB_PERSONAL_ACCESS_TOKEN", "GITLAB_API_URL"]
+
+[mcp_servers.excalidash]
+command = "excalidash-mcp"
+args = ["--stdio"]
+env_vars = ["EXCALIDASH_API_KEY", "EXCALIDASH_URL"]
