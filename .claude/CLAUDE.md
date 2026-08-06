@@ -35,6 +35,22 @@ When a package or import is missing, do not install it automatically. Ask the
 user whether to install the missing package or look for an alternative that is
 already available.
 
+When asked to write code, do not create documentation, readmes, or tests
+unless explicitly asked to.
+
+The development machine has an extremely slow mechanical disk. All terminal
+commands take much longer than normal. Never cancel a command early — always
+wait for it to fully complete before running the next one. Never run multiple
+commands back-to-back without waiting for each one to finish first.
+
+## Markdown
+
+When writing markdown, do not use CamelCase for section titles. Use normal
+sentence case instead.
+
+When writing markdown tables, always use spaces around the dashes in the
+separator row: `| --- | --- | --- |` instead of `|---|---|---|`.
+
 ## Commits
 
 Never create a git commit unless the user explicitly asks for it.

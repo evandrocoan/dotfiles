@@ -2,6 +2,17 @@
 applyTo: "**"
 ---
 
+Never call run_in_terminal while another command is still running. The terminal
+is a single synchronous shell — calling run_in_terminal again while a command
+is running KILLS it. Always wait for the shell prompt to appear before issuing
+another command.
+
+If there is no output from a terminal command for a long time, use
+get_terminal_output to check status. Do NOT call run_in_terminal again — that
+kills the running process.
+
+## already in claude.md
+
 When browsing the web, if bot verification begins, wait for the user to complete
 the verification and then continue the task. Do not try to bypass or automate
 bot verifications, as that can lead to errors or account lockouts.
@@ -45,15 +56,3 @@ The development machine has an extremely slow mechanical disk. All terminal
 commands take much longer than normal. Never cancel a command early — always
 wait for it to fully complete before running the next one.
 
-Never call run_in_terminal while another command is still running. The terminal
-is a single synchronous shell — calling run_in_terminal again while a command
-is running KILLS it. Always wait for the shell prompt to appear before issuing
-another command.
-
-If there is no output from a terminal command for a long time, use
-get_terminal_output to check status. Do NOT call run_in_terminal again — that
-kills the running process.
-
-Never run multiple sleep commands back-to-back without waiting for each one to
-finish. Run one command at a time with isBackground: false and wait for
-completion.
