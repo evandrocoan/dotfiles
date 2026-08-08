@@ -2,6 +2,9 @@ model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 project_doc_fallback_filenames = ["CLAUDE.md", "claude.md"]
 service_tier = "default"
+sandbox_mode = "workspace-write"
+sandbox_workspace_write.network_access = true
+
 developer_instructions = """
 For GitLab repositories, merge requests, issues, reviews, or pipelines, use the
 GitLab MCP tools before shell commands, GitHub tools, curl, or local credential
