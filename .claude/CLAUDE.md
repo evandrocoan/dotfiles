@@ -19,14 +19,28 @@ bot verifications, as that can lead to errors or account lockouts.
 
 Do not change my code formatting style when fixing it.
 
-CLAUDE.md files (both project-level and global) must always be written in
-English, regardless of the surrounding codebase language.
+AI-facing instruction files must always be written in English, regardless of
+the surrounding codebase language. This covers any file whose primary purpose
+is to instruct an AI agent — not just CLAUDE.md, but also skill and slash
+command definitions (`.claude/commands/*.md`, `.claude/skills/**`), `AGENTS.md`,
+`.github/copilot-instructions.md`, and equivalents. English gives the model a
+small but real edge in instruction-following, and keeps these files consistent
+with each other.
 
-When editing or adding content to any other existing file, match the language
+Two things inside an English instruction file stay in their original language:
+- Literal strings the agent must emit verbatim — commit messages, menu/button
+  labels, output templates, example values.
+- Instructions that pin the language of generated output (e.g. "write the note
+  in Portuguese", "generate the Mattermost message in Portuguese"). The
+  instruction prose is English; the output language it specifies is unchanged.
+
+When editing or adding content to any other existing file (code, docs, issue
+files, anything that is not an AI-facing instruction file), match the language
 already used in that file. If the file is in English, write in English. If the
 file is in Portuguese, write in Portuguese.
 
-If the file already mixes languages, ask the user before proceeding:
+If a non-instruction file already mixes languages, ask the user before
+proceeding:
 - Continue adding content in the dominant language?
 - Pick one language and apply it to the new content only?
 - Correct the entire file to a single language?
