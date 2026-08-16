@@ -175,6 +175,17 @@ invariants, non-obvious constraints, decisions and their rationale. It
 answers "why is the code structured this way, and what breaks if I
 change it?"
 
+### Markdown tables of contents
+
+Whenever editing a Markdown document that already has a table of contents,
+keep it synchronized with the document's headings.
+
+If a long-form Markdown document does not have a table of contents, create one
+when it would materially improve navigation. Include substantive sections and
+relevant subsections. Do not add a table of contents to short documents,
+templates, changelogs, generated files, or other documents where it adds
+little navigational value.
+
 ### Staleness traps — never write these in either file
 
 **Lists maintained in code.** Every item you name will silently diverge
