@@ -8,6 +8,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 - [My linux configurations (or Dotfiles)](#my-linux-configurations-or-dotfiles)
     - [To install them](#to-install-them)
+    - [Python scripts environment](#python-scripts-environment)
+      - [Codex session statistics](#codex-session-statistics)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
     - [Fix system crash](#fix-system-crash)
@@ -367,6 +369,23 @@ cd ~/scripts
 poetry update
 ```
 
+#### Codex session statistics
+
+[`~/.local/bin/codex-session-stats`](.local/bin/codex-session-stats) reads the
+local Codex session history and ranks completed, user-initiated executions by
+wall-clock duration. Its report includes the model used, the longest interval
+without events, start and end times, overlapping activity, project, and user
+request.
+
+Run the report with:
+
+```bash
+codex-session-stats
+```
+
+Use `codex-session-stats --help` to see the available filters, output formats,
+timezone selection, and options for including active executions or subagents.
+
 
 ### Install XFCE from sources
 
@@ -670,12 +689,12 @@ To disable this:
 
 1. Use `sudo journalctl -u systemd-logind.service -f` to see login events
    ```
-   dez 10 20:45:11 MOBDEV-016 systemd-logind[172521]: Lid closed.
-   dez 10 20:45:16 MOBDEV-016 systemd-logind[172521]: Lid opened.
-   dez 10 20:46:04 MOBDEV-016 systemd-logind[172521]: New session c1 of user root.
-   dez 10 20:53:47 MOBDEV-016 systemd-logind[172521]: Power key pressed.
-   dez 10 20:54:20 MOBDEV-016 systemd-logind[172521]: Operation 'sleep' finished.
-   dez 10 21:02:15 MOBDEV-016 systemd-logind[172521]: Power key pressed.
+   Dec 10 20:45:11 MOBDEV-016 systemd-logind[172521]: Lid closed.
+   Dec 10 20:45:16 MOBDEV-016 systemd-logind[172521]: Lid opened.
+   Dec 10 20:46:04 MOBDEV-016 systemd-logind[172521]: New session c1 of user root.
+   Dec 10 20:53:47 MOBDEV-016 systemd-logind[172521]: Power key pressed.
+   Dec 10 20:54:20 MOBDEV-016 systemd-logind[172521]: Operation 'sleep' finished.
+   Dec 10 21:02:15 MOBDEV-016 systemd-logind[172521]: Power key pressed.
    ```
 1. Edit `vim /etc/UPower/UPower.conf` and set `IgnoreLid=true`
    1. `service upower restart`
@@ -1037,8 +1056,8 @@ ifup enp1s0
 ifup wlo1
 ip a s
 
-# assegure vim /etc/network/interfaces com o seguinte e execute ifdown/ifup em seguida
-# Verifique se a conexão está ok com `ping 8.8.8.8` ou `ping 1.1.1.1`
+# Ensure that /etc/network/interfaces contains the following settings, then run ifdown/ifup
+# Verify the connection with `ping 8.8.8.8` or `ping 1.1.1.1`
 auto lo
 iface lo inet loopback
 
