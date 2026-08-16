@@ -137,6 +137,7 @@
 !/scripts/*
 
 /scripts/.env*
+!/scripts/.env.example
 !/scripts/install/
 !/scripts/install/**
 
@@ -165,3 +166,4 @@
 /.local/bin/sshkmg
 /.local/bin/uv
 /.local/bin/uvx
+/.local/bin/kredmine-mcp

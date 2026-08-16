@@ -802,6 +802,12 @@ Instead of expanding a SWAP partition, just create a swap file instead!
 1. `git clone https://gitlab.com/screenkey/screenkey`
 1. `cd screenkey`
 1. `sudo ./setup.py install`
+1. Fix the Whisker Menu shortcut (the `.desktop` file is installed inside the Python egg, not in the standard path):
+   ```bash
+   cp /usr/local/lib/python3.*/dist-packages/screenkey-*.egg/share/applications/screenkey.desktop ~/.local/share/applications/
+   update-desktop-database ~/.local/share/applications/
+   ```
+   Then right-click the Whisker Menu → **Reload Applications**.
 1. `screenkey; peek`
 
 

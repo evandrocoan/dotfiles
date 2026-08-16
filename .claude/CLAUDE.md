@@ -49,6 +49,22 @@ When a package or import is missing, do not install it automatically. Ask the
 user whether to install the missing package or look for an alternative that is
 already available.
 
+## Dependency choices
+
+Before choosing dependencies for new code, ask the user which libraries or
+dependency strategy they prefer. Present the reasonable options, including
+appropriate third-party libraries and a standard-library-only approach when it
+is genuinely viable. Explain the relevant tradeoffs — such as ergonomics,
+maintenance, performance, portability, and installation cost — and recommend
+the option that best fits the task before asking the user to choose.
+
+Do not default to the standard library, avoiding dependencies, or any specific
+library without this discussion. Do not announce a dependency decision before
+the user has chosen. A separate question is unnecessary only when the user has
+already selected the dependency strategy or the repository contains an
+explicit, applicable requirement that leaves no meaningful choice; state that
+constraint before proceeding.
+
 When asked to write code, do not create documentation, readmes, or tests
 unless explicitly asked to.
 
