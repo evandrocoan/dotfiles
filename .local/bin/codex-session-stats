@@ -1,0 +1,582 @@
+#!/home/someuser/scripts/.venv/bin/python
+from __future__ import annotations
+
+import argparse
+import csv
+import datetime
+import json
+import os
+import re
+import sqlite3
+import sys
+from collections import defaultdict
+from pathlib import Path
+from urllib.parse import quote
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+
+TIMESTAMP_PATTERN = re.compile(br'^\{"timestamp":"([^"]+)"')
+STATE_DATABASE_PATTERN = re.compile(r"state_(\d+)\.sqlite$")
+FINISHED_EVENTS = {
+    "task_complete",
+    "task_aborted",
+    "task_interrupted",
+    "task_cancelled",
+}
+
+
+def positive_integer(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("the value must be greater than zero")
+    return number
+
+
+def parse_arguments() -> argparse.Namespace:
+    default_codex_home = Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
+    parser = argparse.ArgumentParser(
+        description="List the longest Codex executions recorded in local session history."
+    )
+    parser.add_argument(
+        "--limit",
+        type=positive_integer,
+        default=20,
+        help="maximum number of executions to show (default: 20)",
+    )
+    parser.add_argument(
+        "--project",
+        help="case-insensitive filter applied to the working directory, session name and request",
+    )
+    parser.add_argument(
+        "--since",
+        metavar="YYYY-MM-DD",
+        help="include executions started on or after this local date",
+    )
+    parser.add_argument(
+        "--until",
+        metavar="YYYY-MM-DD",
+        help="include executions started on or before this local date",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("markdown", "csv", "json"),
+        default="markdown",
+        help="output format (default: markdown)",
+    )
+    parser.add_argument(
+        "--timezone",
+        default="America/Sao_Paulo",
+        help="IANA timezone used for dates (default: America/Sao_Paulo)",
+    )
+    parser.add_argument(
+        "--codex-home",
+        type=Path,
+        default=default_codex_home,
+        help="Codex state directory (default: CODEX_HOME or ~/.codex)",
+    )
+    parser.add_argument(
+        "--include-active",
+        action="store_true",
+        help="include executions without a completion event",
+    )
+    parser.add_argument(
+        "--all-agents",
+        action="store_true",
+        help="include subagents and automatic reviewers",
+    )
+    parser.add_argument(
+        "--skip-gap-analysis",
+        action="store_true",
+        help="skip the second pass that calculates the largest interval without events",
+    )
+    parser.add_argument(
+        "--max-description",
+        type=positive_integer,
+        default=160,
+        help="maximum request length in Markdown output (default: 160)",
+    )
+    return parser.parse_args()
+
+
+def parse_timestamp(value: str | bytes) -> float:
+    if isinstance(value, bytes):
+        value = value.decode("ascii")
+    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+
+
+def timestamp_from_line(line: bytes) -> float | None:
+    match = TIMESTAMP_PATTERN.match(line)
+    if not match:
+        return None
+    try:
+        return parse_timestamp(match.group(1))
+    except ValueError:
+        return None
+
+
+def find_state_database(codex_home: Path) -> Path:
+    candidates = []
+    for path in codex_home.glob("state_*.sqlite"):
+        match = STATE_DATABASE_PATTERN.search(path.name)
+        if match:
+            candidates.append((int(match.group(1)), path))
+    if not candidates:
+        raise RuntimeError(f"no state_*.sqlite database found in {codex_home}")
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def open_read_only_database(path: Path) -> sqlite3.Connection:
+    encoded_path = quote(str(path.resolve()), safe="/")
+    connection = sqlite3.connect(f"file:{encoded_path}?mode=ro", uri=True)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def load_session_names(codex_home: Path) -> dict[str, str]:
+    names = {}
+    index_path = codex_home / "session_index.jsonl"
+    if not index_path.exists():
+        return names
+    with index_path.open(encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            thread_id = item.get("id")
+            thread_name = item.get("thread_name")
+            if thread_id and thread_name:
+                names[thread_id] = thread_name
+    return names
+
+
+def load_threads(codex_home: Path) -> list[dict[str, object]]:
+    state_database = find_state_database(codex_home)
+    with open_read_only_database(state_database) as connection:
+        available_columns = {
+            row[1] for row in connection.execute("pragma table_info(threads)")
+        }
+        required_columns = {"id", "rollout_path"}
+        missing_columns = required_columns - available_columns
+        if missing_columns:
+            missing = ", ".join(sorted(missing_columns))
+            raise RuntimeError(f"threads table is missing required columns: {missing}")
+
+        optional_columns = (
+            "source",
+            "thread_source",
+            "agent_path",
+            "name",
+            "title",
+            "first_user_message",
+            "cwd",
+            "model",
+        )
+        expressions = ["id", "rollout_path"]
+        expressions.extend(
+            column if column in available_columns else f"null as {column}"
+            for column in optional_columns
+        )
+        query = f"select {', '.join(expressions)} from threads"
+        return [dict(row) for row in connection.execute(query)]
+
+
+def new_execution(
+    thread: dict[str, object],
+    session_name: str,
+    rollout_path: Path,
+    turn_id: str,
+    started_at: float,
+) -> dict[str, object]:
+    return {
+        "thread_id": str(thread["id"]),
+        "turn_id": turn_id,
+        "rollout_path": rollout_path,
+        "started_at": started_at,
+        "ended_at": None,
+        "status": "active",
+        "request": "",
+        "session_name": session_name,
+        "title": str(thread.get("title") or ""),
+        "first_user_message": str(thread.get("first_user_message") or ""),
+        "source": str(thread.get("source") or ""),
+        "thread_source": str(thread.get("thread_source") or ""),
+        "agent_path": str(thread.get("agent_path") or ""),
+        "cwd": str(thread.get("cwd") or ""),
+        "models": [],
+        "fallback_model": str(thread.get("model") or ""),
+        "max_gap_seconds": None,
+        "overlaps": False,
+    }
+
+
+def append_model(execution: dict[str, object], model: object) -> None:
+    if not model:
+        return
+    models = execution["models"]
+    assert isinstance(models, list)
+    model_name = str(model)
+    if not models or models[-1] != model_name:
+        models.append(model_name)
+
+
+def parse_executions(
+    threads: list[dict[str, object]], session_names: dict[str, str]
+) -> list[dict[str, object]]:
+    executions = []
+    for thread in threads:
+        rollout_path = Path(str(thread["rollout_path"])).expanduser()
+        if not rollout_path.is_absolute():
+            rollout_path = Path.cwd() / rollout_path
+        if not rollout_path.exists():
+            continue
+
+        thread_id = str(thread["id"])
+        session_name = session_names.get(thread_id) or str(thread.get("name") or "")
+        active: dict[str, dict[str, object]] = {}
+        pending_models: dict[str, list[str]] = defaultdict(list)
+        last_started_turn_id: str | None = None
+        last_event_timestamp: float | None = None
+
+        with rollout_path.open("rb") as handle:
+            for line in handle:
+                timestamp = timestamp_from_line(line)
+                if timestamp is not None:
+                    last_event_timestamp = timestamp
+
+                relevant_event = (
+                    b'"type":"event_msg"' in line
+                    and (
+                        b'"type":"task_' in line
+                        or b'"type":"user_message"' in line
+                    )
+                )
+                relevant_context = b'"type":"turn_context"' in line
+                if not relevant_event and not relevant_context:
+                    continue
+
+                try:
+                    item = json.loads(line)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+                item_type = item.get("type")
+                payload = item.get("payload") or {}
+
+                if item_type == "turn_context":
+                    turn_id = payload.get("turn_id")
+                    model = payload.get("model")
+                    if not turn_id or not model:
+                        continue
+                    if turn_id in active:
+                        append_model(active[turn_id], model)
+                    elif not pending_models[turn_id] or pending_models[turn_id][-1] != model:
+                        pending_models[turn_id].append(str(model))
+                    continue
+
+                if item_type != "event_msg":
+                    continue
+                event_type = payload.get("type")
+                if event_type == "task_started":
+                    turn_id = payload.get("turn_id")
+                    if not turn_id or timestamp is None:
+                        continue
+                    if turn_id not in active:
+                        active[turn_id] = new_execution(
+                            thread,
+                            session_name,
+                            rollout_path,
+                            turn_id,
+                            timestamp,
+                        )
+                        for model in pending_models.pop(turn_id, []):
+                            append_model(active[turn_id], model)
+                    last_started_turn_id = turn_id
+                elif event_type == "user_message":
+                    if last_started_turn_id not in active:
+                        continue
+                    execution = active[last_started_turn_id]
+                    if not execution["request"]:
+                        execution["request"] = str(payload.get("message") or "")
+                elif event_type in FINISHED_EVENTS:
+                    turn_id = payload.get("turn_id")
+                    if turn_id not in active or timestamp is None:
+                        continue
+                    execution = active.pop(turn_id)
+                    execution["ended_at"] = timestamp
+                    execution["status"] = event_type.removeprefix("task_")
+                    executions.append(execution)
+                    if last_started_turn_id == turn_id:
+                        last_started_turn_id = max(
+                            active,
+                            key=lambda key: float(active[key]["started_at"]),
+                            default=None,
+                        )
+
+        for execution in active.values():
+            execution["ended_at"] = last_event_timestamp or execution["started_at"]
+            executions.append(execution)
+
+    return executions
+
+
+def is_subagent(execution: dict[str, object]) -> bool:
+    if execution["agent_path"]:
+        return True
+    thread_source = str(execution["thread_source"]).casefold()
+    source = str(execution["source"]).casefold()
+    return thread_source == "subagent" or "subagent" in source
+
+
+def local_date_boundary(value: str, timezone: ZoneInfo, end: bool) -> float:
+    try:
+        date = datetime.date.fromisoformat(value)
+    except ValueError as error:
+        raise RuntimeError(f"invalid date {value!r}; expected YYYY-MM-DD") from error
+    if end:
+        date += datetime.timedelta(days=1)
+    return datetime.datetime.combine(date, datetime.time.min, timezone).timestamp()
+
+
+def execution_description(execution: dict[str, object]) -> str:
+    return " ".join(
+        str(
+            execution["request"]
+            or execution["session_name"]
+            or execution["title"]
+            or execution["first_user_message"]
+        ).split()
+    )
+
+
+def filter_executions(
+    executions: list[dict[str, object]], arguments: argparse.Namespace, timezone: ZoneInfo
+) -> list[dict[str, object]]:
+    since = local_date_boundary(arguments.since, timezone, end=False) if arguments.since else None
+    until = local_date_boundary(arguments.until, timezone, end=True) if arguments.until else None
+    if since is not None and until is not None and since >= until:
+        raise RuntimeError("--since must not be later than --until")
+
+    project_filter = arguments.project.casefold() if arguments.project else None
+    selected = []
+    for execution in executions:
+        status = execution["status"]
+        if status != "complete" and not (arguments.include_active and status == "active"):
+            continue
+        if not arguments.all_agents:
+            thread_source = str(execution["thread_source"]).casefold()
+            if is_subagent(execution) or thread_source not in {"", "user"}:
+                continue
+
+        started_at = float(execution["started_at"])
+        ended_at = float(execution["ended_at"] or started_at)
+        if since is not None and started_at < since:
+            continue
+        if until is not None and started_at >= until:
+            continue
+
+        description = execution_description(execution)
+        if project_filter:
+            searchable = "\n".join(
+                (str(execution["cwd"]), str(execution["session_name"]), description)
+            ).casefold()
+            if project_filter not in searchable:
+                continue
+
+        execution["description"] = description
+        execution["duration_seconds"] = max(0.0, ended_at - started_at)
+        selected.append(execution)
+
+    selected.sort(key=lambda item: float(item["duration_seconds"]), reverse=True)
+    return selected
+
+
+def calculate_gaps(executions: list[dict[str, object]]) -> None:
+    by_rollout_path: dict[Path, list[dict[str, object]]] = defaultdict(list)
+    for execution in executions:
+        by_rollout_path[execution["rollout_path"]].append(execution)
+
+    for rollout_path, path_executions in by_rollout_path.items():
+        previous_timestamps: dict[str, float] = {}
+        with rollout_path.open("rb") as handle:
+            for line in handle:
+                timestamp = timestamp_from_line(line)
+                if timestamp is None:
+                    continue
+                for execution in path_executions:
+                    started_at = float(execution["started_at"])
+                    ended_at = float(execution["ended_at"] or started_at)
+                    if not started_at <= timestamp <= ended_at:
+                        continue
+                    turn_id = str(execution["turn_id"])
+                    previous = previous_timestamps.get(turn_id)
+                    if previous is not None:
+                        gap = timestamp - previous
+                        current_gap = execution["max_gap_seconds"]
+                        if current_gap is None or gap > float(current_gap):
+                            execution["max_gap_seconds"] = gap
+                    previous_timestamps[turn_id] = timestamp
+
+
+def mark_overlaps(
+    executions: list[dict[str, object]], comparison_pool: list[dict[str, object]]
+) -> None:
+    for execution in executions:
+        start = float(execution["started_at"])
+        end = float(execution["ended_at"] or start)
+        for other in comparison_pool:
+            if execution is other:
+                continue
+            other_start = float(other["started_at"])
+            other_end = float(other["ended_at"] or other_start)
+            if max(start, other_start) < min(end, other_end):
+                execution["overlaps"] = True
+                break
+
+
+def format_duration(seconds: float | None) -> str:
+    if seconds is None:
+        return "—"
+    total_seconds = int(round(seconds))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}min {seconds:02d}s"
+    if minutes:
+        return f"{minutes}min {seconds:02d}s"
+    return f"{seconds}s"
+
+
+def format_local_timestamp(timestamp: float, timezone: ZoneInfo) -> str:
+    return datetime.datetime.fromtimestamp(timestamp, timezone).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def model_name(execution: dict[str, object]) -> str:
+    models = execution["models"]
+    assert isinstance(models, list)
+    if models:
+        return " → ".join(models)
+    return str(execution["fallback_model"] or "desconhecido")
+
+
+def project_name(execution: dict[str, object]) -> str:
+    cwd = str(execution["cwd"])
+    return Path(cwd).name if cwd else "—"
+
+
+def markdown_escape(value: object) -> str:
+    return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ")
+
+
+def public_record(
+    rank: int, execution: dict[str, object], timezone: ZoneInfo
+) -> dict[str, object]:
+    started_at = float(execution["started_at"])
+    ended_at = float(execution["ended_at"] or started_at)
+    return {
+        "rank": rank,
+        "duration": format_duration(float(execution["duration_seconds"])),
+        "duration_seconds": round(float(execution["duration_seconds"]), 3),
+        "model": model_name(execution),
+        "largest_gap": format_duration(execution["max_gap_seconds"]),
+        "largest_gap_seconds": (
+            round(float(execution["max_gap_seconds"]), 3)
+            if execution["max_gap_seconds"] is not None
+            else None
+        ),
+        "started_at": format_local_timestamp(started_at, timezone),
+        "ended_at": format_local_timestamp(ended_at, timezone),
+        "timezone": str(timezone),
+        "overlaps": bool(execution["overlaps"]),
+        "status": execution["status"],
+        "project": project_name(execution),
+        "cwd": execution["cwd"],
+        "session": execution["session_name"],
+        "request": execution["description"],
+        "thread_id": execution["thread_id"],
+        "turn_id": execution["turn_id"],
+        "rollout_path": str(execution["rollout_path"]),
+    }
+
+
+def print_markdown(records: list[dict[str, object]], max_description: int) -> None:
+    print(
+        "| # | Duração | Modelo | Maior intervalo | Início | Fim | Sobreposição | Projeto | Pedido |"
+    )
+    print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    for record in records:
+        description = str(record["request"])
+        if len(description) > max_description:
+            description = description[: max_description - 1].rstrip() + "…"
+        values = (
+            record["rank"],
+            record["duration"],
+            record["model"],
+            record["largest_gap"],
+            record["started_at"],
+            record["ended_at"],
+            "sim" if record["overlaps"] else "não",
+            record["project"],
+            description,
+        )
+        print("| " + " | ".join(markdown_escape(value) for value in values) + " |")
+
+
+def print_csv(records: list[dict[str, object]]) -> None:
+    fieldnames = list(records[0]) if records else [
+        "rank",
+        "duration",
+        "duration_seconds",
+        "model",
+        "largest_gap",
+        "largest_gap_seconds",
+        "started_at",
+        "ended_at",
+        "timezone",
+        "overlaps",
+        "status",
+        "project",
+        "cwd",
+        "session",
+        "request",
+        "thread_id",
+        "turn_id",
+        "rollout_path",
+    ]
+    writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(records)
+
+
+def main() -> int:
+    arguments = parse_arguments()
+    codex_home = arguments.codex_home.expanduser().resolve()
+    try:
+        timezone = ZoneInfo(arguments.timezone)
+        threads = load_threads(codex_home)
+        session_names = load_session_names(codex_home)
+        executions = parse_executions(threads, session_names)
+        filtered = filter_executions(executions, arguments, timezone)
+        selected = filtered[: arguments.limit]
+        if not arguments.skip_gap_analysis:
+            calculate_gaps(selected)
+        mark_overlaps(selected, filtered)
+    except (OSError, RuntimeError, sqlite3.Error, ZoneInfoNotFoundError) as error:
+        print(f"codex-session-stats: {error}", file=sys.stderr)
+        return 1
+
+    records = [
+        public_record(rank, execution, timezone)
+        for rank, execution in enumerate(selected, start=1)
+    ]
+    if arguments.format == "json":
+        json.dump(records, sys.stdout, ensure_ascii=False, indent=2)
+        print()
+    elif arguments.format == "csv":
+        print_csv(records)
+    else:
+        print_markdown(records, arguments.max_description)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
