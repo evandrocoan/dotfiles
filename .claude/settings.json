@@ -92,5 +92,7 @@
       "/home/someuser/.local/bin"
     ]
   },
-  "model": "sonnet"
+  "model": "sonnet",
+  "effortLevel": "max",
+  "advisorModel": "opus"
 }

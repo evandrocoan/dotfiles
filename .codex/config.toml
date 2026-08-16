@@ -1,9 +1,11 @@
-model = "gpt-5.6-terra"
-model_reasoning_effort = "high"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
 project_doc_fallback_filenames = ["CLAUDE.md", "claude.md"]
 service_tier = "default"
 sandbox_mode = "workspace-write"
 sandbox_workspace_write.network_access = true
+approval_policy = { granular = { sandbox_approval = true, rules = true, mcp_elicitations = true, request_permissions = true, skill_approval = true } }
+approvals_reviewer = "user"
 
 developer_instructions = """
 For GitLab repositories, merge requests, issues, reviews, or pipelines, use the
@@ -24,3 +26,18 @@ env_vars = ["GITLAB_PERSONAL_ACCESS_TOKEN", "GITLAB_API_URL"]
 command = "excalidash-mcp"
 args = ["--stdio"]
 env_vars = ["EXCALIDASH_API_KEY", "EXCALIDASH_URL"]
+
+[mcp_servers.kredmine]
+command = "kredmine-mcp"
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+default_tools_approval_mode = "writes"
+enabled_tools = ["search_issues", "get_issue", "list_projects", "get_project_options", "sync_issue", "prepare_sync_issue", "create_issue_draft", "get_issue_draft", "update_issue_draft", "prepare_create_issue_from_draft", "prepare_create_issue", "prepare_update_issue", "get_proposal", "inspect_reconciliation", "link_reconciliation_issue", "abandon_create_reconciliation", "finalize_reconciliation", "apply_proposal", "cancel_proposal", "retry_backup"]
+
+[mcp_servers.kredmine.tools.apply_proposal]
+approval_mode = "prompt"
+
+[mcp_servers.kredmine.tools.abandon_create_reconciliation]
+approval_mode = "prompt"
+
