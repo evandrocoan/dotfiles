@@ -171,6 +171,7 @@ def load_threads(codex_home: Path) -> list[dict[str, object]]:
             "first_user_message",
             "cwd",
             "model",
+            "reasoning_effort",
         )
         expressions = ["id", "rollout_path"]
         expressions.extend(
@@ -204,7 +205,9 @@ def new_execution(
         "agent_path": str(thread.get("agent_path") or ""),
         "cwd": str(thread.get("cwd") or ""),
         "models": [],
+        "reasoning_levels": [],
         "fallback_model": str(thread.get("model") or ""),
+        "fallback_reasoning_level": str(thread.get("reasoning_effort") or ""),
         "max_gap_seconds": None,
         "overlaps": False,
     }
@@ -218,6 +221,16 @@ def append_model(execution: dict[str, object], model: object) -> None:
     model_name = str(model)
     if not models or models[-1] != model_name:
         models.append(model_name)
+
+
+def append_reasoning_level(execution: dict[str, object], level: object) -> None:
+    if not level:
+        return
+    levels = execution["reasoning_levels"]
+    assert isinstance(levels, list)
+    level_name = str(level)
+    if not levels or levels[-1] != level_name:
+        levels.append(level_name)
 
 
 def parse_executions(
@@ -235,6 +248,7 @@ def parse_executions(
         session_name = session_names.get(thread_id) or str(thread.get("name") or "")
         active: dict[str, dict[str, object]] = {}
         pending_models: dict[str, list[str]] = defaultdict(list)
+        pending_reasoning_levels: dict[str, list[str]] = defaultdict(list)
         last_started_turn_id: str | None = None
         last_event_timestamp: float | None = None
 
@@ -265,12 +279,27 @@ def parse_executions(
                 if item_type == "turn_context":
                     turn_id = payload.get("turn_id")
                     model = payload.get("model")
-                    if not turn_id or not model:
+                    reasoning_level = payload.get("effort") or payload.get(
+                        "reasoning_effort"
+                    )
+                    if not turn_id:
                         continue
                     if turn_id in active:
                         append_model(active[turn_id], model)
-                    elif not pending_models[turn_id] or pending_models[turn_id][-1] != model:
-                        pending_models[turn_id].append(str(model))
+                        append_reasoning_level(active[turn_id], reasoning_level)
+                    else:
+                        if model and (
+                            not pending_models[turn_id]
+                            or pending_models[turn_id][-1] != model
+                        ):
+                            pending_models[turn_id].append(str(model))
+                        if reasoning_level and (
+                            not pending_reasoning_levels[turn_id]
+                            or pending_reasoning_levels[turn_id][-1] != reasoning_level
+                        ):
+                            pending_reasoning_levels[turn_id].append(
+                                str(reasoning_level)
+                            )
                     continue
 
                 if item_type != "event_msg":
@@ -290,6 +319,8 @@ def parse_executions(
                         )
                         for model in pending_models.pop(turn_id, []):
                             append_model(active[turn_id], model)
+                        for level in pending_reasoning_levels.pop(turn_id, []):
+                            append_reasoning_level(active[turn_id], level)
                     last_started_turn_id = turn_id
                 elif event_type == "user_message":
                     if last_started_turn_id not in active:
@@ -458,6 +489,14 @@ def model_name(execution: dict[str, object]) -> str:
     return str(execution["fallback_model"] or "desconhecido")
 
 
+def reasoning_level(execution: dict[str, object]) -> str:
+    levels = execution["reasoning_levels"]
+    assert isinstance(levels, list)
+    if levels:
+        return " → ".join(levels)
+    return str(execution["fallback_reasoning_level"] or "desconhecido")
+
+
 def project_name(execution: dict[str, object]) -> str:
     cwd = str(execution["cwd"])
     return Path(cwd).name if cwd else "—"
@@ -477,6 +516,7 @@ def public_record(
         "duration": format_duration(float(execution["duration_seconds"])),
         "duration_seconds": round(float(execution["duration_seconds"]), 3),
         "model": model_name(execution),
+        "reasoning_level": reasoning_level(execution),
         "largest_gap": format_duration(execution["max_gap_seconds"]),
         "largest_gap_seconds": (
             round(float(execution["max_gap_seconds"]), 3)
@@ -500,9 +540,9 @@ def public_record(
 
 def print_markdown(records: list[dict[str, object]], max_description: int) -> None:
     print(
-        "| # | Duração | Modelo | Maior intervalo | Início | Fim | Sobreposição | Projeto | Pedido |"
+        "| # | Duração | Modelo | Reasoning | Maior intervalo | Início | Fim | Sobreposição | Projeto | Pedido |"
     )
-    print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    print("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for record in records:
         description = str(record["request"])
         if len(description) > max_description:
@@ -511,6 +551,7 @@ def print_markdown(records: list[dict[str, object]], max_description: int) -> No
             record["rank"],
             record["duration"],
             record["model"],
+            record["reasoning_level"],
             record["largest_gap"],
             record["started_at"],
             record["ended_at"],
@@ -527,6 +568,7 @@ def print_csv(records: list[dict[str, object]]) -> None:
         "duration",
         "duration_seconds",
         "model",
+        "reasoning_level",
         "largest_gap",
         "largest_gap_seconds",
         "started_at",
