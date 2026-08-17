@@ -148,7 +148,8 @@ in sync using the following logic:
 ## Documentation
 
 Before writing or editing documentation or AI-facing Markdown instructions,
-read `~/.claude/guidelines/documentation.md` and follow it.
+use the `documentation` skill. If skill discovery is unavailable, read the same
+instructions at `~/.claude/guidelines/documentation.md` and follow them.
 
 ## Memory policy
 
@@ -173,7 +174,7 @@ Before writing or editing Bash scripts, read
 
 ## ExcaliDash / Excalidraw MCP workflow
 
-When asked to create, draw, or generate a diagram, first read
-`/myfiles/Programs/ExcaliDash/mcp/README.md`, then follow its current workflow
-using the registered MCP tools. Read that reference only when needed; do not
-import it into this file.
+When asked to create, draw, edit, or generate a structured diagram, always use
+the `excalidash-diagrams` skill before taking action. If skill discovery is
+unavailable, report that the skill is not installed instead of bypassing it
+with a machine-specific path or an improvised MCP workflow.
