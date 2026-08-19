@@ -87,7 +87,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--skip-gap-analysis",
         action="store_true",
-        help="skip the second pass that calculates the largest interval without events",
+        help="skip calculation of the largest interval without events",
     )
     parser.add_argument(
         "--max-description",
@@ -208,6 +208,8 @@ def new_execution(
         "reasoning_levels": [],
         "fallback_model": str(thread.get("model") or ""),
         "fallback_reasoning_level": str(thread.get("reasoning_effort") or ""),
+        "lines_added": 0,
+        "lines_removed": 0,
         "max_gap_seconds": None,
         "overlaps": False,
     }
@@ -421,31 +423,102 @@ def filter_executions(
     return selected
 
 
-def calculate_gaps(executions: list[dict[str, object]]) -> None:
+def content_line_count(content: object) -> int:
+    return len(content.splitlines()) if isinstance(content, str) else 0
+
+
+def unified_diff_line_counts(unified_diff: object) -> tuple[int, int]:
+    if not isinstance(unified_diff, str):
+        return 0, 0
+
+    added = 0
+    removed = 0
+    in_hunk = False
+    for line in unified_diff.splitlines():
+        if line.startswith("@@"):
+            in_hunk = True
+        elif in_hunk and line.startswith("+"):
+            added += 1
+        elif in_hunk and line.startswith("-"):
+            removed += 1
+    return added, removed
+
+
+def patch_line_counts(changes: object) -> tuple[int, int]:
+    if not isinstance(changes, dict):
+        return 0, 0
+
+    added = 0
+    removed = 0
+    for change in changes.values():
+        if not isinstance(change, dict):
+            continue
+        change_type = change.get("type")
+        if change_type == "add":
+            added += content_line_count(change.get("content"))
+        elif change_type == "delete":
+            removed += content_line_count(change.get("content"))
+        else:
+            change_added, change_removed = unified_diff_line_counts(
+                change.get("unified_diff")
+            )
+            added += change_added
+            removed += change_removed
+    return added, removed
+
+
+def analyze_execution_events(
+    executions: list[dict[str, object]], calculate_gaps: bool
+) -> None:
     by_rollout_path: dict[Path, list[dict[str, object]]] = defaultdict(list)
     for execution in executions:
         by_rollout_path[execution["rollout_path"]].append(execution)
 
     for rollout_path, path_executions in by_rollout_path.items():
+        executions_by_turn_id = {
+            str(execution["turn_id"]): execution for execution in path_executions
+        }
         previous_timestamps: dict[str, float] = {}
         with rollout_path.open("rb") as handle:
             for line in handle:
                 timestamp = timestamp_from_line(line)
-                if timestamp is None:
+                if calculate_gaps and timestamp is not None:
+                    for execution in path_executions:
+                        started_at = float(execution["started_at"])
+                        ended_at = float(execution["ended_at"] or started_at)
+                        if not started_at <= timestamp <= ended_at:
+                            continue
+                        turn_id = str(execution["turn_id"])
+                        previous = previous_timestamps.get(turn_id)
+                        if previous is not None:
+                            gap = timestamp - previous
+                            current_gap = execution["max_gap_seconds"]
+                            if current_gap is None or gap > float(current_gap):
+                                execution["max_gap_seconds"] = gap
+                        previous_timestamps[turn_id] = timestamp
+
+                if b'"type":"patch_apply_end"' not in line:
                     continue
-                for execution in path_executions:
-                    started_at = float(execution["started_at"])
-                    ended_at = float(execution["ended_at"] or started_at)
-                    if not started_at <= timestamp <= ended_at:
-                        continue
-                    turn_id = str(execution["turn_id"])
-                    previous = previous_timestamps.get(turn_id)
-                    if previous is not None:
-                        gap = timestamp - previous
-                        current_gap = execution["max_gap_seconds"]
-                        if current_gap is None or gap > float(current_gap):
-                            execution["max_gap_seconds"] = gap
-                    previous_timestamps[turn_id] = timestamp
+                try:
+                    item = json.loads(line)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+                if item.get("type") != "event_msg":
+                    continue
+                payload = item.get("payload") or {}
+                if payload.get("type") != "patch_apply_end":
+                    continue
+                if (
+                    payload.get("success") is not True
+                    and payload.get("status") != "completed"
+                ):
+                    continue
+                execution = executions_by_turn_id.get(str(payload.get("turn_id") or ""))
+                if execution is None:
+                    continue
+                added, removed = patch_line_counts(payload.get("changes"))
+                execution["lines_added"] = int(execution["lines_added"]) + added
+                execution["lines_removed"] = int(execution["lines_removed"]) + removed
 
 
 def mark_overlaps(
@@ -517,6 +590,8 @@ def public_record(
         "duration_seconds": round(float(execution["duration_seconds"]), 3),
         "model": model_name(execution),
         "reasoning_level": reasoning_level(execution),
+        "lines_added": execution["lines_added"],
+        "lines_removed": execution["lines_removed"],
         "largest_gap": format_duration(execution["max_gap_seconds"]),
         "largest_gap_seconds": (
             round(float(execution["max_gap_seconds"]), 3)
@@ -540,9 +615,9 @@ def public_record(
 
 def print_markdown(records: list[dict[str, object]], max_description: int) -> None:
     print(
-        "| # | Duração | Modelo | Reasoning | Maior intervalo | Início | Fim | Sobreposição | Projeto | Pedido |"
+        "| # | Duração | Modelo | Reasoning | Linhas (+/-) | Maior intervalo | Início | Fim | Sobreposição | Projeto | Pedido |"
     )
-    print("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    print("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for record in records:
         description = str(record["request"])
         if len(description) > max_description:
@@ -552,6 +627,7 @@ def print_markdown(records: list[dict[str, object]], max_description: int) -> No
             record["duration"],
             record["model"],
             record["reasoning_level"],
+            f"+{record['lines_added']}/-{record['lines_removed']}",
             record["largest_gap"],
             record["started_at"],
             record["ended_at"],
@@ -569,6 +645,8 @@ def print_csv(records: list[dict[str, object]]) -> None:
         "duration_seconds",
         "model",
         "reasoning_level",
+        "lines_added",
+        "lines_removed",
         "largest_gap",
         "largest_gap_seconds",
         "started_at",
@@ -599,8 +677,9 @@ def main() -> int:
         executions = parse_executions(threads, session_names)
         filtered = filter_executions(executions, arguments, timezone)
         selected = filtered[: arguments.limit]
-        if not arguments.skip_gap_analysis:
-            calculate_gaps(selected)
+        analyze_execution_events(
+            selected, calculate_gaps=not arguments.skip_gap_analysis
+        )
         mark_overlaps(selected, filtered)
     except (OSError, RuntimeError, sqlite3.Error, ZoneInfoNotFoundError) as error:
         print(f"codex-session-stats: {error}", file=sys.stderr)
