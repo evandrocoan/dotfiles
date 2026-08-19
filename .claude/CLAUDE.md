@@ -68,6 +68,11 @@ constraint before proceeding.
 When asked to write code, do not create documentation, readmes, or tests
 unless explicitly asked to.
 
+## Test quality
+
+Before creating, modifying, reviewing, debugging, or running automated tests,
+always load and follow the `test-quality` skill.
+
 The development machine has an extremely slow mechanical disk. All terminal
 commands take much longer than normal. Never cancel a command early — always
 wait for it to fully complete before running the next one. Never run multiple
