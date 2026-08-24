@@ -29,6 +29,15 @@ Make every test prove one deterministic behavior through an observable result. T
 - Do not use a configured mock return value as the sole evidence. Also assert the real transformation, routing decision, persisted state, emitted request, or other behavior performed by the system under test.
 - Verify both the expected boundary interaction and the resulting state when orchestration is the behavior under test.
 
+## Remove obsolete tests with obsolete code
+
+- Treat tests as evidence of an authoritative product contract, not as an independent reason to preserve production code.
+- Never retain a retired implementation, fallback, compatibility branch, transport, parser, or adapter solely because an existing test exercises it.
+- When an architecture or behavior is intentionally replaced, identify the observable contract that remains. Rewrite tests against the replacement contract and delete tests that only freeze the retired implementation.
+- Remove obsolete production paths and their implementation-specific tests in the same change. Preserve shared primitives only when active production code still consumes them.
+- Require an explicit product, protocol, migration, or compatibility requirement before keeping a legacy path. Test existence alone does not establish such a requirement.
+- If an old test fails because an intentional replacement removed its subject, do not weaken the new design or add a dormant adapter to make the test pass. Correct or remove the stale test.
+
 ## Write assertions that can fail meaningfully
 
 - Require at least one explicit behavior or state assertion, `raises` expectation, or equivalent framework matcher in every test.
