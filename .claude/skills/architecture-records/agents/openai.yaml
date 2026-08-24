@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Records"
+  short_description: "Standardize durable architecture records"
+  default_prompt: "Use $architecture-records to organize and maintain durable architecture records for this project."

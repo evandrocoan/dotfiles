@@ -49,6 +49,19 @@ When a package or import is missing, do not install it automatically. Ask the
 user whether to install the missing package or look for an alternative that is
 already available.
 
+## Portable shared paths
+
+When files, configuration, or symbolic links are intended to be shared across
+users or machines, never store user-specific or machine-specific absolute
+paths. Use paths relative to the containing file or symbolic link and verify
+the stored target after creating it.
+
+For skills shared between Claude and Codex, keep the canonical skill at
+`~/.claude/skills/<skill-name>` and expose it through
+`~/.codex/skills/<skill-name>` with the relative symbolic-link target
+`../../.claude/skills/<skill-name>`. Never store an expanded home-directory
+path in that link.
+
 ## Dependency choices
 
 Before choosing dependencies for new code, ask the user which libraries or
@@ -155,6 +168,19 @@ in sync using the following logic:
 Before writing or editing documentation or AI-facing Markdown instructions,
 use the `documentation` skill. If skill discovery is unavailable, read the same
 instructions at `~/.claude/guidelines/documentation.md` and follow them.
+
+## Architecture records
+
+Before creating, moving, reviewing, implementing, or superseding a durable
+cross-component architecture plan or decision record, use the
+`architecture-records` skill together with the `documentation` skill. If skill
+discovery is unavailable, read
+`~/.claude/skills/architecture-records/SKILL.md` and follow it.
+
+Keep temporary delivery checklists in the issue or merge request. Keep durable
+motivation, boundaries, risks, invariants, lifecycle status, and architectural
+acceptance criteria in the repository's architecture records. Never present a
+proposed record as current behavior.
 
 ## Memory policy
 
