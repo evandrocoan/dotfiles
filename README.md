@@ -9,6 +9,10 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 - [My linux configurations (or Dotfiles)](#my-linux-configurations-or-dotfiles)
     - [To install them](#to-install-them)
     - [Python scripts environment](#python-scripts-environment)
+      - [Install Poetry (if not already installed)](#install-poetry-if-not-already-installed)
+      - [Create the virtual environment](#create-the-virtual-environment)
+      - [Add a new dependency](#add-a-new-dependency)
+      - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
@@ -310,10 +314,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    ```
    * .opencommit
       ```
-      OCO_MODEL=anthropic/claude-sonnet-4-6
+      #OCO_MODEL=anthropic/claude-sonnet-4-6
+      #OCO_API_CUSTOM_HEADERS=undefined
+      OCO_MODEL=@preset/opencommit-sol-xhigh
+      OCO_API_CUSTOM_HEADERS='{}'
       OCO_API_URL=https://openrouter.ai/api/v1
       OCO_API_KEY=
-      OCO_API_CUSTOM_HEADERS=undefined
       OCO_AI_PROVIDER=openai
       OCO_TOKENS_MAX_INPUT=400000
       OCO_TOKENS_MAX_OUTPUT=10000
