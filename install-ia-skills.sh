@@ -7,15 +7,14 @@ DESTINATION="${HOME}"
 FORCE=0
 DRY_RUN=0
 TEMP_DIRECTORY=""
-FOUND_COUNT=0
+FOUND_SKILL_COUNT=0
 INSTALLED_COUNT=0
 SKIPPED_COUNT=0
 
-declare -a SKILL_DIRECTORIES=(
-    ".claude/skills"
-    ".codex/skills"
-    ".copilot/skills"
-    ".agents/skills"
+declare -a GLOBAL_INSTRUCTION_PATHS=(
+    ".claude/CLAUDE.md"
+    ".codex/AGENTS.md"
+    ".copilot/copilot-instructions.md"
 )
 
 function printhelp() {
@@ -23,15 +22,18 @@ cat >&1 <<EOF
 
     Usage: bash ${0} [arguments]
 
-    Download and install the Claude, Codex, and GitHub Copilot skills from
-    https://github.com/${REPOSITORY} without cloning the dotfiles repository.
+    Download and install the Claude, Codex, and GitHub Copilot skills and
+    global instructions from https://github.com/${REPOSITORY} without cloning
+    the dotfiles repository.
 
-    Existing skills are preserved unless --force is used.
+    Skills are stored in ~/.claude/skills and shared with Codex and Copilot
+    through ~/.agents/skills. Existing files are preserved unless --force is
+    used.
 
     bash ${0} -h | --help                 (show this help)
     bash ${0} -r | --ref REF              (branch or tag, default: master)
     bash ${0} -d | --destination PATH     (home directory, default: \$HOME)
-    bash ${0} -f | --force                (replace skills with matching names)
+    bash ${0} -f | --force                (replace matching skills and instructions)
     bash ${0} -n | --dry-run              (show changes without installing)
 
 EOF
@@ -73,7 +75,7 @@ function commandexists() {
 
 function checkdependencies() {
     local command_name
-    for command_name in tar mktemp cp mkdir rm; do
+    for command_name in tar mktemp cp mkdir rm ln; do
         if ! commandexists "${command_name}"; then
             printf 'Error: Required command "%s" was not found.\n' "${command_name}" >&2
             exit 1
@@ -90,7 +92,7 @@ function downloadarchive() {
     local archive_url="${1}"
     local archive_path="${2}"
 
-    printf 'Downloading skills from %s at ref %s...\n' "${REPOSITORY}" "${REF}"
+    printf 'Downloading skills and instructions from %s at ref %s...\n' "${REPOSITORY}" "${REF}"
     if commandexists curl; then
         curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
             --retry 3 --connect-timeout 15 --output "${archive_path}" "${archive_url}"
@@ -99,47 +101,106 @@ function downloadarchive() {
     fi
 }
 
-function installskilldirectory() {
-    local relative_directory="${1}"
-    local source_directory="${2}/${relative_directory}"
-    local target_directory="${DESTINATION}/${relative_directory}"
+function preparetarget() {
+    local target_path="${1}"
+    local entry_type="${2}"
+
+    if [[ -e "${target_path}" ]] || [[ -L "${target_path}" ]]; then
+        if [[ "${FORCE}" -eq 0 ]]; then
+            printf 'Skipped existing %s: %s\n' "${entry_type}" "${target_path}"
+            SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+            return 1
+        fi
+
+        if [[ "${DRY_RUN}" -eq 0 ]]; then
+            rm -rf -- "${target_path}"
+        fi
+        printf 'Replacing %s: %s\n' "${entry_type}" "${target_path}"
+    else
+        printf 'Installing %s: %s\n' "${entry_type}" "${target_path}"
+    fi
+}
+
+function installarchiveentry() {
+    local source_path="${1}"
+    local target_path="${2}"
+    local entry_type="${3}"
+    local dereference_source="${4}"
+    local target_directory="${target_path%/*}"
+
+    if ! preparetarget "${target_path}" "${entry_type}"; then
+        return
+    fi
+
+    if [[ "${DRY_RUN}" -eq 0 ]]; then
+        mkdir -p -- "${target_directory}"
+        if [[ "${dereference_source}" -eq 1 ]]; then
+            cp -aL -- "${source_path}" "${target_path}"
+        else
+            cp -a -- "${source_path}" "${target_path}"
+        fi
+    fi
+    INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+}
+
+function installrelativelink() {
+    local link_target="${1}"
+    local target_path="${2}"
+    local target_directory="${target_path%/*}"
+
+    if ! preparetarget "${target_path}" "shared skill link"; then
+        return
+    fi
+
+    if [[ "${DRY_RUN}" -eq 0 ]]; then
+        mkdir -p -- "${target_directory}"
+        ln -s -- "${link_target}" "${target_path}"
+    fi
+    INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+}
+
+function installskills() {
+    local source_directory="${1}/.claude/skills"
     local source_path
     local skill_name
-    local target_path
+    local claude_target_path
+    local shared_target_path
 
     if [[ ! -d "${source_directory}" ]]; then
         return
     fi
 
     for source_path in "${source_directory}"/*; do
-        if [[ ! -e "${source_path}" ]] && [[ ! -L "${source_path}" ]]; then
+        if [[ ! -f "${source_path}/SKILL.md" ]]; then
             continue
         fi
 
-        FOUND_COUNT=$((FOUND_COUNT + 1))
+        FOUND_SKILL_COUNT=$((FOUND_SKILL_COUNT + 1))
         skill_name="${source_path##*/}"
-        target_path="${target_directory}/${skill_name}"
+        claude_target_path="${DESTINATION}/.claude/skills/${skill_name}"
+        shared_target_path="${DESTINATION}/.agents/skills/${skill_name}"
 
-        if [[ -e "${target_path}" ]] || [[ -L "${target_path}" ]]; then
-            if [[ "${FORCE}" -eq 0 ]]; then
-                printf 'Skipped existing skill: %s\n' "${target_path}"
-                SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
-                continue
-            fi
+        installarchiveentry "${source_path}" "${claude_target_path}" "Claude skill" 1
+        installrelativelink "../../.claude/skills/${skill_name}" "${shared_target_path}"
+    done
+}
 
-            if [[ "${DRY_RUN}" -eq 0 ]]; then
-                rm -rf -- "${target_path}"
-            fi
-            printf 'Replacing skill: %s\n' "${target_path}"
-        else
-            printf 'Installing skill: %s\n' "${target_path}"
+function installglobalinstructions() {
+    local source_directory="${1}"
+    local relative_path
+    local source_path
+    local target_path
+
+    for relative_path in "${GLOBAL_INSTRUCTION_PATHS[@]}"; do
+        source_path="${source_directory}/${relative_path}"
+        target_path="${DESTINATION}/${relative_path}"
+
+        if [[ ! -e "${source_path}" ]] && [[ ! -L "${source_path}" ]]; then
+            printf 'Error: Global instruction source was not found: %s\n' "${relative_path}" >&2
+            exit 1
         fi
 
-        if [[ "${DRY_RUN}" -eq 0 ]]; then
-            mkdir -p -- "${target_directory}"
-            cp -a -- "${source_path}" "${target_path}"
-        fi
-        INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+        installarchiveentry "${source_path}" "${target_path}" "global instructions" 0
     done
 }
 
@@ -192,17 +253,17 @@ mkdir -p -- "${SOURCE_DIRECTORY}"
 downloadarchive "${ARCHIVE_URL}" "${ARCHIVE_PATH}"
 tar -xzf "${ARCHIVE_PATH}" -C "${SOURCE_DIRECTORY}" --strip-components=1
 
-for SKILL_DIRECTORY in "${SKILL_DIRECTORIES[@]}"; do
-    installskilldirectory "${SKILL_DIRECTORY}" "${SOURCE_DIRECTORY}"
-done
+installskills "${SOURCE_DIRECTORY}"
 
-if [[ "${FOUND_COUNT}" -eq 0 ]]; then
+if [[ "${FOUND_SKILL_COUNT}" -eq 0 ]]; then
     printf 'Error: No skills were found in %s at ref %s.\n' "${REPOSITORY}" "${REF}" >&2
     exit 1
 fi
 
+installglobalinstructions "${SOURCE_DIRECTORY}"
+
 if [[ "${DRY_RUN}" -eq 1 ]]; then
-    printf 'Dry run complete: %d change(s), %d existing skill(s) skipped.\n' "${INSTALLED_COUNT}" "${SKIPPED_COUNT}"
+    printf 'Dry run complete: %d change(s), %d existing item(s) skipped.\n' "${INSTALLED_COUNT}" "${SKIPPED_COUNT}"
 else
-    printf 'Installation complete: %d skill entry(s) installed, %d existing skill(s) skipped.\n' "${INSTALLED_COUNT}" "${SKIPPED_COUNT}"
+    printf 'Installation complete: %d change(s), %d existing item(s) skipped.\n' "${INSTALLED_COUNT}" "${SKIPPED_COUNT}"
 fi
