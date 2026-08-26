@@ -41,3 +41,15 @@ approval_mode = "prompt"
 [mcp_servers.kredmine.tools.abandon_create_reconciliation]
 approval_mode = "prompt"
 
+[projects."/home/someuser"]
+trust_level = "trusted"
+
+[projects."/myfiles/Programs/ExcaliDash"]
+trust_level = "trusted"
+
+[projects."/myfiles/Programs/pr-agent"]
+trust_level = "trusted"
+
+[projects."/"]
+trust_level = "trusted"
+
