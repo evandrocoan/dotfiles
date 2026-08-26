@@ -49,6 +49,19 @@ When a package or import is missing, do not install it automatically. Ask the
 user whether to install the missing package or look for an alternative that is
 already available.
 
+## Failed assumptions and Git workspace changes
+
+Never create or use an additional Git worktree, switch branches, rebase,
+merge, or cherry-pick unless the user explicitly requests or approves that
+specific action.
+
+If an assumption required to carry out the user's instruction proves false,
+stop before changing the strategy. Tell the user which assumption failed,
+provide the concrete evidence, and ask how they want to resolve it. Do not
+invent a workaround, substitute a different branch or repository layout, copy
+files across branches, or take another improvised path. Resume only after the
+user chooses how to proceed.
+
 ## Portable shared paths
 
 When files, configuration, or symbolic links are intended to be shared across
