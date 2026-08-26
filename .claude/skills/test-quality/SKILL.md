@@ -29,6 +29,12 @@ Make every test prove one deterministic behavior through an observable result. T
 - Do not use a configured mock return value as the sole evidence. Also assert the real transformation, routing decision, persisted state, emitted request, or other behavior performed by the system under test.
 - Verify both the expected boundary interaction and the resulting state when orchestration is the behavior under test.
 
+## Distinguish telemetry from behavior
+
+- Treat log, metric, and trace assertions as evidence only of the telemetry emitted. A queue name, route, identifier, or outcome recorded in telemetry does not prove that the system used that value or performed that behavior.
+- When the claim concerns application behavior, assert the real boundary interaction, state transition, return value, or failure contract. If observability also matters, assert the telemetry separately.
+- Use telemetry as the sole subject only when its structured fields or message are an explicit operational, audit, or compliance contract. Prefer stable structured fields over exact prose unless a consumer depends on the text.
+
 ## Remove obsolete tests with obsolete code
 
 - Treat tests as evidence of an authoritative product contract, not as an independent reason to preserve production code.
