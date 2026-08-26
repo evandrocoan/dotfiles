@@ -16,6 +16,7 @@
 
 !README.md
 !CLAUDE.md
+!AGENTS.md
 !install-ia-skills.sh
 !.nojekyll
 
@@ -155,8 +156,6 @@
 !/.claude/
 !/.claude/CLAUDE.md
 !/.claude/settings.json
-!/.claude/guidelines/
-!/.claude/guidelines/**
 !/.claude/skills/
 !/.claude/skills/**
 

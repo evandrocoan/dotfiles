@@ -100,6 +100,13 @@ unless explicitly asked to.
 Before creating, modifying, reviewing, debugging, or running automated tests,
 always load and follow the `test-quality` skill.
 
+Use the test environment prescribed by the repository. When a project defines
+an official containerized test workflow, do not replace it with host tooling.
+If host execution fails because of native bindings, permissions, runtime
+differences, or package mismatches, run the documented containerized suite
+before reporting verification complete. Image builds, type checks, and smoke
+checks do not substitute for the prescribed automated tests.
+
 The development machine has an extremely slow mechanical disk. All terminal
 commands take much longer than normal. Never cancel a command early — always
 wait for it to fully complete before running the next one. Never run multiple
