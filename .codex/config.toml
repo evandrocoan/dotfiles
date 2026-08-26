@@ -41,3 +41,35 @@ approval_mode = "prompt"
 [mcp_servers.kredmine.tools.abandon_create_reconciliation]
 approval_mode = "prompt"
 
+[projects."/home/someuser"]
+trust_level = "trusted"
+
+[projects."/myfiles/Programs/ExcaliDash"]
+trust_level = "trusted"
+
+[projects."/myfiles/Programs/pr-agent"]
+trust_level = "trusted"
+
+[projects."/myfiles/analytics/kredmine/workspace"]
+trust_level = "trusted"
+
+[projects."/myfiles/analytics/khognition-pipeline"]
+trust_level = "trusted"
+
+[projects."/"]
+trust_level = "trusted"
+
+[projects."/myfiles/analytics/kvoiceai"]
+trust_level = "trusted"
+
+[projects."/myfiles/analytics/recorder"]
+trust_level = "trusted"
+
+[projects."/myfiles/flow"]
+trust_level = "trusted"
+
+[projects."/myfiles/analytics/cluster-k8s-staging/config-data"]
+trust_level = "trusted"
+
+[projects."/myfiles/analytics/asr"]
+trust_level = "trusted"

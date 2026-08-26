@@ -69,11 +69,12 @@ users or machines, never store user-specific or machine-specific absolute
 paths. Use paths relative to the containing file or symbolic link and verify
 the stored target after creating it.
 
-For skills shared between Claude and Codex, keep the canonical skill at
+For skills shared by Claude, Codex, and Copilot, keep the canonical skill at
 `~/.claude/skills/<skill-name>` and expose it through
-`~/.codex/skills/<skill-name>` with the relative symbolic-link target
+`~/.agents/skills/<skill-name>` with the relative symbolic-link target
 `../../.claude/skills/<skill-name>`. Never store an expanded home-directory
-path in that link.
+path in that link. Keep Codex system skills under `~/.codex/skills/.system`
+untouched.
 
 ## Dependency choices
 
