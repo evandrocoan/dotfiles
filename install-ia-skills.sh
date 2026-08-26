@@ -26,9 +26,9 @@ cat >&1 <<EOF
     global instructions from https://github.com/${REPOSITORY} without cloning
     the dotfiles repository.
 
-    Skills are stored in ~/.claude/skills and shared with Codex and Copilot
-    through ~/.agents/skills. Existing files are preserved unless --force is
-    used.
+    Skills are installed canonically in ~/.claude/skills and shared with Codex
+    and Copilot through relative links in ~/.agents/skills. Existing files are
+    preserved unless --force is used.
 
     bash ${0} -h | --help                 (show this help)
     bash ${0} -r | --ref REF              (branch or tag, default: master)
@@ -125,7 +125,6 @@ function installarchiveentry() {
     local source_path="${1}"
     local target_path="${2}"
     local entry_type="${3}"
-    local dereference_source="${4}"
     local target_directory="${target_path%/*}"
 
     if ! preparetarget "${target_path}" "${entry_type}"; then
@@ -134,11 +133,7 @@ function installarchiveentry() {
 
     if [[ "${DRY_RUN}" -eq 0 ]]; then
         mkdir -p -- "${target_directory}"
-        if [[ "${dereference_source}" -eq 1 ]]; then
-            cp -aL -- "${source_path}" "${target_path}"
-        else
-            cp -a -- "${source_path}" "${target_path}"
-        fi
+        cp -a -- "${source_path}" "${target_path}"
     fi
     INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
 }
@@ -175,12 +170,17 @@ function installskills() {
             continue
         fi
 
+        if [[ -L "${source_path}" ]]; then
+            printf 'Error: Canonical skill source must be a directory, not a symbolic link: %s\n' "${source_path}" >&2
+            exit 1
+        fi
+
         FOUND_SKILL_COUNT=$((FOUND_SKILL_COUNT + 1))
         skill_name="${source_path##*/}"
         claude_target_path="${DESTINATION}/.claude/skills/${skill_name}"
         shared_target_path="${DESTINATION}/.agents/skills/${skill_name}"
 
-        installarchiveentry "${source_path}" "${claude_target_path}" "Claude skill" 1
+        installarchiveentry "${source_path}" "${claude_target_path}" "canonical skill"
         installrelativelink "../../.claude/skills/${skill_name}" "${shared_target_path}"
     done
 }
@@ -200,7 +200,7 @@ function installglobalinstructions() {
             exit 1
         fi
 
-        installarchiveentry "${source_path}" "${target_path}" "global instructions" 0
+        installarchiveentry "${source_path}" "${target_path}" "global instructions"
     done
 }
 
