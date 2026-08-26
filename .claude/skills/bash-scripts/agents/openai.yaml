@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bash Scripts"
+  short_description: "Write safe, consistent Bash scripts"
+  default_prompt: "Use $bash-scripts to create or edit a Bash script following the repository conventions."

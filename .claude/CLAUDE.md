@@ -181,7 +181,7 @@ in sync using the following logic:
 
 Before writing or editing documentation or AI-facing Markdown instructions,
 use the `documentation` skill. If skill discovery is unavailable, read the same
-instructions at `~/.claude/guidelines/documentation.md` and follow them.
+instructions at `~/.claude/skills/documentation/SKILL.md` and follow them.
 
 ## Architecture records
 
@@ -214,8 +214,8 @@ before `.Dockerfile`, not as a suffix after `Dockerfile`:
 
 ## Shell scripts
 
-Before writing or editing Bash scripts, read
-`~/.claude/guidelines/bash-scripts.md` for the style conventions.
+Before creating, editing, reviewing, or debugging Bash scripts, use the
+`bash-scripts` skill.
 
 ## ExcaliDash / Excalidraw MCP workflow
 
