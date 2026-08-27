@@ -160,6 +160,7 @@ function installskills() {
     local skill_name
     local claude_target_path
     local shared_target_path
+    local -a skill_source_paths=()
 
     if [[ ! -d "${source_directory}" ]]; then
         return
@@ -176,11 +177,20 @@ function installskills() {
         fi
 
         FOUND_SKILL_COUNT=$((FOUND_SKILL_COUNT + 1))
+        skill_source_paths+=("${source_path}")
+    done
+
+    for source_path in "${skill_source_paths[@]}"; do
         skill_name="${source_path##*/}"
         claude_target_path="${DESTINATION}/.claude/skills/${skill_name}"
-        shared_target_path="${DESTINATION}/.agents/skills/${skill_name}"
 
         installarchiveentry "${source_path}" "${claude_target_path}" "canonical skill"
+    done
+
+    for source_path in "${skill_source_paths[@]}"; do
+        skill_name="${source_path##*/}"
+        shared_target_path="${DESTINATION}/.agents/skills/${skill_name}"
+
         installrelativelink "../../.claude/skills/${skill_name}" "${shared_target_path}"
     done
 }
