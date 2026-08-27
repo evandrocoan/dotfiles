@@ -1,6 +1,6 @@
 ---
 name: test-quality
-description: Create, review, debug, or improve automated tests that must fail for the right reason. Use for unit, integration, end-to-end, regression, smoke, async, mocked, or data-backed tests; test-related code review; false-positive audits; flaky-test investigation; fixture design; assertion design; and any code change that adds or modifies tests.
+description: Create, review, debug, or improve automated tests that must fail for the right reason. Use for unit, integration, end-to-end, regression, smoke, async, mocked, recorded-replay, or data-backed tests; test-related code review; false-positive audits; flaky-test investigation; fixture design; assertion design; and any code change that adds or modifies tests.
 ---
 
 # Test quality
@@ -28,6 +28,22 @@ Make every test prove one deterministic behavior through an observable result. T
 - Never mock the system under test or the business rule being verified.
 - Do not use a configured mock return value as the sole evidence. Also assert the real transformation, routing decision, persisted state, emitted request, or other behavior performed by the system under test.
 - Verify both the expected boundary interaction and the resulting state when orchestration is the behavior under test.
+
+## Replay recorded failures when possible
+
+Classify recorded regressions by the boundary they reproduce:
+
+- **Recorded-artifact replay:** Feed a sanitized payload captured from a real failure into the narrowest production boundary that mishandled it, such as a parser, canonicalizer, validator, or state transition. Use this when the artifact is sufficient for the local defect but the complete session is unavailable. Preserve the malformed or provider-specific shape that triggered the defect and label the test as an artifact replay, not a session or end-to-end replay.
+- **Recorded-session replay:** Replay the ordered inputs, provider responses, tool calls and results, state transitions, and terminal observation through the same public orchestration boundary used in production. Add this level whenever the recorded transcript is sufficient to reach the failing boundary without live network access.
+
+Apply these rules to both levels:
+
+- Add focused unit coverage for the repaired rule even when a replay exists. When a complete session exists, keep both the focused regression and the session replay because they diagnose different failure scopes.
+- Treat a recording as sufficient only for the level whose required inputs and observations it contains. If session data is incomplete, state what is missing and create the strongest recorded-artifact replay available instead; do not claim a complete replay.
+- Preserve behaviorally relevant envelope shapes, ordering, tool calls, usage fields, malformed outputs, and terminal data. Remove credentials and unrelated content without normalizing away the defect.
+- Stub only mutable external effects. Keep every production control-flow layer inside the declared replay boundary real.
+- Assert the observable outcome and the critical state transition that previously failed. Include a negative control or equivalent sensitivity proof showing that the replay fails when the repair is absent.
+- Reuse and extend an existing fixture when it already represents the same artifact or session. Use the repository's replay marker or suite convention when one exists, and keep deterministic replays in the normal CI gate. Reserve live provider tests for separate smoke coverage.
 
 ## Distinguish telemetry from behavior
 
