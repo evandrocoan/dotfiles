@@ -44,6 +44,23 @@ Apply these rules to both levels:
 - Stub only mutable external effects. Keep every production control-flow layer inside the declared replay boundary real.
 - Assert the observable outcome and the critical state transition that previously failed. Include a negative control or equivalent sensitivity proof showing that the replay fails when the repair is absent.
 - Reuse and extend an existing fixture when it already represents the same artifact or session. Use the repository's replay marker or suite convention when one exists, and keep deterministic replays in the normal CI gate. Reserve live provider tests for separate smoke coverage.
+- Fail on every unexpected, duplicated, reordered, or unconsumed recorded interaction. Assert that the replay exhausts its responses and tool results exactly once.
+- Block live network access during deterministic replay and fail if code attempts to fall back to an unrecorded provider, repository, clock, or other external service.
+
+## Test concurrency and resilience
+
+- Cover idempotency, bounded retries, timeouts, cancellation, duplicate delivery, and partial failure whenever the production path implements those behaviors.
+- Coordinate concurrent tests with barriers, events, fake clocks, or controllable executors. Do not use arbitrary sleeps as proof of ordering or race safety.
+- Assert both the terminal result and durable side effects. Verify that duplicate or retried work does not publish, persist, charge, or mutate more than the contract permits.
+- Force each recoverable and terminal failure at its real boundary. Assert retry count, backoff scheduling when observable, state preservation, and the absence of retry after a deterministic rejection.
+
+## Use property tests for invariants
+
+- Use property-based or deterministically generated cases when parsers, canonicalizers, validators, serializers, or state machines must preserve an invariant across many input shapes.
+- State the invariant explicitly, such as round-trip equivalence, idempotence, monotonic state progress, stable identity, or rejection without mutation. Do not treat random execution without an invariant as meaningful coverage.
+- Keep generation reproducible and retain the smallest failing example reported by the framework as a regression fixture when it represents a distinct production risk.
+- Exercise valid, malformed, boundary, and composition cases. Combine property tests with concrete examples that document important known failures.
+- Follow the repository's dependency policy before introducing a property-testing library. Prefer an already supported framework; otherwise use deterministic parameter generation until a dependency choice is approved.
 
 ## Distinguish telemetry from behavior
 
@@ -82,6 +99,14 @@ Apply these rules to both levels:
 - Assert the resolved value or resulting state, never the coroutine or promise object's truthiness.
 - Treat un-awaited-coroutine warnings, pending tasks, and background exceptions as failures.
 - Await async mocks and assert their awaited arguments when the boundary interaction matters.
+
+## Control skips and flaky tests
+
+- Require every skip or expected failure to name the unavailable capability or known defect through a precise, reviewable condition. Never skip because setup failed or because the result was inconvenient.
+- Use strict expected failures so an unexpected pass fails the suite. Remove the marker when its condition is resolved.
+- Do not add test-level retries for deterministic product behavior. Permit retry only for a confirmed external infrastructure failure, keep it visible in the result, and retain a non-retried deterministic test for the product contract.
+- Treat intermittent failures as defects to reproduce and fix. If temporary quarantine is unavoidable, keep the test visible, state the removal condition, and do not count it as passing coverage.
+- Report skips, expected failures, retries, and quarantined tests separately from passes. Investigate any unexpected change in those outcomes.
 
 ## Audit for false positives
 
