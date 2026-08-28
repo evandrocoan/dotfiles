@@ -179,4 +179,5 @@
 /.local/bin/sshkmg
 /.local/bin/uv
 /.local/bin/uvx
+/.local/bin/excalidash-mcp
 /.local/bin/kredmine-mcp
