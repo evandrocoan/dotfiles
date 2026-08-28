@@ -139,6 +139,7 @@
 !/scripts/*
 
 /scripts/.env*
+/scripts/check_*_playwright.py
 !/scripts/.env.example
 !/scripts/install/
 !/scripts/install/**
