@@ -5,15 +5,19 @@ failures impossible to diagnose.
 
 ## Startup and workspace scope
 
-Before running a command or editing a file, read the `CLAUDE.md` of the primary
-working directory and every additional working directory listed in the session.
-Project instructions may override global workflow assumptions.
+At the start of work in each workspace root, before running project commands or
+editing files, locate and read its `CLAUDE.md` if present. Commands used only to
+locate or read instruction files are permitted before this step. Read each file
+once unless it changes or a new workspace root is added.
+
+Project instructions may refine global workflow assumptions, but must not relax
+global safety, authorization, workspace-scope, or destructive-action boundaries.
 
 ### Missing repositories and workspace scope
 
-Treat `workspace_roots` as the complete authorized repository discovery scope
-unless the user explicitly says otherwise. When a task refers to a repository
-that is not listed there:
+Treat `workspace_roots` as the complete authorized local repository discovery
+scope unless the user explicitly says otherwise. When a task requires local
+file work in a repository that is not listed there:
 
 1. Stop before searching sibling directories, parent directories, the home
    directory, editor metadata, or any other location outside the workspace.
@@ -23,8 +27,9 @@ that is not listed there:
 4. Search outside only after receiving that authorization, and limit the search
    to the smallest plausible location.
 5. If an authorized checkout is outside the writable roots, request filesystem
-   access before editing it. Never bypass missing local access through a remote
-   file or commit API.
+   access before editing it. Never use a remote file or commit API to modify
+   repository contents in place of the authorized local working tree. Read-only
+   remote inspection remains allowed when the task calls for it.
 6. Prefer the authorized local working tree for file work. Read its
    `CLAUDE.md`, inspect its current branch and status, and preserve all existing
    changes.
@@ -36,14 +41,20 @@ that is not listed there:
 - When web browsing reaches bot verification, wait for the user to complete it.
   Never bypass or automate the verification.
 - Preserve the existing code formatting style when making focused changes.
-- If a required assumption proves false, stop before changing strategy. Report
-  the concrete evidence and ask the user how to proceed. Do not invent a
-  workaround, substitute another branch or repository layout, or copy files
-  across branches.
+- If a required assumption proves false, stop before changing implementation
+  strategy. Report the concrete evidence and ask the user how to proceed. Do
+  not invent a workaround, substitute another branch or repository layout, or
+  copy files across branches. Never silently choose a standard-library-only or
+  custom implementation merely to avoid adding or installing a dependency. If
+  a purpose-built dependency is a reasonable option, load
+  `dependency-decisions`, compare it explicitly, and obtain the user's choice
+  before implementation.
 - Never create another Git worktree, switch branches, rebase, merge, or
   cherry-pick without explicit authorization for that specific action.
-- When asked to write code, do not add documentation, README files, or tests
-  unless the user explicitly requests them.
+- When asked to write code, do not add documentation or README files unless the
+  user explicitly requests them. Do not add unrelated tests; add or modify only
+  tests needed to verify the requested behavior, and load `test-quality` before
+  doing so.
 - Name alternative Dockerfiles with the environment before `.Dockerfile`, such
   as `dev.Dockerfile`; never use a suffix such as `Dockerfile.dev`.
 
@@ -52,9 +63,16 @@ that is not listed there:
 Write AI-facing instruction files in English. Preserve literal strings an agent
 must emit and instructions that pin generated output to another language.
 
-For every other existing file, match its language. If a file already mixes
-languages, ask whether to continue in the dominant language, choose a language
-for new content only, or normalize the entire file.
+For every other existing file, match the language of the surrounding content.
+If a file already mixes languages, preserve the local convention during focused
+edits. Ask which language to use only when adding substantial new content whose
+intended language cannot be inferred, or when normalization is requested.
+
+Architecture artifacts are an explicit exception. Architecture indexes, plans,
+ADRs, and decision records must always be written in English according to the
+`architecture-records` skill. When an affected architecture artifact is not in
+English or mixes languages, translate the entire artifact and its coupled index in
+the same change instead of preserving mixed-language prose.
 
 Use relative paths for files, configuration, and symbolic links intended to be
 shared across users or machines. Never store user-specific or machine-specific
@@ -94,21 +112,30 @@ issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
 ## Machine constraints and interactive commands
 
-The development machine has an extremely slow mechanical disk. Run only one
-terminal command at a time, and inspect its result or current state before
-starting another. Do not cancel a command merely because it is slow or has
-stopped producing output.
+The development machine has an extremely slow mechanical disk. Do not run
+multiple disk-intensive terminal commands concurrently. Run dependent commands
+sequentially, and inspect each result or current state before starting the next.
+Long-running servers, watchers, and monitors may remain active while independent
+commands run when necessary, but inspect their startup output or state first. Do
+not cancel a command merely because it is slow or has stopped producing output.
 
 Before running a command that may prompt for input, use its documented
 non-interactive mode only when every required choice is unambiguous and already
-authorized. Never pipe `yes` into a command or blindly accept defaults. Ask the
-user first when a prompt concerns credentials, trust, license acceptance,
-overwriting files, dependency changes, or destructive operations.
+authorized. Never pipe `yes` into a command or blindly accept defaults. If the
+exact choice is not already explicitly authorized, ask the user before answering
+a prompt concerning credentials, trust, license acceptance, overwriting files,
+dependency changes, or destructive operations.
 
-If a running command displays a prompt, treat it as waiting for input rather
-than as a slow command. Respond through the existing process when the answer is
+Whenever a command remains running after a tool response, inspect all newly
+returned output before waiting again. Look specifically for interactive prompts,
+including prompts printed without a trailing newline. If the latest output is
+requesting input, treat the command as waiting rather than slow and do not
+continue waiting. Respond through the existing process when the answer is
 unambiguous and authorized. Otherwise, report the exact prompt and ask the user
-instead of leaving the process silently waiting.
+immediately.
+
+Silence alone is not evidence of an interactive prompt. When the output is
+inconclusive, inspect the process state without cancelling it.
 
 ## Memory policy
 

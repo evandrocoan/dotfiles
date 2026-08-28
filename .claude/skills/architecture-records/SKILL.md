@@ -9,6 +9,21 @@ Use this skill together with the `documentation` skill. Standardize durable
 architecture context without turning temporary delivery tracking into permanent
 documentation.
 
+## Language
+
+Write every architecture index, plan, ADR, decision record, and template-derived
+architecture artifact in English, regardless of the repository's surrounding
+documentation language. This rule applies to both new files and prose added to
+existing architecture files.
+
+When an affected architecture file is not in English or mixes languages, translate
+the entire file and its coupled architecture index to English in the same change.
+Never append English prose to a non-English architecture record and leave a mixed-
+language artifact behind. Preserve literal strings that must remain exact, including
+commands, paths, identifiers, API values, required UI labels, and quoted external
+output. Continue to follow the `documentation` skill's language rules for coupled
+files that are not architecture artifacts, such as user-facing README files.
+
 ## Workflow
 
 ### 1. Inspect the repository convention
@@ -38,7 +53,7 @@ faithful description of the resulting architecture.
 
 Reuse the existing architecture directory and index when present. When the repository
 has no convention, create `architecture/README.md` from
-`assets/architecture-readme-template.md` and adapt it to the repository language.
+`assets/architecture-readme-template.md` and keep it in English.
 Create a new record from `assets/architecture-record-template.md`, removing all
 placeholders and unused sections.
 
@@ -47,11 +62,12 @@ lifecycle status only in the record itself so status has one authoritative owner
 
 ### 4. Apply the lifecycle
 
-Use an explicit semantic state and adapt its literal wording to the repository
-language:
+Use an explicit English semantic state:
 
 - **Proposed:** Describe intended behavior, implementation order, risks, and
   acceptance criteria. State clearly that the record is not current functionality.
+- **In implementation:** Separate delivered behavior from remaining gaps and do not
+  present the record as fully available.
 - **Implemented:** Rewrite speculative sections to describe actual behavior. Preserve
   durable rationale, boundaries, risks, and acceptance criteria. Remove or summarize
   temporary execution detail.
