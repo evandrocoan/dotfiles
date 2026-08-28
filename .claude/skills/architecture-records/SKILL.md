@@ -1,6 +1,6 @@
 ---
 name: architecture-records
-description: "Create, organize, review, implement, or supersede durable cross-component architecture plans and decision records. Use when adding or moving architecture plans or ADRs, creating or updating architecture/README.md, changing a record lifecycle status, promoting a proposed plan to actual architecture, or synchronizing current architectural invariants into CLAUDE.md or AGENTS.md and operational behavior into README.md. Do not use for a temporary issue or merge-request checklist alone."
+description: "Create, organize, review, implement, audit, or supersede durable cross-component architecture plans and decision records. Use when adding or moving architecture plans or ADRs, creating or updating architecture/README.md, changing a record lifecycle status, promoting a proposed plan to actual architecture, tracing architectural invariants through code and regression protection, investigating whether a recurring failure is architectural, or synchronizing current architectural invariants into CLAUDE.md or AGENTS.md and operational behavior into README.md. Do not use for a temporary issue or merge-request checklist alone."
 ---
 
 # Architecture records
@@ -75,7 +75,58 @@ Use this ownership model unless repository instructions define a stricter one:
 When sources disagree, determine which artifact represents the approved decision.
 Update coupled artifacts in the same change instead of correcting only prose.
 
-### 6. Synchronize current behavior
+### 6. Build implementation traceability
+
+For every load-bearing invariant affected by implementation, maintain a compact
+trace from the decision to its executable protection:
+
+```text
+invariant -> authoritative owner -> affected consumers -> tests -> recorded replay
+```
+
+Keep the trace in the architecture record when it aids future maintenance. Point to
+symbols or focused source locations instead of copying code, schemas, current values,
+or maintained inventories. Mark an unavailable element explicitly; never imply that
+documentation, a unit test, an artifact fixture, a provider-stage replay, and a full
+end-to-end replay provide equivalent coverage.
+
+Require a recorded replay when a real incident exposed a cross-component protocol or
+representation failure and sufficient raw inputs exist. The replay must consume the
+recorded interaction completely, reject unexpected calls and silent network access,
+and assert the architectural outcome rather than only a parser detail. When the
+available capture is partial, build the narrowest faithful replay and state its
+boundary; never fabricate the missing session.
+
+Use the `test-quality` skill whenever implementation work adds or changes executable
+regression protection. Follow its replay integrity, concurrency, property-testing,
+skip, and flakiness rules as applicable.
+
+### 7. Diagnose incidents before changing architecture
+
+Classify the observed failure from evidence before deciding whether to amend an
+existing record or create a new one:
+
+- **Architecture:** ownership, authority, stage order, state transition, terminal
+  meaning, or recovery policy is missing, conflicting, or intrinsically unsafe.
+- **Implementation:** the approved invariant is sufficient, but code does not honor
+  it consistently.
+- **Model:** authenticated context and the protocol are sufficient, but a
+  probabilistic judgment is wrong or malformed.
+- **Operational:** transport, credentials, capacity, timeout, deployment, or external
+  state prevented execution.
+
+Record mixed causes when more than one applies. Correct an implementation defect
+under the existing record when its invariant is unchanged. Amend that record when
+the durable contract was incomplete. Create or supersede a record only when the
+ownership model, authority boundary, stage order, failure meaning, or recovery policy
+actually changes.
+
+Do not turn one provider response, log phrase, technology, or incident into a
+deterministic semantic exception. Deterministic logic may authenticate and normalize
+objective representation; semantic relevance and equivalence remain with the
+appropriate semantic decision boundary.
+
+### 8. Synchronize current behavior
 
 When implementation changes a cross-file ownership boundary, stage order, failure
 meaning, recovery rule, or other invariant, update the repository instruction file
@@ -86,20 +137,49 @@ Update user documentation only when setup, operation, configuration, or user-vis
 behavior changes. Follow the repository's instruction-file language and synchronization
 rules; in this environment, write AI-facing instruction files in English.
 
-### 7. Keep records durable
+### 9. Audit the implemented architecture
+
+Before declaring implementation complete, reconstruct the actual runtime flow from
+code, configuration, tests, and recorded artifacts rather than from the intended
+plan. Check that:
+
+- every invariant has one authoritative runtime owner and all consumers use it;
+- no legacy, fallback, cache, renderer, or compatibility path reconstructs a second
+  authority or preserves the superseded meaning;
+- deterministic gates decide only objective facts and semantic gates receive the
+  authenticated context needed for probabilistic decisions;
+- every terminal path is explicit, observable, and preserves already authenticated
+  independent outcomes;
+- retries, timeouts, malformed provider output, partial progress, duplicate events,
+  and stale state have bounded and documented meanings;
+- incident-derived replays fail before the fix and protect the cross-component
+  outcome after it.
+
+If any required trace or audit item is unresolved, keep the record proposed or in
+implementation using the repository's established lifecycle wording. Do not call the
+architecture implemented based only on code presence or passing unit tests.
+
+### 10. Keep records durable
 
 Point to authoritative code and configuration instead of copying maintained
 inventories, defaults, model names, versions, limits, or deployment-specific values.
 Preserve historical anchors. Use relative links that remain correct after moving the
 record into its architecture directory.
 
-### 8. Validate the result
+### 11. Validate the result
 
 Before handoff:
 
 - Confirm that the record has one explicit lifecycle status.
 - Confirm that the architecture index links to every current record.
 - Confirm that proposed behavior is not described as implemented elsewhere.
+- Confirm that each implemented invariant is traceable to its runtime owner,
+  affected consumers, and proportional executable protection.
+- Confirm that real cross-component incidents have a faithful recorded replay when
+  the required raw data exists, and that partial replays are not labeled end to end.
+- Confirm that obsolete paths cannot compete with the current source of authority.
+- Confirm that every runtime terminal state remains observable and semantically
+  consistent through rendering, persistence, retries, and reuse.
 - Verify relative links and moved-file paths.
 - Keep an existing table of contents synchronized; add one only when the
   `documentation` skill calls for it.

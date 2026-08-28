@@ -1,4 +1,4 @@
 interface:
   display_name: "Documentation"
   short_description: "Keep Markdown documentation accurate and concise"
-  default_prompt: "Use $documentation to create or update this Markdown documentation."
+  default_prompt: "Use $documentation to create, update, and verify this Markdown documentation."

@@ -134,7 +134,14 @@ Do not weaken an assertion merely to make a failing test green. Fix missing fixt
 1. Run the narrowest relevant test while iterating.
 2. Run formatting, lint, type checks, unit tests, integration tests, smoke tests, and every other job in the repository's complete CI gate after the final test change.
 3. Use the repository-prescribed environment and commands; do not substitute host tools for containerized or locked tooling.
-4. Report exact pass, fail, skip, and blocked results. Distinguish product failures from infrastructure, quota, credential, or dependency failures.
+4. When the repository defines an official containerized test workflow, use it
+   instead of treating host execution as equivalent. If host execution fails
+   because of native bindings, permissions, runtime differences, or package
+   mismatches, run the documented containerized suite before reporting
+   verification complete.
+5. Do not treat image builds, type checks, lint, or smoke checks as substitutes
+   for the prescribed automated tests.
+6. Report exact pass, fail, skip, and blocked results. Distinguish product failures from infrastructure, quota, credential, or dependency failures.
 
 ## Report audit findings
 

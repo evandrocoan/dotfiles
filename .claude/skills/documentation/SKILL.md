@@ -9,6 +9,25 @@ Apply these rules when creating, editing, reviewing, or reorganizing
 documentation. Inspect the target document and its authoritative sources before
 changing content.
 
+## Match document language
+
+Write AI-facing instruction files in English. This includes `CLAUDE.md`,
+`AGENTS.md`, skills, slash commands, `.github/copilot-instructions.md`, and
+equivalent agent guidance. Keep literal strings that an agent must emit and
+instructions that prescribe an output language in their required language.
+
+For every other existing document, match its language. If it already mixes
+languages, ask whether to continue in the dominant language, select a language
+for new content only, or normalize the entire document before editing it.
+
+## Format Markdown consistently
+
+- Use normal sentence case for headings; do not use CamelCase titles.
+- In Markdown table separator rows, use spaces around the dashes, such as
+  `| --- | --- |`.
+- Preserve the surrounding document's formatting style and avoid unrelated
+  reformatting.
+
 ## Keep content durable
 
 Never embed information that will silently become stale as the code evolves:
@@ -27,6 +46,14 @@ Use qualitative language for quantities so documentation remains accurate as
 the code evolves. A list reproduced directly from its authoritative source is
 allowed only when the document states that the copies must remain synchronized.
 
+## Verify claims and lifecycle
+
+Treat behavior as current only after checking its authoritative code,
+configuration, test, or generated source. Label intended behavior as planned
+and link to its proposed architecture record; do not describe it as available.
+Preserve explicitly historical statements as history. When a claim cannot be
+verified, say so or remove it instead of presenting an inference as fact.
+
 ## Distinguish README.md from agent instructions
 
 Keep `README.md` user-facing. Cover setup, operational usage, and runbooks,
@@ -36,6 +63,21 @@ Keep `CLAUDE.md`, `AGENTS.md`, skills, and equivalent agent instructions
 AI-facing. Record architectural context, cross-file invariants, non-obvious
 constraints, and decisions with their rationale, answering "why is the code
 structured this way, and what breaks if I change it?"
+
+## Synchronize Claude and Copilot instructions
+
+When a project has a regular `.github/copilot-instructions.md` file, ensure
+`CLAUDE.md` begins with `@.github/copilot-instructions.md` so Claude loads the
+same project guidance. Do not add that directive when the Copilot file is a
+symlink to `CLAUDE.md`, because it would create a self-reference.
+
+When `.github/copilot-instructions.md` does not exist, create `.github/` when
+needed and create a relative symlink with the stored target `../CLAUDE.md`.
+Verify the target with `readlink`; never link to `.github/CLAUDE.md` or store a
+machine-specific absolute path.
+
+When the path already contains a symlink, verify its stored target and correct
+it only when the task authorizes instruction synchronization or maintenance.
 
 ## Maintain tables of contents
 
@@ -79,6 +121,24 @@ Keep specific values such as concurrency limits, batch sizes, and function
 names in code comments. Describe the invariant in agent instructions and point
 to the authoritative file instead of duplicating the value. Move procedures or
 task-specific reference material to skills so they load only when relevant.
+
+Use the `architecture-records` skill when documentation changes a durable
+cross-component invariant, ownership boundary, stage order, failure meaning, or
+recovery rule. Keep the extended rationale in the architecture record and only
+the current load-bearing rule in agent instructions.
+
+## Validate coupled documentation
+
+Search for duplicate or contradictory descriptions in affected documentation,
+agent instructions, architecture records, and configuration examples. Update or
+replace stale copies with authoritative pointers rather than synchronizing prose
+manually.
+
+Before handoff, validate affected links, anchors, paths, and symlinks. Exercise
+changed commands or executable examples in the repository-approved environment
+when practical; otherwise report them as unverified. Run available Markdown and
+whitespace checks, inspect untracked files as well as the diff, and report the
+validation performed.
 
 ## Preserve historical anchors
 

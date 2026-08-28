@@ -1,259 +1,106 @@
-# Global Claude Instructions
+# Global Claude instructions
 
-Never redirect stderr to /dev/null (2>/dev/null) in any command, because it hides errors and makes failures impossible to diagnose.
+Never redirect standard error to `/dev/null` (`2>/dev/null`). Hidden errors make
+failures impossible to diagnose.
 
-## Reading CLAUDE.md before acting
+## Startup and workspace scope
 
-Before running any command or making any file edit, read the CLAUDE.md of
-every working directory in the session — both the primary directory and all
-additional working directories listed in the session context. Each project
-may have its own environment constraints, tool execution rules, and
-architectural decisions that override default behavior. Skipping any of them
-causes incorrect actions that cannot be undone safely.
+Before running a command or editing a file, read the `CLAUDE.md` of the primary
+working directory and every additional working directory listed in the session.
+Project instructions may override global workflow assumptions.
 
 ### Missing repositories and workspace scope
 
 Treat `workspace_roots` as the complete authorized repository discovery scope
-unless the user explicitly says otherwise. When a task or repository
-instruction refers to a repository that is not listed there:
+unless the user explicitly says otherwise. When a task refers to a repository
+that is not listed there:
 
 1. Stop before searching sibling directories, parent directories, the home
-   directory, or any other location outside the workspace.
+   directory, editor metadata, or any other location outside the workspace.
 2. Tell the user exactly which repository or checkout is missing.
 3. Ask the user either to add the checkout to the workspace or to explicitly
-   authorize a search outside the current workspace.
-4. Search outside the workspace only after receiving that authorization, and
-   limit the search to the smallest plausible location.
+   authorize a search outside it.
+4. Search outside only after receiving that authorization, and limit the search
+   to the smallest plausible location.
 5. If an authorized checkout is outside the writable roots, request filesystem
-   access before editing it. Never bypass missing local write permission by
-   editing or committing through a remote repository API.
-6. Prefer the authorized local working tree for edits. Use remote repository
-   tools for read-only verification unless the user explicitly requests a
-   remote operation.
-7. Read the target working tree's `CLAUDE.md`, then inspect its current branch,
-   status, and existing changes before editing. Never assume its branch.
-8. Leave local changes uncommitted and unpushed unless the user explicitly asks
-   for the corresponding commit or push.
+   access before editing it. Never bypass missing local access through a remote
+   file or commit API.
+6. Prefer the authorized local working tree for file work. Read its
+   `CLAUDE.md`, inspect its current branch and status, and preserve all existing
+   changes.
+7. Treat remote repository tools as read-only unless the user explicitly
+   requests the corresponding remote mutation.
 
-## General
+## General safeguards
 
-When browsing the web, if bot verification begins, wait for the user to complete
-the verification and then continue the task. Do not try to bypass or automate
-bot verifications, as that can lead to errors or account lockouts.
+- When web browsing reaches bot verification, wait for the user to complete it.
+  Never bypass or automate the verification.
+- Preserve the existing code formatting style when making focused changes.
+- If a required assumption proves false, stop before changing strategy. Report
+  the concrete evidence and ask the user how to proceed. Do not invent a
+  workaround, substitute another branch or repository layout, or copy files
+  across branches.
+- Never create another Git worktree, switch branches, rebase, merge, or
+  cherry-pick without explicit authorization for that specific action.
+- When asked to write code, do not add documentation, README files, or tests
+  unless the user explicitly requests them.
+- Name alternative Dockerfiles with the environment before `.Dockerfile`, such
+  as `dev.Dockerfile`; never use a suffix such as `Dockerfile.dev`.
 
-Do not change my code formatting style when fixing it.
+## Language and portable files
 
-AI-facing instruction files must always be written in English, regardless of
-the surrounding codebase language. This covers any file whose primary purpose
-is to instruct an AI agent — not just CLAUDE.md, but also skill and slash
-command definitions (`.claude/commands/*.md`, `.claude/skills/**`), `AGENTS.md`,
-`.github/copilot-instructions.md`, and equivalents. English gives the model a
-small but real edge in instruction-following, and keeps these files consistent
-with each other.
+Write AI-facing instruction files in English. Preserve literal strings an agent
+must emit and instructions that pin generated output to another language.
 
-Two things inside an English instruction file stay in their original language:
-- Literal strings the agent must emit verbatim — commit messages, menu/button
-  labels, output templates, example values.
-- Instructions that pin the language of generated output (e.g. "write the note
-  in Portuguese", "generate the Mattermost message in Portuguese"). The
-  instruction prose is English; the output language it specifies is unchanged.
+For every other existing file, match its language. If a file already mixes
+languages, ask whether to continue in the dominant language, choose a language
+for new content only, or normalize the entire file.
 
-When editing or adding content to any other existing file (code, docs, issue
-files, anything that is not an AI-facing instruction file), match the language
-already used in that file. If the file is in English, write in English. If the
-file is in Portuguese, write in Portuguese.
+Use relative paths for files, configuration, and symbolic links intended to be
+shared across users or machines. Never store user-specific or machine-specific
+absolute paths in shared artifacts.
 
-If a non-instruction file already mixes languages, ask the user before
-proceeding:
-- Continue adding content in the dominant language?
-- Pick one language and apply it to the new content only?
-- Correct the entire file to a single language?
+Keep shared Claude, Codex, and Copilot skills canonical at
+`~/.claude/skills/<skill-name>` and expose them through
+`~/.agents/skills/<skill-name>` with the relative target
+`../../.claude/skills/<skill-name>`. Leave Codex system skills under
+`~/.codex/skills/.system` untouched.
 
-When a package or import is missing, do not install it automatically. Ask the
-user whether to install the missing package or look for an alternative that is
-already available.
+## Git authorization
 
-## Failed assumptions and Git workspace changes
+Never create a commit, push, branch, pull request, or merge request unless the
+user explicitly requests that action. Interpret each authorization separately:
+a commit does not authorize a push, and a push does not authorize a merge
+request.
 
-Never create or use an additional Git worktree, switch branches, rebase,
-merge, or cherry-pick unless the user explicitly requests or approves that
-specific action.
+For commits, pushes, branches, pull requests, GitLab merge requests, repository
+issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
-If an assumption required to carry out the user's instruction proves false,
-stop before changing the strategy. Tell the user which assumption failed,
-provide the concrete evidence, and ask how they want to resolve it. Do not
-invent a workaround, substitute a different branch or repository layout, copy
-files across branches, or take another improvised path. Resume only after the
-user chooses how to proceed.
+## Task-specific skills
 
-## Portable shared paths
+- Before selecting, adding, replacing, upgrading, removing, or installing a
+  dependency, load `dependency-decisions`. Never install a missing package
+  automatically.
+- Before creating, modifying, reviewing, debugging, or running automated tests,
+  load `test-quality`.
+- Before writing or editing documentation or AI-facing Markdown instructions,
+  load `documentation`.
+- For durable cross-component architecture plans or decision records, load
+  `architecture-records` together with `documentation`.
+- Before creating, editing, reviewing, or debugging Bash, load `bash-scripts`.
+- Before creating or editing a structured diagram, load
+  `excalidash-diagrams`. If that skill is unavailable, report that it is not
+  installed instead of improvising another workflow.
 
-When files, configuration, or symbolic links are intended to be shared across
-users or machines, never store user-specific or machine-specific absolute
-paths. Use paths relative to the containing file or symbolic link and verify
-the stored target after creating it.
+## Machine constraints
 
-For skills shared by Claude, Codex, and Copilot, keep the canonical skill at
-`~/.claude/skills/<skill-name>` and expose it through
-`~/.agents/skills/<skill-name>` with the relative symbolic-link target
-`../../.claude/skills/<skill-name>`. Never store an expanded home-directory
-path in that link. Keep Codex system skills under `~/.codex/skills/.system`
-untouched.
-
-## Dependency choices
-
-Before choosing dependencies for new code, ask the user which libraries or
-dependency strategy they prefer. Present the reasonable options, including
-appropriate third-party libraries and a standard-library-only approach when it
-is genuinely viable. Explain the relevant tradeoffs — such as ergonomics,
-maintenance, performance, portability, and installation cost — and recommend
-the option that best fits the task before asking the user to choose.
-
-Do not default to the standard library, avoiding dependencies, or any specific
-library without this discussion. Do not announce a dependency decision before
-the user has chosen. A separate question is unnecessary only when the user has
-already selected the dependency strategy or the repository contains an
-explicit, applicable requirement that leaves no meaningful choice; state that
-constraint before proceeding.
-
-When asked to write code, do not create documentation, readmes, or tests
-unless explicitly asked to.
-
-## Test quality
-
-Before creating, modifying, reviewing, debugging, or running automated tests,
-always load and follow the `test-quality` skill.
-
-Use the test environment prescribed by the repository. When a project defines
-an official containerized test workflow, do not replace it with host tooling.
-If host execution fails because of native bindings, permissions, runtime
-differences, or package mismatches, run the documented containerized suite
-before reporting verification complete. Image builds, type checks, and smoke
-checks do not substitute for the prescribed automated tests.
-
-The development machine has an extremely slow mechanical disk. All terminal
-commands take much longer than normal. Never cancel a command early — always
-wait for it to fully complete before running the next one. Never run multiple
-commands back-to-back without waiting for each one to finish first.
-
-## Markdown
-
-When writing markdown, do not use CamelCase for section titles. Use normal
-sentence case instead.
-
-When writing markdown tables, always use spaces around the dashes in the
-separator row: `| --- | --- | --- |` instead of `|---|---|---|`.
-
-## Commits
-
-Never create a git commit unless the user explicitly asks for it.
-
-When the user requests a commit:
-
-1. Read each changed file to understand what was modified and why
-2. Analyze the architectural impact of the changes
-3. Write a professional commit message as a plain text code block
-
-Commit message rules:
-- Always written in **English**
-- No conventional commit prefixes (no `feat:`, `fix:`, `chore:`, etc.)
-- Title line must be concise and descriptive, max 72 characters
-- Body lines must wrap at 80 columns
-- Explain *why* the change matters, not just what changed
-- Separate title from body with a blank line
-- Never add `Co-Authored-By` trailers
-
-## Pull Requests
-
-Never create a pull request unless the user explicitly asks for it.
-
-When the user requests a pull request:
-
-1. Read each changed file to understand what was modified and why
-2. Analyze the architectural impact of the changes
-3. Write a professional pull request description as a plain text code block
-
-Pull request rules:
-- Always written in **Portuguese (Brazil)**
-- No emojis anywhere in the title or body
-- Title must be concise and descriptive
-- Body must explain *why* the change matters, not just what changed
-- Describe the architectural context and motivation behind the changes
-
-### GitLab merge requests through Git push options
-
-When GitLab CLI or an MCP server is unavailable, create a merge request by
-pushing the branch with GitLab push options. Set the target branch, title, and
-description explicitly along with `merge_request.create`.
-
-Push option values cannot contain literal newlines. For a multiline merge
-request description, use the literal `\\n` escape sequence; GitLab converts it
-to line breaks. Never URL-encode line breaks as `%0A`, because GitLab stores
-that text verbatim.
-
-`merge_request.title` and `merge_request.description` can also update an
-existing merge request when supplied with a later push. Prefer an ordinary
-branch update or the GitLab API/MCP for such edits; do not rewrite history
-solely to alter metadata unless explicitly necessary and safe.
-
-## CLAUDE.md and .github/copilot-instructions.md sync
-
-When working in a project, keep CLAUDE.md and .github/copilot-instructions.md
-in sync using the following logic:
-
-- If `.github/copilot-instructions.md` **already exists**: add
-  `@.github/copilot-instructions.md` at the top of `CLAUDE.md` so Claude
-  also reads those instructions.
-- If `.github/copilot-instructions.md` **does not exist**: create a symlink
-  pointing it to `CLAUDE.md` so Copilot reads the same instructions:
-  `mkdir -p .github` followed by
-  `ln -s ../CLAUDE.md .github/copilot-instructions.md`. Verify the stored
-  relative target with `readlink`; do not create a link to
-  `.github/CLAUDE.md`.
-
-## Documentation
-
-Before writing or editing documentation or AI-facing Markdown instructions,
-use the `documentation` skill. If skill discovery is unavailable, read the same
-instructions at `~/.claude/skills/documentation/SKILL.md` and follow them.
-
-## Architecture records
-
-Before creating, moving, reviewing, implementing, or superseding a durable
-cross-component architecture plan or decision record, use the
-`architecture-records` skill together with the `documentation` skill. If skill
-discovery is unavailable, read
-`~/.claude/skills/architecture-records/SKILL.md` and follow it.
-
-Keep temporary delivery checklists in the issue or merge request. Keep durable
-motivation, boundaries, risks, invariants, lifecycle status, and architectural
-acceptance criteria in the repository's architecture records. Never present a
-proposed record as current behavior.
+The development machine has an extremely slow mechanical disk. Never cancel a
+command early. Wait for it to complete before running the next command, and do
+not start terminal commands back-to-back without observing each result.
 
 ## Memory policy
 
-Do not use the private memory system (`~/.claude/projects/`) to store
-decisions, preferences, or context learned during sessions. Instead, persist
-all relevant information directly in the project's `CLAUDE.md` or this global
-`~/.claude/CLAUDE.md` so that every user, machine, and AI session has access
-to the same up-to-date context via version control.
-
-## Dockerfile naming
-
-Alternative Dockerfiles must be named with the environment as a **prefix**
-before `.Dockerfile`, not as a suffix after `Dockerfile`:
-
-- Correct: `dev.Dockerfile`, `test.Dockerfile`
-- Wrong: `Dockerfile.dev`, `Dockerfile.test`
-
-## Shell scripts
-
-Before creating, editing, reviewing, or debugging Bash scripts, use the
-`bash-scripts` skill.
-
-## ExcaliDash / Excalidraw MCP workflow
-
-When asked to create, draw, edit, or generate a structured diagram, always use
-the `excalidash-diagrams` skill before taking action. If skill discovery is
-unavailable, report that the skill is not installed instead of bypassing it
-with a machine-specific path or an improvised MCP workflow.
+Do not store project decisions, preferences, or session context in the private
+memory system under `~/.claude/projects/`. Persist durable shared context in the
+project's version-controlled instruction or architecture files. Use this global
+file only for behavior that truly applies across projects.
