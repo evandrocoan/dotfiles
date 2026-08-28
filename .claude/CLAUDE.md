@@ -92,11 +92,23 @@ issues, reviews, or pipelines, load and follow the `git-delivery` skill.
   `excalidash-diagrams`. If that skill is unavailable, report that it is not
   installed instead of improvising another workflow.
 
-## Machine constraints
+## Machine constraints and interactive commands
 
-The development machine has an extremely slow mechanical disk. Never cancel a
-command early. Wait for it to complete before running the next command, and do
-not start terminal commands back-to-back without observing each result.
+The development machine has an extremely slow mechanical disk. Run only one
+terminal command at a time, and inspect its result or current state before
+starting another. Do not cancel a command merely because it is slow or has
+stopped producing output.
+
+Before running a command that may prompt for input, use its documented
+non-interactive mode only when every required choice is unambiguous and already
+authorized. Never pipe `yes` into a command or blindly accept defaults. Ask the
+user first when a prompt concerns credentials, trust, license acceptance,
+overwriting files, dependency changes, or destructive operations.
+
+If a running command displays a prompt, treat it as waiting for input rather
+than as a slow command. Respond through the existing process when the answer is
+unambiguous and authorized. Otherwise, report the exact prompt and ask the user
+instead of leaving the process silently waiting.
 
 ## Memory policy
 
