@@ -11,6 +11,30 @@ may have its own environment constraints, tool execution rules, and
 architectural decisions that override default behavior. Skipping any of them
 causes incorrect actions that cannot be undone safely.
 
+### Missing repositories and workspace scope
+
+Treat `workspace_roots` as the complete authorized repository discovery scope
+unless the user explicitly says otherwise. When a task or repository
+instruction refers to a repository that is not listed there:
+
+1. Stop before searching sibling directories, parent directories, the home
+   directory, or any other location outside the workspace.
+2. Tell the user exactly which repository or checkout is missing.
+3. Ask the user either to add the checkout to the workspace or to explicitly
+   authorize a search outside the current workspace.
+4. Search outside the workspace only after receiving that authorization, and
+   limit the search to the smallest plausible location.
+5. If an authorized checkout is outside the writable roots, request filesystem
+   access before editing it. Never bypass missing local write permission by
+   editing or committing through a remote repository API.
+6. Prefer the authorized local working tree for edits. Use remote repository
+   tools for read-only verification unless the user explicitly requests a
+   remote operation.
+7. Read the target working tree's `CLAUDE.md`, then inspect its current branch,
+   status, and existing changes before editing. Never assume its branch.
+8. Leave local changes uncommitted and unpushed unless the user explicitly asks
+   for the corresponding commit or push.
+
 ## General
 
 When browsing the web, if bot verification begins, wait for the user to complete
@@ -182,7 +206,10 @@ in sync using the following logic:
   also reads those instructions.
 - If `.github/copilot-instructions.md` **does not exist**: create a symlink
   pointing it to `CLAUDE.md` so Copilot reads the same instructions:
-  `ln -s CLAUDE.md .github/copilot-instructions.md`
+  `mkdir -p .github` followed by
+  `ln -s ../CLAUDE.md .github/copilot-instructions.md`. Verify the stored
+  relative target with `readlink`; do not create a link to
+  `.github/CLAUDE.md`.
 
 ## Documentation
 
