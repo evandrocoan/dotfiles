@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dependency decisions"
+  short_description: "Choose dependencies with explicit approval"
+  default_prompt: "Use $dependency-decisions to compare viable dependency strategies and obtain approval before implementation."

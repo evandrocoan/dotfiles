@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git delivery"
+  short_description: "Prepare and perform safe Git delivery"
+  default_prompt: "Use $git-delivery to prepare and perform the requested commit or merge request safely."
