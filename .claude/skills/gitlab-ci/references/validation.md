@@ -91,3 +91,8 @@ For shared image catalogs, exercise image-local, nested-context, catalog, shared
 rename, scheduled-refresh, CPU/GPU, and protected-release scenarios. Verify that each selected entry follows the full
 validate, build, test, scan, and publish graph; that skipped entries are genuinely unaffected; and that publication
 uses the exact uniquely tagged candidate produced and tested by the pipeline without a rebuild.
+
+For live deployment verification, exercise zero, one, and multiple matching workloads; partial and mixed rollouts;
+multiple replicas; stale deployment identity; missing metadata or files; inaccessible targets; health failure; and a
+new rollout during verification. Require every relevant replica to match the expected protected tag and release
+manifest before a clean result.
