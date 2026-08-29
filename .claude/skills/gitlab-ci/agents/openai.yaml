@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitLab CI"
+  short_description: "Design and secure GitLab CI/CD pipelines"
+  default_prompt: "Use $gitlab-ci to design, review, or troubleshoot this GitLab CI/CD pipeline."
