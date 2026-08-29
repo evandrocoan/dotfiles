@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docker & Compose"
+  short_description: "Build, run, secure, and debug Docker stacks"
+  default_prompt: "Use $docker to build, review, or troubleshoot a Dockerfile and Docker Compose stack safely."
