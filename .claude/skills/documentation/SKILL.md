@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: "Create, edit, review, or reorganize durable Markdown documentation. Use for README files, docs, runbooks, CLAUDE.md, AGENTS.md, skill and command instructions, changelogs, and any task that writes or changes documentation."
+description: "Create, edit, review, reorganize, or synchronize durable Markdown documentation. Use for README files, docs, runbooks, CLAUDE.md, AGENTS.md, Copilot instructions, skill and command instructions, changelogs, and any task that writes or changes documentation or synchronizes AGENTS.md-first project guidance across Claude, Codex, and Copilot."
 ---
 
 # Documentation
@@ -83,20 +83,37 @@ AI-facing. Record architectural context, cross-file invariants, non-obvious
 constraints, and decisions with their rationale, answering "why is the code
 structured this way, and what breaks if I change it?"
 
-## Synchronize Claude and Copilot instructions
+## Synchronize agent instructions
 
-When a project has a regular `.github/copilot-instructions.md` file, ensure
-`CLAUDE.md` begins with `@.github/copilot-instructions.md` so Claude loads the
-same project guidance. Do not add that directive when the Copilot file is a
-symlink to `CLAUDE.md`, because it would create a self-reference.
+Treat root `AGENTS.md` as the canonical shared project guidance. Whenever any of
+`AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` exists, or a task
+creates or edits AI-facing project guidance, ensure all three paths exist and
+expose the shared instructions.
 
-When `.github/copilot-instructions.md` does not exist, create `.github/` when
-needed and create a relative symlink with the stored target `../CLAUDE.md`.
-Verify the target with `readlink`; never link to `.github/CLAUDE.md` or store a
-machine-specific absolute path.
+Keep the compatibility files regular so every supported consumer can load
+them:
 
-When the path already contains a symlink, verify its stored target and correct
-it only when the task authorizes instruction synchronization or maintenance.
+- make `CLAUDE.md` begin with the plain import line `@AGENTS.md`, outside code
+  spans and fences, so Claude Code expands the canonical guidance;
+- keep `.github/copilot-instructions.md` byte-identical to `AGENTS.md` for
+  Copilot surfaces that do not load agent instructions directly.
+
+Create `.github/` when needed. Do not replace either compatibility file with a
+symlink. Add Claude-specific guidance below the import only when it cannot be
+shared safely; keep shared rules in `AGENTS.md`. Do not add Copilot-specific
+material to the synchronized repository-wide copy; use a supported scoped
+instruction mechanism when such guidance is required.
+
+When existing files differ, inspect every one before changing them. Consolidate
+unique, non-conflicting shared guidance into `AGENTS.md`, preserve justified
+Claude-specific guidance below its import, and resolve material conflicts with
+the user. Never overwrite or discard unique guidance merely to enforce
+synchronization.
+
+After every canonical change, refresh the Copilot copy and verify
+synchronization with `cmp -s AGENTS.md .github/copilot-instructions.md`. Verify
+that the first non-empty line of `CLAUDE.md` is exactly `@AGENTS.md`. Revalidate
+all three paths before delivery.
 
 ## Maintain tables of contents
 
