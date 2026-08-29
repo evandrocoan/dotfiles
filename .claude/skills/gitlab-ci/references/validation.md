@@ -78,3 +78,11 @@ newer syntax such as components, inputs, or status strategies.
 When a job builds or runs containers, load the `docker` skill and validate the Dockerfile, Compose model, image tags,
 runtime permissions, and container behavior separately from the GitLab pipeline graph. A valid `.gitlab-ci.yml` does
 not prove that a container build is reproducible or that privileged access is safe.
+
+For Compose-backed jobs, also verify unique project names, exact file and profile selection, dependency health,
+terminal-service exit propagation, bounded cleanup, and isolation from concurrent jobs. For repository-owned CI
+wrappers, compare the mandatory split jobs with the local aggregate command.
+
+For monorepos and parallel suites, exercise application-only, shared-package, lockfile, CI-wrapper, and global-config
+changes. Verify complete shard coverage, unique artifact names, fan-in over every required shard, and promotion of the
+same artifact that passed testing.

@@ -15,6 +15,10 @@ repository layout or GitLab instance does not support a component cleanly.
   provider, not in inputs.
 - Give reusable jobs collision-resistant names or configurable prefixes. Included configuration merges into the
   consumer's configuration and can overwrite or be overwritten.
+- Assign one explicit owner for global keys such as `workflow`, `stages`, `default`, and top-level variables. An
+  included template that defines them changes the whole consumer pipeline, not only its own jobs.
+- Do not require every consumer to rediscover and duplicate an undocumented stage list. Expose configurable stage
+  names through typed inputs where supported, or version and validate the exact consumer contract.
 
 Authoritative references: [CI/CD components](https://docs.gitlab.com/ci/components/) and
 [CI/CD inputs](https://docs.gitlab.com/ci/inputs/).
@@ -41,6 +45,7 @@ For artifacts:
 
 - bind consumers to the intended producer with `needs:artifacts`, `dependencies`, or the appropriate cross-pipeline
   mechanism;
+- when using `needs`, select artifacts on that edge and do not also configure `dependencies` in the consumer;
 - set retention and access to the minimum operational need;
 - expose machine-readable outputs through the applicable `artifacts:reports` contract;
 - treat expiration, download failure, or malformed content as missing evidence, not an empty result;

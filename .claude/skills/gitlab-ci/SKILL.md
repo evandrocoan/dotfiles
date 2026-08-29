@@ -1,6 +1,6 @@
 ---
 name: gitlab-ci
-description: Design, create, edit, review, secure, validate, and troubleshoot GitLab CI/CD pipelines, shared templates, and CI/CD components. Use when Codex works with .gitlab-ci.yml, GitLab CI YAML includes, workflow or job rules, stages, needs or DAGs, artifacts, caches, inputs, variables, runners, downstream or child pipelines, security scanners, merge request reporting, CODEOWNERS gates, deployment gates, or GitLab pipeline failures.
+description: Design, create, edit, review, secure, validate, and troubleshoot GitLab CI/CD pipelines, shared templates, and CI/CD components. Use when Codex works with .gitlab-ci.yml, GitLab CI YAML includes, workflow or job rules, stages, needs or DAGs, artifacts, caches, inputs, variables, runners, downstream or child pipelines, monorepo change scoping, containerized CI, image or package promotion, security scanners, merge request reporting, CODEOWNERS gates, deployment gates, or GitLab pipeline failures.
 ---
 
 # GitLab CI/CD
@@ -37,6 +37,10 @@ snapshot identity, and an honest distinction between a successful check, an inco
   central security templates, merge request comments, diff-scoped findings, CODEOWNERS checks, or approval gates.
 - Read [runners-and-secrets.md](references/runners-and-secrets.md) whenever a task touches runners, executors, tags,
   tokens, protected resources, forks, Docker daemon access, privileged execution, or cross-project access.
+- Read [containerized-ci.md](references/containerized-ci.md) before changing Compose-backed jobs, repository-owned CI
+  wrappers, prebuilt CI images, writable container workspaces, or container lifecycle and cleanup.
+- Read [monorepos-and-delivery.md](references/monorepos-and-delivery.md) before changing path-scoped monorepo jobs,
+  sharding, build artifacts, image publication, package promotion, or diagnostics collected from parallel jobs.
 - Read [validation.md](references/validation.md) before declaring a pipeline change valid or a failure diagnosed.
 
 ## Preserve ownership boundaries
@@ -72,6 +76,8 @@ snapshot identity, and an honest distinction between a successful check, an inco
   satisfy the repository contract.
 - Do not bypass required tests merely to publish or deploy an artifact. Independent packaging may proceed when the
   project intends it, but promotion and deployment must retain their required gates.
+- Use `needs: []` only for genuinely independent work. A manual, release, publication, or deployment job must still
+  depend on every gate and exact producer whose success authorizes the mutation.
 - Do not use `allow_failure`, manual jobs, or skipped rules to make a mandatory security or quality gate appear green.
   State optionality explicitly and verify the merge policy sees the intended status.
 
