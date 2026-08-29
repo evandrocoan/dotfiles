@@ -86,3 +86,8 @@ wrappers, compare the mandatory split jobs with the local aggregate command.
 For monorepos and parallel suites, exercise application-only, shared-package, lockfile, CI-wrapper, and global-config
 changes. Verify complete shard coverage, unique artifact names, fan-in over every required shard, and promotion of the
 same artifact that passed testing.
+
+For shared image catalogs, exercise image-local, nested-context, catalog, shared-template, common-base, deletion,
+rename, scheduled-refresh, CPU/GPU, and protected-release scenarios. Verify that each selected entry follows the full
+validate, build, test, scan, and publish graph; that skipped entries are genuinely unaffected; and that publication
+uses the exact uniquely tagged candidate produced and tested by the pipeline without a rebuild.

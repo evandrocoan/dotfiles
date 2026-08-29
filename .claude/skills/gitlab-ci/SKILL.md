@@ -1,6 +1,6 @@
 ---
 name: gitlab-ci
-description: Design, create, edit, review, secure, validate, and troubleshoot GitLab CI/CD pipelines, shared templates, and CI/CD components. Use when Codex works with .gitlab-ci.yml, GitLab CI YAML includes, workflow or job rules, stages, needs or DAGs, artifacts, caches, inputs, variables, runners, downstream or child pipelines, monorepo change scoping, containerized CI, image or package promotion, security scanners, merge request reporting, CODEOWNERS gates, deployment gates, or GitLab pipeline failures.
+description: Design, create, edit, review, secure, validate, and troubleshoot GitLab CI/CD pipelines, shared templates, and CI/CD components. Use when Codex works with .gitlab-ci.yml, GitLab CI YAML includes, workflow or job rules, stages, needs or DAGs, artifacts, caches, inputs, variables, runners, downstream or child pipelines, monorepo change scoping, containerized CI, shared image catalogs, image or package promotion, security scanners, merge request reporting, CODEOWNERS gates, deployment gates, or GitLab pipeline failures.
 ---
 
 # GitLab CI/CD
@@ -41,6 +41,8 @@ snapshot identity, and an honest distinction between a successful check, an inco
   wrappers, prebuilt CI images, writable container workspaces, or container lifecycle and cleanup.
 - Read [monorepos-and-delivery.md](references/monorepos-and-delivery.md) before changing path-scoped monorepo jobs,
   sharding, build artifacts, image publication, package promotion, or diagnostics collected from parallel jobs.
+- Read [shared-image-catalogs.md](references/shared-image-catalogs.md) before changing a repository that builds,
+  validates, scans, or publishes multiple reusable container images for downstream projects.
 - Read [validation.md](references/validation.md) before declaring a pipeline change valid or a failure diagnosed.
 
 ## Preserve ownership boundaries
