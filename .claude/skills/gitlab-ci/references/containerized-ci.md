@@ -17,6 +17,16 @@ Use a prebuilt CI environment image when dependency installation dominates runti
 the relevant lockfiles, runtime, and toolchain, and document the update trigger. Never use `latest` as compatibility
 authority.
 
+Audit mount shadowing before trusting that image. A checkout, project-directory, or home-directory bind mount can hide
+an environment, package-manager configuration, or cache created during the build. Place reusable environments and
+non-authoritative caches outside mounted paths, or configure their locations through explicit environment variables.
+When the image intentionally prewarms downloads and recreates a project environment at runtime, bind its tag to every
+relevant lockfile and make a cache miss affect speed rather than correctness.
+
+Use one base Compose model plus a focused CI override when CI must remove production-only mounts or ports, change
+commands, or move nonessential default services behind profiles. Validate the exact merged file set. Do not copy the
+stack into a second CI-only model or let an override silently retain an incompatible base field.
+
 ## Isolate every Compose stack
 
 Assign every job a unique, bounded `COMPOSE_PROJECT_NAME`, normally derived from trusted pipeline and job identifiers.
@@ -30,6 +40,11 @@ For each job:
 4. propagate the terminal service status with `--abort-on-container-exit` and `--exit-code-from` when appropriate;
 5. clean only that job's project in `after_script` with `docker compose down --remove-orphans`;
 6. add `--volumes` only when every named volume in that isolated project is disposable.
+
+If a dependency cannot be modeled as a Compose service, use a bounded, strict readiness helper: refuse to execute the
+payload after timeout, preserve the readiness exit status, and `exec` the payload after success. When a CI shell block
+must start a local helper in the background, capture its PID, install a cleanup trap, wait for readiness, preserve the
+test status, and terminate the helper. Prefer a Compose service and healthcheck whenever practical.
 
 Do not begin with a broad `down`, delete shared runner directories, or ignore setup and teardown errors as routine
 cleanup. Serialize jobs with `resource_group` when they mutate one shared external environment; a unique Compose name
