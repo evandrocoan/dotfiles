@@ -46,6 +46,25 @@ Use qualitative language for quantities so documentation remains accurate as
 the code evolves. A list reproduced directly from its authoritative source is
 allowed only when the document states that the copies must remain synchronized.
 
+## Use immutable source evidence
+
+Distinguish navigation links from evidence links. Use relative repository paths
+for ordinary navigation to content that should follow the current branch. When a
+document cites source code, configuration, or a specific line range as evidence
+for a claim, use the provider's permalink bound to the full commit SHA. Never
+anchor durable evidence to a moving branch, tag, or default-branch URL.
+
+Resolve the exact revision through the repository provider connector or API and
+read the cited content at that revision before writing the link. Verify that the
+referenced lines support the surrounding claim, then use the provider-generated
+permalink and its stable line anchors. Do not guess a SHA, combine line numbers
+from one revision with another revision, or silently move an existing permalink
+to a newer commit.
+
+Preserve an existing immutable link when it still supports the claim. If the
+exact revision or cited range cannot be verified, mark the reference as
+unverified or omit the claim instead of replacing it with a moving link.
+
 ## Verify claims and lifecycle
 
 Treat behavior as current only after checking its authoritative code,
