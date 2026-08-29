@@ -52,6 +52,9 @@ host mounts, additional capabilities, or image-building changes.
 - If privileged execution is unavoidable, use a dedicated ephemeral runner with no unrelated secrets or workloads.
 - Use explicit released image tags; reject `latest`, floating ranges, and digest-only references under the tag policy.
 - Keep Docker and Compose commands in the repository's approved container workflow and use `docker compose` syntax.
+- Authenticate to registries with a password or token on standard input, never as a command-line argument.
+- Construct build and push commands from an explicit allowlist. Reject `eval`, dynamic variable-name expansion, and
+  secret-bearing Docker build arguments.
 
 Authoritative reference: [Docker-in-Docker with GitLab](https://docs.gitlab.com/ci/docker/docker_in_docker/).
 

@@ -28,19 +28,20 @@ privileged deputy. Require all of the following:
 ## Integrate GitLab security reports faithfully
 
 - Start from the stable official GitLab security template unless the project explicitly accepts a preview template.
-- Enable merge request scanning through the supported GitLab security configuration for the target instance. Do not
-  replace the included analyzer's rules without inspecting the merged result.
-- Override a generated analyzer job after its include and only for a verified need such as stage, applicable file
-  types, exclusions, or an intentionally selected analyzer version tag.
-- Preserve the expected `artifacts:reports` output. A scanner process exit, artifact upload failure, malformed schema,
-  or missing report is operational failure, not proof of no vulnerabilities.
-- Keep scanner policy separate from transport and comment formatting. The scanner produces observations; project
-  policy determines which observations block; the publisher renders the committed result.
+- Enable merge request scanning through the supported GitLab security configuration for the target instance. Inspect
+  the merged result before replacing analyzer rules.
+- Override a generated analyzer job only for a verified need such as stage, file types, exclusions, or version tag.
+- Preserve `artifacts:reports`; a scanner exit, upload failure, malformed schema, or missing report is operational
+  failure, not proof of no vulnerabilities.
+- Keep scanner policy separate from transport and formatting: scanning observes, policy blocks, and publication renders.
 - Scope exclusions narrowly. Excluding tests or generated files can hide executable or distributed code and requires
   repository-specific justification.
+- Separate fast merge request checks from scheduled full or deep scans. A schedule complements, but does not replace,
+  a required change gate.
+- Preserve the scanner's exit status and machine-readable report; do not reconstruct verdicts from human-readable text.
+- Pin scanner images and central templates to protected release tags under the project's tag-based policy.
 
-Authoritative references: [GitLab SAST](https://docs.gitlab.com/user/application_security/sast/) and
-[security configuration](https://docs.gitlab.com/user/application_security/detect/security_configuration/).
+Authoritative references: [GitLab SAST](https://docs.gitlab.com/user/application_security/sast/) and [security configuration](https://docs.gitlab.com/user/application_security/detect/security_configuration/).
 
 ## Distinguish diff scope from repository posture
 
@@ -95,6 +96,5 @@ constraint. Then:
 A job that merely parses CODEOWNERS and exits successfully is not equivalent to enabling Code Owner approval on a
 protected branch.
 
-Authoritative references: [CODEOWNERS syntax](https://docs.gitlab.com/user/project/codeowners/reference/), [approval
-rules](https://docs.gitlab.com/user/project/merge_requests/approvals/rules/), and [protected
+Authoritative references: [CODEOWNERS syntax](https://docs.gitlab.com/user/project/codeowners/reference/), [approval rules](https://docs.gitlab.com/user/project/merge_requests/approvals/rules/), and [protected
 branches](https://docs.gitlab.com/user/project/repository/branches/protected/).
