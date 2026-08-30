@@ -77,7 +77,8 @@ multiple or missing matches. Never choose an artifact merely by the latest branc
 Use GitLab Runner's checkout model before implementing a custom clone:
 
 - select `GIT_STRATEGY` according to whether the job needs a working tree;
-- control main repository and submodule depth independently;
+- control main repository and submodule depth independently with `GIT_DEPTH` and `GIT_SUBMODULE_DEPTH`; on a
+  supported current Runner, do not retain custom clone logic solely to make submodules shallow;
 - use the built-in recursive submodule strategy when required;
 - synchronize submodule URLs and credentials through supported controls;
 - use `GIT_STRATEGY: none` only for jobs that truly consume no repository content.
