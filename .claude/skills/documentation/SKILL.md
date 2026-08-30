@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: "Create, edit, review, reorganize, or synchronize durable Markdown documentation. Use for README files, docs, runbooks, CLAUDE.md, AGENTS.md, Copilot instructions, skill and command instructions, changelogs, and any task that writes or changes documentation or synchronizes AGENTS.md-first project guidance across Claude, Codex, and Copilot."
+description: "Create, edit, review, reorganize, or synchronize durable Markdown documentation. Use for README files, docs, runbooks, CLAUDE.md, AGENTS.md, Copilot instructions, skill and command instructions, changelogs, and any task that writes or changes documentation or exposes canonical AGENTS.md guidance to Claude, Codex, and Copilot without duplicating it."
 ---
 
 # Documentation
@@ -43,8 +43,10 @@ Never embed information that will silently become stale as the code evolves:
   even as examples.
 
 Use qualitative language for quantities so documentation remains accurate as
-the code evolves. A list reproduced directly from its authoritative source is
-allowed only when the document states that the copies must remain synchronized.
+the code evolves. Never reproduce content merely to support another consumer.
+Use an import, include, relative symlink, or authoritative pointer instead. If
+the consumer supports none of these mechanisms, report the compatibility
+limitation rather than creating another manually synchronized source.
 
 ## Use immutable source evidence
 
@@ -83,37 +85,36 @@ AI-facing. Record architectural context, cross-file invariants, non-obvious
 constraints, and decisions with their rationale, answering "why is the code
 structured this way, and what breaks if I change it?"
 
-## Synchronize agent instructions
+## Keep one source of truth for agent instructions
 
-Treat root `AGENTS.md` as the canonical shared project guidance. Whenever any of
-`AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` exists, or a task
-creates or edits AI-facing project guidance, ensure all three paths exist and
-expose the shared instructions.
+Treat root `AGENTS.md` as the only source of project-wide AI guidance. Whenever
+any of `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` exists, or
+a task creates or edits AI-facing project guidance, ensure all three paths exist
+without copying the canonical content.
 
-Keep the compatibility files regular so every supported consumer can load
-them:
+Expose `AGENTS.md` through compatibility files:
 
-- make `CLAUDE.md` begin with the plain import line `@AGENTS.md`, outside code
-  spans and fences, so Claude Code expands the canonical guidance;
-- keep `.github/copilot-instructions.md` byte-identical to `AGENTS.md` for
-  Copilot surfaces that do not load agent instructions directly.
+- keep `CLAUDE.md` as a regular file whose only content is the plain import
+  `@AGENTS.md`, followed by a newline;
+- keep `.github/copilot-instructions.md` as a relative symbolic link to
+  `../AGENTS.md`.
 
-Create `.github/` when needed. Do not replace either compatibility file with a
-symlink. Add Claude-specific guidance below the import only when it cannot be
-shared safely; keep shared rules in `AGENTS.md`. Do not add Copilot-specific
-material to the synchronized repository-wide copy; use a supported scoped
-instruction mechanism when such guidance is required.
+Create `.github/` when needed. Never copy shared instructions into either
+compatibility path, and never maintain byte-identical regular-file copies. Put
+all project-wide rules in `AGENTS.md`. Use a supported scoped instruction file
+only for genuinely consumer-specific rules; do not append them to these
+repository-wide compatibility paths.
 
 When existing files differ, inspect every one before changing them. Consolidate
-unique, non-conflicting shared guidance into `AGENTS.md`, preserve justified
-Claude-specific guidance below its import, and resolve material conflicts with
-the user. Never overwrite or discard unique guidance merely to enforce
-synchronization.
+unique, non-conflicting project-wide guidance into `AGENTS.md`, resolve material
+conflicts with the user, then replace the compatibility files with the import
+and relative symlink above. Never discard unique guidance merely to enforce the
+layout.
 
-After every canonical change, refresh the Copilot copy and verify
-synchronization with `cmp -s AGENTS.md .github/copilot-instructions.md`. Verify
-that the first non-empty line of `CLAUDE.md` is exactly `@AGENTS.md`. Revalidate
-all three paths before delivery.
+After every canonical change, verify that `CLAUDE.md` contains exactly
+`@AGENTS.md` plus its final newline and that
+`.github/copilot-instructions.md` resolves through the relative symlink to the
+root `AGENTS.md`. Revalidate all three paths before delivery.
 
 ## Maintain tables of contents
 
