@@ -17,6 +17,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
     - [Fix system crash](#fix-system-crash)
+      - [Prevent memory-exhaustion lockups with earlyoom](#prevent-memory-exhaustion-lockups-with-earlyoom)
       - [Fix Skype Crash](#fix-skype-crash)
     - [To list all programs using a given port](#to-list-all-programs-using-a-given-port)
     - [Install Sublime Text](#install-sublime-text)
@@ -496,6 +497,65 @@ timezone selection, and options for including active executions or subagents.
 
 
 ### Fix system crash
+
+#### Prevent memory-exhaustion lockups with earlyoom
+
+This configuration allows normal swap usage and intervenes only when available
+RAM and free swap are simultaneously close to exhaustion:
+
+| Action | Available RAM | Free swap |
+| --- | ---: | ---: |
+| `SIGTERM` | 5% | 4% |
+| `SIGKILL` | 4% | 3% |
+
+Install `earlyoom`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo apt update
+sudo apt install earlyoom
+```
+
+Edit the service configuration with `sudoedit /etc/default/earlyoom` and set:
+
+```text
+EARLYOOM_ARGS="-m 5,4 -s 4,3 -r 60 --prefer (^|/)(pytest)$ --avoid (^|/)(sshd|ssh|tmux.*)$"
+```
+
+The two thresholds for each action must be reached together. `--prefer` makes
+`pytest` a preferred victim, while `--avoid` makes `sshd`, `ssh`, and `tmux`
+less likely victims. These options influence victim selection but do not provide
+absolute protection. Do not add quotes around the regular expressions inside
+`EARLYOOM_ARGS`; systemd expands this variable without shell quote processing.
+
+Keep `earlyoom` responsive under memory pressure by running
+`sudo systemctl edit earlyoom` and adding:
+
+```ini
+[Service]
+OOMScoreAdjust=-100
+Nice=-20
+```
+
+Apply and verify the configuration:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo systemctl daemon-reload
+sudo systemctl enable earlyoom
+sudo systemctl restart earlyoom
+sudo systemctl status earlyoom --no-pager --full
+sudo journalctl -u earlyoom -n 30 --no-pager
+systemctl show earlyoom --property=Nice --property=OOMScoreAdjust
+```
+
+The startup log should report the configured RAM and swap thresholds. See the
+[official earlyoom configuration documentation](https://github.com/rfjakob/earlyoom#configuration-file)
+for all supported options.
 
 Disable Google Chrome/Firefox hardware acceleration:
 1. https://www.lifewire.com/hardware-acceleration-in-chrome-4125122
