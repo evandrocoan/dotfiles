@@ -49,8 +49,8 @@ file work in a repository that is not listed there:
   a purpose-built dependency is a reasonable option, load
   `dependency-decisions`, compare it explicitly, and obtain the user's choice
   before implementation.
-- Never create another Git worktree, switch branches, rebase, merge, or
-  cherry-pick without explicit authorization for that specific action.
+- Never create another Git worktree, rebase, merge, rewrite history,
+  force-push, or cherry-pick unless the user asks for that operation.
 - When asked to write code, do not add documentation or README files unless the
   user explicitly requests them. Do not add unrelated tests; add or modify only
   tests needed to verify the requested behavior, and load `test-quality` before
@@ -86,10 +86,10 @@ Keep shared Claude, Codex, and Copilot skills canonical at
 
 ## Git authorization
 
-Never create a commit, push, branch, pull request, or merge request unless the
-user explicitly requests that action. Interpret each authorization separately:
-a commit does not authorize a push, and a push does not authorize a merge
-request.
+Treat the user's requested Git outcome as authorization for its routine,
+in-scope steps. Opening a pull request or merge request includes creating a
+suitable source branch, committing the scoped changes, and pushing the branch.
+It never includes merging, force-pushing, rewriting history, or unrelated work.
 
 For commits, pushes, branches, pull requests, GitLab merge requests, repository
 issues, reviews, or pipelines, load and follow the `git-delivery` skill.
