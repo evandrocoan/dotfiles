@@ -5,18 +5,21 @@ description: Prepare or perform safe Git delivery while preserving local work an
 
 # Git delivery
 
-Keep file work in the authorized local working tree and treat each remote or
-history-changing action as a separate permission boundary.
+Keep file work in the authorized local working tree. Treat the requested
+delivery outcome as authorization for its routine in-scope Git steps, but
+nothing beyond it.
 
 ## Establish scope and authorization
 
 1. Read the repository instructions and inspect the current branch, status,
    staged changes, unstaged changes, untracked files, and configured remote.
-2. Interpret authorization narrowly. A request to commit does not authorize a
-   push; a push does not authorize a merge request; a review does not authorize
-   edits, approval, merge, or pipeline actions.
-3. Never create or use another worktree, switch branches, rewrite history,
-   rebase, merge, or cherry-pick without explicit authorization for that action.
+2. Treat the requested delivery outcome as authorization for its routine
+   prerequisites. A commit-only request stays local. Opening a pull request or
+   merge request includes the source branch, scoped commit, and push. It never
+   includes merging, force-pushing, rewriting history, or unrelated changes. A
+   review authorizes no mutations.
+3. Never create another worktree, rewrite history, force-push, rebase, merge, or
+   cherry-pick unless the user asks for that operation.
 4. Preserve unrelated and pre-existing changes. Do not stage, unstage, discard,
    or include them merely to obtain a clean status.
 5. If the requested delivery scope is ambiguous, identify the exact files or
@@ -31,7 +34,7 @@ history-changing action as a separate permission boundary.
   commands, HTTP calls, or local credential discovery.
 - Use a shell or HTTP fallback only when the GitLab MCP capability is
   unavailable or returns an error, and state why the fallback was necessary.
-- Treat remote tools as read-only unless the user explicitly requests the
+- Treat remote tools as read-only unless the user requests the
   corresponding remote mutation. A remote URL alone grants no write authority.
 
 ## Prepare a commit
@@ -50,10 +53,9 @@ history-changing action as a separate permission boundary.
    - Explain why the change matters, not only what changed.
    - Never add `Co-Authored-By` or another AI attribution trailer.
 
-When drafting a message for the user, present it as a plain-text code block.
-When the user explicitly requested the commit itself, use the approved scope
-and report the resulting commit without pushing it unless push was also
-requested.
+When drafting a message for the user, present it as a plain-text code block. A
+commit-only request stays local; a pull-request or merge-request request
+continues through its routine delivery steps.
 
 ## Prepare a pull or merge request
 
@@ -65,13 +67,12 @@ requested.
 4. Explain the motivation, architectural context, important risks, and relevant
    validation. Describe why the change matters instead of merely listing files.
 5. Present a drafted title and description as plain text. Create or update the
-   remote request only when the user explicitly asks for that mutation.
+   remote request only when the user asks for that outcome.
 
 ## Use GitLab push options only as a fallback
 
-When GitLab CLI and MCP capabilities are unavailable, create a merge request by
-pushing with GitLab push options only if the user authorized both the push and
-merge-request creation. Set the target branch, title, and description explicitly
+When GitLab CLI and MCP capabilities are unavailable, create the requested merge
+request with GitLab push options. Set the target branch, title, and description
 with `merge_request.create`.
 
 Push-option values cannot contain literal newlines. Use the literal `\\n`
