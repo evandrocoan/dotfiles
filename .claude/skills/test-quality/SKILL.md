@@ -1,6 +1,6 @@
 ---
 name: test-quality
-description: Create, review, debug, or improve automated tests that must fail for the right reason. Use for unit, integration, end-to-end, regression, smoke, async, mocked, recorded-replay, or data-backed tests; test-related code review; false-positive audits; flaky-test investigation; fixture design; assertion design; and any code change that adds or modifies tests.
+description: Create, review, debug, or improve automated tests that must fail for the right reason. Use for unit, integration, end-to-end, regression, smoke, async, mocked, recorded-replay, or data-backed tests; continuous replay recording, retention, rotation, promotion, and CI fixture design; test-related code review; false-positive audits; flaky-test investigation; assertion design; and any code change that adds or modifies tests.
 ---
 
 # Test quality
@@ -31,6 +31,13 @@ Make every test prove one deterministic behavior through an observable result. T
 
 ## Replay recorded failures when possible
 
+When designing or modifying an always-on recording system, replay storage,
+retention and rotation, fixture promotion, replay sidecars, or replay CI gates,
+read [references/recorded-replay-lifecycle.md](references/recorded-replay-lifecycle.md)
+completely before acting. Keep repository-specific commands, directories,
+schemas, environment variables, and defaults in that repository's authoritative
+code and documentation.
+
 Classify recorded regressions by the boundary they reproduce:
 
 - **Recorded-artifact replay:** Feed a sanitized payload captured from a real failure into the narrowest production boundary that mishandled it, such as a parser, canonicalizer, validator, or state transition. Use this when the artifact is sufficient for the local defect but the complete session is unavailable. Preserve the malformed or provider-specific shape that triggered the defect and label the test as an artifact replay, not a session or end-to-end replay.
@@ -46,6 +53,14 @@ Apply these rules to both levels:
 - Reuse and extend an existing fixture when it already represents the same artifact or session. Use the repository's replay marker or suite convention when one exists, and keep deterministic replays in the normal CI gate. Reserve live provider tests for separate smoke coverage.
 - Fail on every unexpected, duplicated, reordered, or unconsumed recorded interaction. Assert that the replay exhausts its responses and tool results exactly once.
 - Block live network access during deterministic replay and fail if code attempts to fall back to an unrecorded provider, repository, clock, or other external service.
+
+## Control paid live validation
+
+- Treat a user request to run paid live validation as authorization; no separate confirmation or special wording is
+  required. If the request does not authorize a paid run, ask before starting. That authorization covers the
+  follow-up runs required by the same task.
+- Run paid validation scenarios sequentially: wait for one scenario to reach a terminal outcome before starting the
+  next. This rule does not reduce normal production concurrency.
 
 ## Test concurrency and resilience
 
