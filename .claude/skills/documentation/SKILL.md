@@ -9,6 +9,28 @@ Apply these rules when creating, editing, reviewing, or reorganizing
 documentation. Inspect the target document and its authoritative sources before
 changing content.
 
+## Preserve the requested scope
+
+- Treat examples named by the user as the edit targets, not as permission to
+  rewrite adjacent content.
+- Before removing content as duplication, verify that it has the same audience,
+  execution boundary, inputs, outputs, and configuration semantics as its
+  proposed replacement. If any of these differ, preserve it.
+- Treat commands for host versus container, bridge versus host, interactive
+  versus non-interactive use, and configuration that transforms canonical
+  defaults for a supported mode as distinct operational workflows. They are
+  not duplicates merely because they produce the same result or repeat some
+  source values.
+- When replacing copied facts with an authoritative pointer, preserve nearby
+  procedures unless the user explicitly includes them, they directly
+  contradict the requested change, or leaving them unchanged would make the
+  edited instructions incorrect.
+- When uncertain whether content is reference duplication or an operational
+  recipe, preserve it and report the possible duplication instead of deleting
+  or consolidating it.
+- Report unrelated stale or improvable content separately instead of editing
+  it opportunistically.
+
 ## Match document language
 
 Write AI-facing instruction files in English. This includes `CLAUDE.md`,
@@ -46,9 +68,15 @@ Never embed information that will silently become stale as the code evolves:
   or link to the authoritative source instead.
 - Do not put current version numbers in prose. Historical statements such as
   "removed in v2.1" are allowed.
-- Do not copy lists maintained in code, such as tool names, modules, CLI
-  subcommands, environment variables, schema fields, model names, proxy
-  aliases, or defaults. Point to the authoritative source instead.
+- Do not copy reference inventories maintained in code, such as tool names,
+  modules, CLI subcommands, environment variables, schema fields, model names,
+  proxy aliases, or defaults, when an authoritative pointer gives the reader
+  everything needed.
+- Preserve complete, copy-ready operational configuration when it is required
+  to transform canonical defaults for a documented mode or execution boundary.
+  Link to the authoritative base, state why the overlay differs, and verify the
+  repeated values against the current source instead of replacing the recipe
+  with a pointer.
 - Do not put deployment- or tenant-specific values in shared documentation,
   even as examples.
 
@@ -149,6 +177,7 @@ Instead of duplicating evolving information, point to its authoritative source:
 | Listing entity types or relationships | "defined in `prompts.py` and `call_center_ontology.owl`" |
 | Listing configuration constants with defaults | "see `config.py`; each constant has an inline comment" |
 | Listing environment variables with values | "see `.env.example`; annotated list" |
+| Configuring a mode that differs from `.env.example` | Keep the verified, copy-ready overlay and link to `.env.example` as its base |
 | Listing module files | "source under `call_pipeline/`; see CLAUDE.md for architectural context" |
 | Enumerating rollup passes | "multiple idempotent Cypher passes; see `rollup.py`" |
 | Hardcoding model names | "configurable via `litellm-config.yaml`" |
