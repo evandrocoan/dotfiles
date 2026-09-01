@@ -84,6 +84,15 @@ Keep shared Claude, Codex, and Copilot skills canonical at
 `../../.claude/skills/<skill-name>`. Leave Codex system skills under
 `~/.codex/skills/.system` untouched.
 
+## Copyable outbound messages
+
+Whenever drafting a complete message that the user intends to send or paste
+into another service, place only the ready-to-send text inside a fenced `text`
+code block. Keep explanations, alternatives, and delivery notes outside that
+block. Do not format the sendable message as a Markdown blockquote or prefix
+its lines with quotation markers. Use another format only when the user asks
+for it or when the content is not intended for direct copying.
+
 ## Git authorization
 
 Treat the user's requested Git outcome as authorization for its routine,
