@@ -25,8 +25,18 @@ for new content only, or normalize the entire document before editing it.
 - Use normal sentence case for headings; do not use CamelCase titles.
 - In Markdown table separator rows, use spaces around the dashes, such as
   `| --- | --- |`.
-- Preserve the surrounding document's formatting style and avoid unrelated
-  reformatting.
+- Use the Markdown line width explicitly enforced by the repository. When the
+  repository defines no width, wrap ordinary prose written or changed by the
+  current task at 100 columns. Count list markers, blockquote prefixes, and
+  indentation toward the target.
+- Treat 100 columns as a soft limit. Tables, code blocks, HTML, URLs, paths,
+  link destinations, and indivisible identifiers may exceed it. Never damage
+  Markdown syntax or split an indivisible token solely to meet the limit.
+- Preserve untouched prose and avoid whole-file line-width normalization unless
+  the user explicitly requests it.
+- Prefer the repository-approved Markdown formatter when one exists. Do not
+  add a formatter or dependency without applying `dependency-decisions` and
+  obtaining user approval.
 
 ## Keep content durable
 
