@@ -24,6 +24,16 @@ commands, paths, identifiers, API values, required UI labels, and quoted externa
 output. Continue to follow the `documentation` skill's language rules for coupled
 files that are not architecture artifacts, such as user-facing README files.
 
+## Normative force
+
+Treat every imperative and every `must`, `require`, `never`, and `do not` in this
+skill as a delivery gate, not as advice. Conditional language defines scope or an
+explicitly permitted choice; it never makes an applicable requirement optional.
+When this skill applies, do not mark a record implemented, approve the architecture,
+or hand off the documentation while any applicable gate is violated. Correct the
+artifact or move the misplaced information to its authoritative owner first. A
+repository convention may make these gates stricter; it may not weaken them.
+
 ## Workflow
 
 ### 1. Inspect the repository convention
@@ -45,15 +55,17 @@ these concerns:
   future changes.
 
 Keep a task-specific checklist, rollout log, or merge sequence in the issue or merge
-request. A proposed architecture record may retain delivery order and architectural
-acceptance criteria. After implementation, convert temporary execution detail into a
-faithful description of the resulting architecture.
+request. A proposed architecture record may contain only the minimum prospective
+implementation order needed to constrain the design and its architectural acceptance
+criteria. It must never accumulate completed-step status, run-by-run evidence, or
+chronological progress. After implementation, remove that temporary execution detail
+and describe the resulting architecture.
 
-Treat an approved proposed record as a prescription for implementation, not as prose
-to retrofit around whatever the code currently does. If implementation diverges,
-correct the code and its protection to match the approved record. Change the record
-first only when a deliberate architecture decision changes the approved design; do
-not silently rationalize a defect by rewriting the plan after the fact.
+An approved proposed record prescribes the implementation. Never retrofit it around
+whatever the code currently does. If implementation diverges, correct the code and
+its protection to match the approved record. Change the record first only when a
+deliberate architecture decision changes the approved design; never rationalize a
+defect by rewriting the plan after the fact.
 
 ### 3. Establish the record structure
 
@@ -110,11 +122,12 @@ trace from the decision to its executable protection:
 invariant -> authoritative owner -> affected consumers -> tests -> recorded replay
 ```
 
-Keep the trace in the architecture record when it aids future maintenance. Point to
-symbols or focused source locations instead of copying code, schemas, current values,
-or maintained inventories. Mark an unavailable element explicitly; never imply that
-documentation, a unit test, an artifact fixture, a provider-stage replay, and a full
-end-to-end replay provide equivalent coverage.
+Keep the trace in the architecture record unless the repository defines one canonical
+traceability artifact linked directly from the record. Never omit the trace merely to
+reduce document size. Point to symbols or focused source locations instead of copying
+code, schemas, current values, or maintained inventories. Mark an unavailable element
+explicitly; never imply that documentation, a unit test, an artifact fixture, a
+provider-stage replay, and a full end-to-end replay provide equivalent coverage.
 
 Require a recorded replay when a real incident exposed a cross-component protocol or
 representation failure and sufficient raw inputs exist. The replay must consume the
@@ -198,19 +211,25 @@ inventories, defaults, model names, versions, limits, or deployment-specific val
 Preserve historical anchors. Use relative links that remain correct after moving the
 record into its architecture directory.
 
-Architecture records are normative design artifacts, not project journals. Do not
-duplicate timestamps, per-run costs or token counts, mutable commit SHAs, suite pass
+Architecture records are normative design artifacts, not project journals. They must
+not contain timestamps, per-run costs or token counts, mutable commit SHAs, suite pass
 counts, raw logs, rollout narration, or merge-request-by-merge-request progress.
-Store exact execution facts in their authoritative issue, merge request, replay
-manifest, quality expectation, or test artifact. Reference a stable behavior-oriented
-artifact when useful, and retain a specific incident only when its concise rationale
-is necessary to understand the architectural decision.
+Store those execution facts only in their authoritative issue, merge request, replay
+manifest, quality expectation, or test artifact. Reference only the stable
+behavior-oriented artifact identifiers required for traceability. Retain a specific
+incident in the record only when a concise statement of its cause is indispensable to
+the rationale; omit its chronological execution details and mutable metrics.
 
 Before marking a record implemented, perform an editorial closure pass. Remove future
 delivery sequences, completed checklists, progress reports, repeated implementation
-summaries, and raw validation metrics. The resulting record should contain the
+summaries, and raw validation metrics. The resulting record must contain the
 decision, responsibilities, invariants, flow, failure semantics, risks, rejected
 alternatives, and a compact decision-to-code-to-test/replay trace.
+
+This closure pass is mandatory and blocking. If any diary residue remains, keep the
+record out of `Implemented`, do not hand it off as complete, and remove or relocate the
+residue before continuing. Never accept document growth or historical convenience as
+a reason to bypass this gate.
 
 ### 11. Validate the result
 
@@ -226,10 +245,11 @@ Before handoff:
 - Confirm that obsolete paths cannot compete with the current source of authority.
 - Confirm that every runtime terminal state remains observable and semantically
   consistent through rendering, persistence, retries, and reuse.
-- Audit for diary residue: merge-request sequences, timestamps, changing SHAs,
-  per-run costs or token counts, suite totals, and repeated delivery narratives. Keep
-  an occurrence only when it is a necessary rationale anchor; otherwise remove it or
-  move it to the artifact that owns the execution evidence.
+- Fail the validation when diary residue exists: merge-request sequences, timestamps,
+  changing SHAs, per-run costs or token counts, suite totals, or repeated delivery
+  narratives. Keep an occurrence only when its concise cause is indispensable to the
+  architectural rationale; otherwise remove it or move it to the artifact that owns
+  the execution evidence before handoff.
 - Confirm that an implemented record describes the approved resulting architecture,
   rather than reverse-engineering or legitimizing incidental current behavior.
 - Verify relative links and moved-file paths.
