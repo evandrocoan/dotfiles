@@ -49,6 +49,12 @@ request. A proposed architecture record may retain delivery order and architectu
 acceptance criteria. After implementation, convert temporary execution detail into a
 faithful description of the resulting architecture.
 
+Treat an approved proposed record as a prescription for implementation, not as prose
+to retrofit around whatever the code currently does. If implementation diverges,
+correct the code and its protection to match the approved record. Change the record
+first only when a deliberate architecture decision changes the approved design; do
+not silently rationalize a defect by rewriting the plan after the fact.
+
 ### 3. Establish the record structure
 
 Reuse the existing architecture directory and index when present. When the repository
@@ -69,8 +75,9 @@ Use an explicit English semantic state:
 - **In implementation:** Separate delivered behavior from remaining gaps and do not
   present the record as fully available.
 - **Implemented:** Rewrite speculative sections to describe actual behavior. Preserve
-  durable rationale, boundaries, risks, and acceptance criteria. Remove or summarize
-  temporary execution detail.
+  durable rationale, boundaries, risks, and acceptance criteria. Remove temporary
+  execution detail instead of preserving an implementation diary. Keep only compact
+  traceability to authoritative executable evidence.
 - **Superseded:** Preserve the record as a historical anchor, mark it superseded, and
   link to its replacement. Do not maintain two records as concurrently authoritative.
 
@@ -89,7 +96,10 @@ Use this ownership model unless repository instructions define a stricter one:
 - `README.md` or user docs: setup, operation, and user-visible behavior.
 
 When sources disagree, determine which artifact represents the approved decision.
-Update coupled artifacts in the same change instead of correcting only prose.
+An approved current architecture record governs implementation until a deliberate
+decision supersedes or amends it; current code is evidence of implementation, not
+automatic authority to redefine the design. Update coupled artifacts in the same
+change instead of correcting only prose.
 
 ### 6. Build implementation traceability
 
@@ -137,6 +147,12 @@ the durable contract was incomplete. Create or supersede a record only when the
 ownership model, authority boundary, stage order, failure meaning, or recovery policy
 actually changes.
 
+Do not append an incident section merely because another merge request exposed the
+same implementation defect. When an existing invariant already covers the failure,
+change code, tests, and replay only. When the incident exposes a genuine contract gap,
+edit the normative decision, invariant, flow, or failure semantics where it belongs;
+do not add a chronological patch note.
+
 Do not turn one provider response, log phrase, technology, or incident into a
 deterministic semantic exception. Deterministic logic may authenticate and normalize
 objective representation; semantic relevance and equivalence remain with the
@@ -182,6 +198,20 @@ inventories, defaults, model names, versions, limits, or deployment-specific val
 Preserve historical anchors. Use relative links that remain correct after moving the
 record into its architecture directory.
 
+Architecture records are normative design artifacts, not project journals. Do not
+duplicate timestamps, per-run costs or token counts, mutable commit SHAs, suite pass
+counts, raw logs, rollout narration, or merge-request-by-merge-request progress.
+Store exact execution facts in their authoritative issue, merge request, replay
+manifest, quality expectation, or test artifact. Reference a stable behavior-oriented
+artifact when useful, and retain a specific incident only when its concise rationale
+is necessary to understand the architectural decision.
+
+Before marking a record implemented, perform an editorial closure pass. Remove future
+delivery sequences, completed checklists, progress reports, repeated implementation
+summaries, and raw validation metrics. The resulting record should contain the
+decision, responsibilities, invariants, flow, failure semantics, risks, rejected
+alternatives, and a compact decision-to-code-to-test/replay trace.
+
 ### 11. Validate the result
 
 Before handoff:
@@ -196,6 +226,12 @@ Before handoff:
 - Confirm that obsolete paths cannot compete with the current source of authority.
 - Confirm that every runtime terminal state remains observable and semantically
   consistent through rendering, persistence, retries, and reuse.
+- Audit for diary residue: merge-request sequences, timestamps, changing SHAs,
+  per-run costs or token counts, suite totals, and repeated delivery narratives. Keep
+  an occurrence only when it is a necessary rationale anchor; otherwise remove it or
+  move it to the artifact that owns the execution evidence.
+- Confirm that an implemented record describes the approved resulting architecture,
+  rather than reverse-engineering or legitimizing incidental current behavior.
 - Verify relative links and moved-file paths.
 - Keep an existing table of contents synchronized; add one only when the
   `documentation` skill calls for it.
