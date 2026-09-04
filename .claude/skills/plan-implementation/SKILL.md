@@ -56,8 +56,29 @@ The persistent plan is mandatory when any of these conditions applies:
 - losing a constraint, non-goal, authenticated fact, or validation obligation could produce an
   incorrect delivery.
 
-When the repository defines a current implementation-plan convention, follow it. Otherwise, for
-repository-backed work, create:
+When the repository defines a current implementation-plan convention, follow it. Otherwise use
+this default root for repository-backed work:
+
+```text
+implementation-plans/
+├── README.md
+├── active/
+└── completed/
+```
+
+Create `implementation-plans/README.md` when establishing this root. If the default root already
+exists without that file, add it before the next plan is created, moved, or closed. Keep the README
+concise and require it to define:
+
+- `active/` as the location for planned, in-progress, blocked, or otherwise unresolved work;
+- `completed/` as the location for plans whose closure audit passed;
+- moving the same file between lifecycle directories without retaining a duplicate;
+- the repository's plan naming and any additional lifecycle states; and
+- the boundary between temporary execution authority and durable architecture records.
+
+Do not maintain a manual inventory of individual plans in the README; the plan files present in the
+lifecycle directories are the inventory and cannot drift from a copied list. Place an active
+repository-backed plan at:
 
 ```text
 implementation-plans/active/<task-slug>.md
@@ -67,8 +88,8 @@ Use `assets/implementation-plan-template.md` as the starting structure. Use a co
 hyphenated task slug. Keep one active file for one delivery objective; do not create a new file for
 every retry or replanning event.
 
-When the repository has no lifecycle convention, close a successfully completed plan by moving the
-same file, after its final conformance verdict passes, to:
+When using the default lifecycle, close a successfully completed plan by moving the same file,
+after its final conformance verdict passes, to:
 
 ```text
 implementation-plans/completed/<task-slug>.md
@@ -79,10 +100,17 @@ under `active/`. Update any task-plan or documentation link that pointed to the 
 blocked or unresolved plan under `active/` with its real status unless the repository defines a
 separate blocked state.
 
-When no repository exists, use another durable user-visible Markdown artifact that every acting
-agent can reopen. An issue or merge-request description may replace the local file only when it is
-the established execution authority and all agents can read and update it. A chat message or hidden
-model state never replaces the persistent plan.
+When no repository owns the task, use the same documented lifecycle under the global root:
+
+```text
+~/.claude/implementation-plans/active/<task-slug>.md
+~/.claude/implementation-plans/completed/<task-slug>.md
+```
+
+Create `~/.claude/implementation-plans/README.md` when establishing that root. Never use `/tmp` or
+another automatically cleaned location for a persistent plan. An issue or merge-request description
+may replace the local file only when it is the established execution authority and all agents can
+read and update it. A chat message or hidden model state never replaces the persistent plan.
 
 Apply this authority order:
 
