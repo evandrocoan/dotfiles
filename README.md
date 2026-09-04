@@ -39,6 +39,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Optionally install KDE](#optionally-install-kde)
     - [Hide user account from login screen](#hide-user-account-from-login-screen)
     - [Fix teamviewer not opening anymore](#fix-teamviewer-not-opening-anymore)
+      - [Restart TeamViewer when its graphical session becomes stale](#restart-teamviewer-when-its-graphical-session-becomes-stale)
     - [Fix networking not connecting (after coming out from system sleep)](#fix-networking-not-connecting-after-coming-out-from-system-sleep)
     - [Install remmina from snap](#install-remmina-from-snap)
     - [Install wine \& others](#install-wine--others)
@@ -1277,6 +1278,56 @@ SystemAccount=true
 1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication
 1. Use `systemctl edit --full systemd-logind` to disable the network restrictions in systemd-logind, by removing the `IPAddressDeny=` and `RestrictAddressFamilies=` options. (And probably `SystemCallFilter=` as well).
    1. Reboot your computer after `systemctl edit --full systemd-logind`
+
+
+#### Restart TeamViewer when its graphical session becomes stale
+
+TeamViewer can retain the removed LightDM greeter session after the desktop is unlocked. In that
+state it stays online but fails to attach incoming connections to the active desktop. The watchdog
+in [`scripts/teamviewer_session_watchdog.py`](./scripts/teamviewer_session_watchdog.py) follows the
+TeamViewer daemon log and restarts `teamviewerd.service` when either:
+
+- TeamViewer's selected active session is removed; or
+- an incoming connection reports `Unable to get session`.
+
+The watchdog starts reading at the end of the log, so failures from before its startup cannot cause
+a restart. Restart attempts have a cooldown to prevent loops.
+
+Install the executable as a root-owned copy, then install and enable the system service:
+
+```bash
+sudo install -o root -g root -m 0755 \
+  ~/scripts/teamviewer_session_watchdog.py /usr/local/sbin/teamviewer-session-watchdog
+sudo install -o root -g root -m 0644 \
+  ~/scripts/teamviewer-session-watchdog.service \
+  /etc/systemd/system/teamviewer-session-watchdog.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now teamviewer-session-watchdog.service
+```
+
+Inspect its state and follow recovery events:
+
+```bash
+systemctl status teamviewer-session-watchdog.service
+journalctl -u teamviewer-session-watchdog.service -f
+```
+
+After changing the repository copy, reinstall it and restart only the watchdog:
+
+```bash
+sudo install -o root -g root -m 0755 \
+  ~/scripts/teamviewer_session_watchdog.py /usr/local/sbin/teamviewer-session-watchdog
+sudo systemctl restart teamviewer-session-watchdog.service
+```
+
+To remove it:
+
+```bash
+sudo systemctl disable --now teamviewer-session-watchdog.service
+sudo rm /etc/systemd/system/teamviewer-session-watchdog.service
+sudo rm /usr/local/sbin/teamviewer-session-watchdog
+sudo systemctl daemon-reload
+```
 
 
 ### Fix networking not connecting (after coming out from system sleep)
