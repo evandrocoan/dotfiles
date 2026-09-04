@@ -67,6 +67,25 @@ its protection to match the approved record. Change the record first only when a
 deliberate architecture decision changes the approved design; never rationalize a
 defect by rewriting the plan after the fact.
 
+### 2a. Hand off implementation planning
+
+Use the `plan-implementation` skill before implementing a proposed or in-implementation
+record, or before making a non-trivial correction governed by an implemented record.
+The architecture record owns the durable design; the execution plan owns the temporary
+sequence, status, and validation work needed to deliver it.
+
+Do not edit production code until the execution plan identifies the governing
+invariants, authoritative runtime owner, affected consumers, ordered implementation
+slices, proportional test and replay coverage, completion criteria, and conditions
+that require replanning. Keep this planning state in the task, issue, or merge request,
+not in the architecture record.
+
+When execution exposes a code defect under an adequate invariant, revise only the
+execution plan. When it exposes a missing or incorrect durable decision, amend or
+supersede the architecture record first and then regenerate the affected execution
+steps. Never let the implementation plan silently change ownership, authority, stage
+order, terminal meaning, or recovery policy.
+
 ### 3. Establish the record structure
 
 Reuse the existing architecture directory and index when present. When the repository

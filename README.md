@@ -19,6 +19,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Fix system crash](#fix-system-crash)
       - [Prevent memory-exhaustion lockups with earlyoom](#prevent-memory-exhaustion-lockups-with-earlyoom)
       - [Fix Skype Crash](#fix-skype-crash)
+    - [Limit Docker storage growth](#limit-docker-storage-growth)
     - [To list all programs using a given port](#to-list-all-programs-using-a-given-port)
     - [Install Sublime Text](#install-sublime-text)
     - [Enable hibernation](#enable-hibernation)
@@ -619,6 +620,180 @@ GRUB_CMDLINE_LINUX="i915.enable_rc6=0 i915.semaphores=0"
    Icon=/snap/skype/66/meta/gui/skypeforlinux.png
    ...
    ```
+
+
+### Limit Docker storage growth
+
+This configuration keeps private BuildKit cache at no more than 50 GB and removes Docker images
+older than 90 days when no running or stopped container depends on them. It never removes
+containers, volumes, or networks.
+
+The BuildKit limit does not include layers shared with Docker images. Therefore,
+`docker system df` may show more than 50 GB under `Build Cache` even when the private,
+reclaimable portion is below the limit.
+
+Open `/etc/docker/daemon.json` with `sudoedit /etc/docker/daemon.json`. Add the following
+top-level key while preserving all existing keys:
+
+```json
+"builder": {
+    "gc": {
+        "enabled": true,
+        "defaultKeepStorage": "50GB"
+    }
+}
+```
+
+Remember to add a comma between this key and adjacent top-level keys. Validate the complete JSON
+before restarting Docker:
+
+```text
+sudo dockerd --validate --config-file=/etc/docker/daemon.json
+```
+
+The native garbage-collection setting takes effect after the next Docker daemon restart. Do not
+restart a busy daemon without first checking the running containers. The daily maintenance below
+enforces the same limit without requiring an immediate restart.
+
+Create `/usr/local/sbin/docker-prune-old-images` with
+`sudoedit /usr/local/sbin/docker-prune-old-images`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 0 ]]; then
+    printf 'Error: This command does not accept arguments.\n' >&2
+    exit 2
+fi
+
+CUTOFF_SECONDS="$(date --date='90 days ago' +%s)"
+IMAGE_IDS="$(docker image ls --all --quiet --no-trunc)"
+REMOVED_REFERENCES=0
+declare -A SEEN_IMAGE_IDS=()
+
+while IFS= read -r IMAGE_ID; do
+    if [[ -z "${IMAGE_ID}" ]] || [[ -n "${SEEN_IMAGE_IDS[${IMAGE_ID}]+set}" ]]; then
+        continue
+    fi
+    SEEN_IMAGE_IDS["${IMAGE_ID}"]=1
+
+    if ! CREATED_AT="$(docker image inspect --format '{{.Created}}' "${IMAGE_ID}")"; then
+        printf 'Warning: Image %s disappeared before it could be inspected.\n' "${IMAGE_ID}" >&2
+        continue
+    fi
+    CREATED_SECONDS="$(date --date="${CREATED_AT}" +%s)"
+    if (( CREATED_SECONDS >= CUTOFF_SECONDS )); then
+        continue
+    fi
+
+    CONTAINER_IDS="$(docker container ls --all --quiet --filter "ancestor=${IMAGE_ID}")"
+    if [[ -n "${CONTAINER_IDS}" ]]; then
+        continue
+    fi
+
+    if ! IMAGE_TAGS="$(docker image inspect --format '{{range .RepoTags}}{{println .}}{{end}}' "${IMAGE_ID}")"; then
+        printf 'Warning: Image %s disappeared before its tags could be inspected.\n' "${IMAGE_ID}" >&2
+        continue
+    fi
+
+    if [[ -z "${IMAGE_TAGS}" ]]; then
+        if docker image rm "${IMAGE_ID}"; then
+            ((REMOVED_REFERENCES += 1))
+        else
+            printf 'Warning: Docker refused to remove image %s.\n' "${IMAGE_ID}" >&2
+        fi
+        continue
+    fi
+
+    while IFS= read -r IMAGE_TAG; do
+        if [[ -z "${IMAGE_TAG}" ]]; then
+            continue
+        fi
+        if docker image rm "${IMAGE_TAG}"; then
+            ((REMOVED_REFERENCES += 1))
+        else
+            printf 'Warning: Docker refused to remove image reference %s.\n' "${IMAGE_TAG}" >&2
+        fi
+    done <<< "${IMAGE_TAGS}"
+done <<< "${IMAGE_IDS}"
+
+printf 'Removed %d Docker image reference(s) older than 90 days.\n' "${REMOVED_REFERENCES}"
+```
+
+Make the script executable:
+
+```text
+sudo chmod 0755 /usr/local/sbin/docker-prune-old-images
+```
+
+The script checks image creation time, searches all containers using Docker's `ancestor` filter,
+and removes each eligible tag without `--force`. Docker can therefore still refuse removal if an
+image becomes referenced while maintenance is running.
+
+Create `/etc/systemd/system/docker-storage-maintenance.service` with
+`sudoedit /etc/systemd/system/docker-storage-maintenance.service`:
+
+```ini
+[Unit]
+Description=Limit Docker build cache and prune old unused images
+Documentation=https://docs.docker.com/build/cache/garbage-collection/ https://docs.docker.com/reference/cli/docker/image/prune/
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker buildx prune --force --max-used-space 50GB
+ExecStart=/usr/local/sbin/docker-prune-old-images
+Nice=10
+IOSchedulingClass=idle
+IOSchedulingPriority=7
+```
+
+Create `/etc/systemd/system/docker-storage-maintenance.timer` with
+`sudoedit /etc/systemd/system/docker-storage-maintenance.timer`:
+
+```ini
+[Unit]
+Description=Run Docker storage maintenance daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30m
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target
+```
+
+`OnCalendar=daily` schedules maintenance after midnight, and `RandomizedDelaySec=30m` spreads the
+start across the following 30 minutes. `Persistent=true` runs a missed maintenance after the next
+boot. CPU and disk I/O priorities are reduced so maintenance interferes less with other work.
+
+Validate and enable the automation:
+
+```text
+bash -n /usr/local/sbin/docker-prune-old-images
+sudo systemd-analyze verify /etc/systemd/system/docker-storage-maintenance.service /etc/systemd/system/docker-storage-maintenance.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now docker-storage-maintenance.timer
+```
+
+Run the maintenance immediately and inspect its status:
+
+```text
+sudo systemctl start docker-storage-maintenance.service
+sudo systemctl list-timers docker-storage-maintenance.timer --all --no-pager
+sudo journalctl -u docker-storage-maintenance.service -n 100 --no-pager
+sudo docker system df
+```
+
+References:
+
+1. https://docs.docker.com/build/cache/garbage-collection/
+1. https://docs.docker.com/reference/cli/docker/buildx/prune/
+1. https://docs.docker.com/reference/cli/docker/image/prune/
 
 
 ### To list all programs using a given port

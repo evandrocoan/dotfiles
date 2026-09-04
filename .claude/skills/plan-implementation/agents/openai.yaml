@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Implementation"
+  short_description: "Turn approved intent into executable plans"
+  default_prompt: "Use $plan-implementation to create a concrete, testable execution plan for this change."
