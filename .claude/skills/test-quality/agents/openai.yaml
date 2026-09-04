@@ -1,4 +1,4 @@
 interface:
   display_name: "Test Quality"
-  short_description: "Write tests that fail for the right reasons"
-  default_prompt: "Use $test-quality to audit and improve these tests so they validate one deterministic behavior."
+  short_description: "Create, run, and audit trustworthy tests"
+  default_prompt: "Use $test-quality to create, run, or audit these tests so they validate the intended behavior."

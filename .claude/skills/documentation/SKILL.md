@@ -1,6 +1,10 @@
 ---
 name: documentation
-description: "Create, edit, review, reorganize, or synchronize durable Markdown documentation. Use for README files, docs, runbooks, CLAUDE.md, AGENTS.md, Copilot instructions, skill and command instructions, changelogs, and any task that writes or changes documentation or exposes canonical AGENTS.md guidance to Claude, Codex, and Copilot without duplicating it."
+description: >-
+  Create, edit, review, reorganize, or synchronize durable Markdown documentation. Use for README
+  files, docs, runbooks, CLAUDE.md, AGENTS.md, Copilot instructions, skill and command instructions,
+  changelogs, and any task that writes or changes documentation or exposes canonical AGENTS.md
+  guidance to Claude, Codex, and Copilot without duplicating it.
 ---
 
 # Documentation
@@ -125,10 +129,17 @@ structured this way, and what breaks if I change it?"
 
 ## Keep one source of truth for agent instructions
 
-Treat root `AGENTS.md` as the only source of project-wide AI guidance. Whenever
-any of `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` exists, or
-a task creates or edits AI-facing project guidance, ensure all three paths exist
-without copying the canonical content.
+Apply the compatibility topology in this section only to project-wide guidance
+at a repository root. Do not create repository compatibility paths inside a
+global client configuration directory, a skill package, or a scoped
+subdirectory instruction boundary. Global and scoped instructions follow the
+layout of their owning client or tool.
+
+At a repository root, treat `AGENTS.md` as the only source of project-wide AI
+guidance. Whenever any of `AGENTS.md`, `CLAUDE.md`, or
+`.github/copilot-instructions.md` exists there, or a task creates or edits
+project-wide AI guidance, ensure all three paths exist without copying the
+canonical content.
 
 Expose `AGENTS.md` through compatibility files:
 
@@ -178,7 +189,7 @@ Instead of duplicating evolving information, point to its authoritative source:
 | Listing configuration constants with defaults | "see `config.py`; each constant has an inline comment" |
 | Listing environment variables with values | "see `.env.example`; annotated list" |
 | Configuring a mode that differs from `.env.example` | Keep the verified, copy-ready overlay and link to `.env.example` as its base |
-| Listing module files | "source under `call_pipeline/`; see CLAUDE.md for architectural context" |
+| Listing module files | "source under `call_pipeline/`; see AGENTS.md for architectural context" |
 | Enumerating rollup passes | "multiple idempotent Cypher passes; see `rollup.py`" |
 | Hardcoding model names | "configurable via `litellm-config.yaml`" |
 | Stating concurrency defaults | "code-level cap in `signals.py`; tune together with `.env`" |

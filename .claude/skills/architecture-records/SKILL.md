@@ -1,6 +1,13 @@
 ---
 name: architecture-records
-description: "Create, organize, review, implement, audit, or supersede durable cross-component architecture plans and decision records. Use when adding or moving architecture plans or ADRs, creating or updating architecture/README.md, changing a record lifecycle status, promoting a proposed plan to actual architecture, tracing architectural invariants through code and regression protection, investigating whether a recurring failure is architectural, or synchronizing current architectural invariants into CLAUDE.md or AGENTS.md and operational behavior into README.md. Do not use for a temporary issue or merge-request checklist alone."
+description: >-
+  Create, organize, review, implement, audit, or supersede durable cross-component architecture
+  plans and decision records. Use when adding or moving architecture plans or ADRs, creating or
+  updating architecture/README.md, changing a record lifecycle status, promoting a proposed plan
+  to actual architecture, tracing architectural invariants through code and regression protection,
+  investigating whether a recurring failure is architectural, or synchronizing current
+  architectural invariants into the canonical AGENTS.md and operational behavior into README.md.
+  Do not use for a temporary issue or merge-request checklist alone.
 ---
 
 # Architecture records
@@ -93,6 +100,8 @@ order, terminal meaning, or recovery policy.
 Reuse the existing architecture directory and index when present. When the repository
 has no convention, create `architecture/README.md` from
 `assets/architecture-readme-template.md` and keep it in English.
+Replace or remove every sample index entry and placeholder link from that template;
+never leave `record-file.md` or another template-only target in the resulting index.
 Create a new record from `assets/architecture-record-template.md`, removing all
 placeholders and unused sections.
 
@@ -121,7 +130,9 @@ complete. Require the described behavior and its required validation to be compl
 
 Use this ownership model unless repository instructions define a stricter one:
 
-- `CLAUDE.md`, `AGENTS.md`, or equivalent: short, current, load-bearing invariants.
+- Root `AGENTS.md`: short, current, load-bearing project-wide invariants.
+- `CLAUDE.md` and repository-wide Copilot instructions: compatibility paths that
+  import or link to the root `AGENTS.md`; they never own a second copy.
 - Architecture records: extended context, rationale, boundaries, risks, lifecycle,
   and architectural acceptance criteria.
 - Code and configuration: executable behavior and current values.

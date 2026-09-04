@@ -6,12 +6,27 @@ failures impossible to diagnose.
 ## Startup and workspace scope
 
 At the start of work in each workspace root, before running project commands or
-editing files, locate and read its `CLAUDE.md` if present. Commands used only to
-locate or read instruction files are permitted before this step. Read each file
-once unless it changes or a new workspace root is added.
+editing files, locate and read its root `AGENTS.md` if present. Use `CLAUDE.md`
+only as a compatibility fallback when `AGENTS.md` is absent, and follow an
+`@AGENTS.md` import by reading the target directly. Commands used only to locate
+or read instruction files are permitted before this step. Read each file once
+unless it changes or a new workspace root is added.
 
 Project instructions may refine global workflow assumptions, but must not relax
 global safety, authorization, workspace-scope, or destructive-action boundaries.
+
+## Question-only turns
+
+- Treat a user message whose last non-whitespace character is `?` or `w` as a
+  question. A trailing `w` may be an accidental result of typing `?` with AltGr.
+- For such a message, only answer the question. Read-only inspection of files,
+  diffs, logs, or state, including through tools or commands, is allowed when it
+  is necessary to answer accurately.
+- Do not edit anything, run tests, implement changes, create or execute a plan,
+  resume pending work, or perform any action that changes local or remote state.
+- A question about missing or incomplete work, or about what something means, is
+  not authorization to perform that work. Wait for a later, explicit instruction
+  that does not end as a question before acting.
 
 ### Missing repositories and workspace scope
 
@@ -30,8 +45,9 @@ file work in a repository that is not listed there:
    access before editing it. Never use a remote file or commit API to modify
    repository contents in place of the authorized local working tree. Read-only
    remote inspection remains allowed when the task calls for it.
-6. Prefer the authorized local working tree for file work. Read its
-   `CLAUDE.md`, inspect its current branch and status, and preserve all existing
+6. Prefer the authorized local working tree for file work. Read its root
+   `AGENTS.md`, or its `CLAUDE.md` compatibility fallback when no `AGENTS.md`
+   exists, inspect its current branch and status, and preserve all existing
    changes.
 7. Treat remote repository tools as read-only unless the user explicitly
    requests the corresponding remote mutation.
@@ -78,8 +94,11 @@ Use relative paths for files, configuration, and symbolic links intended to be
 shared across users or machines. Never store user-specific or machine-specific
 absolute paths in shared artifacts.
 
-Keep shared Claude, Codex, and Copilot skills canonical at
-`~/.claude/skills/<skill-name>` and expose them through
+Expose every shared Claude, Codex, and Copilot skill at
+`~/.claude/skills/<skill-name>`. Keep locally owned skill packages canonical
+there. When a repository owns a shared skill, preserve that repository as the
+source and use a relative symbolic link at the same `~/.claude/skills` path;
+never copy it into a second maintained package. Expose every shared entry through
 `~/.agents/skills/<skill-name>` with the relative target
 `../../.claude/skills/<skill-name>`. Leave Codex system skills under
 `~/.codex/skills/.system` untouched.

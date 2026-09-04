@@ -18,7 +18,8 @@ set -euo pipefail
 
 Every script that accepts arguments must define:
 
-1. `printhelp()` — print help for `--help` and every argument error.
+1. `printhelp()` — print help and exit with the supplied status: `0` for an
+   explicit help request and nonzero for an argument error.
 2. `invalidargument()` — handle an option that receives an invalid value.
 3. `checkargsvalid()` — reject a missing value or one starting with `-` for an
    option that requires a value.
@@ -29,6 +30,8 @@ Use this structure:
 
 ```bash
 function printhelp() {
+    local exit_status="${1}"
+
 cat >&1 <<EOF
 
     Usage: bash ${0} [arguments]
@@ -39,15 +42,14 @@ cat >&1 <<EOF
     bash ${0} -x | --option    (description)
 
 EOF
-    exit 1
+    exit "${exit_status}"
 }
 
 # ${1} - Option (for example, --load-config)
 # ${2} - Invalid argument (for example, -k)
 function invalidargument() {
     printf 'Error: Invalid argument "%s" for option "%s".\n' "${2}" "${1}" >&2
-    printhelp
-    exit 1
+    printhelp 1
 }
 
 function checkargsvalid() {
@@ -61,7 +63,7 @@ function checkexpectedargs() {
     local argument_value="${2--}"
     if [[ "${argument_value}" != '-'* ]]; then
         printf 'Error: The command "%s" does not expect any arguments, but got "%s".\n' "${1}" "${argument_value}" >&2
-        printhelp
+        printhelp 1
     fi
 }
 ```
@@ -73,7 +75,7 @@ while [[ $# -gt 0 ]]; do
     case "${1}" in
         -h|--help)
             checkexpectedargs "${1}" "${2--}"
-            printhelp
+            printhelp 0
             ;;
         -x|--option)
             checkargsvalid "${1}" "${2-}"
@@ -87,7 +89,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             printf 'Error: Unknown parameter "%s".\n' "${1}" >&2
-            printhelp
+            printhelp 1
             ;;
     esac
 done
@@ -101,5 +103,6 @@ done
   variables.
 - Declare every function variable with `local`.
 - Send errors to stderr with `>&2`; send help and normal output to stdout.
-- End `printhelp()` with `exit 1`.
+- End `printhelp()` with the supplied exit status. Use `0` only for explicitly
+  requested help and a nonzero status for invalid usage.
 - Validate enum values explicitly with `invalidargument()` after parsing.
