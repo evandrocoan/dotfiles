@@ -103,21 +103,50 @@ It never includes merging, force-pushing, rewriting history, or unrelated work.
 For commits, pushes, branches, pull requests, GitLab merge requests, repository
 issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
-## Task-specific skills
+## Shared skill registry
 
-- Before selecting, adding, replacing, upgrading, removing, or installing a
-  dependency, load `dependency-decisions`. Never install a missing package
-  automatically.
-- Before creating, modifying, reviewing, debugging, or running automated tests,
-  load `test-quality`.
-- Before writing or editing documentation or AI-facing Markdown instructions,
-  load `documentation`.
-- For durable cross-component architecture plans or decision records, load
-  `architecture-records` together with `documentation`.
-- Before creating, editing, reviewing, or debugging Bash, load `bash-scripts`.
-- Before creating or editing a structured diagram, load
-  `excalidash-diagrams`. If that skill is unavailable, report that it is not
-  installed instead of improvising another workflow.
+Treat every entry exposed under `~/.agents/skills/` as an installed shared skill.
+Before acting, match the task against this complete registry and load the entire
+`SKILL.md` for every applicable entry. Never skip an applicable skill because the
+task appears familiar or because another skill also applies. When a skill is added,
+renamed, or removed under `~/.agents/skills/`, update this registry in the same
+change. If the registry and filesystem disagree, inspect the filesystem, report the
+stale registry, and correct it before relying on the missing entry.
+
+- `architecture-records`: Create, review, implement, audit, or supersede durable
+  cross-component architecture records and lifecycle states. Load it together with
+  `documentation`; also load `plan-implementation` before implementing or making a
+  non-trivial correction governed by a record.
+- `bash-scripts`: Create, edit, review, or debug Bash scripts and Bash snippets.
+- `dependency-decisions`: Select, add, replace, upgrade, remove, or install any
+  library, package, framework, service, or system dependency. Never install a
+  missing dependency automatically.
+- `docker`: Create, edit, review, build, run, or troubleshoot Dockerfiles, Compose,
+  BuildKit/Buildx, container-backed CI, images, services, volumes, networks,
+  healthchecks, or container runtime behavior.
+- `documentation`: Create, edit, review, reorganize, or synchronize Markdown,
+  README files, runbooks, changelogs, and AI-facing instruction files.
+- `excalidash-diagrams`: Create or edit structured, editable Excalidraw or
+  ExcaliDash diagrams. If unavailable, report that instead of improvising another
+  diagram workflow.
+- `git-delivery`: Create or inspect branches, commits, pushes, issues, pull requests,
+  GitLab merge requests, reviews, or pipelines, while preserving authorization and
+  existing work.
+- `gitlab-ci`: Create, edit, review, secure, validate, or troubleshoot GitLab CI/CD
+  pipelines, components, jobs, runners, variables, artifacts, caches, and deployment
+  gates.
+- `plan-implementation`: Plan or implement any non-trivial multi-file, multi-stage,
+  cross-component, protocol, migration, replay, paid-validation, or externally
+  mutating change. Use its persistent Markdown plan whenever its persistence gate
+  applies, and complete its mandatory closure audit before declaring success.
+- `test-quality`: Create, modify, review, debug, or run automated tests, including
+  unit, integration, end-to-end, regression, smoke, property, concurrency, and
+  recorded-replay tests and their recording lifecycle.
+
+Runtime-owned Codex system skills and plugin-provided skills are discovered through
+their runtime catalogs and may not be available to every AI client. Do not add them
+to this shared registry unless they are deliberately exposed under
+`~/.agents/skills/`.
 
 ## Machine constraints and interactive commands
 
