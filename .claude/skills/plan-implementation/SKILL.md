@@ -130,7 +130,8 @@ Order work by dependency and feedback speed:
 7. Run broader integration, replay, and suite-level checks after the flow is connected.
 8. Perform operational or paid live validation only when it is useful and authorized under the
    applicable rules.
-9. Audit the final runtime flow and repository diff against the outcome and invariants.
+9. Perform the mandatory closure audit against the complete plan, governing architecture, actual
+   runtime flow, repository diff, and validation evidence.
 
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
@@ -220,6 +221,56 @@ and do not label partial coverage as end to end.
 Keep paid or externally mutating scenarios sequential unless the applicable policy explicitly
 requires otherwise. Measure the complete scenario rather than hiding retries or nested commands.
 
+## Perform the mandatory closure audit
+
+Treat closure as a separate blocking phase, not as a summary written from memory. After the
+candidate implementation and required validation are complete:
+
+1. Reread the entire persistent implementation plan from its first line through its final
+   conformance-verdict section. Reread every governing architecture record and coupled repository
+   instruction file in full. Do not rely on a prior summary, the changed sections, task-plan labels,
+   or remembered intent.
+2. Reconstruct the implemented runtime path from code, configuration, tests, fixtures, and actual
+   validation artifacts. A report that a command passed is evidence only for what that command
+   asserted.
+3. Expand and complete the plan's closure-audit matrix. Account individually for every outcome,
+   in-scope boundary, non-goal, governing invariant, execution step, affected consumer, replan
+   condition, and required validation obligation. Group entries only when they share the same owner,
+   failure mode, and evidence; never group distinct terminal or recovery paths merely to shorten the
+   table.
+4. Trace both directions:
+
+   ```text
+   architecture invariant -> implementation-plan step -> code/config owner -> consumers -> test/replay
+   changed code/config/test -> authorized plan scope -> governing invariant or explicit local objective
+   ```
+
+   The forward trace detects omitted implementation. The reverse trace detects unauthorized work,
+   accidental new architecture, and tests that validate behavior outside the approved objective.
+5. Mark each matrix row `verified`, `not applicable` with a concrete reason, or `unresolved`.
+   Use `not applicable` only when the approved scope and governing authority objectively exclude
+   the requirement. Missing evidence, unavailable or skipped required validation, an unexamined
+   consumer, cost, time, or an unexplained scope addition is `unresolved`; it is never implicitly
+   satisfied by another passing row.
+6. For persistent, architecture-governed, protocol, migration, replay, or cross-component work,
+   perform a second conformance pass after the implementer's pass. Use a separate agent with fresh
+   task context when one is available, giving it the plan, governing records, final diff, and
+   validation artifacts without the intended verdict. Otherwise perform a separate full reread and
+   report that the second pass was self-reviewed rather than independent.
+7. If either pass finds a mismatch, reopen the affected execution steps, correct the lowest
+   incorrect authority, rerun invalidated validation, and repeat the complete closure audit. Do not
+   append an exception that permits completion.
+
+Store the concise matrix and final conformance verdict in the persistent implementation plan.
+Store detailed command output, costs, raw logs, and replay events in their executable or operational
+artifacts and link them; do not copy them into the plan or architecture record.
+
+Any change after the closure audit to an in-scope or coupled artifact—including code,
+configuration, tests, fixtures, plans, architecture records, repository instructions, or user
+documentation—invalidates the closure verdict. Reread the complete final plan and governing
+records, recheck every row, rerun all checks invalidated by the change, and issue a new closure
+verdict before completion.
+
 ## Completion gates
 
 Do not mark the plan complete until all applicable gates pass:
@@ -228,13 +279,18 @@ Do not mark the plan complete until all applicable gates pass:
 - Every affected consumer uses the updated contract.
 - No legacy or fallback path preserves the superseded meaning.
 - Focused protection fails for the intended reason without the fix and passes with it.
-- Required integration, replay, and broader checks have completed or are reported explicitly as
-  unavailable.
+- Required integration, replay, and broader checks have completed. An unavailable required check
+  remains unresolved and blocks completion unless the governing authority changes its requirement.
 - The final diff contains no unrelated user-owned changes.
 - Documentation and architecture records are synchronized only where their owned behavior changed.
 - Remaining limitations, skipped validation, live cost, and operational uncertainty are reported
   accurately.
 - The persistent plan and task-plan projection agree on every material terminal status.
+- The closure-audit matrix contains no `pending` or `unresolved` row and cites current evidence for
+  every applicable requirement.
+- The architecture-to-implementation and implementation-to-authority traces are both complete.
+- The required second conformance pass found no unresolved omission, contradiction, unauthorized
+  behavior, or unprotected failure path.
 
 If implementation is incomplete, leave the corresponding step pending or in progress and state the
 concrete blocker. Never convert an unfinished plan into a successful handoff by weakening its

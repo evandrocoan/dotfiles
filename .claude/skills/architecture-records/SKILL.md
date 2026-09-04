@@ -77,8 +77,10 @@ sequence, status, and validation work needed to deliver it.
 Do not edit production code until the execution plan identifies the governing
 invariants, authoritative runtime owner, affected consumers, ordered implementation
 slices, proportional test and replay coverage, completion criteria, and conditions
-that require replanning. Keep this planning state in the task, issue, or merge request,
-not in the architecture record.
+that require replanning. When the `plan-implementation` persistence gate applies, keep
+the detailed state in its user-visible Markdown artifact and mirror status through the
+task plan. Otherwise keep it in the task, issue, or merge request. Never keep execution
+status in the architecture record.
 
 When execution exposes a code defect under an adequate invariant, revise only the
 execution plan. When it exposes a missing or incorrect durable decision, amend or
@@ -201,11 +203,28 @@ Update user documentation only when setup, operation, configuration, or user-vis
 behavior changes. Follow the repository's instruction-file language and synchronization
 rules; in this environment, write AI-facing instruction files in English.
 
-### 9. Audit the implemented architecture
+### 9. Perform the mandatory closure conformance audit
 
-Before declaring implementation complete, reconstruct the actual runtime flow from
-code, configuration, tests, and recorded artifacts rather than from the intended
-plan. Check that:
+Before declaring implementation complete or moving a record to `Implemented`, reread
+the entire governing architecture record, every coupled current record, the complete
+implementation plan, and the coupled repository instructions. Then reconstruct the
+actual runtime flow from code, configuration, tests, and recorded artifacts rather
+than from the intended plan or a prior summary.
+
+Require the implementation plan to contain a completed closure-audit matrix. Keep the
+execution evidence and row statuses there; keep only durable invariant traceability in
+the architecture record. The matrix must account individually for every architectural
+invariant, implementation-plan requirement, affected consumer, failure path, and
+required validation boundary.
+
+Audit both directions:
+
+```text
+architecture invariant -> plan step -> code/config owner -> consumers -> test/replay
+changed implementation artifact -> authorized plan scope -> governing architecture or local objective
+```
+
+Check that:
 
 - every invariant has one authoritative runtime owner and all consumers use it;
 - no legacy, fallback, cache, renderer, or compatibility path reconstructs a second
@@ -218,6 +237,20 @@ plan. Check that:
   and stale state have bounded and documented meanings;
 - incident-derived replays fail before the fix and protect the cross-component
   outcome after it.
+
+For a lifecycle transition to `Implemented`, and for a non-trivial correction governed
+by an implemented record, require a second conformance pass after the implementer's
+pass. Use a separate agent with fresh task context when one is available and provide
+the records, implementation plan, final diff, and validation artifacts without the
+intended conclusion. Otherwise perform a separate full reread and identify it as
+self-reviewed rather than independent.
+
+Any change after the audit to an in-scope or coupled artifact—including code,
+configuration, tests, fixtures, implementation plans, architecture records, repository
+instructions, or user documentation—invalidates the closure verdict. Reopen the
+relevant implementation step, reread the complete final plan and governing records,
+recheck every trace row, rerun invalidated checks, and repeat the closure conformance
+audit. Never preserve an audit exception merely to keep a completion status.
 
 If any required trace or audit item is unresolved, keep the record proposed or in
 implementation using the repository's established lifecycle wording. Do not call the
@@ -271,6 +304,12 @@ Before handoff:
   the execution evidence before handoff.
 - Confirm that an implemented record describes the approved resulting architecture,
   rather than reverse-engineering or legitimizing incidental current behavior.
+- Confirm that the complete implementation plan was reread and its closure-audit
+  matrix contains no pending or unresolved applicable requirement.
+- Confirm that every architecture invariant is represented in the forward trace and
+  every changed implementation artifact is represented in the reverse trace.
+- Confirm that the required second conformance pass was completed and that its
+  findings were corrected and revalidated rather than waived.
 - Verify relative links and moved-file paths.
 - Keep an existing table of contents synchronized; add one only when the
   `documentation` skill calls for it.
