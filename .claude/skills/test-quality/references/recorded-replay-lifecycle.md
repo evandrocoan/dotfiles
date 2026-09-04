@@ -4,17 +4,6 @@ Use this design when a system must continuously capture real executions and
 later reproduce selected executions as deterministic CI tests. Adapt names and
 storage technology to the repository; preserve the contracts below.
 
-## Contents
-
-- [Design the boundary first](#design-the-boundary-first)
-- [Record continuously without changing behavior](#record-continuously-without-changing-behavior)
-- [Store large artifacts efficiently](#store-large-artifacts-efficiently)
-- [Rotate bounded raw storage safely](#rotate-bounded-raw-storage-safely)
-- [Replay through production orchestration](#replay-through-production-orchestration)
-- [Promote a recording into CI](#promote-a-recording-into-ci)
-- [Preserve incidents honestly](#preserve-incidents-honestly)
-- [Test the recorder and lifecycle](#test-the-recorder-and-lifecycle)
-
 ## Design the boundary first
 
 Define the public production entry point the replay must call and every mutable
