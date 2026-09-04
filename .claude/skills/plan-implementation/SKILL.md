@@ -1,6 +1,13 @@
 ---
 name: plan-implementation
-description: "Turn an approved objective, bug diagnosis, or architecture record into a concrete, testable execution plan and keep implementation aligned with it. Use when the user asks for an implementation plan, asks to implement a non-trivial multi-file or multi-stage change, requests a plan for approval, or when an architecture record is moving into implementation. Also use before costly live validation, migrations, protocol changes, or fixes whose correctness depends on coordinated code, tests, replay, configuration, or documentation. Require a user-visible persistent Markdown plan when work may span phases, agents, interruptions, or context compaction."
+description: >-
+  Turn an approved objective, bug diagnosis, or architecture record into a concrete, testable
+  execution plan and keep implementation aligned with it. Use when the user asks for an
+  implementation plan, asks to implement a non-trivial multi-file or multi-stage change, requests
+  a plan for approval, or when an architecture record is moving into implementation. Also use
+  before costly live validation, migrations, protocol changes, or fixes whose correctness depends
+  on coordinated code, tests, replay, configuration, or documentation. Require a user-visible
+  persistent Markdown plan when work may span phases, agents, interruptions, or context compaction.
 ---
 
 # Plan implementation
@@ -59,6 +66,18 @@ implementation-plans/active/<task-slug>.md
 Use `assets/implementation-plan-template.md` as the starting structure. Use a concise lowercase
 hyphenated task slug. Keep one active file for one delivery objective; do not create a new file for
 every retry or replanning event.
+
+When the repository has no lifecycle convention, close a successfully completed plan by moving the
+same file, after its final conformance verdict passes, to:
+
+```text
+implementation-plans/completed/<task-slug>.md
+```
+
+Preserve the completed plan as the final execution contract; do not copy it or leave another copy
+under `active/`. Update any task-plan or documentation link that pointed to the active path. Keep a
+blocked or unresolved plan under `active/` with its real status unless the repository defines a
+separate blocked state.
 
 When no repository exists, use another durable user-visible Markdown artifact that every acting
 agent can reopen. An issue or merge-request description may replace the local file only when it is
@@ -159,8 +178,8 @@ The user must be able to see the plan path and every status transition.
 
 Do not commit the plan merely because it exists. Follow the user's requested Git outcome and the
 repository convention. Report whether the plan is tracked or untracked. Keep it available through
-handoff; remove or archive it only when the user requests that action or an established repository
-lifecycle requires it.
+handoff. Follow the repository lifecycle when one exists; otherwise apply the default `active/` to
+`completed/` transition above. Remove a plan only when the user requests removal.
 
 Never store task status, completed-step narration, timestamps, run-by-run cost, mutable commit
 identifiers, or raw logs in an architecture record. A proposed architecture record may contain only

@@ -1,4 +1,4 @@
 interface:
   display_name: "Plan Implementation"
   short_description: "Create visible, durable execution plans"
-  default_prompt: "Use $plan-implementation to create a visible, persistent, testable execution plan for this change."
+  default_prompt: "Use $plan-implementation to select the proportionate planning mode, create a visible testable plan, and persist it only when the skill's persistence gate applies."

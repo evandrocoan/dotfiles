@@ -95,9 +95,12 @@ public dispatcher, command handler, or service endpoint used in production.
 
 Block live network, provider, repository, model, browser, clock, and publication
 fallbacks unless the replay explicitly supplies a controlled fake for that
-boundary. Match every request structurally, return the next recorded result,
-and fail on an unexpected, duplicated, reordered, or unconsumed interaction.
-Compare terminal output, canonical state, durable effects, usage, and failure
+boundary. Match every request structurally. Preserve strict ordering for causal
+dependencies and sequences whose order is part of the contract. Match causally
+independent concurrent interactions by authenticated identity and multiplicity,
+regardless of completion order. Fail on every unexpected, duplicated, or
+unconsumed interaction, and return each recorded result exactly once. Compare
+terminal output, canonical state, durable effects, usage, and failure
 classification with explicit expectations.
 
 For an external browser or research sidecar, record both its API transcript and
@@ -146,10 +149,11 @@ provider, or browser response.
 
 ## Test the recorder and lifecycle
 
-Cover event ordering, atomic finalization, interrupted sessions, schema and hash
-rejection, concurrent executions, duplicate events, writer retry idempotency,
-quota boundaries, active-recording protection, deterministic victim order,
-rotation failure recovery, artifact deduplication, compression round trips,
-promotion self-containment, network blocking, exact consumption, and sidecar
-replay isolation. Use temporary storage and controllable coordination
+Cover causal event ordering, order-independent matching of authenticated
+concurrent interactions, atomic finalization, interrupted sessions, schema and
+hash rejection, concurrent executions, duplicate events, writer retry
+idempotency, quota boundaries, active-recording protection, deterministic victim
+order, rotation failure recovery, artifact deduplication, compression round
+trips, promotion self-containment, network blocking, exact consumption, and
+sidecar replay isolation. Use temporary storage and controllable coordination
 primitives; do not prove concurrency or rotation with sleeps.
