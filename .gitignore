@@ -150,6 +150,8 @@
 !/scripts/.env.example
 !/scripts/install/
 !/scripts/install/**
+!/scripts/systemd/
+!/scripts/systemd/**
 
 # temp clone
 /scripts/xfce4
