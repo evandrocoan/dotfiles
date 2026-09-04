@@ -93,6 +93,6 @@
     ]
   },
   "model": "sonnet",
-  "effortLevel": "max",
+  "effortLevel": "xhigh",
   "advisorModel": "opus"
 }
