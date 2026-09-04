@@ -1,13 +1,14 @@
 ---
 name: plan-implementation
-description: "Turn an approved objective, bug diagnosis, or architecture record into a concrete, testable execution plan and keep implementation aligned with it. Use when the user asks for an implementation plan, asks to implement a non-trivial multi-file or multi-stage change, requests a plan for approval, or when an architecture record is moving into implementation. Also use before costly live validation, migrations, protocol changes, or fixes whose correctness depends on coordinated code, tests, replay, configuration, or documentation."
+description: "Turn an approved objective, bug diagnosis, or architecture record into a concrete, testable execution plan and keep implementation aligned with it. Use when the user asks for an implementation plan, asks to implement a non-trivial multi-file or multi-stage change, requests a plan for approval, or when an architecture record is moving into implementation. Also use before costly live validation, migrations, protocol changes, or fixes whose correctness depends on coordinated code, tests, replay, configuration, or documentation. Require a user-visible persistent Markdown plan when work may span phases, agents, interruptions, or context compaction."
 ---
 
 # Plan implementation
 
 Create the smallest plan that makes the requested delivery reliable. Keep durable design
-authority in architecture records and keep temporary execution state in the task, issue, or merge
-request.
+authority in architecture records. Keep every formal plan user-visible. When the persistence gate
+applies, keep detailed execution state in Markdown and project its current steps into the task
+plan.
 
 ## Determine the planning mode
 
@@ -25,11 +26,66 @@ Use a formal plan whenever work crosses component boundaries, changes a protocol
 transition, has several dependent stages, requires a migration or replay, consumes paid
 validation, or has material uncertainty about scope.
 
+## Materialize the plan visibly
+
+Never keep a formal plan only in hidden reasoning or conversation memory. Materialize it in the
+task's visible plan mechanism, or present it directly when no such mechanism exists, before editing
+production code.
+
+Use these two layers when the persistence gate applies:
+
+- **Persistent execution plan:** Store the complete current execution contract in Markdown.
+- **Task plan:** Project the current steps and statuses into the environment's visible plan
+  mechanism for concise progress tracking.
+
+The persistent plan is mandatory when any of these conditions applies:
+
+- work is likely to cross context compaction, an interruption, a handoff, or more than one session;
+- multiple agents or people may act on the plan;
+- several dependent phases or cross-component consumers must remain coordinated;
+- the task implements or materially audits an architecture record;
+- migration, recorded replay, end-to-end validation, paid validation, or external mutation is
+  required;
+- losing a constraint, non-goal, authenticated fact, or validation obligation could produce an
+  incorrect delivery.
+
+When the repository defines a current implementation-plan convention, follow it. Otherwise, for
+repository-backed work, create:
+
+```text
+implementation-plans/active/<task-slug>.md
+```
+
+Use `assets/implementation-plan-template.md` as the starting structure. Use a concise lowercase
+hyphenated task slug. Keep one active file for one delivery objective; do not create a new file for
+every retry or replanning event.
+
+When no repository exists, use another durable user-visible Markdown artifact that every acting
+agent can reopen. An issue or merge-request description may replace the local file only when it is
+the established execution authority and all agents can read and update it. A chat message or hidden
+model state never replaces the persistent plan.
+
+Apply this authority order:
+
+```text
+approved architecture or product decision
+        -> persistent implementation plan
+        -> task-plan status projection
+        -> conversational progress update
+```
+
+Resolve disagreement by correcting the lower layer. Never let the task-plan projection silently
+override the persistent plan or let the persistent plan override approved architecture.
+
 ## Inspect before planning
 
 Read the applicable repository instructions and inspect the authoritative code, configuration,
 tests, and existing records before choosing implementation steps. Do not create a plan from
 filenames, issue prose, or remembered architecture alone.
+
+Inspect enough evidence to create a truthful initial plan, then materialize the plan before the
+first production edit. Mark unresolved facts as assumptions or investigation steps instead of
+inventing implementation details.
 
 When a durable architecture record governs the change, use `architecture-records` together with
 this skill. Treat the approved record as the design authority and derive the implementation plan
@@ -84,20 +140,39 @@ For parallelizable work, group only tasks with no shared mutable files, state, g
 expensive local resources, or causal dependency. Never parallelize merely to make a plan appear
 faster.
 
+When a persistent plan exists, reread it before starting each new phase and confirm that its
+prerequisites are complete. After context compaction, interruption, session restart, or agent
+handoff, reread the entire plan before acting. Give every delegated agent the plan path and the
+exact step it owns.
+
 ## Keep planning state in the correct place
 
-Use the task's plan mechanism for transient execution tracking. Use an issue or merge request when
-the plan must be shared across people or sessions. Write a repository plan file only when the user
-explicitly requests one or the repository has an established non-architecture convention for it.
+When the persistence gate applies, treat the persistent plan as the sole current authority for
+execution detail. Keep it compact and current; do not append a chronological diary. Update it only
+when status, scope, evidence, dependencies, validation obligations, blockers, or the chosen
+execution route materially changes.
+
+Mirror its executable steps into the task's plan mechanism. The task plan may be shorter, but it
+must not omit a material pending phase or report a status that conflicts with the persistent file.
+The user must be able to see the plan path and every status transition.
+
+Do not commit the plan merely because it exists. Follow the user's requested Git outcome and the
+repository convention. Report whether the plan is tracked or untracked. Keep it available through
+handoff; remove or archive it only when the user requests that action or an established repository
+lifecycle requires it.
 
 Never store task status, completed-step narration, timestamps, run-by-run cost, mutable commit
 identifiers, or raw logs in an architecture record. A proposed architecture record may contain only
 the minimum implementation order needed to constrain the design and its architectural acceptance
 criteria.
 
-After implementation, close the transient plan. Preserve durable rationale and invariants in their
+After implementation, close the execution plan. Preserve durable rationale and invariants in their
 authoritative record, executable expectations in tests and fixtures, and operational evidence in
 the issue, merge request, replay, or CI artifact that owns it.
+
+Do not store chain-of-thought, speculative internal reasoning, raw prompts, secrets, or copied logs
+in the plan. Store verified facts, explicit assumptions, decisions, dependencies, and observable
+validation results.
 
 ## Replan without changing authority
 
@@ -110,6 +185,10 @@ Replan immediately when:
 - user-owned concurrent changes overlap the planned edit;
 - validation demonstrates that the chosen implementation violates an invariant;
 - cost, quota, or operational state makes the remaining validation predictably wasteful.
+
+Update the persistent plan before taking a materially different implementation route. Preserve the
+current outcome and governing invariants, replace superseded steps instead of appending a narrative,
+and synchronize the task-plan projection.
 
 Change only the execution plan when the approved design remains valid. Amend or supersede the
 architecture record first when ownership, authority, stage order, terminal meaning, recovery policy,
@@ -155,6 +234,7 @@ Do not mark the plan complete until all applicable gates pass:
 - Documentation and architecture records are synchronized only where their owned behavior changed.
 - Remaining limitations, skipped validation, live cost, and operational uncertainty are reported
   accurately.
+- The persistent plan and task-plan projection agree on every material terminal status.
 
 If implementation is incomplete, leave the corresponding step pending or in progress and state the
 concrete blocker. Never convert an unfinished plan into a successful handoff by weakening its
@@ -162,7 +242,8 @@ acceptance criteria.
 
 ## Compact plan format
 
-Use a concise form unless the task needs more detail:
+Use the bundled template for a persistent file. For a formal task-plan projection or a plan that
+does not meet the persistence gate, use this concise form:
 
 ```text
 Outcome: <observable result>

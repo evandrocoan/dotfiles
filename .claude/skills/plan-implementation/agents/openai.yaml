@@ -1,4 +1,4 @@
 interface:
   display_name: "Plan Implementation"
-  short_description: "Turn approved intent into executable plans"
-  default_prompt: "Use $plan-implementation to create a concrete, testable execution plan for this change."
+  short_description: "Create visible, durable execution plans"
+  default_prompt: "Use $plan-implementation to create a visible, persistent, testable execution plan for this change."
