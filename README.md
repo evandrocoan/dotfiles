@@ -1299,7 +1299,7 @@ Install the executable as a root-owned copy, then install and enable the system 
 sudo install -o root -g root -m 0755 \
   ~/scripts/teamviewer_session_watchdog.py /usr/local/sbin/teamviewer-session-watchdog
 sudo install -o root -g root -m 0644 \
-  ~/scripts/teamviewer-session-watchdog.service \
+  ~/scripts/systemd/system/teamviewer-session-watchdog.service \
   /etc/systemd/system/teamviewer-session-watchdog.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now teamviewer-session-watchdog.service
