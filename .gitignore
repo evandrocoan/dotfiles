@@ -20,6 +20,13 @@
 !install-ia-skills.sh
 !.nojekyll
 
+!/implementation-plans/
+!/implementation-plans/README.md
+!/implementation-plans/active/
+!/implementation-plans/active/**
+!/implementation-plans/completed/
+!/implementation-plans/completed/**
+
 /.local/
 /.local/share/
 /.local/share/remmina/

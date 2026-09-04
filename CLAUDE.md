@@ -74,6 +74,19 @@ Installed via `cp -rv ~/scripts/install/* ~/.config/` followed by
 
 To view logs: `journalctl --user -u <service-name> -f`
 
+## Documentation placement
+
+`README.md` is the primary user-facing operations guide for this dotfiles repository. When
+implementing durable automation or a system integration, update it if the change creates or changes
+steps a person needs to install, enable, run, diagnose, recover, update, or remove the feature. Keep
+the runbook concise and point to the authoritative source files instead of duplicating their
+implementation details.
+
+Do not add one-off investigation notes, internal implementation details, test inventories, or
+behavior that is clear from a single source file. A diagnosis or review alone does not authorize a
+README change. Keep reusable agent-only constraints in `AGENTS.md`; use a dedicated document only
+when an operational procedure would make the main README disproportionately long.
+
 ## .gitignore strategy
 
 The ignore file uses an allowlist pattern:
