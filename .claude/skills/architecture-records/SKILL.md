@@ -108,6 +108,19 @@ placeholders and unused sections.
 Keep the index concise. Describe each record's subject and purpose, but keep its
 lifecycle status only in the record itself so status has one authoritative owner.
 
+### 3a. Keep record navigation canonical
+
+Architecture records are AI-facing artifacts. Do not add a manual table of contents
+to a plan, ADR, decision record, or architecture-record template. Use a clear heading
+hierarchy inside each record and the concise `architecture/README.md` index for
+cross-record navigation. The index is an authoritative catalog, not an internal table
+of contents to duplicate inside each record.
+
+When reviewing, editing, or closing a record that contains a manually maintained
+table of contents, remove that section without removing the substantive headings it
+referenced. This prevents a redundant heading inventory from becoming stale and
+spending context tokens whenever an agent reads the record.
+
 ### 4. Apply the lifecycle
 
 Use an explicit English semantic state:
@@ -322,8 +335,9 @@ Before handoff:
 - Confirm that the required second conformance pass was completed and that its
   findings were corrected and revalidated rather than waived.
 - Verify relative links and moved-file paths.
-- Keep an existing table of contents synchronized; add one only when the
-  `documentation` skill calls for it.
+- Confirm that architecture records and their templates contain no manual table of
+  contents. Keep the heading hierarchy clear and verify that the architecture index
+  links to each current record instead.
 - Run the repository's Markdown or whitespace checks when available and inspect
   untracked files as well as tracked diffs.
 - Report changed files, lifecycle transitions, and validation performed. Do not commit

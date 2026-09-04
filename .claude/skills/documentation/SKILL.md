@@ -167,16 +167,25 @@ root `AGENTS.md`. Revalidate all three paths before delivery.
 
 ## Maintain tables of contents
 
-When editing a Markdown document that already has a table of contents, keep it
-synchronized with the document's headings.
+When editing a Markdown document that already has a table of contents, first confirm
+that the document category permits one. Remove it from an excluded AI-facing or
+template artifact. Otherwise keep it synchronized with the final heading tree: add
+missing entries, remove stale entries, preserve document order, update renamed
+headings, and confirm that every link resolves to the intended heading under the
+repository's Markdown renderer.
 
 For long-form user-facing Markdown, create a table of contents when it would
 materially improve human navigation. Include substantive sections and relevant
 subsections.
 
-Do not add a table of contents to AI-facing instruction files. Clear headings
-provide structure without duplicating tokens in every agent context. Also omit
-tables of contents from short documents, templates, changelogs, generated
+Do not add a table of contents to AI-facing instruction or architecture artifacts.
+This includes `AGENTS.md`, `CLAUDE.md`, skills, slash commands, Copilot instructions,
+architecture plans, ADRs, decision records, and their templates. Clear headings and
+the architecture index provide navigation without duplicating tokens or creating a
+second heading inventory that can become stale. An `architecture/README.md` index is
+not an internal table of contents.
+
+Also omit tables of contents from short documents, templates, changelogs, generated
 files, and other documents where they add little navigational value.
 
 ## Prefer authoritative pointers
