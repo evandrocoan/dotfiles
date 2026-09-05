@@ -75,8 +75,24 @@ resources, and container-backed local or CI workflows.
 - Avoid broad mounts such as an entire home directory, `/root`, the Docker data
   root, or host timezone files unless a specific trusted local workflow proves
   the need.
-- Preserve the same host and container checkout path only when a tool serializes
-  paths that must resolve on both sides. Document the portability cost.
+- For trusted local development bind mounts, preserve the checkout's absolute
+  host path inside the container by default instead of using a generic target
+  such as `/workspace`. When Compose is invoked from the checkout being mounted,
+  use:
+
+  ```yaml
+  working_dir: $PWD
+  volumes:
+    - "$PWD:$PWD"
+  ```
+
+  This keeps paths emitted by debuggers, test tools, caches, and editor
+  integrations valid on both sides. Resolve `$PWD` from the actual Compose
+  invocation boundary: when an integrated Compose command runs from a monorepo
+  root, mount that root at the same path and set a product service's
+  `working_dir` to its subdirectory under `$PWD`. Use a different target only
+  for a demonstrated image or portability constraint, and document that
+  constraint.
 - Use workspace-derived project or volume names for parallel test scenarios.
   Normalize and delimit the value so two workspaces cannot collide.
 
