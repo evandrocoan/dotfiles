@@ -18,11 +18,15 @@ nothing beyond it.
    merge request includes the source branch, scoped commit, and push. It never
    includes merging, force-pushing, rewriting history, or unrelated changes. A
    review authorizes no mutations.
-3. Never create another worktree, rewrite history, force-push, rebase, merge, or
+3. Creating, correcting, or amending a commit never authorizes a push by
+   itself, even when the remote contains an earlier version of that commit.
+   Leave the rewritten commit local until the user explicitly requests remote
+   delivery or requests a pull or merge request as the current outcome.
+4. Never create another worktree, rewrite history, force-push, rebase, merge, or
    cherry-pick unless the user asks for that operation.
-4. Preserve unrelated and pre-existing changes. Do not stage, unstage, discard,
+5. Preserve unrelated and pre-existing changes. Do not stage, unstage, discard,
    or include them merely to obtain a clean status.
-5. If the requested delivery scope is ambiguous, identify the exact files or
+6. If the requested delivery scope is ambiguous, identify the exact files or
    actions in question and ask before mutating Git state.
 
 ## Use local and remote tools correctly
@@ -40,18 +44,38 @@ nothing beyond it.
 ## Prepare a commit
 
 1. Read every file that will be committed and understand why it changed.
-2. Analyze the architectural impact and confirm that the staged set matches the
-   requested scope.
-3. Run validation proportionate to the change and report anything that could
+2. Inspect the exact intended diff and staged set. Confirm that it matches the
+   requested scope before drafting the message.
+3. Before writing, identify the problem or objective, the reason it matters,
+   the important implementation or architectural decisions, the resulting
+   behavior, and the validation performed. Derive these facts from the changed
+   files and task evidence; do not infer intent from filenames alone.
+4. Run validation proportionate to the change and report anything that could
    not be run.
-4. Write the commit message in English with these rules:
+5. Write the commit message in English with these rules:
 
    - Use no conventional-commit prefix.
    - Keep the title concise, descriptive, and at most 72 characters.
    - Separate the title from the body with a blank line.
+   - Always include a nonempty body unless the user explicitly requests a
+     title-only commit.
    - Wrap body lines at 80 columns.
-   - Explain why the change matters, not only what changed.
+   - Explain the problem or motivation first, then the consequential design or
+     behavior. Include relevant validation when it materially supports the
+     change.
+   - Explain why the change matters instead of restating the title, listing
+     filenames, or mechanically narrating the diff.
+   - Do not start the body with "This commit".
    - Never add `Co-Authored-By` or another AI attribution trailer.
+
+6. Treat installed commit-message generators as non-authoritative references.
+   Do not run one unless the user asks. Independently derive and verify the
+   message from the actual diff even when a generated draft is available.
+7. After creating the commit and before any push, inspect the stored message.
+   Confirm that its title and body satisfy the rules above and that every claim
+   matches the committed diff and validation evidence. Correct the message
+   before delivery if it fails this check; never rewrite a pushed commit merely
+   to improve wording without explicit authorization.
 
 When drafting a message for the user, present it as a plain-text code block. A
 commit-only request stays local; a pull-request or merge-request request
