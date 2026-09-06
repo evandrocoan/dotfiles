@@ -17,16 +17,22 @@ global safety, authorization, workspace-scope, or destructive-action boundaries.
 
 ## Question-only turns
 
-- Treat a user message whose last non-whitespace character is `?` or `w` as a
-  question. A trailing `w` may be an accidental result of typing `?` with AltGr.
-- For such a message, only answer the question. Read-only inspection of files,
-  diffs, logs, or state, including through tools or commands, is allowed when it
-  is necessary to answer accurately.
+- Treat any user message containing `?` anywhere as a question-only turn. Also
+  treat a message whose last non-whitespace character is `w` as question-only;
+  the trailing `w` may be an accidental result of typing `?` with AltGr.
+- This rule applies even when the same message contains an imperative or an
+  explicit request to edit, implement, test, run, continue, or otherwise act.
+- In a question-only turn, answer the question or questions only. Read-only
+  inspection of files, diffs, logs, or state, including through tools or
+  commands, is allowed when necessary for an accurate answer.
 - Do not edit anything, run tests, implement changes, create or execute a plan,
   resume pending work, or perform any action that changes local or remote state.
-- A question about missing or incomplete work, or about what something means, is
-  not authorization to perform that work. Wait for a later, explicit instruction
-  that does not end as a question before acting.
+  After answering, at most ask whether the user wants implementation to continue
+  in a later turn.
+- Begin implementation only after a later, explicit user instruction that does
+  not contain `?` and does not otherwise qualify as a question-only turn. A
+  question about missing or incomplete work, or about what something means, is
+  never authorization to perform that work.
 
 ### Missing repositories and workspace scope
 
