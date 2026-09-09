@@ -1,0 +1,11 @@
+[Unit]
+Description=Keep atop history within the workstation disk budget
+After=atop.service
+ConditionPathIsDirectory=/var/log/atop
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/retain-atop-logs
+Nice=10
+IOSchedulingClass=idle
+UMask=0077

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check the atop history disk budget hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

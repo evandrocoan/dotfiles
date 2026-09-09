@@ -1,0 +1,6 @@
+Types: deb
+URIs: https://repository.netdata.cloud/repos/stable/ubuntu/
+Suites: noble/
+Architectures: amd64
+Signed-By: /usr/share/keyrings/netdata-archive-keyring.gpg
+By-Hash: yes

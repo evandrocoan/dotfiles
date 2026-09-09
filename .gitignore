@@ -153,6 +153,21 @@
 !/scripts/systemd/
 !/scripts/systemd/**
 
+!/scripts/performance-monitoring/
+!/scripts/performance-monitoring/atop.default
+!/scripts/performance-monitoring/sysstat.default
+!/scripts/performance-monitoring/sysstat.conf
+!/scripts/performance-monitoring/99-performance-monitoring.conf
+!/scripts/performance-monitoring/netdata.conf
+!/scripts/performance-monitoring/netdata.sources
+!/scripts/performance-monitoring/netdata-cloud.conf
+!/scripts/performance-monitoring/netdata-apps_groups.conf
+!/scripts/performance-monitoring/netatop-bpf.revision
+!/scripts/performance-monitoring/netatop-bpf.patch
+!/scripts/performance-monitoring/verify_netatop_bpf.py
+!/scripts/performance-monitoring/retain_atop_logs.py
+!/scripts/performance-monitoring/test_retention.py
+
 # temp clone
 /scripts/xfce4
 

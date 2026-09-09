@@ -1,0 +1,17 @@
+[Unit]
+Description=Per-process TCP/UDP accounting for atop
+After=systemd-sysctl.service
+Before=atop.service
+
+[Service]
+Type=forking
+ExecStart=/usr/local/sbin/netatop-bpf
+ExecStartPost=/usr/bin/timeout 10 /bin/sh -c 'until test -S /run/netatop-bpf-socket; do sleep 0.1; done'
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+UMask=0077
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Codex session statistics](#codex-session-statistics)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
+    - [Historical performance monitoring](#historical-performance-monitoring)
+      - [Install or update the collectors](#install-or-update-the-collectors)
+      - [Apply the monitoring configuration](#apply-the-monitoring-configuration)
+      - [Investigate a slow period](#investigate-a-slow-period)
+      - [Check health, storage and recovery](#check-health-storage-and-recovery)
+      - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
       - [Prevent memory-exhaustion lockups with earlyoom](#prevent-memory-exhaustion-lockups-with-earlyoom)
       - [Fix Skype Crash](#fix-skype-crash)
@@ -239,6 +245,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. `systemctl --user start hypervisor_clock_punches_playwright.service`
    1. `journalctl --user -u hypervisor_clock_punches_playwright.service -f`
 1. Configure ps aux monitoring:
+   For the current installation, use [historical performance monitoring](#historical-performance-monitoring).
+   The following collectd and ps-aux notes describe the older alternative.
    1. Configure collectd monitoring
       https://richard.downer.tech/2017/10/collectd-and-rrdtool/
       ```
@@ -505,6 +513,240 @@ timezone selection, and options for including active executions or subagents.
    1. http://vimdoc.sourceforge.net/htmldoc/change.html#registers
    1. https://stackoverflow.com/questions/9166328/how-to-copy-selected-lines-to-clipboard-in-vim
 
+
+### Historical performance monitoring
+
+The host records system and process activity automatically, including workloads inside containers.
+Open [the local Netdata dashboard](http://127.0.0.1:19999/) for graphs. On its welcome screen, choose
+**Skip and use the dashboard anonymously.** No account is required. The service listens only on
+loopback; cloud connectivity, anonymous agent telemetry and external alert notifications are disabled.
+
+| Collector | Configured behavior | Historical data |
+| --- | --- | --- |
+| atop and atopacctd | All processes every 10 seconds; accounting for terminated processes | `/var/log/atop/atop_YYYYMMDD` |
+| netatop-bpf | TCP/UDP bytes per process, read by atop | Included in atop recordings |
+| sysstat / sar | System, disks, paging, swap and network every minute; 30-day retention policy | `/var/log/sysstat/saYYYYMMDD`; older files compressed with xz |
+| Netdata | System/app/container graphs every 10 seconds, with one-minute and hourly aggregation tiers | `/var/cache/netdata/`; maximum age 30 days, with per-tier size budgets |
+
+Atop uses a 30-day age setting for daily cleanup and a **20 GiB storage budget**. An hourly
+cleanup removes the oldest closed files when the budget is exceeded or filesystem free space falls
+below 10 GiB. Today's file and files observed open by writers/readers are preserved, so protected
+files can temporarily exceed the budget. With many processes, actual detailed retention can be
+considerably shorter than a month. Save an incident outside `/var/log/atop` before automatic cleanup.
+The cleanup policy is in [`retain_atop_logs.py`](./scripts/performance-monitoring/retain_atop_logs.py).
+
+Netdata's metric-data budgets total 2 GiB across tiers, plus indexes and other metadata; the size or
+age limit reached first determines retention. Its service has a 384 MiB memory pressure threshold
+and a 768 MiB hard limit. Exact per-process investigation uses atop; Netdata groups applications
+according to [`netdata-apps_groups.conf`](./scripts/performance-monitoring/netdata-apps_groups.conf).
+Disk-space collection excludes inaccessible internal Docker mounts and root FUSE mounts; the
+backing filesystems and container I/O remain monitored.
+
+`kernel.task_delayacct=1` enables per-task I/O delay accounting. It takes effect for tasks created
+after activation and is reapplied at boot. Programs already open at installation need to be restarted
+before their per-task delay statistics are available. No reboot is performed by these instructions.
+History begins when recording starts; very short memory spikes between samples can still be missed.
+
+#### Install or update the collectors
+
+These commands target Linux Mint based on Ubuntu noble, on amd64. System-wide configuration belongs
+under `/etc`, separate from the `scripts/install/` tree used for user services.
+
+Install the base tools and the compiler required by netatop-bpf:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo apt-get update
+sudo apt-get install --no-install-recommends atop sysstat git make gcc clang-18 llvm-18 libelf-dev zlib1g-dev
+```
+
+Use the official stable Netdata repository: the Ubuntu package cannot read some network procfs
+files on the HWE kernel. Download its signing key and verify the fingerprint before installing it:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+MONITOR_SETUP_DIR="$(mktemp -d)"
+curl -fL https://repository.netdata.cloud/netdatabot.gpg.key -o "${MONITOR_SETUP_DIR}/key.asc"
+MONITOR_KEY_FINGERPRINT="$(gpg --show-keys --with-colons "${MONITOR_SETUP_DIR}/key.asc" | awk -F: '$1 == "fpr" { print $10; exit }')"
+test "${MONITOR_KEY_FINGERPRINT}" = 6E155DC153906B73765A74A99DD4A74CECFA8F4F
+gpg --batch --dearmor -o "${MONITOR_SETUP_DIR}/key.gpg" "${MONITOR_SETUP_DIR}/key.asc"
+sudo install -m 0644 "${MONITOR_SETUP_DIR}/key.gpg" /usr/share/keyrings/netdata-archive-keyring.gpg
+sudo install -m 0644 ~/scripts/performance-monitoring/netdata.sources /etc/apt/sources.list.d/netdata.sources
+sudo apt-get update
+sudo apt-get install --no-install-recommends -o Dpkg::Options::=--force-confold netdata netdata-plugin-apps
+```
+
+For future Netdata updates, retain the local configuration and repeat the configuration step below.
+The repository and key setup need to be performed only once. See the
+[official package installation guide](https://learn.netdata.cloud/docs/netdata-agent/installation/linux/native-linux-distribution-packages).
+
+Build the pinned netatop-bpf revision as your normal user. The local patch adapts socket accounting
+to this kernel, excludes failed receives and `MSG_PEEK`, allocates BPF counters on demand, and
+restricts the collector socket to root. Keep the revision and patch together when updating them.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+MONITOR_BUILD_DIR="$(mktemp -d)"
+MONITOR_NETATOP_REVISION="$(cat ~/scripts/performance-monitoring/netatop-bpf.revision)"
+git clone --no-checkout https://github.com/bytedance/netatop-bpf.git "${MONITOR_BUILD_DIR}/netatop-bpf"
+cd "${MONITOR_BUILD_DIR}/netatop-bpf"
+git checkout --detach "${MONITOR_NETATOP_REVISION}"
+git submodule update --init --recursive
+git apply --check ~/scripts/performance-monitoring/netatop-bpf.patch
+git apply ~/scripts/performance-monitoring/netatop-bpf.patch
+make -j2 CLANG=clang-18 LLVM_STRIP=llvm-strip-18
+sudo install -m 0755 netatop /usr/local/sbin/netatop-bpf
+```
+
+#### Apply the monitoring configuration
+
+Before changing an existing installation, save the files you intend to replace. The initial setup's
+vendor defaults are preserved under `/var/backups/performance-monitoring/vendor-config/`, with a
+Netdata data/configuration snapshot in `/var/backups/performance-monitoring/netdata-before-upgrade.tar.gz`.
+Keep subsequent backups separate so the original recovery point is not overwritten.
+
+The authoritative configuration is under [`scripts/performance-monitoring/`](./scripts/performance-monitoring/)
+and [`scripts/systemd/system/`](./scripts/systemd/system/). Apply changes with:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd ~
+sudo install -m 0644 scripts/performance-monitoring/atop.default /etc/default/atop
+sudo install -m 0644 scripts/performance-monitoring/sysstat.default /etc/default/sysstat
+sudo install -m 0644 scripts/performance-monitoring/sysstat.conf /etc/sysstat/sysstat
+sudo install -m 0644 scripts/performance-monitoring/99-performance-monitoring.conf /etc/sysctl.d/99-performance-monitoring.conf
+sudo install -m 0644 scripts/performance-monitoring/netdata.conf /etc/netdata/netdata.conf
+sudo install -m 0644 scripts/performance-monitoring/netdata-apps_groups.conf /etc/netdata/apps_groups.conf
+sudo touch /etc/netdata/.opt-out-from-anonymous-statistics
+sudo install -d -o netdata -g netdata -m 0750 /var/lib/netdata/cloud.d
+sudo install -o netdata -g netdata -m 0640 scripts/performance-monitoring/netdata-cloud.conf /var/lib/netdata/cloud.d/cloud.conf
+sudo install -m 0755 scripts/performance-monitoring/retain_atop_logs.py /usr/local/sbin/retain-atop-logs
+for UNIT in netatop-bpf.service performance-log-retention.service performance-log-retention.timer; do
+    sudo install -m 0644 "scripts/systemd/system/${UNIT}" "/etc/systemd/system/${UNIT}"
+done
+for UNIT in atop.service atop-rotate.timer sysstat-collect.timer sysstat-summary.timer netdata.service; do
+    sudo install -D -m 0644 "scripts/systemd/system/${UNIT}.d/10-performance-monitoring.conf" "/etc/systemd/system/${UNIT}.d/10-performance-monitoring.conf"
+done
+printf 'sysstat sysstat/enable boolean true\n' | sudo debconf-set-selections
+sudo sysctl -p /etc/sysctl.d/99-performance-monitoring.conf
+sudo systemctl daemon-reload
+sudo systemctl enable --now netatop-bpf.service atopacct.service atop.service atop-rotate.timer sysstat.service sysstat-collect.timer sysstat-summary.timer netdata.service performance-log-retention.timer
+sudo systemctl restart netatop-bpf.service atop.service netdata.service
+sudo systemctl restart atop-rotate.timer sysstat-collect.timer sysstat-summary.timer performance-log-retention.timer
+sudo chmod 0750 /var/log/atop /var/log/sysstat
+sudo find /var/log/atop -maxdepth 1 -type f -name 'atop_*' -exec chmod 0640 {} +
+```
+
+Atop rotates daily at midnight. Sysstat summarizes, compresses and expires old files after midnight.
+Their age-based expiry is approximate because cleanup uses whole elapsed days and runs daily.
+Persistent daily timers catch up after the computer was off or suspended. The distribution's cron
+wrappers defer to systemd, so no additional cron collector is needed.
+
+#### Investigate a slow period
+
+Use the computer's local timezone. For example, replace the date and times below with the incident:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo atop -r /var/log/atop/atop_20260909 -b 140000 -e 143000
+```
+
+Within atop, `t` advances and `T` goes back one sample. Use `m` for memory, `d` for disk, `n` for
+network, `s` for scheduling/wait, `c` for command arguments and `j` for containers. Uppercase `M`,
+`D`, `N` and `C` sort by memory, disk, network and CPU respectively. `q` exits.
+
+For system-level details, set the incident's sysstat filename and query the same interval:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+MONITOR_DAY=/var/log/sysstat/sa20260909
+sudo sar -u ALL -r ALL -S -W -B -q ALL -f "${MONITOR_DAY}" -s 14:00:00 -e 14:30:00
+sudo sar -d -p -f "${MONITOR_DAY}" -s 14:00:00 -e 14:30:00
+sudo sar -n DEV,EDEV,TCP,ETCP -f "${MONITOR_DAY}" -s 14:00:00 -e 14:30:00
+```
+
+For an older `.xz` archive, use `sudo xz -dc /var/log/sysstat/saYYYYMMDD.xz > /tmp/incident.sa`
+and pass `/tmp/incident.sa` to `sar -f`. Choose an unused temporary filename and remove it afterwards.
+Correlate events with `sudo journalctl -k --since 'YYYY-MM-DD HH:MM:SS' --until 'YYYY-MM-DD HH:MM:SS'`.
+
+Look for memory/IO **PSI** pressure together with swap-in/swap-out, then inspect processes at that
+time. Swap occupancy alone is insufficient: this computer also uses compressed zram. For disk
+latency, inspect queueing and request latency alongside `iowait`. In Netdata, select the same period
+and compare system pressure, applications, disk and network/container charts. Network counters are
+TCP/UDP bytes attributed to socket operations, not a packet capture or a record of remote content.
+
+#### Check health, storage and recovery
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+systemctl status atop atopacct netatop-bpf netdata --no-pager
+systemctl list-timers atop-rotate.timer sysstat-collect.timer sysstat-summary.timer performance-log-retention.timer
+sysctl kernel.task_delayacct
+sudo ss -ltnp '( sport = :19999 )'
+sudo du -sh /var/log/atop /var/log/sysstat /var/cache/netdata
+df -h /var
+sudo journalctl -u atop -u atopacct -u netatop-bpf -u netdata -u performance-log-retention --since today --no-pager
+sudo journalctl --namespace=netdata -u netdata.service --since today --no-pager
+```
+
+Netdata's collector logs use the `netdata` journal namespace; its service lifecycle also appears
+in the default journal.
+
+Recheck disk growth after a few days. Adjust atop's interval/maximum age in
+[`atop.default`](./scripts/performance-monitoring/atop.default), the disk budget in
+[`retain_atop_logs.py`](./scripts/performance-monitoring/retain_atop_logs.py), and dashboard storage
+in [`netdata.conf`](./scripts/performance-monitoring/netdata.conf); then reapply the configuration.
+The retention service reports removed files and warns when protected files exceed the budget.
+
+If recording stops, inspect its journal and available disk space, then restart only the affected
+service. If network columns are empty, check `netatop-bpf.service` and rerun its small loopback check,
+especially after a kernel or collector update:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo python3 ~/scripts/performance-monitoring/verify_netatop_bpf.py
+```
+
+After changing the BPF binary, restart `netatop-bpf` followed by `atop`. Restarting a collector creates
+a boundary in the history; its first sample can contain totals since boot, so exclude it when
+estimating an interval's consumption. Netdata's cloud state can be checked with
+`sudo netdatacli aclk-state`; this local setup should report `Claimed: No` and `Online: No`.
+
+#### Remove the monitoring setup
+
+Stop recording first. These commands retain historical data for later inspection:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo systemctl disable --now performance-log-retention.timer atop-rotate.timer sysstat-collect.timer sysstat-summary.timer atop.service atopacct.service netatop-bpf.service sysstat.service netdata.service
+sudo rm /etc/systemd/system/netatop-bpf.service /etc/systemd/system/performance-log-retention.service /etc/systemd/system/performance-log-retention.timer
+for UNIT in atop.service atop-rotate.timer sysstat-collect.timer sysstat-summary.timer netdata.service; do
+    sudo rm "/etc/systemd/system/${UNIT}.d/10-performance-monitoring.conf"
+done
+sudo rm /usr/local/sbin/netatop-bpf /usr/local/sbin/retain-atop-logs
+sudo rm /etc/sysctl.d/99-performance-monitoring.conf
+sudo sysctl -w kernel.task_delayacct=0
+sudo cp -a /var/backups/performance-monitoring/vendor-config/. /
+sudo rm /etc/netdata/apps_groups.conf
+printf 'sysstat sysstat/enable boolean false\n' | sudo debconf-set-selections
+sudo systemctl daemon-reload
+```
+
+If uninstalling on another machine, restore its own backups instead of the initial setup's backup.
+Keep Netdata's cloud and telemetry opt-outs when retaining the package. To remove the packages too,
+use `sudo apt-get remove atop sysstat netdata 'netdata-plugin-*' netdata-dashboard netdata-user`, then
+remove `/etc/apt/sources.list.d/netdata.sources` and `/usr/share/keyrings/netdata-archive-keyring.gpg`.
+Review the proposed package removal list. Historical files under `/var/log/atop`, `/var/log/sysstat`
+and `/var/cache/netdata` can be removed separately once they are no longer needed.
 
 ### Fix system crash
 
