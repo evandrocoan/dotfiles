@@ -1,0 +1,78 @@
+diff --git a/netatop.bpf.c b/netatop.bpf.c
+index 6bc5674..652fc4a 100644
+--- a/netatop.bpf.c
++++ b/netatop.bpf.c
+@@ -12,6 +12,8 @@
+ 
+ struct {
+ 	__uint(type, BPF_MAP_TYPE_PERCPU_HASH);
++	/* Allocate counters only for processes that actually use the network. */
++	__uint(map_flags, BPF_F_NO_PREALLOC);
+ 	__uint(max_entries, TASK_MAX_ENTRIES);
+ 	__type(key, u64);
+ 	__type(value, struct taskcount);
+@@ -43,8 +45,8 @@ struct sock_msg_length_args {
+ 	struct sock *sk;
+ 	__u16 family;
+ 	__u16 protocol;
+-	int length;
+-	int error;
++	/* Current kernels expose the signed syscall result, followed by flags. */
++	int ret;
+ 	int flags;
+ };
+ 
+@@ -55,7 +57,10 @@ int handle_tp_send(struct sock_msg_length_args *ctx)
+ 	int id;
+ 	short family = ctx->family;
+ 	short protocol = ctx->protocol;
+-	int length = ctx->length;
++	int length = ctx->ret;
++
++	if (length <= 0)
++		return 0;
+ 
+ 	// AF_INET = 2
+ 	// AF_INET6 = 10
+@@ -98,7 +103,11 @@ int handle_tp_recv(struct sock_msg_length_args *ctx)
+ 	int id;
+ 	short family = ctx->family;
+ 	short protocol = ctx->protocol;
+-	int length = ctx->length;
++	int length = ctx->ret;
++
++	/* MSG_PEEK (2) observes data without consuming it. */
++	if (length <= 0 || (ctx->flags & 2))
++		return 0;
+ 
+ 	if (family == 2 || family == 10) {
+ 		u64 tgid = current_tgid();
+diff --git a/server.c b/server.c
+index aedbed3..ad9f45f 100644
+--- a/server.c
++++ b/server.c
+@@ -70,7 +70,7 @@ int serv_listen()
+         goto errout;
+     }
+ 
+-    if(chmod(un.sun_path, 0777) < 0)
++    if(chmod(un.sun_path, 0600) < 0)
+     {
+         rval = -4;
+         goto errout;
+@@ -104,7 +104,7 @@ int serv_listen()
+    
+     while(! cleanup_and_go)
+     {
+-        int fd_num = epoll_wait(epoll_fd, events, 10000, 1000);
++        int fd_num = epoll_wait(epoll_fd, events, sizeof(events) / sizeof(events[0]), 1000);
+         for (int i = 0; i < fd_num; i++)
+         {
+             if (events[i].data.fd == sock_fd) // new client
+@@ -172,4 +172,4 @@ errout:
+     close(sock_fd);
+     close(epoll_fd);
+     return(rval);
+-}
+\ No newline at end of file
++}
