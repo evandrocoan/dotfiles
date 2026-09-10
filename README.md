@@ -14,6 +14,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Add a new dependency](#add-a-new-dependency)
       - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
+    - [Repository tests](#repository-tests)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
     - [Historical performance monitoring](#historical-performance-monitoring)
@@ -411,6 +412,23 @@ codex-session-stats
 
 Use `codex-session-stats --help` to see the available filters, output formats,
 timezone selection, and options for including active executions or subagents.
+
+
+### Repository tests
+
+GitHub Actions runs the deterministic Python tests on every push and pull request. The workflow is
+defined in [`.github/workflows/tests.yml`](./.github/workflows/tests.yml) and can also be started
+manually from the Actions tab. Run the same test suites locally with:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+python3 -m unittest discover -s scripts/performance-monitoring -p 'test_*.py' -v
+python3 -m unittest discover -s scripts -p 'test_teamviewer_session_watchdog.py' -v
+```
+
+The privileged netatop/eBPF verification depends on the installed host kernel and is intentionally
+kept as a local check; see [check health, storage and recovery](#check-health-storage-and-recovery).
 
 
 ### Install XFCE from sources
