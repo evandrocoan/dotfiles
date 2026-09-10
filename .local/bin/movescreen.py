@@ -31,7 +31,7 @@ else:
 # =======================
 # scr will store a list of list: [ [ width height offset_x offset_y ] ... ]
 out = subprocess.check_output(['xrandr']).decode('ascii', 'ignore')
-reg = re.compile(" connected( primary)? ([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)")
+reg = re.compile(r" connected( primary)? ([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)")
 scr = []
 for l in out.splitlines():
 	m = reg.search(l)
@@ -144,4 +144,3 @@ else:
 	wmctrl(id, [['-b', 'toggle,' + s] for s in state])
 	wmctrl(id, [['-e', '0,%d,%d,%d,%d' % tuple(npos+nsiz)]])
 	wmctrl(id, [['-b', 'toggle,' + s] for s in state])
-
