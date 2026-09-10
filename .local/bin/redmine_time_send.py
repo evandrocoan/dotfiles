@@ -6,13 +6,7 @@ import sys
 import json
 import datetime
 import argparse
-import requests
 import pprint
-
-try:
-    import pytest
-except:
-    pytest = None
 
 
 def get_day_of_the_week(entry) -> str:
@@ -41,6 +35,30 @@ class State(object):
 
     def __repr__(self):
         return str(self)
+
+
+def extract_outermost_parenthesis_content(state, input_data):
+    stack = []
+    result = []
+    has_parentheses = False
+    for i, char in enumerate(input_data):
+        if char == '(':
+            has_parentheses = True
+            stack.append(i)
+        elif char == ')':
+            has_parentheses = True
+            if not stack:
+                raise RuntimeError(
+                    f"Unbalanced parentheses on input! Line {state.line_count}: {input_data}."
+                )
+            start = stack.pop()
+            if not stack:
+                result.append(input_data[start + 1: i])
+    if has_parentheses and not result:
+        raise RuntimeError(
+            f"Unbalanced parentheses on input! Line {state.line_count}: {input_data}."
+        )
+    return " ".join(result)
 
 
 def parse_time_line(state, line):
@@ -146,7 +164,12 @@ def parse_time_line(state, line):
         state.errors.append(f"Line with invalid data! Line {state.line_count}: {line}.")
 
 
-def verify_titles(entries, url, headers):
+def verify_titles(entries, url, headers, request_get=None):
+    if request_get is None:
+        import requests
+
+        request_get = requests.get
+
     mismatches = []
     issue_cache = {}
     seen = set()
@@ -158,7 +181,7 @@ def verify_titles(entries, url, headers):
             continue
 
         if issue_id not in issue_cache:
-            response = requests.get(f'{url}/issues/{issue_id}.json', headers=headers)
+            response = request_get(f'{url}/issues/{issue_id}.json', headers=headers)
             if response.status_code == 200:
                 issue_cache[issue_id] = response.json()['issue']['subject']
             else:
@@ -178,27 +201,16 @@ def verify_titles(entries, url, headers):
     return mismatches
 
 
-def main():
+def main(argv=None, credential_path=None, request_get=None, request_post=None, input_fn=input):
     state = State()
-    arguments = g_argumentParser.parse_args()
+    arguments = g_argumentParser.parse_args(argv)
 
-    with open(arguments.file) as file:
+    with open(arguments.file, encoding="utf-8") as file:
         for line in file:
             parse_time_line(state, line)
 
     # flush current day for warnings check
     parse_time_line(state, '')
-
-    with open( os.path.expanduser('~/Documents/redmine_api_key.json') ) as file:
-        data = json.load(file)
-
-    url = data['url']  # "https://redmine.com"
-    api_key = data['key']  # "jsebfyjsebfyjsebfyjsebfyjsebfyebfyjsebfy"
-
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Redmine-API-Key': api_key,
-    }
 
     total = 0
     last_date = ""
@@ -209,7 +221,7 @@ def main():
         "spent_on": None,
         "activity_id": "",
     }]:
-        if last_date and last_date != data['spent_on'] or data['hours'] == 0:
+        if last_date and (last_date != data['spent_on'] or data['hours'] == 0):
             day = datetime.datetime.strptime(last_date, "%Y-%m-%d").strftime("%A")
             print(f'total {total} ({day})')
             print()
@@ -224,7 +236,38 @@ def main():
         for warning in state.warnings:
             print("warning", warning, '\n')
 
-    title_mismatches = verify_titles(state.entries, url, headers)
+    if state.errors:
+        print("\nErros de parse:")
+        for error in state.errors:
+            print(f"  {error}")
+        print("\nEnvio abortado.")
+        return 1
+
+    if arguments.dry_run:
+        print("\nDry run — nenhum dado enviado.")
+        return 0
+
+    if credential_path is None:
+        credential_path = os.path.expanduser('~/Documents/redmine_api_key.json')
+    with open(credential_path, encoding="utf-8") as file:
+        credentials = json.load(file)
+
+    url = credentials['url']  # "https://redmine.com"
+    api_key = credentials['key']  # "jsebfyjsebfyjsebfyjsebfyjsebfyebfyjsebfy"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Redmine-API-Key': api_key,
+    }
+
+    if request_get is None or request_post is None:
+        import requests
+
+        if request_get is None:
+            request_get = requests.get
+        if request_post is None:
+            request_post = requests.post
+
+    title_mismatches = verify_titles(state.entries, url, headers, request_get)
     if title_mismatches:
         print("\nTítulos divergentes:")
         for issue_id, local, remote in title_mismatches:
@@ -232,25 +275,14 @@ def main():
             print(f"  #{issue_id} + {remote}")
             print()
 
-    if state.errors:
-        print("\nErros de parse:")
-        for error in state.errors:
-            print(f"  {error}")
-        print("\nEnvio abortado.")
-        return
-
-    if arguments.dry_run:
-        print("\nDry run — nenhum dado enviado.")
-        return
-
-    input("Press enter to send data...")
-    input("Press enter to send data...")
-    input("Press enter to send data...")
+    input_fn("Press enter to send data...")
+    input_fn("Press enter to send data...")
+    input_fn("Press enter to send data...")
     errors = []
     for data in state.entries:
         payload = {k: v for k, v in data.items() if k != 'title'}
         data_json = json.dumps({ "time_entry": payload })
-        response = requests.post(f'{url}/time_entries.json', headers=headers, data=data_json)
+        response = request_post(f'{url}/time_entries.json', headers=headers, data=data_json)
 
         if response.status_code in (200, 201):
             print("Response was successful.", repr(response.text))
@@ -261,256 +293,10 @@ def main():
     if errors:
         print("\n\nWARNING\n\nThe following requests resulted in errors:")
         pprint.pprint(errors)
+        return 1
 
-    else:
-        print("\nSuccessfully sent all requests.")
-
-
-def test_basic_load():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 inhere cradle unhoed increpate u
-1. Add 1.0 hours/8 (2023/04/12) #80661 fishlike sc
-1. Add 5.0 hours/8 (2023/04/12) #89081 roughet overintellectual bureaucratization s
-
-1. Add 6.0 hours/8 (2023/04/15) #89081 deciduously the
-
-1. Add 1.0 hours/8 (2023/04/16) #81352 bifocal somers repr
-1. Add 1.0 hours/8 (2023/04/16) #81236 assaying pneumotherapy perceptibleness
-1. Add 5.0 hours/8 (2023/04/16) #89081 salmonif
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-
-
-def extract_outermost_parenthesis_content(state, input_data):
-    stack = []
-    result = []
-    has_parentheses = False
-    for i, char in enumerate(input_data):
-        if char == '(':
-            has_parentheses = True
-            stack.append(i)
-        elif char == ')':
-            has_parentheses = True
-            if not stack:
-                raise RuntimeError(f"Unbalanced parentheses on input! Line {state.line_count}: {input_data}.")
-            start = stack.pop()
-            if not stack:
-                result.append(input_data[start + 1: i])
-    if has_parentheses and not result:
-        raise RuntimeError(f"Unbalanced parentheses on input! Line {state.line_count}: {input_data}.")
-    return " ".join(result)
-
-
-def test_comment_with_parentheses_1():
-    state = State()
-    parse_time_line(state,
-        "1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m (:some comment with (parentheses) inside)"
-    )
-    assert state.entries[0]['comments'] == "some comment with (parentheses) inside"
-
-
-def test_comment_with_parentheses_2():
-    state = State()
-    parse_time_line(state,
-        "1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m (:some comment with (parentheses inside)"
-    )
-    assert not state.entries
-    assert any("Unbalanced parentheses on input" in e for e in state.errors)
-
-
-def test_comment_with_parentheses_3():
-    state = State()
-    parse_time_line(state,
-        "1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m (:some comment with parentheses) inside)"
-    )
-    assert not state.entries
-    assert any("Unbalanced parentheses on input" in e for e in state.errors)
-
-
-def test_comment_before_title():
-    state = State()
-    parse_time_line(state,
-        "1. Add 1.0 hours/8 (2023/04/12) #80661 (:some note) fusilier Octocorallia reprovingly"
-    )
-    assert state.entries[0]['comments'] == "some note"
-    assert state.entries[0]['title'] == "fusilier Octocorallia reprovingly"
-
-
-def test_mixed_data_raise_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 jugated envision crackhemp
-1. Add 1.0 hours/8 (2023/04/12) #80661 grasslike Monomya
-1. Add 5.0 hours/8 (2023/04/12) #89081 unavailing fasciculus cursorary sca
-
-1. Add 6.0 hours/8 (2023/04/15) #89081 abranchious Kokoona unprincipledness poluphloisboiotic ideolo
-
-1. Add 1.0 hours/8 (2023/04/16) #81352 Guttera enfila
-1. Add 1.0 hours/8 (2023/04/15) #81236 Welf overbearing yeomanwis
-1. Add 5.0 hours/8 (2023/04/16) #89081 thumb
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert any("Each line group must be from the same date" in e for e in state.errors)
-
-
-def test_invalid_issue_id_raises_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
-1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
-
-1. Add 2.0 hours/8 (2023/04/15) #8xxxx Jacaltec sepi
-1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
-
-1. Add 1.0 hours/8 (2023/04/16) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/16) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/16) #89081 emanatory radiolocator
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert any("Invalid data issue_id" in e for e in state.errors)
-
-
-def test_invalid_line_parse_raises_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
-1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
-
-1. Add 2.0 hours8 (2023/04/15) #8xxxx Jacaltec sepi
-1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
-
-1. Add 1.0 hours/8 (2023/04/16) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/16) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/16) #89081 emanatory radiolocator
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert any("Line with invalid data" in e for e in state.errors)
-
-
-def test_invalid_date_raises_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
-1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
-
-1. Add 2.0 hours/8 (2023/04/15) #89081 Jacaltec sepi
-1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
-
-1. Add 1.0 hours/8 (2023/04/14) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/14) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/14) #89081 emanatory radiolocator
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert any("Invalid date 2023-04-15 00:00:00, should always be >=" in e for e in state.errors)
-
-
-def test_same_date_different_blocks_raises_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
-1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
-
-1. Add 2.0 hours/8 (2023/04/15) #89081 Jacaltec sepi
-1. Add 5.0 hours/8 (2023/04/15) #89081 foremasthand ungeniu
-
-1. Add 1.0 hours/8 (2023/04/15) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/15) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/15) #89081 emanatory radiolocator
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert any("The next block must be from higher date" in e for e in state.errors)
-
-
-def test_too_much_hours_raises_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
-1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
-
-1. Add 2.0 hours/8 (2023/04/14) #89081 Jacaltec sepi
-1. Add 5.0 hours/8 (2023/04/14) #89081 foremasthand ungeniu
-
-1. Add 5.0 hours/8 (2023/04/17) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/17) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/17) #89081 emanatory radiolocator
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-
-    assert "Invalid total time 11.0" in str(state.warnings)
-
-
-def test_too_less_hours_raises_runtime_error():
-    lines = """
-1. Add 1.0 hours/8 (2023/04/12) #81448 colostric uncultivate So
-1. Add 1.0 hours/8 (2023/04/12) #80661 fusilier Octocorallia reprovingly Rickettsiales m
-1. Add 5.0 hours/8 (2023/04/12) #89081 collectibility cartmaker dropsied le
-
-1. Add 5.0 hours/8 (2023/04/14) #89081 foremasthand ungeniu
-
-1. Add 5.0 hours/8 (2023/04/17) #81352 Serapis unwomanlike prominency ba
-1. Add 1.0 hours/8 (2023/04/17) #81236 mesomorphy scandalizer u
-1. Add 5.0 hours/8 (2023/04/17) #89081 emanatory radiolocator
-    """
-
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-
-    assert "Invalid total time 5.0" in str(state.warnings)
-
-
-def test_saturday_allows_less_than_6h():
-    # 2023/04/15 is a Saturday — no minimum applies
-    lines = """
-1. Add 3.0 hours/8 (2023/04/15) #89081 some saturday work
-    """
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert not state.warnings
-
-
-def test_saturday_warns_above_10h():
-    # 2023/04/15 is a Saturday — maximum of 10h still applies
-    lines = """
-1. Add 6.0 hours/8 (2023/04/15) #89081 some saturday work
-1. Add 5.0 hours/8 (2023/04/15) #81448 more saturday work
-    """
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert "Invalid total time 11.0" in str(state.warnings)
-
-
-def test_sunday_warns_any_hours():
-    # 2023/04/16 is a Sunday — any logged hours generate a warning
-    lines = """
-1. Add 2.0 hours/8 (2023/04/16) #89081 should not work on sunday
-    """
-    state = State()
-    for line in lines.split('\n'):
-        parse_time_line(state, line)
-    assert "Invalid total time 2.0" in str(state.warnings)
+    print("\nSuccessfully sent all requests.")
+    return 0
 
 
 g_argumentParser = argparse.ArgumentParser(
@@ -544,5 +330,4 @@ File to open and parse contents to send to redmine time api.
 
 
 if __name__ == "__main__":
-    main()
-
+    raise SystemExit(main())

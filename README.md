@@ -416,15 +416,14 @@ timezone selection, and options for including active executions or subagents.
 
 ### Repository tests
 
-GitHub Actions runs the deterministic Python tests on every push and pull request. The workflow is
-defined in [`.github/workflows/tests.yml`](./.github/workflows/tests.yml) and can also be started
-manually from the Actions tab. Run the same test suites locally with:
+GitHub Actions runs the deterministic tests and syntax/configuration checks on every push and pull
+request. The workflow is defined in [`.github/workflows/tests.yml`](./.github/workflows/tests.yml)
+and can also be started manually from the Actions tab. Run the same gate locally with:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-python3 -m unittest discover -s scripts/performance-monitoring -p 'test_*.py' -v
-python3 -m unittest discover -s scripts -p 'test_teamviewer_session_watchdog.py' -v
+bash scripts/run_repository_tests.sh
 ```
 
 The privileged netatop/eBPF verification depends on the installed host kernel and is intentionally

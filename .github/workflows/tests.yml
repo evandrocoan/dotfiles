@@ -30,8 +30,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Test performance monitoring
-        run: python -m unittest discover -s scripts/performance-monitoring -p 'test_*.py' -v
-
-      - name: Test TeamViewer watchdog
-        run: python -m unittest discover -s scripts -p 'test_teamviewer_session_watchdog.py' -v
+      - name: Run repository tests and syntax checks
+        shell: bash
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          bash scripts/run_repository_tests.sh

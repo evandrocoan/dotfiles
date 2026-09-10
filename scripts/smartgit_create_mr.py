@@ -73,6 +73,8 @@ def gitlab_request(method, path, token, data=None):
 
 
 def main():
+    token = get_token()
+
     # --- 1. ask for branch name and create it before committing ---
     current_branch = get_current_branch()
     raw_branch_input = input(f"Branch name (Enter or whitespace to keep '{current_branch}'): ")
@@ -105,7 +107,6 @@ def main():
     subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
 
     # --- 5. resolve GitLab project ID ---
-    token = get_token()
     project_path = get_remote_project_path()
     encoded_path = urllib.parse.quote(project_path, safe="")
     logger.info("Resolving GitLab project: {}", project_path)
