@@ -15,6 +15,18 @@ unless it changes or a new workspace root is added.
 Project instructions may refine global workflow assumptions, but must not relax
 global safety, authorization, workspace-scope, or destructive-action boundaries.
 
+### Local agent history
+
+When a user asks to identify, retrieve, or summarize a prior agent chat, inspect
+the relevant read-only local history before claiming that it is unavailable:
+
+- Codex: `~/.codex/sessions/`.
+- Claude: `~/.claude/projects/` and `~/.claude/sessions/`.
+- Copilot: its locally available conversation history.
+
+Treat this as local agent data rather than repository discovery. Never alter
+session, history, or runtime files while searching.
+
 ## Mandatory question-only gate
 
 Before sending commentary, creating a plan, calling a tool, or taking any action,
