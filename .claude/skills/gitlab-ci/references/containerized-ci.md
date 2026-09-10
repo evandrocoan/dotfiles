@@ -61,13 +61,16 @@ Choose the Compose lifecycle from the services that may exit:
 
 ```bash
 docker compose up -d --quiet-pull <terminal-service>
+docker compose logs --follow --no-color <terminal-service> &
 docker compose wait --down-project <terminal-service>
 ```
 
 The first command starts the dependency graph and fails if a required setup service fails. The
-second waits only for the named terminal service, returns its exit status, and tears down that
-isolated Compose project. Keep `after_script` cleanup as a fallback for cancellation or startup
-failure.
+log follower exposes the terminal service's output without becoming the result authority. The
+Compose wait returns the named terminal service's exit status and tears down that isolated project.
+Keep `after_script` cleanup as a fallback for cancellation or startup failure. Do not use detached
+`up` followed only by `wait`: `wait` does not stream container output, and `--down-project` can
+remove the container before later log collection.
 
 If Compose has `wait` but lacks `wait --down-project`, preserve both the terminal and cleanup
 results explicitly:
@@ -75,6 +78,7 @@ results explicitly:
 ```bash
 set -euo pipefail
 docker compose up -d --quiet-pull <terminal-service>
+docker compose logs --follow --no-color <terminal-service> &
 set +e
 docker compose wait <terminal-service>
 TERMINAL_STATUS="$?"
