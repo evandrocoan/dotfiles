@@ -538,6 +538,10 @@ The host records system and process activity automatically, including workloads 
 Open [the local Netdata dashboard](http://127.0.0.1:19999/) for graphs. On its welcome screen, choose
 **Skip and use the dashboard anonymously.** No account is required. The service listens only on
 loopback; cloud connectivity, anonymous agent telemetry and external alert notifications are disabled.
+Anonymous access includes the Metrics tab and non-sensitive Live functions such as Block Devices.
+Netdata classifies **Live > Processes (Top)** as sensitive and requires a Netdata Cloud login plus a
+claimed agent even when the dashboard is opened through loopback. Use `sudo atop` for a completely
+local live process view, or the dated atop commands below for per-process history.
 
 | Collector | Configured behavior | Historical data |
 | --- | --- | --- |
