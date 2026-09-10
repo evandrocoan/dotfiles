@@ -126,6 +126,10 @@ resources, and container-backed local or CI workflows.
 
 ## Align development and CI
 
+- In CI, use `--quiet-pull` on Compose `up` and `run`, and `--quiet` on an explicit Compose
+  `pull`, so registry transfer progress does not consume the job log. Preserve errors and normal
+  lifecycle diagnostics; do not redirect or silence the complete Compose command. Keep pull
+  progress visible for ordinary local development unless the user asks otherwise.
 - Mount the checkout for hot reload when rebuilding would impede development.
   Keep dependency environments outside a path hidden by that mount.
 - Use a focused override to switch a development container between host

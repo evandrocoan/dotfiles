@@ -36,11 +36,14 @@ For each job:
 
 1. select the exact Compose files and profiles;
 2. validate the merged model with `docker compose config --quiet`;
-3. wait for dependency health rather than a fixed sleep or an unmanaged background process;
-4. propagate the terminal service status with an invocation that matches every selected
+3. keep registry transfer progress out of ordinary job logs by using `--quiet-pull` on every
+   Compose `up` and `run`, and `--quiet` on an explicit Compose `pull`; preserve pull errors and
+   do not silence the complete Compose command;
+4. wait for dependency health rather than a fixed sleep or an unmanaged background process;
+5. propagate the terminal service status with an invocation that matches every selected
    service's lifecycle;
-5. clean only that job's project in `after_script` with `docker compose down --remove-orphans`;
-6. add `--volumes` only when every named volume in that isolated project is disposable.
+6. clean only that job's project in `after_script` with `docker compose down --remove-orphans`;
+7. add `--volumes` only when every named volume in that isolated project is disposable.
 
 Choose the Compose lifecycle from the services that may exit:
 
@@ -57,7 +60,7 @@ Choose the Compose lifecycle from the services that may exit:
   service as the lifecycle boundary:
 
 ```bash
-docker compose up -d <terminal-service>
+docker compose up -d --quiet-pull <terminal-service>
 docker compose wait --down-project <terminal-service>
 ```
 
@@ -71,7 +74,7 @@ results explicitly:
 
 ```bash
 set -euo pipefail
-docker compose up -d <terminal-service>
+docker compose up -d --quiet-pull <terminal-service>
 set +e
 docker compose wait <terminal-service>
 TERMINAL_STATUS="$?"
