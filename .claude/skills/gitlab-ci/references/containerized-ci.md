@@ -37,9 +37,57 @@ For each job:
 1. select the exact Compose files and profiles;
 2. validate the merged model with `docker compose config --quiet`;
 3. wait for dependency health rather than a fixed sleep or an unmanaged background process;
-4. propagate the terminal service status with `--abort-on-container-exit` and `--exit-code-from` when appropriate;
+4. propagate the terminal service status with an invocation that matches every selected
+   service's lifecycle;
 5. clean only that job's project in `after_script` with `docker compose down --remove-orphans`;
 6. add `--volumes` only when every named volume in that isolated project is disposable.
+
+Choose the Compose lifecycle from the services that may exit:
+
+- Use `--abort-on-container-exit` with `--exit-code-from <terminal-service>` only when
+  that terminal service is the only service expected to exit. A successful setup, seed, or
+  migration would otherwise abort the stack before the terminal test finishes.
+- Use `--abort-on-container-failure` only when any nonzero service exit must stop an
+  attached stack and another explicit condition owns successful completion. It ignores
+  successful exits, so it cannot finish a CI test after a terminal service returns `0`.
+  Do not add `--exit-code-from` as a workaround because that option implies
+  `--abort-on-container-exit`.
+- When expected one-shots are dependencies of a terminal test, model their success with
+  `depends_on` and `condition: service_completed_successfully`, then use the terminal
+  service as the lifecycle boundary:
+
+```bash
+docker compose up -d <terminal-service>
+docker compose wait --down-project <terminal-service>
+```
+
+The first command starts the dependency graph and fails if a required setup service fails. The
+second waits only for the named terminal service, returns its exit status, and tears down that
+isolated Compose project. Keep `after_script` cleanup as a fallback for cancellation or startup
+failure.
+
+If Compose has `wait` but lacks `wait --down-project`, preserve both the terminal and cleanup
+results explicitly:
+
+```bash
+set -euo pipefail
+docker compose up -d <terminal-service>
+set +e
+docker compose wait <terminal-service>
+TERMINAL_STATUS="$?"
+docker compose down --remove-orphans
+CLEANUP_STATUS="$?"
+set -e
+if [[ "${TERMINAL_STATUS}" -ne 0 ]]; then
+    exit "${TERMINAL_STATUS}"
+fi
+exit "${CLEANUP_STATUS}"
+```
+
+If Compose lacks `wait` entirely, use a repository-owned wrapper that waits for the exact terminal
+container, reads its recorded exit status, tears down only the isolated Compose project, and
+returns the terminal status. Do not replace that lifecycle with sleeps, log matching, or an
+unbounded polling loop.
 
 If a dependency cannot be modeled as a Compose service, use a bounded, strict readiness helper: refuse to execute the
 payload after timeout, preserve the readiness exit status, and `exec` the payload after success. When a CI shell block
