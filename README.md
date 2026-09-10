@@ -20,6 +20,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Install or update the collectors](#install-or-update-the-collectors)
       - [Apply the monitoring configuration](#apply-the-monitoring-configuration)
       - [Investigate a slow period](#investigate-a-slow-period)
+      - [Automatic incident capture](#automatic-incident-capture)
       - [Check health, storage and recovery](#check-health-storage-and-recovery)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
@@ -527,6 +528,7 @@ loopback; cloud connectivity, anonymous agent telemetry and external alert notif
 | netatop-bpf | TCP/UDP bytes per process, read by atop | Included in atop recordings |
 | sysstat / sar | System, disks, paging, swap and network every minute; 30-day retention policy | `/var/log/sysstat/saYYYYMMDD`; older files compressed with xz |
 | Netdata | System/app/container graphs every 10 seconds, with one-minute and hourly aggregation tiers | `/var/cache/netdata/`; maximum age 30 days, with per-tier size budgets |
+| Performance incident service | Sustained I/O or memory PSI triggers a bounded eBPF capture with host and process context; manual capture is also available | Private incident directories under `/var/log/performance-incidents/` |
 
 Atop uses a 30-day age setting for daily cleanup and a **20 GiB storage budget**. An hourly
 cleanup removes the oldest closed files when the budget is exceeded or filesystem free space falls
@@ -542,9 +544,14 @@ according to [`netdata-apps_groups.conf`](./scripts/performance-monitoring/netda
 Disk-space collection excludes inaccessible internal Docker mounts and root FUSE mounts; the
 backing filesystems and container I/O remain monitored.
 
-`kernel.task_delayacct=1` enables per-task I/O delay accounting. It takes effect for tasks created
-after activation and is reapplied at boot. Programs already open at installation need to be restarted
-before their per-task delay statistics are available. No reboot is performed by these instructions.
+`kernel.task_delayacct=1` enables per-task I/O delay accounting for newly created tasks. The GRUB
+drop-in installed under [automatic incident capture](#automatic-incident-capture) enables `delayacct`
+from early boot, covering tasks that would otherwise start before the sysctl is applied. That boot
+change takes effect after a normal reboot; these instructions do not reboot or restart applications.
+Some raw per-thread delay counters on this host have exceeded the thread's entire lifetime. Treat
+such atop `BDELAY` values as invalid; the incident reports flag them and exclude the affected
+processes from delay rankings while preserving the raw snapshots. Boot enablement improves coverage;
+it is not a verified fix for anomalous kernel counters.
 History begins when recording starts; very short memory spikes between samples can still be missed.
 
 #### Install or update the collectors
@@ -681,19 +688,132 @@ latency, inspect queueing and request latency alongside `iowait`. In Netdata, se
 and compare system pressure, applications, disk and network/container charts. Network counters are
 TCP/UDP bytes attributed to socket operations, not a packet capture or a record of remote content.
 
+#### Automatic incident capture
+
+The service watches I/O and memory PSI once a second. Sustained pressure starts an episode with
+`biosnoop` request/queue latency, `biolatency` disk histograms, recent host samples and before/after
+process snapshots. Those snapshots include CPU, RSS/swap, I/O byte counters, cgroup membership and
+per-thread delay counters. No environment variables, full command lines or application payloads are
+collected by this incident recorder. Existing atop recordings have their own command-line policy.
+
+Thresholds, sustained duration, capture duration, cooldown, retention and minimum free space live in
+[`incident-capture.json`](./scripts/performance-monitoring/incident-capture.json). A cooldown limits
+automatic attempts, including failures; manual requests bypass it. Only one capture runs at a time,
+and additional manual requests received during a capture are discarded. A persistent slowdown can
+produce another episode after cooldown. The service bounds collector output and total episode size;
+its [system unit](./scripts/systemd/system/performance-incident.service) bounds CPU and memory use.
+Systemd reports successful startup only after the manual-capture signal handlers are ready.
+
+Install the tools and the headers matching the running kernel, then install or update this component
+without restarting the other collectors. Preserve any existing files at the destinations first.
+The initial installation's backup is under `/var/backups/performance-monitoring/incidents-*/`.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd ~
+sudo apt-get install --no-install-recommends bpfcc-tools "linux-headers-$(uname -r)"
+sudo install -d -m 0755 /usr/local/lib/performance-monitoring /etc/performance-monitoring
+sudo install -m 0644 scripts/performance-monitoring/incident_capture.py scripts/performance-monitoring/bcc_ready.py /usr/local/lib/performance-monitoring/
+sudo install -m 0644 scripts/performance-monitoring/incident-capture.json /etc/performance-monitoring/incident-capture.json
+sudo install -m 0644 scripts/systemd/system/performance-incident.service /etc/systemd/system/performance-incident.service
+sudo install -m 0644 scripts/performance-monitoring/99-performance-delayacct.cfg /etc/default/grub.d/99-performance-delayacct.cfg
+sudo python3 /usr/local/lib/performance-monitoring/incident_capture.py check-config
+sudo update-grub
+sudo grub-script-check /boot/grub/grub.cfg
+sudo systemctl daemon-reload
+sudo systemctl enable performance-incident.service
+sudo systemctl restart performance-incident.service
+```
+
+Request a capture while a slowdown is occurring, then inspect its completion in the journal:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo systemctl kill --kill-who=main --signal=USR1 performance-incident.service
+sudo journalctl -u performance-incident.service --since '5 minutes ago' --no-pager
+sudo find /var/log/performance-incidents -mindepth 1 -maxdepth 1 -type d -name 'incident-*'
+```
+
+The journal prints the episode directory and terminal status. Set `INCIDENT_DIR` to that exact path:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+INCIDENT_DIR=/var/log/performance-incidents/incident-YYYYMMDDTHHMMSSZ-ID
+sudo cat "${INCIDENT_DIR}/report.txt"
+sudo python3 -m json.tool "${INCIDENT_DIR}/manifest.json"
+sudo less "${INCIDENT_DIR}/biosnoop.stdout.log"
+sudo less "${INCIDENT_DIR}/biolatency.stdout.log"
+```
+
+`summary.json` contains process I/O/delay rankings, cgroups and counter-quality flags; raw process
+snapshots remain in the same directory. Cgroups retain container IDs for correlation with atop and
+Netdata. Snapshot comparisons cover surviving identities; short-lived or exited processes require
+atop's accounting history. New/unmatched and exited threads are reported as incomplete coverage.
+Do not interpret a zero delay counter as evidence of no waiting, especially before boot enablement.
+
+Directory names, host samples, manifests and histogram clocks use UTC; atop/sar examples above use
+local time. Biosnoop's `TIME(s)` is relative to its first observed event. The first event's receipt
+time in `biosnoop.stderr.log` supplies an approximate UTC anchor, subject to event-buffer delay.
+`QUE(ms)` measures queueing (`-1` means unavailable), `LAT(ms)` measures request latency, and the disk
+histograms include queueing. A high-volume issuer or blocked task is a diagnostic candidate; it does
+not by itself prove causation. Buffered writeback and this host's encrypted storage can attribute block requests
+to kernel workers, so correlate the trace with process byte deltas and memory/PSI history.
+
+Read `manifest.json` before trusting completeness. `partial` means a timeout, early collector exit,
+lost events/map updates, an output limit, cancellation or an incomplete snapshot; `failed` records an
+orchestration error. A recorder killed before finalization is marked `interrupted` on recovery. Collector stderr
+is retained for diagnosis, including harmless compiler warnings. The wrapper gates kernel collection
+until all hooks and buffers are ready, checks that startup maps are empty, and records map-update
+failures separately from perf-buffer loss. Biosnoop's final statistics include unknown issuer counts.
+The tool's printed column header alone is not a readiness signal. If a kernel
+or BCC update breaks attachment, inspect stderr and matching kernel headers, then retry manually.
+The wrapper adapts the packaged block-event structure to verified kernel field offsets and refuses
+unknown layouts. Revalidate a manual capture after changing its compatibility code or the service's
+execution restrictions, since successful attachment alone does not prove system-wide visibility.
+
+Retention removes complete episode directories, oldest first, on age, size or low free-space limits.
+Active captures and episodes observed open by readers are preserved. Before a longer investigation,
+pin an episode with `sudo touch "${INCIDENT_DIR}/KEEP"`; remove that marker to resume expiry. Copy the
+whole directory outside the rotating log root to archive it. Protected data can exceed the budget;
+new captures are skipped when there is insufficient room. Cleanup runs hourly and around captures.
+Reports and cooldown state are root-only and stay outside Git.
+
+To remove only incident capture, retain its reports and undo next-boot delay enablement:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo systemctl disable --now performance-incident.service
+sudo rm /etc/systemd/system/performance-incident.service
+sudo rm /etc/default/grub.d/99-performance-delayacct.cfg
+sudo rm /etc/performance-monitoring/incident-capture.json
+sudo rm /usr/local/lib/performance-monitoring/incident_capture.py /usr/local/lib/performance-monitoring/bcc_ready.py
+sudo systemctl daemon-reload
+sudo update-grub
+```
+
+Restore any pre-existing local overrides from your backup. The runtime sysctl and other collectors
+remain installed. Remove `bpfcc-tools` separately if no other workflow uses it; inspect the package
+manager's proposed removal list. Delete `/var/log/performance-incidents/` and
+`/var/lib/performance-incident/` separately only when their retained data is no longer needed.
+
 #### Check health, storage and recovery
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-systemctl status atop atopacct netatop-bpf netdata --no-pager
+systemctl status atop atopacct netatop-bpf netdata performance-incident --no-pager
 systemctl list-timers atop-rotate.timer sysstat-collect.timer sysstat-summary.timer performance-log-retention.timer
 sysctl kernel.task_delayacct
 sudo ss -ltnp '( sport = :19999 )'
-sudo du -sh /var/log/atop /var/log/sysstat /var/cache/netdata
+sudo du -sh /var/log/atop /var/log/sysstat /var/cache/netdata /var/log/performance-incidents
 df -h /var
 sudo journalctl -u atop -u atopacct -u netatop-bpf -u netdata -u performance-log-retention --since today --no-pager
 sudo journalctl --namespace=netdata -u netdata.service --since today --no-pager
+sudo journalctl -u performance-incident.service --since today --no-pager
 ```
 
 Netdata's collector logs use the `netdata` journal namespace; its service lifecycle also appears
@@ -722,7 +842,8 @@ estimating an interval's consumption. Netdata's cloud state can be checked with
 
 #### Remove the monitoring setup
 
-Stop recording first. These commands retain historical data for later inspection:
+First remove the [incident capture component](#automatic-incident-capture) using its removal commands
+above, if installed. Then stop the remaining collectors. These commands retain historical data:
 
 ```bash
 #!/usr/bin/env bash
