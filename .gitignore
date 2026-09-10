@@ -167,6 +167,12 @@
 !/scripts/performance-monitoring/verify_netatop_bpf.py
 !/scripts/performance-monitoring/retain_atop_logs.py
 !/scripts/performance-monitoring/test_retention.py
+!/scripts/performance-monitoring/incident_capture.py
+!/scripts/performance-monitoring/bcc_ready.py
+!/scripts/performance-monitoring/incident-capture.json
+!/scripts/performance-monitoring/99-performance-delayacct.cfg
+!/scripts/performance-monitoring/test_incident_capture.py
+!/scripts/performance-monitoring/delay-anomaly-fixture.json
 
 # temp clone
 /scripts/xfce4

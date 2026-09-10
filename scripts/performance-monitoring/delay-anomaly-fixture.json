@@ -1,0 +1,6 @@
+{
+  "provenance": "Sanitized shape of a /proc per-thread anomaly observed on this host: block-delay ticks exceeded the thread's entire lifetime. Identifiers and start time are replaced; the anomalous counter magnitude is preserved. This is an artifact replay, not a full session recording.",
+  "thread": {"tid": 123, "start_ticks": 737000000, "delay_ticks": 738541183},
+  "sample": {"hz": 100, "uptime_end": 7385412},
+  "expected_invalid": true
+}

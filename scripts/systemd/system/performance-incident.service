@@ -1,0 +1,29 @@
+[Unit]
+Description=Automatic PSI-triggered performance incident recording
+After=local-fs.target systemd-sysctl.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/python3 /usr/local/lib/performance-monitoring/incident_capture.py watch
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=15
+KillMode=control-group
+UMask=0077
+LogsDirectory=performance-incidents
+LogsDirectoryMode=0700
+StateDirectory=performance-incident
+StateDirectoryMode=0700
+RuntimeDirectory=performance-incident
+RuntimeDirectoryMode=0700
+Nice=10
+CPUQuota=100%
+MemoryHigh=384M
+MemoryMax=768M
+TasksMax=64
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

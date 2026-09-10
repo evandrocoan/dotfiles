@@ -1,0 +1,11 @@
+{
+  "io_some_avg10_percent": 5,
+  "memory_some_avg10_percent": 2,
+  "sustained_seconds": 10,
+  "cooldown_seconds": 900,
+  "capture_seconds": 45,
+  "startup_timeout_seconds": 30,
+  "retention_days": 30,
+  "storage_budget_mib": 2048,
+  "minimum_free_mib": 10240
+}
