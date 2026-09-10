@@ -15,24 +15,36 @@ unless it changes or a new workspace root is added.
 Project instructions may refine global workflow assumptions, but must not relax
 global safety, authorization, workspace-scope, or destructive-action boundaries.
 
-## Question-only turns
+## Mandatory question-only gate
 
-- Treat any user message containing `?` anywhere as a question-only turn. Also
-  treat a message whose last non-whitespace character is `w` as question-only;
-  the trailing `w` may be an accidental result of typing `?` with AltGr.
-- This rule applies even when the same message contains an imperative or an
-  explicit request to edit, implement, test, run, continue, or otherwise act.
-- In a question-only turn, answer the question or questions only. Read-only
-  inspection of files, diffs, logs, or state, including through tools or
-  commands, is allowed when necessary for an accurate answer.
-- Do not edit anything, run tests, implement changes, create or execute a plan,
-  resume pending work, or perform any action that changes local or remote state.
-  After answering, at most ask whether the user wants implementation to continue
-  in a later turn.
-- Begin implementation only after a later, explicit user instruction that does
-  not contain `?` and does not otherwise qualify as a question-only turn. A
-  question about missing or incomplete work, or about what something means, is
-  never authorization to perform that work.
+Before sending commentary, creating a plan, calling a tool, or taking any action,
+inspect the latest user message.
+
+Treat the entire turn as question-only when either condition applies:
+
+- The message contains `?` anywhere.
+- Its last non-whitespace character is `w`; the trailing `w` may be an accidental
+  result of typing `?` with AltGr.
+
+This gate applies even when the same message contains an imperative or an explicit
+request to edit, implement, test, run, continue, or otherwise act.
+
+In a question-only turn:
+
+- Answer only the question or questions.
+- Do not announce work, create or execute a plan, edit anything, run tests,
+  implement changes, resume pending work, or perform any action that changes local
+  or remote state.
+- Read-only inspection of files, diffs, logs, or state, including through tools or
+  commands, is allowed only when needed for an accurate answer.
+- Record any accompanying order as deferred, but do not execute it.
+- After answering, at most ask whether the user wants implementation to continue in
+  a later turn.
+
+Begin implementation only after a later, explicit user instruction that does not
+contain `?` and does not otherwise qualify as a question-only turn. A question about
+missing or incomplete work, or about what something means, is never authorization to
+perform that work.
 
 ### Missing repositories and workspace scope
 
