@@ -94,5 +94,5 @@
   },
   "model": "sonnet",
   "effortLevel": "xhigh",
-  "advisorModel": "opus"
+  "advisorModel": "fable"
 }

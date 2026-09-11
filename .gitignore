@@ -189,6 +189,8 @@
 !/.claude/settings.json
 !/.claude/skills/
 !/.claude/skills/**
+!/.claude/agents/
+!/.claude/agents/**
 
 !/.copilot/
 !/.copilot/copilot-instructions.md
@@ -215,3 +217,4 @@
 /.local/bin/kredmine-mcp
 /.local/bin/dotenv
 /.local/bin/codex
+/.local/bin/claude
