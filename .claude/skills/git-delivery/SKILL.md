@@ -93,6 +93,13 @@ continues through its routine delivery steps.
 5. Present a drafted title and description as plain text. Create or update the
    remote request only when the user asks for that outcome.
 
+## Prepare an issue
+
+When creating an issue through a tool that writes a reviewable local draft,
+follow the confirmation contract that tool itself states, such as kredmine's
+proposal confirmation. It ships with the tool and stays current with its
+behavior.
+
 ## Use GitLab push options only as a fallback
 
 When GitLab CLI and MCP capabilities are unavailable, create the requested merge

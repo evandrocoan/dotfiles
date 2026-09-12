@@ -188,6 +188,10 @@ stale registry, and correct it before relying on the missing entry.
   cross-component, protocol, migration, replay, paid-validation, or externally
   mutating change. Use its persistent Markdown plan whenever its persistence gate
   applies, and complete its mandatory closure audit before declaring success.
+- `skill-creator`: Create or update a skill package with appropriately scoped
+  instructions and supporting resources. Written for Codex skills: ignore its
+  `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
+  in `~/.claude/skills/`.
 - `test-quality`: Create, modify, review, debug, or run automated tests, including
   unit, integration, end-to-end, regression, smoke, property, concurrency, and
   recorded-replay tests and their recording lifecycle.
@@ -196,6 +200,13 @@ Runtime-owned Codex system skills and plugin-provided skills are discovered thro
 their runtime catalogs and may not be available to every AI client. Do not add them
 to this shared registry unless they are deliberately exposed under
 `~/.agents/skills/`.
+
+`skill-creator` above is the deliberate exception: it was copied from
+`~/.codex/skills/.system` into `~/.claude/skills/` on request, so it is a locally
+maintained copy that does not follow Codex updates, while the original stays
+untouched. Refresh it by copying it again from that directory. The other Codex system
+skills there were evaluated and deliberately left unexposed, because they depend on
+Codex-only tools, paths, or self-knowledge.
 
 ## Machine constraints and interactive commands
 
