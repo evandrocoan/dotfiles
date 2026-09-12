@@ -94,5 +94,15 @@
   },
   "model": "sonnet",
   "effortLevel": "xhigh",
-  "advisorModel": "fable"
+  "advisorModel": "fable",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "cleanupPeriodDays": 36500,
+  "skillListingMaxDescChars": 3072,
+  "skillListingBudgetFraction": 0.05,
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  }
 }
