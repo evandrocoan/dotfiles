@@ -7,13 +7,6 @@ sandbox_workspace_write.network_access = true
 approval_policy = { granular = { sandbox_approval = true, rules = true, mcp_elicitations = true, request_permissions = true, skill_approval = true } }
 approvals_reviewer = "user"
 
-developer_instructions = """
-For GitLab repositories, merge requests, issues, reviews, or pipelines, use the
-GitLab MCP tools before shell commands, GitHub tools, curl, or local credential
-lookups. Infer GitLab from a GitLab remote URL. Use shell or HTTP fallbacks only
-when the GitLab MCP tool is unavailable or returns an error, and state why.
-"""
-
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
 

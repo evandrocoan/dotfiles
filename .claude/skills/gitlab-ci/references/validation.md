@@ -13,9 +13,7 @@ Use this order, stopping at the first failed boundary:
 6. Trigger or retry a real pipeline only with explicit user authorization, then inspect the earliest failed job and
    preserve its diagnostics.
 
-Use GitLab MCP or connector tools first for GitLab repository, merge request, and pipeline state. Fall back to the
-GitLab API or shell only when the connector is unavailable or fails, and state the fallback. Never send CI YAML or
-secrets to an unrelated public validator.
+Never send CI YAML or secrets to an unrelated public validator.
 
 A generic YAML parser cannot validate GitLab includes, custom tags, inputs, expressions, or merged semantics. Static
 parsing is useful only as an earlier syntax check.

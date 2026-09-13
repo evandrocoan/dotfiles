@@ -154,7 +154,11 @@ Record these elements before implementation:
    runtime owner, or other source that constrains the implementation.
 4. **Current evidence:** Summarize the verified failure or current behavior. Mark assumptions that
    remain unverified.
-5. **Work sequence:** Divide the change into ordered, independently checkable slices.
+5. **Work sequence:** Divide the change into ordered, independently checkable slices. Record the
+   premise each slice depends on and the artifact that proves it. The premise is what must already
+   be true for the slice's result to mean what the slice claims, such as what a passing test
+   actually measures. A slice whose premise cannot be named or has not been verified does not
+   start; record it as an open assumption and verify it first.
 6. **Validation:** Bind each material slice to focused protection and bind the completed flow to
    proportional integration, replay, end-to-end, or operational validation.
 7. **Replanning conditions:** State the discoveries that would invalidate the current route.
@@ -164,21 +168,33 @@ Name the behavior boundary, the affected owner or consumer, and the evidence tha
 step complete. Mention exact paths or symbols only after inspecting them; do not invent locations
 to make a plan look concrete.
 
+Submit the finished plan for review before its first step runs. Call the advisor every time the
+client provides one, as Claude Code does: it already holds this task's context, so the check costs
+no briefing. On a client without an advisor, use the closest review mechanism it offers, or perform
+a separate full reread of the plan and record it as self-reviewed. Also open an independent
+reviewer when the plan crosses components, implements or materially audits an architecture record,
+or when discarding its first slice would be expensive; when the client cannot open one, record that
+the independent review was unavailable. State which mechanism each review used. Record what the
+review found and what you rejected, then start. A plan that nobody but its author has read is
+itself an unverified premise about the work.
+
 ## Build an executable sequence
 
 Order work by dependency and feedback speed:
 
-1. Reproduce or authenticate the current failure when one exists.
-2. Establish or update the smallest failing regression protection.
-3. Change the authoritative owner of the behavior.
-4. Update every affected consumer of that contract.
-5. Remove competing or superseded behavior rather than leaving parallel authority.
-6. Run focused checks after the smallest meaningful slice.
-7. Run broader integration, replay, and suite-level checks after the flow is connected.
-8. Perform operational or paid live validation only when it is useful and authorized under the
+1. Obtain the plan review described above and record it in the plan's **Plan review** section
+   before any other step starts.
+2. Reproduce or authenticate the current failure when one exists.
+3. Establish or update the smallest failing regression protection.
+4. Change the authoritative owner of the behavior.
+5. Update every affected consumer of that contract.
+6. Remove competing or superseded behavior rather than leaving parallel authority.
+7. Run focused checks after the smallest meaningful slice.
+8. Run broader integration, replay, and suite-level checks after the flow is connected.
+9. Perform operational or paid live validation only when it is useful and authorized under the
    applicable rules.
-9. Perform the mandatory closure audit against the complete plan, governing architecture, actual
-   runtime flow, repository diff, and validation evidence.
+10. Perform the mandatory closure audit against the complete plan, governing architecture, actual
+    runtime flow, repository diff, and validation evidence.
 
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
@@ -353,14 +369,16 @@ Outcome: <observable result>
 Constraints: <invariants, non-goals, and authorization boundaries>
 Evidence: <verified current behavior and open assumptions>
 
-1. <reproduce or authenticate> — validation: <specific check>
-2. <change authoritative owner> — validation: <specific check>
-3. <update affected consumers> — validation: <specific check>
-4. <integrate and replay> — validation: <specific check>
-5. <audit and deliver> — validation: <specific check>
+1. <obtain plan review> — mechanism: <what reviewed the plan> — findings: <each applied or rejected with a reason>
+2. <reproduce or authenticate> — premise: <what must already be true, and its proof> — validation: <specific check>
+3. <change authoritative owner> — premise: <what must already be true, and its proof> — validation: <specific check>
+4. <update affected consumers> — premise: <what must already be true, and its proof> — validation: <specific check>
+5. <integrate and replay> — premise: <what must already be true, and its proof> — validation: <specific check>
+6. <audit and deliver> — premise: <what must already be true, and its proof> — validation: <specific check>
 
 Replan if: <material invalidating conditions>
 ```
 
 Expand the plan only when additional detail changes how the implementation will be performed or
-validated.
+validated. A step whose premise is unverified stays in `Evidence` as an open assumption until it is
+verified; it does not run.

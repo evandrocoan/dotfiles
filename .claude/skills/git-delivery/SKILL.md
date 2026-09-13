@@ -32,14 +32,12 @@ nothing beyond it.
 ## Use local and remote tools correctly
 
 - Read, edit, stage, diff, and inspect files in the authorized local working
-  tree. Never use a remote file or commit API to bypass missing local access.
+  tree.
 - Infer GitLab from a GitLab remote URL. For GitLab merge requests, issues,
   reviews, or pipelines, use the available GitLab MCP tools before shell
   commands, HTTP calls, or local credential discovery.
 - Use a shell or HTTP fallback only when the GitLab MCP capability is
   unavailable or returns an error, and state why the fallback was necessary.
-- Treat remote tools as read-only unless the user requests the
-  corresponding remote mutation. A remote URL alone grants no write authority.
 
 ## Prepare a commit
 

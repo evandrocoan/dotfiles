@@ -34,15 +34,35 @@ State the observable result and terminal condition.
 
 ## Execution steps
 
-| Status | Step | Affected owner and consumers | Validation |
-| --- | --- | --- | --- |
-| pending | Reproduce or authenticate the current behavior. | <boundary> | <specific check> |
-| pending | Change the authoritative owner. | <owner and consumers> | <specific check> |
-| pending | Integrate and remove competing behavior. | <boundary> | <specific check> |
-| pending | Run proportional checks. | <test boundary> | <commands or artifacts> |
-| pending | Audit and deliver. | <complete flow> | <completion evidence> |
+| Status | Step | Affected owner and consumers | Premise and how it was verified | Validation |
+| --- | --- | --- | --- | --- |
+| pending | Obtain review of this plan before starting. | <the review mechanism the client offers, plus an independent reviewer when the skill requires one and the client can open it> | <the plan is complete and every premise is named> | <findings recorded under **Plan review**, each applied or rejected with a reason> |
+| pending | Reproduce or authenticate the current behavior. | <boundary> | <premise and the artifact that proves it> | <specific check> |
+| pending | Change the authoritative owner. | <owner and consumers> | <premise and the artifact that proves it> | <specific check> |
+| pending | Integrate and remove competing behavior. | <boundary> | <premise and the artifact that proves it> | <specific check> |
+| pending | Run proportional checks. | <test boundary> | <premise and the artifact that proves it> | <commands or artifacts> |
+| pending | Audit and deliver. | <complete flow> | <premise and the artifact that proves it> | <completion evidence> |
 
 Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `completed`.
+
+Every step states the premise it depends on and the artifact that proves it. A premise is what must
+already be true for the step's result to mean what the step claims, such as what a passing test
+actually measures. Write the premise before starting the step, not after. When it cannot be named or
+has not been verified, the step does not start: record it under **Open assumptions** and verify it
+first. A step built on an unverified premise produces work that must be discarded when the premise
+turns out to be false.
+
+## Plan review
+
+Record the pre-execution review before the first step runs. Update this section if the plan is
+reviewed again after a material replan.
+
+- **Mechanism:** Name what reviewed the plan, such as the advisor in Claude Code, the closest review
+  mechanism another client offers, or a self-reviewed full reread when the client offers none.
+- **Independent reviewer:** Not required | Opened | Unavailable on this client. State the condition
+  from the skill that required it.
+- **Applied:** List each finding that changed the plan and what changed.
+- **Rejected:** List each finding that was not applied and the reason.
 
 ## Replan conditions
 
