@@ -86,9 +86,13 @@ Never embed information that will silently become stale as the code evolves:
 
 Use qualitative language for quantities so documentation remains accurate as
 the code evolves. Never reproduce content merely to support another consumer.
-Use an import, include, relative symlink, or authoritative pointer instead. If
-the consumer supports none of these mechanisms, report the compatibility
-limitation rather than creating another manually synchronized source.
+Use an import, include, relative symlink, or authoritative pointer instead. When
+the authoritative owner is already always loaded for the same reader, such as
+the global agent instructions for any shared skill, remove the copy without
+adding a pointer; point only at content that is not guaranteed to be in
+context. If the consumer supports none of these mechanisms, report the
+compatibility limitation rather than creating another manually synchronized
+source.
 
 ## Use immutable source evidence
 

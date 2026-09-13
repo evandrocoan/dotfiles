@@ -10,7 +10,9 @@ editing files, locate and read its root `AGENTS.md` if present. Use `CLAUDE.md`
 only as a compatibility fallback when `AGENTS.md` is absent, and follow an
 `@AGENTS.md` import by reading the target directly. Commands used only to locate
 or read instruction files are permitted before this step. Read each file once
-unless it changes or a new workspace root is added.
+at startup, and reread it when it changes, when a new workspace root is added,
+when a loaded skill's audit step requires a full reread, or before stating a
+fact about its content in a later turn.
 
 Project instructions may refine global workflow assumptions, but must not relax
 global safety, authorization, workspace-scope, or destructive-action boundaries.
@@ -80,7 +82,8 @@ file work in a repository that is not listed there:
    exists, inspect its current branch and status, and preserve all existing
    changes.
 7. Treat remote repository tools as read-only unless the user explicitly
-   requests the corresponding remote mutation.
+   requests the corresponding remote mutation. A remote URL alone grants no
+   write authority.
 
 ## General safeguards
 
@@ -103,6 +106,12 @@ file work in a repository that is not listed there:
   doing so.
 - Name alternative Dockerfiles with the environment before `.Dockerfile`, such
   as `dev.Dockerfile`; never use a suffix such as `Dockerfile.dev`.
+- State a fact about repository state, the filesystem, or a client's
+  configuration only from an inspection made in the same turn as the statement.
+  Re-verify before repeating an earlier finding instead of carrying it forward.
+  When reporting that something is absent, show the check that would have found
+  it and the same check matching a known-present case, because a search that
+  matches nothing proves only that the search ran.
 
 ## Language and portable files
 
@@ -152,6 +161,17 @@ It never includes merging, force-pushing, rewriting history, or unrelated work.
 For commits, pushes, branches, pull requests, GitLab merge requests, repository
 issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
+## Review authorization
+
+Reviews that a loaded shared skill requires, such as the plan review in
+`plan-implementation` and the closure pass that it and `architecture-records`
+require, are pre-authorized: open them without asking and report what they
+found, including the findings you disagree with. The skill owns when a review
+happens and how it runs on each client. A pre-authorized reviewer only reads
+and reports; it never edits, commits, or performs a remote operation. Every
+other delegation, including read-only exploration, still needs an explicit
+request.
+
 ## Shared skill registry
 
 Treat every entry exposed under `~/.agents/skills/` as an installed shared skill.
@@ -161,6 +181,10 @@ task appears familiar or because another skill also applies. When a skill is add
 renamed, or removed under `~/.agents/skills/`, update this registry in the same
 change. If the registry and filesystem disagree, inspect the filesystem, report the
 stale registry, and correct it before relying on the missing entry.
+
+When two loaded skills give incompatible guidance for the same change, name the
+conflict and present the options with their trade-offs before editing, instead
+of choosing one silently.
 
 - `architecture-records`: Create, review, implement, audit, or supersede durable
   cross-component architecture records and lifecycle states. Load it together with
@@ -201,12 +225,13 @@ their runtime catalogs and may not be available to every AI client. Do not add t
 to this shared registry unless they are deliberately exposed under
 `~/.agents/skills/`.
 
-`skill-creator` above is the deliberate exception: it was copied from
-`~/.codex/skills/.system` into `~/.claude/skills/` on request, so it is a locally
-maintained copy that does not follow Codex updates, while the original stays
-untouched. Refresh it by copying it again from that directory. The other Codex system
-skills there were evaluated and deliberately left unexposed, because they depend on
-Codex-only tools, paths, or self-knowledge.
+`skill-creator` above is the one Codex system skill exposed this way. It is a
+copy in `~/.claude/skills/`, not a symbolic link into
+`~/.codex/skills/.system`, because that directory is runtime-owned and follows
+Codex updates; the copy is locally maintained and the original stays untouched.
+Refresh it by copying it again from that directory. The other Codex system
+skills there were evaluated and deliberately left unexposed, because they
+depend on Codex-only tools, paths, or self-knowledge.
 
 ## Machine constraints and interactive commands
 
