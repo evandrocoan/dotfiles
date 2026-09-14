@@ -94,6 +94,18 @@ behavior that is clear from a single source file. A diagnosis or review alone do
 README change. Keep reusable agent-only constraints in `AGENTS.md`; use a dedicated document only
 when an operational procedure would make the main README disproportionately long.
 
+## Investigating slowness or performance incidents
+
+This host has a historical performance-monitoring stack already installed and running
+(atop/atopacctd/netatop-bpf, sysstat/sar, Netdata, and a bounded eBPF incident capture). See
+[Historical performance monitoring](README.md#historical-performance-monitoring) in `README.md` for
+the collectors, their retention, and the query commands.
+
+Before running ad-hoc live diagnostics (`ps`, `top`, `free`, `vmstat`) to investigate a slowness
+report about a past time window, reconstruct that window from the historical recorders first —
+live tools only show the current instant, not what happened during the reported window. Live
+diagnostics remain appropriate for an ongoing, currently-reproducible issue.
+
 ## .gitignore strategy
 
 The ignore file uses an allowlist pattern:
