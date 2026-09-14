@@ -85,7 +85,7 @@ exists without that file, add it before the next plan is created, moved, or clos
 concise and require it to define:
 
 - `active/` as the location for planned, in-progress, blocked, or otherwise unresolved work;
-- `completed/` as the location for plans whose closure audit passed;
+- `completed/` as the location for plans whose risk-appropriate closure verdict passed;
 - moving the same file between lifecycle directories without retaining a duplicate;
 - the repository's plan naming and any additional lifecycle states; and
 - the boundary between temporary execution authority and durable architecture records.
@@ -410,7 +410,7 @@ For a high-risk formal plan, do not mark the plan complete until all applicable 
 - The closure-audit matrix contains no `pending` or `unresolved` row and cites current evidence for
   every applicable requirement.
 - The architecture-to-implementation and implementation-to-authority traces are both complete.
-- The second conformance pass, when required by the risk classification, found no unresolved
+- The required second conformance pass found no unresolved
   omission, contradiction, unauthorized behavior, or unprotected failure path.
 
 If implementation is incomplete, leave the corresponding step pending or in progress and state the

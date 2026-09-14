@@ -13,6 +13,7 @@ high-risk trigger applies.
 - Outcome: <observable result and terminal condition>.
 - In scope: <authorized owner and consumers>.
 - Out of scope: <adjacent behavior that remains unchanged>.
+- Authority: <governing decision, configuration, schema, local objective, and relevant invariants>.
 
 ## Evidence and assumptions
 

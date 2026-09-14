@@ -17,6 +17,8 @@ for contextual supervision and independent review, and its tracked settings matc
 - Keep plan evidence concise instead of accumulating a chronological execution diary.
 - Use Sonnet for routine Claude work and Fable for both contextual advice and fresh-context audit.
 - Remove the hidden `assume-unchanged` state from `.claude/settings.json`.
+- For this follow-up, correct the compact template, the plan skill and lifecycle README wording,
+  and this plan's historical classification without changing runtime model selection.
 
 ### Out of scope
 
@@ -84,7 +86,11 @@ for contextual supervision and independent review, and its tracked settings matc
 | completed | Review the plan and follow-up findings. Complete workflow. | This global workflow change remains high risk through material follow-ups. | Initial reviews plus the user's fresh-context Fable second opinion identified the correction set below. |
 | completed | Verify the current model roles. Claude settings and reviewer. | The model selector can rewrite the active default. | Current state is Sonnet/xhigh execution with Fable advisor and Fable reviewer; index flags are normal. |
 | completed | Implement the governing workflow invariants. Global instructions, plan skill, compact and full templates. | The accepted findings concern coupled policy surfaces. | Routine work has one definition; persistent non-trivial work has a separate compact template; the full high-risk path remains intact. |
-| completed | Validate and independently audit the corrected workflow. Complete change set. | The material follow-up inherits the original high-risk classification. | Focused routing checks, skill and settings validation, diff and status checks, and the repeated fresh-context audit passed. |
+| completed | Review the current follow-up before implementation. Complete follow-up scope. | The material follow-up inherits the original high-risk classification, while the user explicitly rejected a new global model-selector rule. | Fresh-context review required separated execution and validation stages, explicit owner paths, and clear separation of prior-round evidence. The plan was corrected before content edits. |
+| completed | Apply the four accepted corrections. Plan skill, compact template, lifecycle README, and this plan. | No runtime model-selection or unrelated workflow rule needs to change. | Added the authority field; synchronized lifecycle wording; simplified the high-risk second-pass gate; classified the restored Sonnet default as applied without attributing its cause to the review. |
+| completed | Run focused semantic and package checks. Affected documentation and skill package. | Each check must distinguish the requested correction from unrelated text. | Exact positive and negative checks cover all four corrections; the skill validator and whitespace checks pass. |
+| completed | Rebuild affected closure evidence and perform the author pass. Complete diff. | Prior-round validation remains historical evidence and does not close this follow-up. | The affected matrix rows, concise-plan requirement, reverse trace, diff, status, unchanged model configuration, index flags, and symlinks pass inspection. |
+| completed | Perform the required independent second pass and close the same plan. Complete working-tree state. | All content changes and author checks must be complete first. | Fresh-context audit passed with no findings; the same plan was closed after recording the verdict. |
 
 Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `completed`.
 
@@ -92,33 +98,28 @@ Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `com
 
 - **Risk classification:** High risk because the change calibrates global review and authorization
   boundaries used across repositories. Material follow-ups inherit this classification.
-- **Mechanism:** Independent fresh-context Codex reviews plus the user's Fable second opinion; this
-  client has no advisor.
-- **Independent reviewer:** Completed before workflow edits and repeated after the final fixes. The
-  closing reviewer used a fresh Codex context outside the user-pinned Fable advisor path.
-- **Applied:** Define three risk levels; enumerate all six workflow surfaces; remove
-  `assume-unchanged` before editing and preserve non-model fields; verify model aliases before
-  writing them; describe deep-reviewer read-only behavior as procedural unless a technical
-  per-agent allowlist is available. The first final audit then required explicit risk precedence,
-  a light closure path for work without a formal plan, advisor-unavailable reporting, and the new
-  compact closure schema in this plan; all four findings were accepted.
-- **Applied:** The follow-up review requires inherited risk; explicit user authority for a
-  same-model advisor and reviewer; one routine-work definition; an actual compact persistent-plan
-  path; objective positive-control rules; explicit high-risk shared-policy changes; proportional
-  closure wording; and removal of the unreachable no-second-pass option.
-- **Rejected:** The reported executor mismatch was real during the Fable session but is not current;
-  architecture's stricter post-audit rule is compatible with the general plan rule; the reviewer's
-  `by default` wording is editorial rather than contradictory.
-- **Pre-execution follow-up review:** Required the compact persistent schema and full high-risk path
-  to be explicit, made the positive-control predicate falsifiable, promoted four safety rules from
-  review history to governing invariants, and bound validation to each accepted correction. All
-  findings were applied before policy edits began.
-- **First closure follow-up review:** Found that discovery metadata omitted single-file high-risk
-  and inherited-plan triggers, a non-persistent high-risk task could reach the compact form, and the
-  plan used an absolute repository path. Discovery now covers those triggers, every high-risk plan
-  is persistent and full, and the plan path is relative.
-- **Repeated closure review:** Passed the corrected working-tree state with no findings across all
-  six routing scenarios and confirmed that unrelated safeguards remain intact.
+- **Mechanism:** The user's Fable second opinion supplies the current advisor findings. Independent
+  fresh-context Codex review covers the pre-execution and final conformance passes because this
+  client has no advisor mechanism.
+- **Prior-round independent review:** Completed before the earlier workflow edits and repeated
+  after those fixes. It established explicit risk precedence, proportional planning and closure,
+  inherited high-risk follow-ups, objective absence controls, and a complete high-risk path.
+- **Applied:** The persisted executor differed from the configured Sonnet default and was restored
+  to Sonnet. The user confirmed separately that the model selector rewrites the persisted setting;
+  this records the behavior without attributing the earlier drift to the review session.
+- **Applied:** Add the missing authority field to the compact template, use risk-appropriate
+  lifecycle wording for completed plans, and remove the redundant risk qualifier from the
+  high-risk completion gate.
+- **Rejected:** A new shared rule prescribing `@deep-reviewer` or prohibiting use of the model
+  selector is unnecessary because no current instruction tells the executor to change models, and
+  a Claude-specific invocation must not become a universal Codex rule. Architecture's stricter
+  post-audit rule remains compatible with the general plan rule; the reviewer's `by default`
+  wording is editorial rather than contradictory.
+- **Current pre-execution review:** Required distinct review, implementation, focused-validation,
+  author-closure, and independent-audit stages; explicit ownership by the compact template,
+  `implementation-plans/README.md`, and the plan skill; and separation of retained prior-round
+  evidence from checks invalidated by this follow-up. These findings were applied before content
+  edits.
 
 ## Replan conditions
 
@@ -129,31 +130,33 @@ Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `com
 
 ## Completion evidence
 
-- Focused consistency checks cover every accepted Fable, pre-execution, and first closure-review
-  finding.
-- The skill validator, settings and alias checks, symlink checks, and `git diff --check` pass.
-- The repeated fresh-context audit passed all six routing scenarios with no findings.
-- Current Git inspection shows only the scoped workflow/configuration changes, normal settings
-  index flags, and no staged changes.
+- Prior-round evidence: focused consistency checks, skill validation, settings and alias checks,
+  symlink checks, whitespace validation, and a repeated fresh-context audit passed before this
+  follow-up.
+- Current follow-up evidence: exact semantic controls verify the compact authority field, both
+  lifecycle owners, unconditional high-risk second-pass wording, and neutral plan history. The
+  skill validator, whitespace checks, final diff, status, model-setting, index-flag, and symlink
+  checks pass. The independent conformance audit passed with no findings.
 
 ## Closure audit
 
 | Status | Requirement | Owner and consumers | Evidence |
 | --- | --- | --- | --- |
-| verified | Risk classification is unambiguous, inherited by material follow-ups, and protects consequential shared-policy changes. | Plan skill, discovery metadata, full template, and implementing agents. | High-risk discovery and persistence are explicit; the repeated scenario audit passed. |
-| verified | Routine and non-trivial work avoid unnecessary plans, matrices, second passes, rereads, and absence controls. | Global instructions, plan skill, and compact template; all agents. | One routine definition, a separate compact persistent path, and objective absence controls passed focused and independent checks. |
+| verified | Risk classification is unambiguous, inherited by material follow-ups, and protects consequential shared-policy changes. | Plan skill, discovery metadata, full template, and implementing agents. | The high-risk gate now calls its second pass unconditionally required; exact semantic and package checks pass. |
+| verified | Routine and non-trivial work avoid unnecessary plans, matrices, second passes, rereads, and absence controls. | Global instructions, plan skill, compact template, and lifecycle README; all agents. | The compact template records authority, and both lifecycle owners use risk-appropriate verdict wording. |
 | verified | The user-pinned Fable advisor and reviewer configuration has an explicit independent-review rule. | Plan skill, Claude settings, and deep reviewer. | Same-model use requires fresh context, evidence baseline, withheld verdict, and residual-risk disclosure; settings checks passed. |
-| verified | No unrelated configuration or remote state changes. | Complete working tree. | Final diff and status contain only scoped local changes; settings flags are normal and nothing is staged. |
+| verified | Plan evidence remains concise and current instead of accumulating a chronological review diary. | This plan and implementing agents. | The author pass retained current decisions and a single clearly labeled prior-round evidence summary. |
+| verified | No unrelated configuration or remote state changes. | Complete working tree. | The candidate diff contains only the plan, skill, compact template, and lifecycle README; settings remain Sonnet/xhigh with Fable advisor, index flags are normal, and nothing is staged. |
 
 - Architecture to implementation: No architecture record governs this local workflow calibration.
-- Implementation to authority: `.codex/AGENTS.md`, the plan skill and both templates,
-  `.claude/settings.json`, `.claude/agents/deep-reviewer.md`, and this plan map directly to the
-  requested workflow, evidence, and model-role corrections.
+- Implementation to authority: `.codex/AGENTS.md`, the plan skill, both templates,
+  `implementation-plans/README.md`, `.claude/settings.json`, `.claude/agents/deep-reviewer.md`, and
+  this plan map directly to the requested workflow, evidence, and model-role corrections.
 
 ### Final conformance verdict
 
-- **Verdict:** Passed after the repeated closure review.
-- **Second pass:** Independent fresh-context review.
-- **Auditor and evidence:** Focused routing and configuration checks plus a clean independent audit
-  of the complete working-tree state.
+- **Verdict:** Passed.
+- **Second pass:** Independent fresh-context Codex review.
+- **Auditor and evidence:** Author checks passed; the independent reviewer verified the four
+  corrections, scoped diff, unchanged model configuration, matrix, and traces with no findings.
 - **Unresolved requirements:** None.
