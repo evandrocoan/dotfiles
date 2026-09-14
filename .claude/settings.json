@@ -92,8 +92,8 @@
       "/home/someuser/.local/bin"
     ]
   },
-  "model": "opus",
-  "effortLevel": "max",
+  "model": "sonnet",
+  "effortLevel": "xhigh",
   "advisorModel": "fable",
   "attribution": {
     "commit": "",

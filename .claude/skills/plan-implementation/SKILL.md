@@ -4,10 +4,12 @@ description: >-
   Turn an approved objective, bug diagnosis, or architecture record into a concrete, testable
   execution plan and keep implementation aligned with it. Use when the user asks for an
   implementation plan, asks to implement a non-trivial multi-file or multi-stage change, requests
-  a plan for approval, or when an architecture record is moving into implementation. Also use
-  before costly live validation, migrations, protocol changes, or fixes whose correctness depends
-  on coordinated code, tests, replay, configuration, or documentation. Require a user-visible
-  persistent Markdown plan when work may span phases, agents, interruptions, or context compaction.
+  a plan for approval, or when an architecture record is moving into implementation. Also use for
+  every high-risk change, including authorization, safety, risk, or mandatory-review policy; for a
+  material continuation, replan, or follow-up under an existing formal plan; and before costly live
+  validation, migrations, protocol changes, or fixes whose correctness depends on coordinated code,
+  tests, replay, configuration, or documentation. Require a user-visible persistent Markdown plan
+  when work may span phases, agents, interruptions, or context compaction.
 ---
 
 # Plan implementation
@@ -26,12 +28,13 @@ Classify the request before editing:
   after presenting it.
 - **Plan and execute:** When the user asks to change, fix, build, or implement, create the plan and
   continue through it without requesting separate approval for routine in-scope steps.
-- **No formal plan:** Skip a formal plan only for an obvious, low-risk, single-step change whose
-  implementation and validation are both local. Still identify the expected outcome and verify it.
+- **No formal plan:** Skip a formal plan when the request meets the routine, local, and reversible
+  criteria under **Review plans proportionally**. Still identify the expected outcome and verify it.
 
-Use a formal plan whenever work crosses component boundaries, changes a protocol or state
-transition, has several dependent stages, requires a migration or replay, consumes paid
-validation, or has material uncertainty about scope.
+Use a formal plan for every high-risk request and for non-trivial work with dependent stages,
+cross-component consumers, migration or replay, paid validation, or material scope uncertainty.
+Touching several files or performing several obvious edits under one owner does not by itself make
+otherwise routine work non-trivial.
 
 ## Materialize the plan visibly
 
@@ -47,6 +50,7 @@ Use these two layers when the persistence gate applies:
 
 The persistent plan is mandatory when any of these conditions applies:
 
+- work is high risk under **Review plans proportionally**;
 - work is likely to cross context compaction, an interruption, a handoff, or more than one session;
 - multiple agents or people may act on the plan;
 - several dependent phases or cross-component consumers must remain coordinated;
@@ -55,6 +59,16 @@ The persistent plan is mandatory when any of these conditions applies:
   required;
 - losing a constraint, non-goal, authenticated fact, or validation obligation could produce an
   incorrect delivery.
+
+Persistence and risk are independent. Persistence determines where the execution contract
+survives; it does not promote non-trivial local work to high risk. A persistent non-trivial local
+plan uses the compact template and proportional closure below. A high-risk or
+architecture-governed plan uses the full template, closure matrix, bidirectional traces, full
+reread, and independent second pass.
+
+If otherwise routine work later meets the persistence gate because of handoff, interruption,
+multiple actors, or another listed condition, treat it as non-trivial for planning ceremony and use
+the compact persistent path. That promotion does not make it high risk by itself.
 
 When the repository defines a current implementation-plan convention, follow it. Otherwise use
 this default root for repository-backed work:
@@ -84,9 +98,10 @@ repository-backed plan at:
 implementation-plans/active/<task-slug>.md
 ```
 
-Use `assets/implementation-plan-template.md` as the starting structure. Use a concise lowercase
-hyphenated task slug. Keep one active file for one delivery objective; do not create a new file for
-every retry or replanning event.
+Use `assets/compact-implementation-plan-template.md` for persistent non-trivial local work and
+`assets/implementation-plan-template.md` for high-risk or architecture-governed work. Use a concise
+lowercase hyphenated task slug. Keep one active file for one delivery objective; do not create a new
+file for every retry or replanning event.
 
 When using the default lifecycle, close a successfully completed plan by moving the same file,
 after its final conformance verdict passes, to:
@@ -154,10 +169,11 @@ Record these elements before implementation:
    runtime owner, or other source that constrains the implementation.
 4. **Current evidence:** Summarize the verified failure or current behavior. Mark assumptions that
    remain unverified.
-5. **Work sequence:** Divide the change into ordered, independently checkable slices. Record the
-   premise each slice depends on and the artifact that proves it. The premise is what must already
-   be true for the slice's result to mean what the slice claims, such as what a passing test
-   actually measures. A slice whose premise cannot be named or has not been verified does not
+5. **Work sequence:** Divide the change into ordered, independently checkable slices. For each
+   material slice whose result depends on a non-obvious premise, record that premise and the
+   artifact that proves it. A premise is what must already be true for the result to mean what the
+   slice claims, such as what a passing test actually measures. Obvious local prerequisites need
+   not become separate evidence fields. A slice with an unverified material premise does not
    start; record it as an open assumption and verify it first.
 6. **Validation:** Bind each material slice to focused protection and bind the completed flow to
    proportional integration, replay, end-to-end, or operational validation.
@@ -168,22 +184,43 @@ Name the behavior boundary, the affected owner or consumer, and the evidence tha
 step complete. Mention exact paths or symbols only after inspecting them; do not invent locations
 to make a plan look concrete.
 
-Submit the finished plan for review before its first step runs. Call the advisor every time the
-client provides one, as Claude Code does: it already holds this task's context, so the check costs
-no briefing. On a client without an advisor, use the closest review mechanism it offers, or perform
-a separate full reread of the plan and record it as self-reviewed. Also open an independent
-reviewer when the plan crosses components, implements or materially audits an architecture record,
-or when discarding its first slice would be expensive; when the client cannot open one, record that
-the independent review was unavailable. State which mechanism each review used. Record what the
-review found and what you rejected, then start. A plan that nobody but its author has read is
-itself an unverified premise about the work.
+Review plans proportionally before implementation:
+
+Evaluate high-risk triggers first; any match overrides locality, reversibility, or apparent
+simplicity. Then distinguish the remaining levels:
+
+- **High risk:** Requires advisor review when available and a fresh-context independent review.
+  High risk includes architecture, protocol or state-transition changes, security or authorization
+  boundaries, migration or data-loss risk, external or destructive actions, production-wide
+  impact, and expensive or irreversible validation. Changes to shared agent instructions, skills,
+  or permission allowlists are also high risk when they alter authorization, safety safeguards,
+  risk classification, or mandatory review and closure gates; ordinary wording and narrowly scoped
+  skill edits do not become high risk solely because of their location.
+- **Non-trivial local and reversible:** Uses a compact plan. Call the advisor when available;
+  otherwise perform a focused author reread. An independent reviewer is optional. Cross-file or
+  cross-component scope belongs here when no high-risk trigger applies.
+- **Routine, local, and reversible:** Uses no formal plan and needs no advisor or independent
+  reviewer. Routine means one obvious owner, no material uncertainty, and cheap local validation.
+  File count and the number of obvious mechanical steps do not change that classification alone.
+
+Here, local means effects remain confined to the working tree or an isolated development
+environment, with no external or production mutation. Reversible means the intended operation has
+no credible data-loss or recovery hazard.
+
+When an independent reviewer is required, prefer a different model from the advisor, ideally from
+another family or provider. An explicit user decision that pins the same model for both roles is
+authoritative; record that choice and the residual risk of correlated model blind spots. In every
+case, preserve review independence with fresh context, an authoritative evidence baseline, and a
+prompt that withholds the intended verdict. If the client cannot open a required reviewer, record
+that it was unavailable. State which mechanism each applicable review used and record findings that
+changed the plan plus findings rejected with a reason.
 
 ## Build an executable sequence
 
 Order work by dependency and feedback speed:
 
-1. Obtain the plan review described above and record it in the plan's **Plan review** section
-   before any other step starts.
+1. Obtain the risk-appropriate plan review described above and record it in the plan's
+   **Plan review** section before any implementation step starts.
 2. Reproduce or authenticate the current failure when one exists.
 3. Establish or update the smallest failing regression protection.
 4. Change the authoritative owner of the behavior.
@@ -193,8 +230,8 @@ Order work by dependency and feedback speed:
 8. Run broader integration, replay, and suite-level checks after the flow is connected.
 9. Perform operational or paid live validation only when it is useful and authorized under the
    applicable rules.
-10. Perform the mandatory closure audit against the complete plan, governing architecture, actual
-    runtime flow, repository diff, and validation evidence.
+10. Close routine work with direct outcome, validation, diff, and status checks; close formal plans
+    with the risk-appropriate audit below.
 
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
@@ -204,10 +241,10 @@ For parallelizable work, group only tasks with no shared mutable files, state, g
 expensive local resources, or causal dependency. Never parallelize merely to make a plan appear
 faster.
 
-When a persistent plan exists, reread it before starting each new phase and confirm that its
-prerequisites are complete. After context compaction, interruption, session restart, or agent
-handoff, reread the entire plan before acting. Give every delegated agent the plan path and the
-exact step it owns.
+When a persistent plan exists, inspect its current step, prerequisites, and relevant scope before
+starting each new phase; do not reread the entire file solely because the phase changed. After
+context compaction, interruption, session restart, material replan, or agent handoff, reread the
+entire plan before acting. Give every delegated agent the plan path and the exact step it owns.
 
 ## Keep planning state in the correct place
 
@@ -284,23 +321,32 @@ and do not label partial coverage as end to end.
 Keep paid or externally mutating scenarios sequential unless the applicable policy explicitly
 requires otherwise. Measure the complete scenario rather than hiding retries or nested commands.
 
-## Perform the mandatory closure audit
+## Close work proportionally
 
-Treat closure as a separate blocking phase, not as a summary written from memory. After the
-candidate implementation and required validation are complete:
+Routine work without a formal plan closes after verifying the requested outcome, running its cheap
+local validation, and checking the final diff and repository status. It needs no closure matrix or
+second pass.
 
-1. Reread the entire persistent implementation plan from its first line through its final
-   conformance-verdict section. Reread every governing architecture record and coupled repository
-   instruction file in full. Do not rely on a prior summary, the changed sections, task-plan labels,
-   or remembered intent.
+For a non-trivial local and reversible formal plan, inspect the plan's outcome, scope, current
+steps, completion evidence, verdict, and relevant governing instructions. After compaction,
+handoff, or a material replan, reread the entire compact plan. Reconstruct the changed path from
+the implementation and validation evidence, then verify the requested outcome, affected consumers,
+required checks, final diff, and repository status. Record a concise completion verdict, unresolved
+limitations, and a focused author pass. This level needs no closure matrix or bidirectional traces
+unless it is reclassified as high risk.
+
+For a high-risk formal plan, treat closure as a separate blocking phase, not as a summary written
+from memory. After the candidate implementation and required validation are complete:
+
+1. Reread the entire persistent plan, every governing architecture record, and coupled repository
+   instruction file. Do not rely only on task-plan labels or remembered intent.
 2. Reconstruct the implemented runtime path from code, configuration, tests, fixtures, and actual
    validation artifacts. A report that a command passed is evidence only for what that command
    asserted.
-3. Expand and complete the plan's closure-audit matrix. Account individually for every outcome,
-   in-scope boundary, non-goal, governing invariant, execution step, affected consumer, replan
-   condition, and required validation obligation. Group entries only when they share the same owner,
-   failure mode, and evidence; never group distinct terminal or recovery paths merely to shorten the
-   table.
+3. Complete the plan's closure-audit matrix with concise evidence pointers rather than execution
+   history. Account for every outcome, scope boundary, governing invariant, affected consumer,
+   replan condition, and required validation obligation. Group entries when they share the same
+   owner, failure mode, and evidence; keep distinct terminal or recovery paths separate.
 4. Trace both directions:
 
    ```text
@@ -315,28 +361,40 @@ candidate implementation and required validation are complete:
    the requirement. Missing evidence, unavailable or skipped required validation, an unexamined
    consumer, cost, time, or an unexplained scope addition is `unresolved`; it is never implicitly
    satisfied by another passing row.
-6. For persistent, architecture-governed, protocol, migration, replay, or cross-component work,
-   perform a second conformance pass after the implementer's pass. Use a separate agent with fresh
-   task context when one is available, giving it the plan, governing records, final diff, and
-   validation artifacts without the intended verdict. Otherwise perform a separate full reread and
-   report that the second pass was self-reviewed rather than independent.
+6. Perform a second conformance pass after the implementer's pass. Use a separate agent with fresh
+   task context and give it the plan, governing records, final diff, and validation artifacts
+   without the intended verdict. Apply the independent-review model rule above. When a required
+   independent pass is unavailable, report that limitation instead of calling it independent.
 7. If either pass finds a mismatch, reopen the affected execution steps, correct the lowest
    incorrect authority, rerun invalidated validation, and repeat the complete closure audit. Do not
    append an exception that permits completion.
 
-Store the concise matrix and final conformance verdict in the persistent implementation plan.
-Store detailed command output, costs, raw logs, and replay events in their executable or operational
-artifacts and link them; do not copy them into the plan or architecture record.
+For high-risk persistent plans, store the concise matrix and final conformance verdict in the plan.
+For compact persistent plans, store only the proportional completion evidence and verdict described
+above. Store detailed command output, costs, raw logs, and replay events in their executable or
+operational artifacts and link them; do not copy them into either plan type or an architecture
+record.
 
-Any change after the closure audit to an in-scope or coupled artifact—including code,
-configuration, tests, fixtures, plans, architecture records, repository instructions, or user
-documentation—invalidates the closure verdict. Reread the complete final plan and governing
-records, recheck every row, rerun all checks invalidated by the change, and issue a new closure
-verdict before completion.
+A material change after the closure audit to an in-scope or coupled artifact—including code,
+configuration, tests, fixtures, plans, architecture, authorization rules, or behavior
+documentation—invalidates the closure verdict. A material follow-up or replan within the same
+formal plan inherits that plan's highest risk classification; it cannot be relabeled as a lower-risk
+slice to avoid required review. Repeat the inherited-risk reread and review, recheck every affected
+requirement, rerun checks invalidated by the change, and issue a new verdict. A formatting-only or
+evidence-wording correction requires rechecking the affected evidence and final diff, not replaying
+unrelated validation.
 
 ## Completion gates
 
-Do not mark the plan complete until all applicable gates pass:
+For routine work without a formal plan, require the requested outcome, proportional local
+validation, a scoped final diff, and an accurate report of limitations.
+
+For a non-trivial local and reversible formal plan, require the requested outcome, every affected
+consumer, proportional validation, a scoped final diff and status, a focused author pass, an
+accurate limitation report, and agreement between the persistent plan and task-plan statuses. Do
+not require a closure matrix, bidirectional traces, or an independent second pass at this level.
+
+For a high-risk formal plan, do not mark the plan complete until all applicable gates pass:
 
 - The requested outcome exists in the authoritative runtime path.
 - Every affected consumer uses the updated contract.
@@ -352,8 +410,8 @@ Do not mark the plan complete until all applicable gates pass:
 - The closure-audit matrix contains no `pending` or `unresolved` row and cites current evidence for
   every applicable requirement.
 - The architecture-to-implementation and implementation-to-authority traces are both complete.
-- The required second conformance pass found no unresolved omission, contradiction, unauthorized
-  behavior, or unprotected failure path.
+- The second conformance pass, when required by the risk classification, found no unresolved
+  omission, contradiction, unauthorized behavior, or unprotected failure path.
 
 If implementation is incomplete, leave the corresponding step pending or in progress and state the
 concrete blocker. Never convert an unfinished plan into a successful handoff by weakening its
@@ -361,15 +419,17 @@ acceptance criteria.
 
 ## Compact plan format
 
-Use the bundled template for a persistent file. For a formal task-plan projection or a plan that
-does not meet the persistence gate, use this concise form:
+Use `assets/compact-implementation-plan-template.md` for a persistent non-trivial local and
+reversible plan. Use the following concise form for its task-plan projection or for a non-trivial
+local and reversible formal plan that does not meet the persistence gate. High-risk work always
+meets that gate and uses the full persistent template.
 
 ```text
 Outcome: <observable result>
 Constraints: <invariants, non-goals, and authorization boundaries>
 Evidence: <verified current behavior and open assumptions>
 
-1. <obtain plan review> — mechanism: <what reviewed the plan> — findings: <each applied or rejected with a reason>
+1. <obtain any risk-required plan review> — mechanism: <advisor, independent reviewer, or focused author reread> — findings: <concise applied or rejected findings>
 2. <reproduce or authenticate> — premise: <what must already be true, and its proof> — validation: <specific check>
 3. <change authoritative owner> — premise: <what must already be true, and its proof> — validation: <specific check>
 4. <update affected consumers> — premise: <what must already be true, and its proof> — validation: <specific check>
@@ -380,5 +440,6 @@ Replan if: <material invalidating conditions>
 ```
 
 Expand the plan only when additional detail changes how the implementation will be performed or
-validated. A step whose premise is unverified stays in `Evidence` as an open assumption until it is
-verified; it does not run.
+validated. Record premises only when they are material and non-obvious. An unverified material
+premise stays in `Evidence` as an open assumption until it is verified; its dependent step does not
+run.

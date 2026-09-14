@@ -10,9 +10,10 @@ editing files, locate and read its root `AGENTS.md` if present. Use `CLAUDE.md`
 only as a compatibility fallback when `AGENTS.md` is absent, and follow an
 `@AGENTS.md` import by reading the target directly. Commands used only to locate
 or read instruction files are permitted before this step. Read each file once
-at startup, and reread it when it changes, when a new workspace root is added,
-when a loaded skill's audit step requires a full reread, or before stating a
-fact about its content in a later turn.
+at startup. Reread it in full when it changes, when a new workspace root is
+added, or when an applicable high-risk audit explicitly requires it. In later
+turns, inspect only the relevant passage when exact wording matters or the file
+may have changed; a turn boundary alone does not require another full reread.
 
 Project instructions may refine global workflow assumptions, but must not relax
 global safety, authorization, workspace-scope, or destructive-action boundaries.
@@ -106,12 +107,15 @@ file work in a repository that is not listed there:
   doing so.
 - Name alternative Dockerfiles with the environment before `.Dockerfile`, such
   as `dev.Dockerfile`; never use a suffix such as `Dockerfile.dev`.
-- State a fact about repository state, the filesystem, or a client's
-  configuration only from an inspection made in the same turn as the statement.
-  Re-verify before repeating an earlier finding instead of carrying it forward.
-  When reporting that something is absent, show the check that would have found
-  it and the same check matching a known-present case, because a search that
-  matches nothing proves only that the search ran.
+- Inspect volatile state in the same turn before reporting it: current Git
+  status or branch, process or service state, file existence, and the active
+  client configuration. Stable facts from an already-read file do not need
+  revalidation merely because the turn changed unless the file may have changed.
+  When a claim that something is absent materially supports safety, scope, or
+  task completion, verify the search scope. Include a known-present control when
+  a wrong root, matcher, pathspec, filter, exclusion, or inaccessible source could
+  produce the empty result. Exact-target checks and deterministic universe queries
+  that establish their own scope do not require a manufactured positive control.
 
 ## Language and portable files
 
@@ -209,9 +213,11 @@ of choosing one silently.
   pipelines, components, jobs, runners, variables, artifacts, caches, and deployment
   gates.
 - `plan-implementation`: Plan or implement any non-trivial multi-file, multi-stage,
-  cross-component, protocol, migration, replay, paid-validation, or externally
-  mutating change. Use its persistent Markdown plan whenever its persistence gate
-  applies, and complete its mandatory closure audit before declaring success.
+  cross-component, protocol, migration, replay, paid-validation, externally mutating,
+  or high-risk change, including authorization, safety, risk, or mandatory-review
+  policy. Also load it for a material continuation, replan, or follow-up under an
+  existing formal plan. Use its persistent Markdown plan whenever its persistence
+  gate applies, and complete its risk-appropriate closure before declaring success.
 - `skill-creator`: Create or update a skill package with appropriately scoped
   instructions and supporting resources. Written for Codex skills: ignore its
   `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
