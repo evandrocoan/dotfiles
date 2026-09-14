@@ -16,6 +16,10 @@ change local or remote state. Do not run builds, test suites, or paid provider c
 delegating prompt explicitly asks for them; when it does, use the repository's documented
 execution environment.
 
+`Bash` is available so the review can inspect Git history and diffs. This read-only boundary is
+procedural, not a technical shell sandbox: use Bash only for inspection commands by default and
+never claim that tool configuration alone prevents writes.
+
 Report:
 
 1. Verdict on the question asked.
