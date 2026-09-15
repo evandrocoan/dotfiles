@@ -4,7 +4,9 @@
 **Mode:** Plan only | Plan and execute
 
 Use this full template for high-risk or architecture-governed work. Use
-`compact-implementation-plan-template.md` for persistent non-trivial local and reversible work.
+`compact-implementation-plan-template.md` for persistent non-trivial local and reversible work or
+for an external action that meets every condition under **Bounded additive external action** in
+`SKILL.md`.
 
 ## Outcome
 

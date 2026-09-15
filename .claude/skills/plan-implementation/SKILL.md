@@ -36,11 +36,20 @@ cross-component consumers, migration or replay, paid validation, or material sco
 Touching several files or performing several obvious edits under one owner does not by itself make
 otherwise routine work non-trivial.
 
+A bounded additive external action that meets every condition under **Bounded additive external
+action** uses the compact persistent path. Eligibility selects risk, template, and closure; it never
+overrides an explicit plan-only request or supplies permission to execute. When execution is
+authorized, use plan-and-execute mode. External mutation still activates the persistence gate even
+though externality alone does not make that narrowly defined action high risk.
+
 ## Materialize the plan visibly
 
 Never keep a formal plan only in hidden reasoning or conversation memory. Materialize it in the
 task's visible plan mechanism, or present it directly when no such mechanism exists, before editing
-production code.
+production code. User-visible means that the durable artifact is accessible through the
+environment or a clickable path; it does not require pasting the full plan or its payloads into
+progress messages. Give the user a concise summary and the artifact link unless they request the
+complete text in chat.
 
 Use these two layers when the persistence gate applies:
 
@@ -61,10 +70,10 @@ The persistent plan is mandatory when any of these conditions applies:
   incorrect delivery.
 
 Persistence and risk are independent. Persistence determines where the execution contract
-survives; it does not promote non-trivial local work to high risk. A persistent non-trivial local
-plan uses the compact template and proportional closure below. A high-risk or
-architecture-governed plan uses the full template, closure matrix, bidirectional traces, full
-reread, and independent second pass.
+survives; it does not promote non-trivial local work or a bounded additive external action to high
+risk. A persistent non-trivial local plan and a bounded additive external action use the compact
+template and their proportional closure below. A high-risk or architecture-governed plan uses the
+full template, closure matrix, bidirectional traces, full reread, and independent second pass.
 
 If otherwise routine work later meets the persistence gate because of handoff, interruption,
 multiple actors, or another listed condition, treat it as non-trivial for planning ceremony and use
@@ -99,9 +108,9 @@ implementation-plans/active/<task-slug>.md
 ```
 
 Use `assets/compact-implementation-plan-template.md` for persistent non-trivial local work and
-`assets/implementation-plan-template.md` for high-risk or architecture-governed work. Use a concise
-lowercase hyphenated task slug. Keep one active file for one delivery objective; do not create a new
-file for every retry or replanning event.
+bounded additive external actions. Use `assets/implementation-plan-template.md` for high-risk or
+architecture-governed work. Use a concise lowercase hyphenated task slug. Keep one active file for
+one delivery objective; do not create a new file for every retry or replanning event.
 
 When using the default lifecycle, close a successfully completed plan by moving the same file,
 after its final conformance verdict passes, to:
@@ -191,11 +200,12 @@ simplicity. Then distinguish the remaining levels:
 
 - **High risk:** Requires advisor review when available and a fresh-context independent review.
   High risk includes architecture, protocol or state-transition changes, security or authorization
-  boundaries, migration or data-loss risk, external or destructive actions, production-wide
-  impact, and expensive or irreversible validation. Changes to shared agent instructions, skills,
-  or permission allowlists are also high risk when they alter authorization, safety safeguards,
-  risk classification, or mandatory review and closure gates; ordinary wording and narrowly scoped
-  skill edits do not become high risk solely because of their location.
+  boundaries, migration or data-loss risk, destructive actions, authorized and verifiable external
+  mutations that do not meet every remaining condition under **Bounded additive external action**,
+  production-wide impact, and expensive or irreversible validation. Changes to shared agent
+  instructions, skills, or permission allowlists are also high risk when they alter authorization,
+  safety safeguards, risk classification, or mandatory review and closure gates; ordinary wording
+  and narrowly scoped skill edits do not become high risk solely because of their location.
 - **Non-trivial local and reversible:** Uses a compact plan. Call the advisor when available;
   otherwise perform a focused author reread. An independent reviewer is optional. Cross-file or
   cross-component scope belongs here when no high-risk trigger applies.
@@ -206,6 +216,53 @@ simplicity. Then distinguish the remaining levels:
 Here, local means effects remain confined to the working tree or an isolated development
 environment, with no external or production mutation. Reversible means the intended operation has
 no credible data-loss or recovery hazard.
+
+### Bounded additive external action
+
+Use the compact path only when every condition below is verified before the first write:
+
+- The user authorized the exact destination, operation, finite set of items, payload or inputs, and
+  relevant target identifiers or preconditions. Record that binding in the compact plan; do not
+  request the same approval again.
+- Authoritative read-back can identify every created record and verify its target, exact request or
+  content, multiplicity, and resulting state.
+- Each intended effect creates a new, independently identifiable record. It does not modify or
+  delete an existing record.
+- Downstream effects are known and limited to record creation plus ordinary delivery or
+  notification. The action does not change workflow or approval state, grant access, create a
+  financial or legal commitment, deploy, or cause an operational or destructive effect.
+- Revalidate mutable targets and preconditions immediately before acting.
+- No other high-risk trigger or applicable skill requires the full workflow, and the action is not
+  part of a formal plan that already inherited a higher risk classification.
+
+Fixed review comments, issue notes, messages, and unshared drafts are examples that may qualify;
+their product names and fields do not define the category.
+
+Treat authorization, authoritative read-back, and knowledge of downstream effects as blocking
+preconditions, not high-risk fallbacks. If any is missing or uncertain, do not write. A material
+change to the authorized destination, operation, item set, payload, target, or precondition
+invalidates the binding until the user authorizes it; then classify again. Drift found before the
+first write does not itself force high risk. Once these preconditions are established, a false or
+unknown remaining condition routes the authorized action through the normal high-risk workflow.
+
+Apply every substantive review required by the user, an applicable domain skill, or another
+governing authority before writing. This planning skill neither adds nor removes a review based on
+the payload's topic or vocabulary. If a required reviewer is unavailable, block execution and
+report the limitation. The post-action read-back verifies delivery, not substantive correctness.
+
+Perform multiple items sequentially. After a timeout, partial success, or inconclusive response,
+stop later writes and retries, then reconcile through authoritative read-only evidence:
+
+- Confirmed creation: record the external ID without retrying, then resume remaining items.
+- Confirmed non-creation: retry only the same authorized item, then continue sequentially.
+- Unresolved delivery: block completion and request direction when safe reconciliation cannot
+  establish the result.
+- Unexpected effects or target drift after an attempted write: stop, reconcile the prior attempt,
+  obtain renewed authorization for changed scope, and replan remaining work as high risk.
+
+Preserve confirmed results. Never blindly retry or perform an unapproved compensating mutation.
+Conclusive reconciliation alone does not promote the compact plan. An action within an existing
+formal plan retains that plan's highest risk classification and closure requirements.
 
 When an independent reviewer is required, prefer a different model from the advisor, ideally from
 another family or provider. An explicit user decision that pins the same model for both roles is
@@ -252,6 +309,10 @@ When the persistence gate applies, treat the persistent plan as the sole current
 execution detail. Keep it compact and current; do not append a chronological diary. Update it only
 when status, scope, evidence, dependencies, validation obligations, blockers, or the chosen
 execution route materially changes.
+
+Keep conversational updates as a projection of that artifact: state the outcome or current status
+and link the file. Do not reproduce the complete persistent plan or full external-action payloads in
+chat unless the user asks for them.
 
 Mirror its executable steps into the task's plan mechanism. The task plan may be shorter, but it
 must not omit a material pending phase or report a status that conflicts with the persistent file.
@@ -335,6 +396,14 @@ required checks, final diff, and repository status. Record a concise completion 
 limitations, and a focused author pass. This level needs no closure matrix or bidirectional traces
 unless it is reclassified as high risk.
 
+For a bounded additive external action, reread the compact plan after compaction, handoff, material
+replan, or an ambiguous tool result. Reconcile every intended item with one authoritative external
+ID and verify the authorized target, exact request or content, multiplicity, and resulting state.
+Confirm that every governing review completed and that no prohibited effect or unresolved delivery
+outcome remains. Record the implementer's delivery read-back and concise verdict. Do not require a
+second independent closure pass unless another governing rule requires it or the action inherits a
+higher-risk formal plan.
+
 For a high-risk formal plan, treat closure as a separate blocking phase, not as a summary written
 from memory. After the candidate implementation and required validation are complete:
 
@@ -394,6 +463,12 @@ consumer, proportional validation, a scoped final diff and status, a focused aut
 accurate limitation report, and agreement between the persistent plan and task-plan statuses. Do
 not require a closure matrix, bidirectional traces, or an independent second pass at this level.
 
+For a bounded additive external action, require one authoritative external ID for every intended
+item; an exact match for its authorized target, request or content, multiplicity, and expected
+state; all governing reviews; no prohibited effect; no unresolved delivery result; and agreement
+between plan statuses. The implementer's authoritative read-back closes this path; do not require
+an independent second closure pass unless a stronger or inherited rule does.
+
 For a high-risk formal plan, do not mark the plan complete until all applicable gates pass:
 
 - The requested outcome exists in the authoritative runtime path.
@@ -420,16 +495,19 @@ acceptance criteria.
 ## Compact plan format
 
 Use `assets/compact-implementation-plan-template.md` for a persistent non-trivial local and
-reversible plan. Use the following concise form for its task-plan projection or for a non-trivial
-local and reversible formal plan that does not meet the persistence gate. High-risk work always
-meets that gate and uses the full persistent template.
+reversible plan or bounded additive external action. Its conditional external-action section
+records the authorization binding, items, governing-review status, read-back authority,
+reconciliation state, and delivery evidence; omit that section for local work. Use the following
+concise form for a task-plan projection or for a non-trivial local and reversible formal plan that
+does not meet the persistence gate. High-risk work always meets that gate and uses the full
+persistent template.
 
 ```text
 Outcome: <observable result>
 Constraints: <invariants, non-goals, and authorization boundaries>
 Evidence: <verified current behavior and open assumptions>
 
-1. <obtain any risk-required plan review> — mechanism: <advisor, independent reviewer, or focused author reread> — findings: <concise applied or rejected findings>
+1. <obtain any risk-required plan review> — mechanism: <advisor, independent plan or domain-required reviewer, or focused author reread> — findings: <concise applied or rejected findings>
 2. <reproduce or authenticate> — premise: <what must already be true, and its proof> — validation: <specific check>
 3. <change authoritative owner> — premise: <what must already be true, and its proof> — validation: <specific check>
 4. <update affected consumers> — premise: <what must already be true, and its proof> — validation: <specific check>
