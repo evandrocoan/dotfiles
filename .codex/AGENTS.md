@@ -63,26 +63,39 @@ perform that work.
 
 ### Missing repositories and workspace scope
 
-Treat `workspace_roots` as the complete authorized local repository discovery
-scope unless the user explicitly says otherwise. When a task requires local
-file work in a repository that is not listed there:
+Treat `workspace_roots` as the initial local scope, not necessarily the complete
+list of folders in a VS Code multi-root workspace. When a task names a checkout
+that is not listed there:
 
-1. Stop before searching sibling directories, parent directories, the home
-   directory, editor metadata, or any other location outside the workspace.
-2. Tell the user exactly which repository or checkout is missing.
-3. Ask the user either to add the checkout to the workspace or to explicitly
-   authorize a search outside it.
-4. Search outside only after receiving that authorization, and limit the search
-   to the smallest plausible location.
-5. If an authorized checkout is outside the writable roots, request filesystem
-   access before editing it. Never use a remote file or commit API to modify
-   repository contents in place of the authorized local working tree. Read-only
-   remote inspection remains allowed when the task calls for it.
-6. Prefer the authorized local working tree for file work. Read its root
-   `AGENTS.md`, or its `CLAUDE.md` compatibility fallback when no `AGENTS.md`
-   exists, inspect its current branch and status, and preserve all existing
-   changes.
-7. Treat remote repository tools as read-only unless the user explicitly
+1. If running in VS Code, inspect the folders of the **current agent window**
+   before declaring the checkout missing. Prefer a live editor workspace API.
+   If using read-only VS Code process or workspace metadata instead, establish
+   the current window's identity and its exact active workspace file or folder;
+   resolve relative `.code-workspace` entries against that file and verify the
+   selected local directory. Aggregate `code --status` folder statistics,
+   recently opened workspace records, matching window titles, and other open
+   windows do not establish membership by themselves. Do not enumerate
+   unrelated editor data or treat every open folder as task scope.
+2. If the live folder inventory is unavailable or ambiguous, an explicit user
+   statement that a specific checkout is open in VS Code, together with its
+   known exact local path, authorizes targeted local discovery for that task.
+   Do not ask the user to authorize inspection of that same checkout again.
+   Verify the path and repository identity without scanning siblings, parent
+   directories, or the home directory. This fallback does not make other
+   editor folders or repositories available.
+3. If neither current-window membership nor an exact user-identified checkout
+   is established, stop before searching outside the known roots. Tell the user
+   which checkout is missing and ask for its path, for it to be added to the
+   workspace, or for a bounded outside-workspace search.
+4. For a selected checkout, read its root `AGENTS.md` (or `CLAUDE.md` fallback)
+   before project commands or edits, inspect its branch and status, and preserve
+   existing changes. Local workspace membership authorizes task-scoped
+   discovery, not unrelated edits. Apply the user's actual read or write request
+   and the current filesystem permissions; do not ask for redundant permission
+   when the requested local action is already authorized and access is available.
+   If access is denied, request the necessary filesystem access before editing.
+   Never substitute a remote file or commit API for the local working tree.
+5. Treat remote repository tools as read-only unless the user explicitly
    requests the corresponding remote mutation. A remote URL alone grants no
    write authority.
 
