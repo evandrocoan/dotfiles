@@ -5,23 +5,22 @@ description: Prepare or perform safe Git delivery while preserving local work an
 
 # Git delivery
 
-Keep file work in the authorized local working tree. Treat the requested
-delivery outcome as authorization for its routine in-scope Git steps, but
-nothing beyond it.
+Keep file work in the authorized local working tree. A user-requested commit,
+pull request, or merge request authorizes only its routine, in-scope Git steps.
 
 ## Establish scope and authorization
 
 1. Read the repository instructions and inspect the current branch, status,
    staged changes, unstaged changes, untracked files, and configured remote.
-2. Treat the requested delivery outcome as authorization for its routine
-   prerequisites. A commit-only request stays local. Opening a pull request or
-   merge request includes the source branch, scoped commit, and push. It never
-   includes merging, force-pushing, rewriting history, or unrelated changes. A
-   review authorizes no mutations.
+2. Treat an explicitly requested commit, pull request, or merge request as
+   authorization for its routine prerequisites. A commit-only request stays local.
+   Opening a pull request or merge request includes the source branch, scoped
+   commit, and push. It never includes merging, force-pushing, rewriting
+   history, or unrelated changes. A review authorizes no mutations.
 3. Creating, correcting, or amending a commit never authorizes a push by
    itself, even when the remote contains an earlier version of that commit.
-   Leave the rewritten commit local until the user explicitly requests remote
-   delivery or requests a pull or merge request as the current outcome.
+   Leave the rewritten commit local unless the user requests a pull or merge
+   request as the current outcome.
 4. Never create another worktree, rewrite history, force-push, rebase, merge, or
    cherry-pick unless the user asks for that operation.
 5. Preserve unrelated and pre-existing changes. Do not stage, unstage, discard,
@@ -31,8 +30,7 @@ nothing beyond it.
 
 ## Use local and remote tools correctly
 
-- Read, edit, stage, diff, and inspect files in the authorized local working
-  tree.
+- Read, edit, diff, and inspect files in the authorized local working tree.
 - Infer GitLab from a GitLab remote URL. For GitLab merge requests, issues,
   reviews, or pipelines, use the available GitLab MCP tools before shell
   commands, HTTP calls, or local credential discovery.

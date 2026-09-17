@@ -170,6 +170,12 @@ for it or when the content is not intended for direct copying.
 
 ## Git authorization
 
+The user owns Git state. Unless the user explicitly requests a commit, pull
+request, or merge request, use only read-only Git operations. Editing files does
+not authorize staging, unstaging, branch changes, resets, commits, pushes, or any
+other Git-state mutation. Do not change the index to reconcile or tidy it, even
+for files this agent created or previously staged.
+
 Treat the user's requested Git outcome as authorization for its routine,
 in-scope steps. Opening a pull request or merge request includes creating a
 suitable source branch, committing the scoped changes, and pushing the branch.
@@ -231,6 +237,9 @@ of choosing one silently.
   policy. Also load it for a material continuation, replan, or follow-up under an
   existing formal plan. Use its persistent Markdown plan whenever its persistence
   gate applies, and complete its risk-appropriate closure before declaring success.
+- `codex-claude-loop`: Coordinate Codex Sol planning and review with Claude Opus
+  implementation through one shared local handoff file, with optional periodic
+  checks until completion or a user decision.
 - `skill-creator`: Create or update a skill package with appropriately scoped
   instructions and supporting resources. Written for Codex skills: ignore its
   `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
