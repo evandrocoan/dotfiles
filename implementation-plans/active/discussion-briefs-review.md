@@ -1,0 +1,122 @@
+# Implementation plan: apply the reviewed corrections to the discussion-briefs skill
+
+**Status:** Blocked on the user decision recorded as D8 in the brief
+**Mode:** Plan and execute
+**Risk:** Non-trivial local and reversible
+
+The changes are wording edits in shared skills plus one `.gitignore` allowlist rule. No edit relaxes
+an authorization, safety, review, or closure gate: the Git sentences replaced under D7 and D5.10
+repeat the always-loaded global Git authorization section, which stays the governing rule for
+Claude, Codex, and Copilot, and D4.1 and D5.7 only tighten the new skill.
+
+## Outcome and scope
+
+- Outcome: every decision the user recorded in
+  [the brief](../briefs/discussion-briefs-review.md) is applied to its owning file, the four touched
+  skill packages validate, and the forward-test under D6 has run with its observations recorded.
+- In scope: `.claude/skills/discussion-briefs/` (`SKILL.md` and the template), the registry entry
+  for `discussion-briefs` in `.codex/AGENTS.md`, three narrow insertions in
+  `.claude/skills/plan-implementation/SKILL.md`, one sentence each in
+  `.claude/skills/architecture-records/SKILL.md` and `.claude/skills/codex-claude-loop/SKILL.md`,
+  two allowlist rules in `.gitignore`, and the brief itself.
+- Out of scope: any Git staging, commit, or push; every other sentence of the three sibling
+  skills; the global question-only gate; the plan templates; new skills.
+- Authority: the user's decisions below, stated in chat and noted in the brief; the global
+  instructions in `.codex/AGENTS.md`; `skill-creator` and `documentation` for skill text.
+
+## Governing decisions absorbed from the brief
+
+| Brief item | Decision |
+| --- | --- |
+| D1 | Create a brief unprompted only for points waiting on the user: a decision, an authorization, or an external dependency. Explanation-only requests stay in chat, subagents and reviewers never create a brief, and an explicit user request always creates one. Update the frontmatter and the registry entry to match. |
+| D2 | `plan-implementation` shows `briefs/` in its root layout, reads a same-subject brief before planning and absorbs its decided items, and fixes brief links when a plan moves. `discussion-briefs` tells the user in chat when it edits the plan root's README. |
+| D3 | Allowlist `implementation-plans/briefs/` in this repository's `.gitignore`. |
+| D4.1 | Promotion means recording a decision in the plan, architecture record, or issue, never in code or configuration, and never implementing it. It follows the owner's skill, including any plan, review, or user instruction required. Until recorded, the item stays `decidido` with the marker `registro pendente`. A plan under `completed/` counts as no owner. |
+| D4.2 | When a brief is warranted in a question-only turn, do not create it; answer with a short self-contained summary and offer the brief for a later turn. |
+| D4.3 | Apply pending rewrites only at the next non-question instruction about the brief or its subject, and list every item with an unapplied rewrite in each question-only reply. |
+| D4.4 | Add the state `resolvido` for dependency items and accept it in the closing condition. |
+| D4.5 | Only the formatting rules of `documentation` apply to a brief: no table of contents and no commit-pinned links. Remove the item count from the template summary. |
+| D4.6 | Number items sequentially only; cite plan or record identifiers inside the item text and define them in the glossary; the brief's own item numbers need no glossary entry. |
+| D5.1 | Rename the closing section to "Decididos e descartados" and keep a dropped item there in one line. |
+| D5.2 | Remove the state `em discussão` from items. |
+| D5.3 | Show the `Decisão` line only when a decision exists. |
+| D5.4 | Separate the template header fields with blank lines. |
+| D5.5 | State in the template preamble that nothing in the brief authorizes work. |
+| D5.6 | Rename the heading "Decisões suas" to "Decisões que dependem de você". |
+| D5.7 | The brief ranks below every authority layer and is never an authority. A user decision noted there draws its authority from the user's statement and stays marked pending until its owner records it; in every other disagreement, correct the brief. |
+| D5.8 | With another plan location, `briefs/` sits beside the lifecycle directories; without a plan directory, use the default root; never place a brief inside an architecture directory. |
+| D5.9 | Let `Alimenta` list several targets, and show `não verificado` and a verification date in the template. |
+| D5.10 | Replace the stage-or-commit sentence with the wording `plan-implementation` uses for plans. |
+| D7 | Replace the copied Git sentence in `architecture-records` and in `codex-claude-loop` with the same pattern: name the artifact-specific temptation, then defer to the user's requested Git outcome and the repository convention. |
+| D8 | Pending user decision: whether a bare decision may change anything beyond the brief, such as the active plan or an approved architecture record. Raised by forward-test case C. |
+| D6 | After the corrections, forward-test the skill with independent agents, starting with three cases: work ending with several pending points, a status question with no brief, and a decision whose owner is an approved architecture record. |
+
+## Evidence and assumptions
+
+- Verified: the working tree was clean at `e2fcf6a` before this plan; none of the five skill files
+  changed since they were read in this session; `git check-ignore` reports the brief as ignored by
+  the `*` rule; the Claude, Codex, and Copilot instruction files all resolve to `.codex/AGENTS.md`.
+- Open assumption: None.
+
+## Execution
+
+| Status | Step and owners | Validation or result |
+| --- | --- | --- |
+| completed | Obtain the plan review. | Advisor findings recorded below. |
+| completed | Apply D3 in `.gitignore`. | `git status` lists `implementation-plans/briefs/` as untracked; the control `scripts/.env` still matches `/scripts/.env*`. |
+| completed | Rewrite the `discussion-briefs` `SKILL.md` and template and update its registry entry (D1, D2, D4, D5). | Both files rewritten whole; `quick_validate.py` passes on the package and on its `.agents/skills/` symlink. |
+| completed | Edit `plan-implementation` (D2), `architecture-records`, and `codex-claude-loop` (D7). | `git diff` shows only the planned sentences; `quick_validate.py` passes on each package. |
+| completed | Validate the whole change. | Width scan clean, `git diff --check` clean, seven tracked files changed and all in scope. |
+| completed | Run the D6 forward-test in an isolated scratch workspace. | Three sequential Sonnet agents, one throwaway fixture repository each; observations under Completion. |
+| completed | Record in the brief where each decision now lives and collapse its decided items. | Decided items collapsed with links to this plan and the changed files; D8 is the only open item. |
+| pending | Resolve the case C finding once the user decides D8 in the brief, then repeat case C and case B. | Blocked: needs the user's decision. A change to when promotion may happen is a follow-up under this plan. |
+| pending | Close with a focused author pass. | Verdict recorded below. |
+
+## Review and replan
+
+- Review mechanism: Advisor.
+- Applied findings: use `registro pendente` as the single pending marker in the skill, the
+  template, and the brief; D5.2 removes `em discussão` from items only, not from the document
+  header; D2 adds no README requirement to `plan-implementation`, because `discussion-briefs` owns
+  that sentence; rewrite the `discussion-briefs` files whole instead of stacking edits; run each
+  D6 case in its own throwaway fixture repository under the scratchpad so that no test agent
+  writes to a real plan root, sequentially, judged from the fixture's files and not only from the
+  agent's report.
+- Rejected findings: None.
+- Replan if: an edit would relax a global gate or change another skill beyond the planned
+  sentences; the forward-test shows a defect that needs a user decision; the user's files changed
+  underneath the edit.
+
+## Completion
+
+- Evidence: every decision row above is applied in its owning file; `quick_validate.py` passes on
+  `discussion-briefs` (package and symlink), `plan-implementation`, `architecture-records`, and
+  `codex-claude-loop`; width scan and `git diff --check` are clean; `scripts/.env` stays ignored
+  while the brief and this plan are now visible to Git. Nothing was staged or committed.
+- Forward-test, case A (instruction that leaves ten pending points): the agent routed through the
+  registry, created the brief under the fixture's `implementation-plans/briefs/`, numbered items
+  sequentially, wrote the glossary, announced the README edit, and left the plan untouched. It
+  also pasted a list of item titles into chat; the chat-projection rule now forbids that too.
+- Forward-test, case B (status question, no brief): the agent created no file and offered the
+  brief, but its chat answer was a long list full of undefined labels. The question-only summary
+  rule was reworded to one plain line per point with no options or analysis. Not re-run.
+- Forward-test, case C (bare decision whose owner is an approved architecture record): the agent
+  recorded the decision and, in the same turn, superseded the approved record, created a new
+  record, and edited the plan. No code changed. The skill's promotion rule still drives immediate
+  promotion under the owner's skill. Whether a bare decision may touch anything beyond the brief
+  is a user decision, recorded as D8 in the brief. One defect from this case needed no decision
+  and was fixed: the authority paragraph told the agent to update the owner, contradicting the
+  promotion section; it now only keeps the `registro pendente` marker and forbids overwriting the
+  decision. The template's `Alimenta` example now shows a Markdown link, because the case A agent
+  wrote a bare path.
+- Isolation: no test agent wrote outside its fixture; both real plan roots and the home
+  repository status were checked after the runs.
+- Delivery read-back: Not applicable.
+- Focused author pass: Passed for the applied decisions: each decision row maps to a sentence in
+  its owning file, the sibling-skill diffs contain only the planned sentences, and every link in
+  the brief resolves. The brief links to this plan under `active/`; fix that link when the plan
+  moves to `completed/`.
+- Unresolved limitations: case C shows that a bare decision can still rewrite an approved
+  architecture record; the reworded case B rule is untested; the forward-test used one model and
+  one run per case.
+- Verdict: Pending.

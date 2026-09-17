@@ -340,8 +340,9 @@ Before handoff:
   links to each current record instead.
 - Run the repository's Markdown or whitespace checks when available and inspect
   untracked files as well as tracked diffs.
-- Report changed files, lifecycle transitions, and validation performed. Do not commit
-  unless the user explicitly requests it.
+- Report changed files, lifecycle transitions, and validation performed. Do not commit a
+  record merely because it is complete. Follow the user's requested Git outcome and the
+  repository convention.
 
 ## Templates
 

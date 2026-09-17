@@ -89,6 +89,11 @@ implementation-plans/
 └── completed/
 ```
 
+A `briefs/` directory beside these holds `discussion-briefs` working documents when that skill
+establishes it. Before planning, read a brief there on the same subject and absorb the items the
+user decided into the plan's authorities and evidence, in English. A brief supplies user decisions
+only; it holds no execution authority and is not evidence of current behavior.
+
 Create `implementation-plans/README.md` when establishing this root. If the default root already
 exists without that file, add it before the next plan is created, moved, or closed. Keep the README
 concise and require it to define:
@@ -120,9 +125,9 @@ implementation-plans/completed/<task-slug>.md
 ```
 
 Preserve the completed plan as the final execution contract; do not copy it or leave another copy
-under `active/`. Update any task-plan or documentation link that pointed to the active path. Keep a
-blocked or unresolved plan under `active/` with its real status unless the repository defines a
-separate blocked state.
+under `active/`. Update any task-plan, documentation, or brief link that pointed to the active
+path. Keep a blocked or unresolved plan under `active/` with its real status unless the repository
+defines a separate blocked state.
 
 When no repository owns the task, use the same documented lifecycle under the global root:
 
