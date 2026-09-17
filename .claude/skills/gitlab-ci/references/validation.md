@@ -81,6 +81,22 @@ For Compose-backed jobs, also verify unique project names, exact file and profil
 terminal-service exit propagation, bounded cleanup, and isolation from concurrent jobs. For repository-owned CI
 wrappers, compare the mandatory split jobs with the local aggregate command.
 
+Before declaring a Compose-backed change valid, first list every raw `docker compose` command in
+the job's script sections, its `extends` chain and anchors, and every resolved include or template.
+Several raw `up` or `run` commands in one job mean the check is not defined once in a
+repository-owned contract, as [containerized-ci.md](containerized-ci.md#keep-ci-orchestration-thin)
+requires, and each copy is another place to omit a flag. Report that before checking flags.
+
+Then confirm that every remaining `up` and `run`, including those in repository scripts or wrappers
+the job calls, carries `--quiet-pull`, and that every explicit Compose `pull` carries `--quiet`, as
+required by [containerized-ci.md](containerized-ci.md#isolate-every-compose-stack). A single-line
+grep is only triage: commands may continue across `\` lines or YAML block scalars, carry global
+flags such as `-f`, `-p`, `--profile`, or `--project-directory` between `compose` and the
+subcommand, or hide `docker compose` behind a variable or alias. Review each match: on `run` the
+flag must precede the service name, otherwise Compose passes it to the container, and matches on
+subcommands such as `config`, `down`, or `logs` are not findings. Fix every remaining occurrence
+before reporting the job valid.
+
 For monorepos and parallel suites, exercise application-only, shared-package, lockfile, CI-wrapper, and global-config
 changes. Verify complete shard coverage, unique artifact names, fan-in over every required shard, and promotion of the
 same artifact that passed testing.
