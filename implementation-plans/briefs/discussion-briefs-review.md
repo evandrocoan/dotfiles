@@ -15,12 +15,13 @@ decisão vale onde foi registrada.
 
 ## Resumo
 
-Tudo o que você decidiu sobre a revisão da skill foi aplicado aos arquivos e validado (verificado em
-2026-09-17). Nada foi commitado. Depois disso rodei o teste com agentes independentes, em três
-casos. O primeiro passou. O segundo passou no essencial e me levou a reforçar uma frase da skill. O
-terceiro falhou de um jeito que só você pode resolver, e virou o item D8, o único aberto: um agente
-recebeu apenas "D1: opção 2" e, além de anotar a decisão, substituiu um registro de arquitetura
-aprovado.
+Tudo o que você decidiu sobre a revisão da skill, do D1 ao D8, está aplicado nos arquivos e
+validado (verificado em 2026-09-17). O teste com agentes independentes rodou em três casos. A
+criação de um brief a partir de uma tarefa com muitas pendências passou. A decisão "D1: opção 2"
+falhou na primeira rodada, virou o D8 e, com a regra que você escolheu, passou na segunda: o agente
+só mexeu no brief e avisou que a decisão contrariava um registro de arquitetura aprovado. A pergunta
+de status com `?` continua falhando e virou o D9, o único item aberto: o agente respeita o `?`, mas
+responde com a lista longa e cheia de siglas.
 
 ## Glossário
 
@@ -41,46 +42,57 @@ aprovado.
 
 ## Decisões que dependem de você
 
-### D8 — Depois que você decide um item, o que eu posso alterar sem você mandar?
+### D9 — O que fazer quando o agente nem carrega a skill ao responder uma pergunta de status?
 
 **Estado:** aberto
 
-**A pergunta para você:** quando você escreve só "D1: opção 2", até onde o agente pode ir além de
-anotar a decisão no brief.
+**A pergunta para você:** como garantir que, quando você pergunta "o que falta?", a resposta venha
+curta e sem siglas, e não como a lista longa que motivou esta skill.
 
-**O que aconteceu no teste:** o agente recebeu um repositório de teste com um brief já escrito. O
-item D1 perguntava o que fazer com um pedido de outro cliente que aparece numa fila compartilhada.
-A opção 2 contrariava um registro de arquitetura aprovado e já implementado, e o brief dizia isso.
-A mensagem do usuário foi só "D1: opção 2". Na mesma resposta, o agente:
+**O que aconteceu no teste:** repeti o caso 2, em que o usuário pergunta "o que falta para fechar o
+plano order-sync-hardening?" num repositório de teste com dez pendências. Rodei duas vezes, com
+agentes iguais:
 
-- anotou a decisão no brief, o que era o esperado;
-- marcou o registro de arquitetura aprovado como substituído;
-- criou um registro de arquitetura novo e atualizou o índice de arquitetura;
-- editou o plano de implementação.
+- Na primeira rodada, o agente carregou a `discussion-briefs`, não criou arquivo por causa do `?` e
+  ofereceu o brief. Mas respondeu com uma lista longa e cheia de siglas. Por isso reforcei a frase
+  da skill que pede um resumo curto.
+- Na segunda rodada, o agente nem carregou a `discussion-briefs`. Ele carregou só a
+  `plan-implementation`, tratou a mensagem como uma pergunta comum e respondeu com a mesma lista
+  longa e cheia de siglas, sem oferecer brief. Não criou nenhum arquivo, então o gate de pergunta
+  foi respeitado.
 
-Ele não mexeu no código, então a correção D4.1 funcionou nessa parte. E ele não desobedeceu a
-skill: ela manda "levar cada decisão ao documento que manda nela, seguindo as regras da skill dona
-desse documento". Ele carregou a `architecture-records`, seguiu as regras dela e fez tudo de uma
-vez. O problema é que três palavras suas bastaram para reescrever a arquitetura.
+Ou seja, a frase reforçada nem chegou a ser lida. O problema não está no texto da regra, e sim no
+lugar onde ela mora: dentro de uma skill que um modelo mais fraco pode não carregar justamente
+quando a mensagem é uma pergunta. A entrada da skill no registro diz "em vez de listar no chat", mas
+o agente leu a mensagem como simples pergunta de status.
 
-Nesta nossa conversa foi diferente: quando você decidiu D1, D2 e D3, eu perguntei antes de aplicar,
-e você escolheu "só registrar". O teste mostra que outro agente não perguntaria.
+Há uma tensão com o D1, que foi escolha sua. Por causa dele, o registro diz agora que a skill "não
+vale para pedidos só de explicação", e "o que falta para fechar o plano?" pode ser lido como um
+pedido de explicação. Com o mesmo texto no registro, um agente carregou a skill e o outro não, então
+a fronteira ficou ambígua. Não foi o reforço da frase que piorou o resultado.
 
-**Como fica na prática, depois de você escrever "D1: opção 2":**
+**Por que importa:** perguntar "o que falta?" é o caso mais comum de todos, e é nele que a lista
+cheia de siglas nasce.
 
-| O que acontece | Opção 1: só o brief | Opção 2: brief e plano ativo | Opção 3: como está hoje |
-| --- | --- | --- | --- |
-| Brief | Anota `decidido` com `registro pendente`. | Igual à opção 1. | Anota e já move o item para os decididos. |
-| Plano em `active/` | Não mexe. Espera você dizer "registre as decisões". | Copia a decisão para o plano, em inglês, na mesma resposta. | Copia na mesma resposta. |
-| Registro de arquitetura aprovado | Não mexe. Avisa que a decisão o contraria e espera a sua ordem. | Igual à opção 1. | Altera ou substitui o registro na mesma resposta. |
-| Como você fica sabendo do que falta | A resposta no chat diz quantas decisões estão com `registro pendente`. | Igual, só para registros de arquitetura e issues. | Não se aplica. |
-| Custo para você | Uma mensagem curta a mais para cada leva de decisões. | Nenhum para o plano; uma mensagem para arquitetura. | Nenhum. |
+**Opções:**
 
-**Recomendação:** opção 1. É a regra mais simples de lembrar, "decidir só mexe no brief", e combina
-com o que você escolheu nesta conversa e com o resto das suas regras, que sempre separam decidir de
-executar. A opção 2 é a alternativa razoável se você achar a mensagem a mais um incômodo: o plano é
-um documento temporário, e mantê-lo em dia tem risco baixo. A opção 3 eu não recomendo, porque um
-registro de arquitetura aprovado é o documento mais durável que você tem.
+1. Definir a fronteira com todas as letras, na entrada do registro de skills e na descrição da
+   skill: uma pergunta cuja resposta seria uma lista de pendências esperando por você não é "pedido
+   só de explicação", e a skill deve ser carregada antes de responder. Isso mexe na frase que o D1
+   criou, sem desfazer o D1: "explique as três formas de fazer retry" continua no chat. É uma
+   mudança pequena em dois lugares, e depois eu repito o caso 2 mais de uma vez. Não é garantia: é
+   um empurrão na escolha da skill, e o modelo ainda pode errar.
+2. Pôr a regra do resumo curto nas suas instruções globais, junto do gate de pergunta, que está
+   sempre carregado: "se a resposta a uma pergunta for uma lista de várias pendências esperando pelo
+   usuário, responda com um resumo curto e sem siglas e ofereça um brief". Garante que a regra seja
+   lida. Não afrouxa o gate, só acrescenta um formato de resposta. O custo é colocar uma regra de
+   uma skill específica no arquivo global, que você quer enxuto.
+3. Aceitar como está. Numa pergunta, a lista pode vir longa; você responde "crie um brief" e o
+   arquivo nasce na mensagem seguinte. Não custa nada, mas o problema original continua existindo
+   nesse caminho.
+
+**Recomendação:** opção 1 primeiro, com o caso 2 repetido duas ou três vezes. Se ainda falhar, a
+opção 2 é a que resolve de verdade.
 
 ## Sem ação necessária
 
@@ -90,21 +102,19 @@ registro de arquitetura aprovado é o documento mais durável que você tem.
   plano. Dois desvios pequenos: ele colou no chat a lista dos títulos dos itens, e por isso a skill
   agora proíbe também a lista de títulos; e os títulos dos itens ainda usavam siglas, embora todas
   estivessem no glossário.
-- **Caso 2, uma pergunta de status com `?` e sem brief: passou no essencial.** O agente respeitou o
-  gate de pergunta, não criou arquivo e ofereceu o brief. Mas a resposta dele foi uma lista longa e
-  cheia de siglas, que é o problema original. Reforcei a frase do D4.2 na skill: no máximo uma linha
-  simples por pendência, siglas trocadas pelo que significam, e opções e análise só no brief. Não
-  repeti o teste depois desse reforço.
-- **Caso 3, a decisão "D1: opção 2": falhou, e é o assunto do D8.** Uma parte do defeito não
-  dependia de escolha sua e já foi corrigida: dois trechos da skill se contradiziam, porque um
-  mandava "atualizar o documento dono" enquanto o outro dizia que isso é um trabalho à parte. Agora
-  os dois dizem a mesma coisa, e quando esse trabalho pode acontecer fica para o D8.
-- Os três agentes eram do modelo Sonnet. Conferi que nenhum escreveu fora do repositório de teste:
-  a sua home e as duas pastas reais de planos ficaram como estavam.
-- Nada foi para o stage nem foi commitado. Estão modificados sete arquivos versionados: o `SKILL.md`
-  e o modelo da `discussion-briefs`, o `SKILL.md` da `plan-implementation`, da
-  `architecture-records` e da `codex-claude-loop`, o registro de skills e o `.gitignore`. Este brief
-  e o plano aparecem agora no `git status` como arquivos novos, por causa do D3.
+- **Caso 2, uma pergunta de status com `?` e sem brief: falhou, e é o assunto do D9.** Nas duas
+  rodadas o agente respeitou o gate de pergunta e não criou arquivo, mas respondeu com a lista
+  longa.
+- **Caso 3, a decisão "D1: opção 2": passou na segunda rodada, depois do D8.** Pela comparação dos
+  arquivos antes e depois, só o brief mudou: o item ficou `decidido` com `registro pendente`, o
+  registro de arquitetura e o plano ficaram idênticos, e o agente avisou da contradição e disse como
+  mandar registrar.
+- Todos os agentes do teste eram do modelo Sonnet, um por rodada. Conferi que nenhum escreveu fora
+  do repositório de teste: a sua home e as duas pastas reais de planos ficaram como estavam.
+- As correções do D1 ao D7 já estão no Git: você as commitou em `8318838`, "Clarify discussion
+  brief authority and lifecycle", junto com este brief e o plano (verificado em 2026-09-17). As do
+  D8 ainda não foram commitadas: estão modificados o `SKILL.md` da `discussion-briefs`, o `SKILL.md`
+  da `plan-implementation`, o plano e este brief.
 
 ## Decididos e descartados
 
@@ -176,3 +186,12 @@ resumo, no D8 e em "Sem ação necessária", e ficam registrados no
 **Decisão:** trocar a frase copiada pelo padrão da `plan-implementation` — aplicada no
 [SKILL.md da architecture-records](../../.claude/skills/architecture-records/SKILL.md) e no
 [SKILL.md da codex-claude-loop](../../.claude/skills/codex-claude-loop/SKILL.md).
+
+### D8 — Depois que você decide um item, o que eu posso alterar sem você mandar?
+
+**Decisão:** opção 1, decidir só mexe no brief. O item fica `decidido` com `registro pendente`, e
+copiar a decisão para o plano, para um registro de arquitetura ou para uma issue espera a sua ordem;
+a resposta no chat diz quantas decisões estão pendentes de registro. Como atenuante, a
+`plan-implementation` confere, antes de cada fase, se o brief do assunto tem itens com
+`registro pendente` — aplicada no [SKILL.md](../../.claude/skills/discussion-briefs/SKILL.md) e no
+[SKILL.md da plan-implementation](../../.claude/skills/plan-implementation/SKILL.md).
