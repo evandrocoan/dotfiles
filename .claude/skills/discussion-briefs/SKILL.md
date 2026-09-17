@@ -135,13 +135,18 @@ about an option are not decisions. Name each newly recorded decision in the chat
 misreading is caught at once. Mark an item that waited on other people or on access `resolvido`
 when the dependency arrives; it needs no user decision.
 
-Promote each decision by recording it in its authoritative owner: the implementation plan, the
-architecture record, or the issue. Promotion is work in its own right. It follows the owner's skill
-and language rules, including any plan, review, or user instruction that skill requires, and it
-never includes implementing the decision. Until the owner records it, keep the item `decidido` with
-the marker `registro pendente` and the reason. Treat a plan already under `completed/` as no owner.
-When no owner exists yet, say so in the item; `plan-implementation` absorbs the decided items when
-a plan on the subject is created.
+A decision changes only the brief. In the turn that states it, mark the item `decidido` with the
+marker `registro pendente`, and change no plan, architecture record, issue, or code. When the
+decision contradicts an approved plan or record, say so in the chat reply and wait.
+
+Promote a decision only on the user's explicit instruction to record it, such as "registre as
+decisões". Promotion records the decision in its authoritative owner: the implementation plan, the
+architecture record, or the issue. It follows the owner's skill and language rules, including any
+plan or review that skill requires, and it never includes implementing the decision. When the
+decision contradicts an approved record, report that and let the record's own skill decide how the
+record changes. Treat a plan already under `completed/` as no owner. When no owner exists yet, say
+so in the item; `plan-implementation` absorbs the decided items when the user asks for a plan on
+the subject.
 
 Once the owner records a decision, reduce the brief item to the decision in one or two sentences
 plus a link to where it was recorded, and move it to the template's closing section so that open
@@ -151,7 +156,8 @@ number is never given to another item.
 ## Keep chat a projection
 
 After creating or updating a brief, the chat message gives the link to the file, how many items
-remain open, what changed in this round, and the one decision that would unblock the most. Do not
+remain open, how many decided items still carry `registro pendente` and the instruction that
+records them, what changed in this round, and the one decision that would unblock the most. Do not
 paste the items or a list of their titles into chat unless the user asks.
 
 ## Close the brief

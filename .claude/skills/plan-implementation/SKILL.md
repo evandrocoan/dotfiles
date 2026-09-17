@@ -304,9 +304,12 @@ expensive local resources, or causal dependency. Never parallelize merely to mak
 faster.
 
 When a persistent plan exists, inspect its current step, prerequisites, and relevant scope before
-starting each new phase; do not reread the entire file solely because the phase changed. After
-context compaction, interruption, session restart, material replan, or agent handoff, reread the
-entire plan before acting. Give every delegated agent the plan path and the exact step it owns.
+starting each new phase; do not reread the entire file solely because the phase changed. When a
+brief on the same subject exists under `briefs/`, also check it for decided items still marked
+`registro pendente`. Report them to the user, and do not start a phase that such a decision affects
+until the user instructs its recording and the plan carries it. After context compaction,
+interruption, session restart, material replan, or agent handoff, reread the entire plan before
+acting. Give every delegated agent the plan path and the exact step it owns.
 
 ## Keep planning state in the correct place
 
