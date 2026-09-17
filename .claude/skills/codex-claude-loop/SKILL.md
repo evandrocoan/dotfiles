@@ -20,8 +20,9 @@ authorize new work.
    not use a second worktree or a remote repository as a substitute for it.
 2. Sol chooses one task-specific Markdown path inside that repository, such as
    `.agent-handoff/<task-id>.md`. Do not overwrite another task's file or write a machine-specific
-   checkout path into the skill or a tracked handoff file. Follow the repository's rules for
-   tracking or ignoring the file; do not stage or commit it by default.
+   checkout path into the skill or a tracked handoff file. Do not commit the handoff file merely
+   because it exists or to share it between sessions. Follow the user's requested Git outcome and
+   the repository convention.
 3. Sol references an existing ready plan when one exists; otherwise Sol prepares the plan required
    by the task's governing instructions. Record the objective, scope, acceptance criteria, ordered
    implementation work, and decisions already made. Do not replan or repeat a review solely to

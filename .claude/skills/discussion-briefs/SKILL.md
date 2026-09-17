@@ -1,12 +1,12 @@
 ---
 name: discussion-briefs
 description: >-
-  Write and iteratively refine a Portuguese working document that explains several open points
-  the user must understand, discuss, or decide, instead of listing them in chat. Use when a status
-  report, plan, review, or investigation leaves several pending decisions or points that need
-  explanation, when the user asks for such a document, or when refining an existing brief. Do not
-  use for a single quick question, for the implementation plan itself, or for a durable
-  architecture record.
+  Write and iteratively refine a Portuguese working document that explains open points waiting on
+  the user, instead of listing them in chat. Use when work, a status report, a plan, or a review
+  leaves several pending user decisions, authorizations, or external dependencies, when one such
+  point needs more than a short explanation, when the user asks for a brief, or when refining an
+  existing brief. Do not use for an explanation-only request, a single quick question, the
+  implementation plan itself, or a durable architecture record.
 ---
 
 # Discussion briefs
@@ -18,24 +18,41 @@ the current state of the discussion, never its history.
 
 ## When to write a brief
 
-Write or update a brief instead of a chat list when either condition applies:
+A point belongs in a brief when it is waiting on the user: a decision, an authorization, or a
+dependency on other people or on access. Write or update a brief instead of a chat list when
+either condition applies:
 
-- several points need the user's decision, authorization, or understanding; or
-- a point cannot be explained in a sentence or two to someone who has not followed the work.
+- several such points are pending; or
+- one such point cannot be explained in a sentence or two to someone who has not followed the work.
 
-Answer a single quick question, a routine progress update, or a yes-or-no confirmation directly in
-chat. Keep one brief per subject and keep updating it while the subject remains open. Add new
-pending points on that subject to the existing brief rather than to chat or to a second file.
+Write one whenever the user asks for a brief, whatever the subject. Answer an explanation-only
+request, a single quick question, a routine progress update, or a yes-or-no confirmation directly
+in chat. A subagent or reviewer that reports to a calling agent never creates or edits a brief; it
+reports its findings, and the caller decides.
+
+Keep one brief per subject and keep updating it while the subject remains open. Add new pending
+points on that subject to the existing brief rather than to chat or to a second file.
+
+When a brief is warranted but the turn is question-only, do not create it, and do not put the
+brief's content in chat instead. Answer with a short summary: how many points are pending, at most
+one plain-language line for each with every label replaced by what it means, and the one that
+unblocks the most. Leave options, evidence, and analysis for the brief, and offer to write it in a
+later turn.
 
 ## What a brief is not
 
 The brief is a working document written in Brazilian Portuguese. It is not an architecture index,
 plan, ADR, or decision record, and it is not an implementation plan, so the English-only rule for
 architecture artifacts does not apply to it. Never title or describe it as a "registro de decisão".
+Of the `documentation` skill, only the Markdown formatting rules apply: a brief takes no table of
+contents and no commit-pinned evidence links.
 
-It stays outside the authority order of approved decision, persistent plan, task plan, and chat.
-It never replaces a plan or record that the task's governing instructions require. When the brief
-disagrees with its plan or record, correct the brief.
+The brief ranks below every layer of the authority order that `plan-implementation` defines, and it
+is never an authority. It never replaces a plan or record that the task's governing instructions
+require. A user decision noted in the brief draws its authority from the user's statement, not from
+the brief. The item keeps the marker `registro pendente` until its owner records the decision;
+never overwrite that decision with the owner's older text. In every other disagreement with a plan
+or record, correct the brief.
 
 Nothing in a brief authorizes work. An item describing work the agent could do, a recorded
 decision, or a note left in the file does not authorize implementation, external mutation, or a
@@ -51,15 +68,20 @@ implementation-plans/briefs/<topic-slug>.md             repository-backed work
 ~/.claude/implementation-plans/briefs/<topic-slug>.md   no repository owns the task
 ```
 
-When the repository defines another implementation-plan location, use a `briefs/` directory beside
-its plans. Reuse the slug of the plan that the brief feeds when there is one. When establishing
-`briefs/`, add a sentence to that root's `README.md` defining it as Portuguese working documents
-that hold no execution authority. When that README does not exist, first create it as
-`plan-implementation` requires, so that skill's definitions are never left missing.
+When the repository keeps its plans elsewhere, put `briefs/` beside that location's lifecycle
+directories. When the plan authority is not a directory, such as an issue or merge request, use the
+default root above. Never place a brief inside an architecture directory, where the English-only
+rule would claim it. Reuse the slug of the plan that the brief feeds when there is one.
 
-Follow the repository's tracking rules. Do not stage or commit the brief by default, and report
-whether it is tracked, untracked, or ignored. Never use `/tmp` or another automatically cleaned
-location. Use a remote document or artifact instead of the local file only when the user asks.
+When establishing `briefs/`, add a sentence to that root's `README.md` defining it as Portuguese
+working documents that hold no execution authority, and tell the user in chat that you edited it.
+When that README does not exist, first create it as `plan-implementation` requires, so that skill's
+definitions are never left missing.
+
+Do not commit the brief merely because it exists. Follow the user's requested Git outcome and the
+repository convention. Report whether the brief is tracked, untracked, or ignored. Never use `/tmp`
+or another automatically cleaned location. Use a remote document or artifact instead of the local
+file only when the user asks.
 
 ## Write each item for a reader outside the work
 
@@ -76,10 +98,11 @@ Assume the user opens an item without the plan, the code, or the earlier convers
   and its reason. Keep the recommendation visibly separate from the user's decision.
 - Order items so the one that unblocks the most comes first.
 
-Reuse the identifiers of the governing plan or record, such as a stage or requirement ID, so the
-brief maps back to it; otherwise number items sequentially, such as `D1`. Never renumber an item or
-reuse an identifier. Give every identifier, acronym, component name, and merge-request or issue
-number used in the brief a one-line plain-language definition in its glossary.
+Number items sequentially, such as `D1`. Never renumber an item or give its number to another item.
+When an item corresponds to a stage or requirement of the governing plan or record, cite that
+identifier inside the item's text together with what it means. Give every such identifier, acronym,
+component name, and merge-request or issue number used in the brief a one-line plain-language
+definition in its glossary. The brief's own item numbers need no glossary entry.
 
 State as fact only what you verified in the current sources, and mark the rest `não verificado`.
 A brief outlives the turn that wrote it: write the verification date beside a volatile fact, such
@@ -98,31 +121,41 @@ Treat a note or question that the user wrote inside the brief as a request to fi
 remove the note once the text answers it.
 
 In a question-only turn, do not edit the brief. Answer in chat, show the rewritten text you propose
-when the item must change, and say that the brief is pending that update. Apply pending updates at
-the next instruction that permits edits. When you create a brief, tell the user once that an
-instruction such as "explique melhor o D2 no documento", or a doubt written inside the file
-followed by "refine o brief", updates the file in the same turn.
+when the item must change, and end the reply with the list of every item that still has an
+unapplied rewrite. Apply pending rewrites only at the next non-question instruction about the brief
+or its subject, never as a side effect of unrelated work. When you create a brief, tell the user
+once that an instruction such as "explique melhor o D2 no documento", or a doubt written inside the
+file followed by "refine o brief", updates the file in the same turn.
 
 ## Record decisions and promote them
 
 Mark an item `decidido` only from the user's explicit statement, given in chat or in an edit to the
 brief that the user asked you to process. Your recommendation, the user's silence, and a question
 about an option are not decisions. Name each newly recorded decision in the chat reply so that a
-misreading is caught at once.
+misreading is caught at once. Mark an item that waited on other people or on access `resolvido`
+when the dependency arrives; it needs no user decision.
 
-Promote each decision to its authoritative owner, such as the implementation plan, architecture
-record, issue, code, or configuration, under that owner's skill and language rules. Then reduce the
-brief item to the decision in one or two sentences plus a link to where it was recorded, and move
-it to the template's closing section so that open items stay on top. When no owner exists yet, say
-so in the item; a later plan must absorb that decision before work depends on it.
+Promote each decision by recording it in its authoritative owner: the implementation plan, the
+architecture record, or the issue. Promotion is work in its own right. It follows the owner's skill
+and language rules, including any plan, review, or user instruction that skill requires, and it
+never includes implementing the decision. Until the owner records it, keep the item `decidido` with
+the marker `registro pendente` and the reason. Treat a plan already under `completed/` as no owner.
+When no owner exists yet, say so in the item; `plan-implementation` absorbs the decided items when
+a plan on the subject is created.
+
+Once the owner records a decision, reduce the brief item to the decision in one or two sentences
+plus a link to where it was recorded, and move it to the template's closing section so that open
+items stay on top. Move a dropped item there too, reduced to one line with the reason, so that its
+number is never given to another item.
 
 ## Keep chat a projection
 
 After creating or updating a brief, the chat message gives the link to the file, how many items
 remain open, what changed in this round, and the one decision that would unblock the most. Do not
-paste the items into chat unless the user asks.
+paste the items or a list of their titles into chat unless the user asks.
 
 ## Close the brief
 
-When every item is decided or dropped and each decision is promoted, set the brief's state to
-`concluído` and tell the user. Keep the file; remove it only when the user asks.
+When every item is decided, resolved, or dropped and each decision is recorded in its owner, set
+the brief's state to `concluído` and tell the user. Keep the file; remove it only when the user
+asks.

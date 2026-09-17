@@ -1,28 +1,33 @@
 # Brief de discussão: <assunto>
 
 **Estado:** em discussão | concluído
-**Alimenta:** <link para o plano, registro de arquitetura ou issue que recebe as decisões, ou
-`nenhum ainda`>
+
+**Alimenta:**
+
+- [<plano, registro de arquitetura ou issue que recebe as decisões>](<caminho relativo ou URL>)
+- <um link Markdown por linha; escreva `nenhum ainda` quando nada recebe as decisões>
 
 Documento de trabalho: explica os pontos em aberto e resume o que já foi decidido. Não substitui o
-plano de implementação nem o registro de arquitetura; cada decisão vale onde foi registrada.
+plano de implementação nem o registro de arquitetura, e nada escrito aqui autoriza trabalho; cada
+decisão vale onde foi registrada.
 
 ## Resumo
 
-<Em poucas linhas: qual é o assunto, em que pé está, quantos pontos dependem de você e qual decisão
-destrava mais coisas.>
+<Em poucas linhas: qual é o assunto, em que pé está e qual decisão destrava mais coisas. Escreva
+`não verificado` ao lado do que não foi conferido, e a data ao lado de um fato que muda, como em
+"a pipeline está verde (verificado em <data>)".>
 
 ## Glossário
 
 | Termo | O que é |
 | --- | --- |
-| <sigla, identificador, componente, MR ou issue> | <definição de uma linha em linguagem simples> |
+| <sigla, identificador do plano, componente, MR ou issue> | <definição de uma linha em linguagem simples> |
 
-## Decisões suas
+## Decisões que dependem de você
 
-### <ID> — <pergunta a decidir, em linguagem simples>
+### D1 — <pergunta a decidir, em linguagem simples>
 
-**Estado:** aberto | em discussão | decidido | descartado
+**Estado:** aberto | decidido
 
 **O que é:** <o componente e a situação concreta: o que acontece hoje e o que se observa, explicado
 para quem não acompanhou o trabalho>
@@ -36,13 +41,14 @@ para quem não acompanhou o trabalho>
 
 **Recomendação:** <opção recomendada e o motivo>
 
-**Decisão:** pendente
+**Decisão:** <inclua esta linha só quando houver decisão: o que você decidiu, em uma ou duas frases,
+seguido de `registro pendente` e do motivo enquanto o plano, o registro ou a issue não a recebeu>
 
 ## Trabalho que posso fazer com sua autorização
 
-### <ID> — <o que seria feito>
+### D2 — <o que seria feito>
 
-**Estado:** aberto | em discussão | decidido | descartado
+**Estado:** aberto | decidido
 
 **O que é:** <o que seria feito e o resultado esperado>
 
@@ -50,13 +56,14 @@ para quem não acompanhou o trabalho>
 
 **Custo e risco:** <esforço, efeitos externos e o que pode dar errado>
 
-**Decisão:** pendente
+**Decisão:** <inclua esta linha só quando houver decisão: fazer, não fazer ou adiar, seguido de
+`registro pendente` e do motivo enquanto o plano, o registro ou a issue não a recebeu>
 
 ## Depende de outras pessoas ou de acesso
 
-### <ID> — <o que falta>
+### D3 — <o que falta>
 
-**Estado:** aberto | em discussão | decidido | descartado
+**Estado:** aberto | resolvido
 
 **O que é:** <o que falta e por que não posso resolver sozinho>
 
@@ -70,8 +77,10 @@ para quem não acompanhou o trabalho>
 
 - <ponto que pode parecer pendente e por que não exige ação>
 
-## Decididos
+## Decididos e descartados
 
-### <ID> — <pergunta que foi decidida>
+### D4 — <pergunta que foi decidida>
 
 **Decisão:** <o que você decidiu, em uma ou duas frases> — registrada em <link>
+
+- D5 — descartado: <motivo em uma linha>

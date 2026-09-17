@@ -26,6 +26,8 @@
 !/implementation-plans/active/**
 !/implementation-plans/completed/
 !/implementation-plans/completed/**
+!/implementation-plans/briefs/
+!/implementation-plans/briefs/**
 
 /.local/
 /.local/share/
