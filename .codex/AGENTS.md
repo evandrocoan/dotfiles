@@ -217,6 +217,10 @@ of choosing one silently.
 - `dependency-decisions`: Select, add, replace, upgrade, remove, or install any
   library, package, framework, service, or system dependency. Never install a
   missing dependency automatically.
+- `discussion-briefs`: Write and refine a Portuguese working document for several
+  open points the user must understand, discuss, or decide, instead of listing them
+  in chat. It never replaces an implementation plan or architecture record and
+  authorizes no work.
 - `docker`: Create, edit, review, build, run, or troubleshoot Dockerfiles, Compose,
   BuildKit/Buildx, container-backed CI, images, services, volumes, networks,
   healthchecks, or container runtime behavior.
