@@ -1,6 +1,6 @@
 # Implementation plan: apply the reviewed corrections to the discussion-briefs skill
 
-**Status:** Blocked on the user decision recorded as D9 in the brief
+**Status:** Complete
 **Mode:** Plan and execute
 **Risk:** Non-trivial local and reversible
 
@@ -49,7 +49,7 @@ Claude, Codex, and Copilot, and D4.1 and D5.7 only tighten the new skill.
 | D5.10 | Replace the stage-or-commit sentence with the wording `plan-implementation` uses for plans. |
 | D7 | Replace the copied Git sentence in `architecture-records` and in `codex-claude-loop` with the same pattern: name the artifact-specific temptation, then defer to the user's requested Git outcome and the repository convention. |
 | D8 | A decision changes only the brief: the item becomes `decidido` with `registro pendente`, and no plan, architecture record, issue, or code changes in that turn. Promotion happens only on the user's instruction, and the chat reply says how many decisions still carry `registro pendente`. As mitigation, `plan-implementation` checks a same-subject brief for such items before each phase. Raised by forward-test case C; the user chose option 1 and then instructed its recording and application. |
-| D9 | Pending user decision: how to make the short, label-free answer reach a question-only turn when the agent does not load `discussion-briefs` at all. Raised by the case B re-test. |
+| D9 | Define the routing boundary in the registry entry, the frontmatter description, and the skill body: a question whose answer would list several points waiting on the user is not an explanation-only request, so `discussion-briefs` loads before the answer. This refines the D1 sentence without undoing it. Then repeat case B more than once. Raised by the case B re-test; the user chose option 1 and instructed its application. |
 | D6 | After the corrections, forward-test the skill with independent agents, starting with three cases: work ending with several pending points, a status question with no brief, and a decision whose owner is an approved architecture record. |
 
 ## Evidence and assumptions
@@ -72,7 +72,9 @@ Claude, Codex, and Copilot, and D4.1 and D5.7 only tighten the new skill.
 | completed | Record in the brief where each decision now lives and collapse its decided items. | Decided items collapsed with links to this plan and the changed files; D8 is the only open item. |
 | completed | Follow-up for D8: obtain the follow-up review, rewrite the promotion rule and the chat projection in `discussion-briefs`, and add the per-phase brief check to `plan-implementation`. | Advisor findings recorded below; validator passes on both packages; diff limited to those passages. |
 | completed | Repeat forward-test case B and case C on fresh fixtures. | Case C passed; case B failed again for a different reason. Observations under Completion. |
-| pending | Resolve the case B finding once the user decides D9 in the brief, then repeat case B more than once. | Blocked: needs the user's decision. |
+| completed | Follow-up for D9: define the boundary in the registry entry, the frontmatter, and the skill body. | Validator passes on the package and its symlink; diff limited to those three passages. |
+| completed | Repeat forward-test case B three times on a fresh fixture. | Three of three runs passed; observations under Completion. |
+| completed | Close: collapse D9 in the brief, fix the brief's links, move this plan to `completed/`. | The brief is `concluído`, links to this plan under `completed/`, and has no open item and no `registro pendente` marker. |
 | pending | Close with a focused author pass. | Verdict recorded below. |
 
 ## Review and replan
@@ -92,6 +94,10 @@ Claude, Codex, and Copilot, and D4.1 and D5.7 only tighten the new skill.
   the promotion section states that a decision changes only the brief, that promotion needs the
   user's explicit instruction, and that a contradiction with an approved record is reported, not
   promoted; the chat projection counts items with `registro pendente`.
+- Follow-up review for D9: the advisor's closing review of the D8 follow-up already covered this
+  route and was applied: option 1 must define the boundary with D1 instead of only adding
+  questions as a trigger, because the registry said the skill is not for explanation-only
+  requests and a status question can be read as one.
 - Rejected findings: None.
 - Replan if: an edit would relax a global gate or change another skill beyond the planned
   sentences; the forward-test shows a defect that needs a user decision; the user's files changed
@@ -128,17 +134,25 @@ Claude, Codex, and Copilot, and D4.1 and D5.7 only tighten the new skill.
   `plan-implementation`, never loaded `discussion-briefs`, and answered with the long list full of
   undefined labels without offering a brief. The reworded rule was therefore not exercised: the
   defect is routing in question-only turns, not the rule's wording. Recorded as D9 in the brief.
+- Re-test after D9, case B, three sequential runs: all passed. In every run the agent loaded
+  `discussion-briefs`, left the fixture byte-identical, answered with six pending points in one
+  line each, named the one that unblocks the most, and offered the brief for a later turn. Two
+  replies still carried a few labels next to their explanation; the third carried none.
 - Isolation: no test agent wrote outside its fixture; both real plan roots and the home
   repository status were checked after the runs.
 - Delivery read-back: Not applicable.
 - Focused author pass: Passed for the applied decisions: each decision row maps to a sentence in
   its owning file, the sibling-skill diffs contain only the planned sentences, and every link in
-  the brief resolves. The brief links to this plan under `active/`; fix that link when the plan
-  moves to `completed/`. The D8 follow-up diff was checked as well: the promotion section, the chat
+  the brief resolves. The brief's links to this plan were updated to `completed/` when the plan
+  moved. The D8 follow-up diff was checked as well: the promotion section, the chat
   projection, the template's `Decisão` line, and the phase-inspection clause in
   `plan-implementation` all say that a decided item keeps `registro pendente` until the user
-  instructs its recording. The pass does not cover D9, which is still open.
-- Unresolved limitations: in a question-only turn a weaker model may not load `discussion-briefs`
-  and then answers with the long labelled list (D9); the forward-test used one model, with one run
-  for case A and two runs each for cases B and C.
-- Verdict: Pending.
+  instructs its recording. The D9 diff was checked too: the registry entry, the frontmatter, and
+  the body all define a status question that lists pending points as in scope, and the
+  explanation-only exclusion from D1 is still stated in all three.
+- Unresolved limitations: skill routing stays a model judgment, so three passing runs show a
+  tendency and not a guarantee; some labels may still appear beside their explanation in a
+  question-only summary; the forward-test used one model, with one run for case A, two for case C,
+  and five for case B across its three wordings; the over-trigger direction of the D9 boundary,
+  such as an explanation-only request loading the skill, was not tested.
+- Verdict: Passed.

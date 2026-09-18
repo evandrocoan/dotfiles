@@ -220,8 +220,10 @@ of choosing one silently.
 - `discussion-briefs`: Write and refine a Portuguese working document for open
   points waiting on the user, such as pending decisions, authorizations, or external
   dependencies, instead of listing them in chat, or when the user asks for a brief.
-  Not for explanation-only requests. It never replaces an implementation plan or
-  architecture record and authorizes no work.
+  Load it also before answering a question, such as a status question about what is
+  still missing, whose answer would list several such points; the skill defines the
+  short reply for that case. Not for explanation-only requests. It never replaces an
+  implementation plan or architecture record and authorizes no work.
 - `docker`: Create, edit, review, build, run, or troubleshoot Dockerfiles, Compose,
   BuildKit/Buildx, container-backed CI, images, services, volumes, networks,
   healthchecks, or container runtime behavior.

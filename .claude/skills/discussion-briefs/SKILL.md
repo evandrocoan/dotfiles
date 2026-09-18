@@ -5,8 +5,10 @@ description: >-
   the user, instead of listing them in chat. Use when work, a status report, a plan, or a review
   leaves several pending user decisions, authorizations, or external dependencies, when one such
   point needs more than a short explanation, when the user asks for a brief, or when refining an
-  existing brief. Do not use for an explanation-only request, a single quick question, the
-  implementation plan itself, or a durable architecture record.
+  existing brief. Also use before answering a question, such as a status question about what is
+  still missing, whose answer would list several such points; that is not an explanation-only
+  request. Do not use for an explanation-only request, a single quick question, the implementation
+  plan itself, or a durable architecture record.
 ---
 
 # Discussion briefs
@@ -27,8 +29,10 @@ either condition applies:
 
 Write one whenever the user asks for a brief, whatever the subject. Answer an explanation-only
 request, a single quick question, a routine progress update, or a yes-or-no confirmation directly
-in chat. A subagent or reviewer that reports to a calling agent never creates or edits a brief; it
-reports its findings, and the caller decides.
+in chat. A question whose answer would list several points waiting on the user, such as "o que
+falta para fechar isso?", is not an explanation-only request: this skill applies to it through the
+question-only rule below. A subagent or reviewer that reports to a calling agent never creates or
+edits a brief; it reports its findings, and the caller decides.
 
 Keep one brief per subject and keep updating it while the subject remains open. Add new pending
 points on that subject to the existing brief rather than to chat or to a second file.
