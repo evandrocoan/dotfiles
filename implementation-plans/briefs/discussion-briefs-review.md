@@ -1,10 +1,10 @@
 # Brief de discussão: revisão independente da skill discussion-briefs
 
-**Estado:** em discussão
+**Estado:** concluído
 
 **Alimenta:**
 
-- [plano de implementação](../active/discussion-briefs-review.md), que recebeu as decisões em
+- [plano de implementação](../completed/discussion-briefs-review.md), que recebeu as decisões em
   inglês
 - o pacote da skill, em [SKILL.md](../../.claude/skills/discussion-briefs/SKILL.md) e no
   [modelo](../../.claude/skills/discussion-briefs/assets/discussion-brief-template.md)
@@ -15,13 +15,12 @@ decisão vale onde foi registrada.
 
 ## Resumo
 
-Tudo o que você decidiu sobre a revisão da skill, do D1 ao D8, está aplicado nos arquivos e
-validado (verificado em 2026-09-17). O teste com agentes independentes rodou em três casos. A
-criação de um brief a partir de uma tarefa com muitas pendências passou. A decisão "D1: opção 2"
-falhou na primeira rodada, virou o D8 e, com a regra que você escolheu, passou na segunda: o agente
-só mexeu no brief e avisou que a decisão contrariava um registro de arquitetura aprovado. A pergunta
-de status com `?` continua falhando e virou o D9, o único item aberto: o agente respeita o `?`, mas
-responde com a lista longa e cheia de siglas.
+Tudo o que você decidiu sobre a revisão da skill, do D1 ao D9, está aplicado nos arquivos, validado
+e registrado no plano (verificado em 2026-09-17). Não há item aberto nem decisão com
+`registro pendente`. O teste com agentes independentes terminou com os três casos passando: criar um
+brief a partir de uma tarefa com muitas pendências; responder a uma pergunta de status com um resumo
+curto, sem criar arquivo; e anotar uma decisão só no brief, sem tocar no registro de arquitetura. Os
+dois últimos só passaram depois das regras que você escolheu no D8 e no D9.
 
 ## Glossário
 
@@ -30,7 +29,7 @@ responde com a lista longa e cheia de siglas.
 | skill | Pacote de instruções que o agente carrega para um tipo de tarefa; o texto fica em `SKILL.md`. |
 | brief | Documento de trabalho em português criado pela skill `discussion-briefs`; este arquivo é um. |
 | modelo | O arquivo `discussion-brief-template.md`, que dá a estrutura inicial de todo brief. |
-| plano de implementação | Roteiro em inglês que eu sigo ao implementar; fica em `implementation-plans/active/` e é regido pela sua skill `plan-implementation`. |
+| plano de implementação | Roteiro em inglês que eu sigo ao implementar; fica em `implementation-plans/active/` enquanto está em andamento, vai para `completed/` quando termina, e é regido pela sua skill `plan-implementation`. |
 | registro de arquitetura | Documento durável, sempre em inglês, que guarda uma decisão de arquitetura aprovada; é regido pela sua skill `architecture-records`. |
 | `codex-claude-loop` | Sua skill que coordena duas sessões, uma do Codex e uma do Claude, por meio de um arquivo compartilhado, o arquivo de handoff. |
 | `documentation` | Sua skill com as regras para escrever qualquer arquivo Markdown. |
@@ -40,60 +39,6 @@ responde com a lista longa e cheia de siglas.
 | Sonnet | Modelo Claude menor que o desta sessão; usei-o nos testes porque o revisor se preocupava com o comportamento de modelos mais fracos. |
 | commit `e2fcf6a` | Seu commit "Add a shared workflow for discussion briefs", que contém a primeira versão da skill (verificado em 2026-09-17). |
 
-## Decisões que dependem de você
-
-### D9 — O que fazer quando o agente nem carrega a skill ao responder uma pergunta de status?
-
-**Estado:** aberto
-
-**A pergunta para você:** como garantir que, quando você pergunta "o que falta?", a resposta venha
-curta e sem siglas, e não como a lista longa que motivou esta skill.
-
-**O que aconteceu no teste:** repeti o caso 2, em que o usuário pergunta "o que falta para fechar o
-plano order-sync-hardening?" num repositório de teste com dez pendências. Rodei duas vezes, com
-agentes iguais:
-
-- Na primeira rodada, o agente carregou a `discussion-briefs`, não criou arquivo por causa do `?` e
-  ofereceu o brief. Mas respondeu com uma lista longa e cheia de siglas. Por isso reforcei a frase
-  da skill que pede um resumo curto.
-- Na segunda rodada, o agente nem carregou a `discussion-briefs`. Ele carregou só a
-  `plan-implementation`, tratou a mensagem como uma pergunta comum e respondeu com a mesma lista
-  longa e cheia de siglas, sem oferecer brief. Não criou nenhum arquivo, então o gate de pergunta
-  foi respeitado.
-
-Ou seja, a frase reforçada nem chegou a ser lida. O problema não está no texto da regra, e sim no
-lugar onde ela mora: dentro de uma skill que um modelo mais fraco pode não carregar justamente
-quando a mensagem é uma pergunta. A entrada da skill no registro diz "em vez de listar no chat", mas
-o agente leu a mensagem como simples pergunta de status.
-
-Há uma tensão com o D1, que foi escolha sua. Por causa dele, o registro diz agora que a skill "não
-vale para pedidos só de explicação", e "o que falta para fechar o plano?" pode ser lido como um
-pedido de explicação. Com o mesmo texto no registro, um agente carregou a skill e o outro não, então
-a fronteira ficou ambígua. Não foi o reforço da frase que piorou o resultado.
-
-**Por que importa:** perguntar "o que falta?" é o caso mais comum de todos, e é nele que a lista
-cheia de siglas nasce.
-
-**Opções:**
-
-1. Definir a fronteira com todas as letras, na entrada do registro de skills e na descrição da
-   skill: uma pergunta cuja resposta seria uma lista de pendências esperando por você não é "pedido
-   só de explicação", e a skill deve ser carregada antes de responder. Isso mexe na frase que o D1
-   criou, sem desfazer o D1: "explique as três formas de fazer retry" continua no chat. É uma
-   mudança pequena em dois lugares, e depois eu repito o caso 2 mais de uma vez. Não é garantia: é
-   um empurrão na escolha da skill, e o modelo ainda pode errar.
-2. Pôr a regra do resumo curto nas suas instruções globais, junto do gate de pergunta, que está
-   sempre carregado: "se a resposta a uma pergunta for uma lista de várias pendências esperando pelo
-   usuário, responda com um resumo curto e sem siglas e ofereça um brief". Garante que a regra seja
-   lida. Não afrouxa o gate, só acrescenta um formato de resposta. O custo é colocar uma regra de
-   uma skill específica no arquivo global, que você quer enxuto.
-3. Aceitar como está. Numa pergunta, a lista pode vir longa; você responde "crie um brief" e o
-   arquivo nasce na mensagem seguinte. Não custa nada, mas o problema original continua existindo
-   nesse caminho.
-
-**Recomendação:** opção 1 primeiro, com o caso 2 repetido duas ou três vezes. Se ainda falhar, a
-opção 2 é a que resolve de verdade.
-
 ## Sem ação necessária
 
 - **Caso 1 do teste, uma tarefa que termina com dez pendências: passou.** O agente achou a skill
@@ -102,24 +47,29 @@ opção 2 é a que resolve de verdade.
   plano. Dois desvios pequenos: ele colou no chat a lista dos títulos dos itens, e por isso a skill
   agora proíbe também a lista de títulos; e os títulos dos itens ainda usavam siglas, embora todas
   estivessem no glossário.
-- **Caso 2, uma pergunta de status com `?` e sem brief: falhou, e é o assunto do D9.** Nas duas
-  rodadas o agente respeitou o gate de pergunta e não criou arquivo, mas respondeu com a lista
-  longa.
+- **Caso 2, uma pergunta de status com `?` e sem brief: passou nas três rodadas finais, depois do
+  D9.** Antes disso falhou duas vezes: numa, o agente carregou a skill e respondeu com a lista
+  longa; na outra, nem carregou a skill. Nas três rodadas finais ele carregou a skill, não criou
+  arquivo, respondeu com seis pendências em uma linha cada, apontou a que mais destrava e ofereceu
+  o brief. Em duas delas sobraram algumas siglas acompanhadas da explicação; na terceira, nenhuma.
+  Não testei o sentido contrário do D9, isto é, se a skill passou a ser carregada à toa em pedidos
+  só de explicação.
 - **Caso 3, a decisão "D1: opção 2": passou na segunda rodada, depois do D8.** Pela comparação dos
   arquivos antes e depois, só o brief mudou: o item ficou `decidido` com `registro pendente`, o
   registro de arquitetura e o plano ficaram idênticos, e o agente avisou da contradição e disse como
   mandar registrar.
 - Todos os agentes do teste eram do modelo Sonnet, um por rodada. Conferi que nenhum escreveu fora
   do repositório de teste: a sua home e as duas pastas reais de planos ficaram como estavam.
-- As correções do D1 ao D7 já estão no Git: você as commitou em `8318838`, "Clarify discussion
-  brief authority and lifecycle", junto com este brief e o plano (verificado em 2026-09-17). As do
-  D8 ainda não foram commitadas: estão modificados o `SKILL.md` da `discussion-briefs`, o `SKILL.md`
-  da `plan-implementation`, o plano e este brief.
+- O que já está no Git (verificado em 2026-09-17): você commitou as correções do D1 ao D7 em
+  `8318838`, "Clarify discussion brief authority and lifecycle", e as do D8 em `922148f`, "Require
+  explicit promotion of discussion brief decisions". As do D9 ainda não foram commitadas: estão
+  modificados o `SKILL.md` da `discussion-briefs`, o registro de skills e este brief, e o plano
+  mudou da pasta `active/` para `completed/`.
 
 ## Decididos e descartados
 
 Todas as decisões abaixo estão registradas, em inglês, na tabela de decisões do
-[plano](../active/discussion-briefs-review.md) e aplicadas no arquivo indicado em cada linha.
+[plano](../completed/discussion-briefs-review.md) e aplicadas no arquivo indicado em cada linha.
 
 ### D1 — Quando eu devo criar um brief sem você pedir?
 
@@ -179,7 +129,7 @@ avisa no chat quando edita o `README.md` da pasta de planos — aplicada no
 
 **Decisão:** fazer, depois das correções. Rodei os três casos recomendados; os resultados estão no
 resumo, no D8 e em "Sem ação necessária", e ficam registrados no
-[plano](../active/discussion-briefs-review.md).
+[plano](../completed/discussion-briefs-review.md).
 
 ### D7 — Alinhar a frase sobre commit de duas outras skills
 
@@ -195,3 +145,11 @@ a resposta no chat diz quantas decisões estão pendentes de registro. Como aten
 `plan-implementation` confere, antes de cada fase, se o brief do assunto tem itens com
 `registro pendente` — aplicada no [SKILL.md](../../.claude/skills/discussion-briefs/SKILL.md) e no
 [SKILL.md da plan-implementation](../../.claude/skills/plan-implementation/SKILL.md).
+
+### D9 — O que fazer quando o agente nem carrega a skill ao responder uma pergunta de status?
+
+**Decisão:** opção 1, definir a fronteira com todas as letras. Uma pergunta cuja resposta seria uma
+lista de pendências esperando por você, como "o que falta para fechar isso?", não é pedido só de
+explicação, e a skill deve ser carregada antes de responder. Isso ajustou a frase criada pelo D1 sem
+desfazê-lo — aplicada no [SKILL.md](../../.claude/skills/discussion-briefs/SKILL.md) e no
+[registro de skills](../../.codex/AGENTS.md).
