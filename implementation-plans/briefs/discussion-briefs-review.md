@@ -112,7 +112,11 @@ avisa no chat quando edita o `README.md` da pasta de planos — aplicada no
 
 **Decisão:** você aprovou os dez, aplicados nos mesmos dois arquivos do D4:
 
-- D5.1 — a seção final do modelo virou "Decididos e descartados".
+- D5.1 — a seção final do modelo virou "Decididos e descartados". Depois você mandou manter os
+  itens decididos no lugar, com o texto inteiro, para poder revisar cada decisão. Por isso essa
+  seção saiu do modelo: o item decidido fica onde está, com o link de onde a decisão foi
+  registrada, e o item descartado também fica no lugar, marcado `descartado`. Este brief foi
+  concluído antes dessa mudança e continua no formato antigo.
 - D5.2 — saiu o estado `em discussão` dos itens.
 - D5.3 — a linha "Decisão" só aparece quando existe decisão.
 - D5.4 — as linhas do cabeçalho do modelo ficaram separadas.

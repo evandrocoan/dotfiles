@@ -156,3 +156,18 @@ Claude, Codex, and Copilot, and D4.1 and D5.7 only tighten the new skill.
   and five for case B across its three wordings; the over-trigger direction of the D9 boundary,
   such as an explanation-only request loading the skill, was not tested.
 - Verdict: Passed.
+
+## Follow-up after closure
+
+- Instruction: after this plan closed, the user instructed that decided items keep their place in
+  the brief so that each recorded decision can be reviewed beside its options.
+- Change: `discussion-briefs` no longer collapses or moves a decided item. The item keeps its full
+  text, its `Decisão` line swaps `registro pendente` for a link to the owner, a dropped item stays
+  in place marked `descartado`, and the summary names the items still open. The template lost its
+  closing section and gained the `descartado` state. This supersedes the D5.1 row above in part;
+  its purpose, never reusing an item number, is kept.
+- Scope: one paragraph in the skill's `SKILL.md` and the template. Routine, local, and reversible.
+- Validation: `quick_validate.py` on the package and its symlink, width scan, `git diff --check`.
+  No forward-test case covers the state after promotion, so this behavior is untested.
+- Verdict for the follow-up: Passed. The original verdict above covers D1 to D9; this follow-up was
+  validated separately and does not reopen it.

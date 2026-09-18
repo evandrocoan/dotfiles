@@ -152,10 +152,12 @@ record changes. Treat a plan already under `completed/` as no owner. When no own
 so in the item; `plan-implementation` absorbs the decided items when the user asks for a plan on
 the subject.
 
-Once the owner records a decision, reduce the brief item to the decision in one or two sentences
-plus a link to where it was recorded, and move it to the template's closing section so that open
-items stay on top. Move a dropped item there too, reduced to one line with the reason, so that its
-number is never given to another item.
+Items keep their place and their full text for the whole life of the brief, so that the user can
+review each recorded decision beside the options it was chosen from. Once the owner records a
+decision, replace the `registro pendente` marker in the item's `Decisão` line with a link to where
+it was recorded. Mark a dropped item `descartado` with the reason in one line and leave it in
+place, so that its number is never given to another item. Because decided items no longer stand
+apart, name the items that are still open in the brief's summary.
 
 ## Keep chat a projection
 

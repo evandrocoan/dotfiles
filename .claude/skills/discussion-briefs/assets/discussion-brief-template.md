@@ -13,9 +13,9 @@ decisão vale onde foi registrada.
 
 ## Resumo
 
-<Em poucas linhas: qual é o assunto, em que pé está e qual decisão destrava mais coisas. Escreva
-`não verificado` ao lado do que não foi conferido, e a data ao lado de um fato que muda, como em
-"a pipeline está verde (verificado em <data>)".>
+<Em poucas linhas: qual é o assunto, em que pé está, quais itens ainda estão abertos e qual decisão
+destrava mais coisas. Escreva `não verificado` ao lado do que não foi conferido, e a data ao lado
+de um fato que muda, como em "a pipeline está verde (verificado em <data>)".>
 
 ## Glossário
 
@@ -27,7 +27,7 @@ decisão vale onde foi registrada.
 
 ### D1 — <pergunta a decidir, em linguagem simples>
 
-**Estado:** aberto | decidido
+**Estado:** aberto | decidido | descartado
 
 **O que é:** <o componente e a situação concreta: o que acontece hoje e o que se observa, explicado
 para quem não acompanhou o trabalho>
@@ -42,13 +42,15 @@ para quem não acompanhou o trabalho>
 **Recomendação:** <opção recomendada e o motivo>
 
 **Decisão:** <inclua esta linha só quando houver decisão: o que você decidiu, em uma ou duas frases,
-seguido de `registro pendente` e do motivo enquanto o plano, o registro ou a issue não a recebeu>
+seguido de `registro pendente` e do motivo enquanto o plano, o registro ou a issue não a recebeu;
+depois do registro, troque a marca pelo link de onde a decisão foi registrada; num item descartado,
+escreva o motivo em uma linha. O item continua neste lugar, com o texto inteiro>
 
 ## Trabalho que posso fazer com sua autorização
 
 ### D2 — <o que seria feito>
 
-**Estado:** aberto | decidido
+**Estado:** aberto | decidido | descartado
 
 **O que é:** <o que seria feito e o resultado esperado>
 
@@ -56,14 +58,14 @@ seguido de `registro pendente` e do motivo enquanto o plano, o registro ou a iss
 
 **Custo e risco:** <esforço, efeitos externos e o que pode dar errado>
 
-**Decisão:** <inclua esta linha só quando houver decisão: fazer, não fazer ou adiar, seguido de
-`registro pendente` e do motivo enquanto o plano, o registro ou a issue não a recebeu>
+**Decisão:** <inclua esta linha só quando houver decisão: fazer, não fazer ou adiar, com as mesmas
+regras da linha "Decisão" do item anterior>
 
 ## Depende de outras pessoas ou de acesso
 
 ### D3 — <o que falta>
 
-**Estado:** aberto | resolvido
+**Estado:** aberto | resolvido | descartado
 
 **O que é:** <o que falta e por que não posso resolver sozinho>
 
@@ -76,11 +78,3 @@ seguido de `registro pendente` e do motivo enquanto o plano, o registro ou a iss
 ## Sem ação necessária
 
 - <ponto que pode parecer pendente e por que não exige ação>
-
-## Decididos e descartados
-
-### D4 — <pergunta que foi decidida>
-
-**Decisão:** <o que você decidiu, em uma ou duas frases> — registrada em <link>
-
-- D5 — descartado: <motivo em uma linha>
