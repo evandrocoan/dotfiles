@@ -4,8 +4,8 @@
 
 **Alimenta:**
 
-- [plano de implementação](../active/decision-to-architecture-flow.md), que recebeu as nove
-  onze decisões, D1 a D11, em inglês. É o dono de todas elas até ser executado. Pelo D11, nenhum
+- [plano de implementação](../active/decision-to-architecture-flow.md), que recebeu as doze
+  decisões, D1 a D12, em inglês. É o dono de todas elas até ser executado. Pelo D11, nenhum
   registro de arquitetura é criado: as skills são a autoridade durável e recebem as regras na
   execução do plano.
 
@@ -25,7 +25,7 @@ A falha foi em parte de comportamento e em parte das skills, que deixam três bu
 decisão sua contraria um registro de arquitetura aprovado. Conferi os trechos das três skills nesta
 sessão, em 2026-09-18, e os buracos existem.
 
-Não há item aberto, e nenhum item tem `registro pendente`. Os onze itens estão decididos e
+Não há item aberto, e nenhum item tem `registro pendente`. Os doze itens estão decididos e
 registrados no [plano](../active/decision-to-architecture-flow.md). O dono de todos é o plano:
 pelo D11, nenhum registro de arquitetura é criado para este fluxo, e as skills recebem as regras
 quando o plano for executado. O D10 e o D11 vieram da primeira revisão independente do plano, que
@@ -34,6 +34,9 @@ Seis eu corrigi no próprio plano, porque não mudam nenhuma decisão sua. Dois 
 D10 você decidiu como o agente escolhe entre o bloco de emenda e o registro novo: o objetivo decide,
 sem contagem de regras. No D11 você decidiu que as skills são a autoridade durável do fluxo; eu
 tinha declarado o plano "único dono" só pela falta da pasta `architecture/`, e essa escolha era sua.
+O D12 veio da segunda revisão e da revisão do advisor: quando emendar um registro obrigaria a uma
+manutenção maior do que a exceção do D3 permite, como traduzir o registro inteiro, você decidiu que
+a emenda recua para depois da revisão do plano.
 
 Das decisões anteriores, as seis escolhas entre opções são: o D1, nomear o dono de cada decisão e
 manter o brief aberto enquanto faltar um; o D2, a marca só na regra emendada quando a mudança é
@@ -44,9 +47,14 @@ trabalhos que você decidiu fazer são: o D5, trocar a frase vaga da
 `discussion-briefs`; o D6, rodar o caso novo no teste com agente independente depois de aplicar as
 decisões; e o D9, dar aos itens de trabalho do modelo a mesma profundidade dos itens de decisão.
 
-Registrado não quer dizer aplicado: nenhuma skill mudou ainda. O plano revisado precisa de uma
-nova revisão independente, e só depois dela pode ser executado, com uma instrução sua. Se essa
-revisão levantar uma decisão nova, ela entra aqui como item novo e o brief reabre.
+Registrado não quer dizer aplicado: nenhuma skill mudou ainda. A segunda revisão independente,
+também de 2026-09-19, deu "pronto depois de corrigir os achados que bloqueiam". Eram quatro, e
+corrigi todos no plano; uma das correções escondia uma escolha sua, que virou o D12. A terceira
+revisão, da mesma data, deu o mesmo veredito, com três achados que bloqueiam, todos sobre precisão
+do plano e nenhum sobre decisão sua; também estão corrigidos. Essas últimas correções não mudam
+decisão, escopo nem ordem dos passos. Falta conferi-las, e depois o plano pode ser executado, com
+uma instrução sua. Se uma conferência levantar uma decisão nova, ela entra aqui como item novo e o
+brief reabre.
 
 ## Glossário
 
@@ -57,7 +65,7 @@ revisão levantar uma decisão nova, ela entra aqui como item novo e o brief rea
 | registro de arquitetura | Documento durável, em inglês, que guarda uma decisão de desenho aprovada e as regras que o código deve obedecer; é regido pela skill `architecture-records`. |
 | regra do registro | Uma frase do registro de arquitetura que o código tem de cumprir; a skill chama isso de invariante. No outro chat era a "invariante 18". |
 | plano de implementação | Roteiro temporário, em inglês, da sequência de trabalho; é regido pela skill `plan-implementation`. |
-| dono da decisão | O documento que manda naquela decisão. Decisão de desenho durável: o registro de arquitetura. Sequência de execução: o plano. |
+| dono da decisão | O documento onde a decisão fica registrada quando você manda registrar. Decisão de desenho durável: o registro de arquitetura. Sequência de execução: o plano. Não é o mesmo que autoridade, que é o texto que governa o que o agente faz, como uma skill ou um registro implementado. |
 | `registro pendente` | Marca que um item decidido carrega no brief enquanto o dono ainda não recebeu a decisão. |
 | revisão independente | Revisão feita por um agente com contexto limpo, que só lê e relata; a `plan-implementation` a exige em trabalho de alto risco, antes e depois. |
 | estado do registro | Rótulo do registro inteiro: proposto, em implementação, implementado ou substituído. |
@@ -171,9 +179,10 @@ situações:
 **O que falta nela:** nas três situações, a skill não diz em que momento o registro antigo vira
 "substituído": quando o novo nasce como proposto, ou só quando o novo é implementado. No caso 3 do
 teste da `discussion-briefs`, o agente criou o registro novo e marcou o antigo como substituído na
-mesma hora, com o código ainda no comportamento antigo, e nenhum registro passou a descrever o que
-valia naquele momento. Falta também a emenda pequena antes do código: "emendar no lugar" quer dizer
-reescrever a regra, o que apresenta o futuro como presente.
+mesma hora, sem mudar código nenhum, e nenhum registro passou a descrever o que valia naquele
+momento. Se o código daquele repositório de teste seguia o registro antigo não foi verificado.
+Falta também a emenda pequena antes do código: "emendar no lugar" quer dizer reescrever a regra, o
+que apresenta o futuro como presente.
 
 **O que este item acrescentaria de fato à skill:** três coisas pequenas. O bloco "emenda aprovada,
 em implementação" para a emenda pequena. A linha de aviso no registro antigo enquanto o substituto
@@ -188,7 +197,7 @@ descrita mais abaixo, e nenhum dos dois ficou.
 | --- | --- | --- | --- |
 | Regra que vale hoje | Continua escrita como vigente. | Continua no registro antigo, intocada. | Continua escrita, mas o registro todo parece em fluxo. |
 | Regra nova aprovada | Aparece ao lado, rotulada "emenda aprovada, em implementação". | Fica num registro novo, no estado proposto, que aponta para a regra que vai substituir. | Entra no texto, com uma nota dizendo o que ainda não foi entregue. |
-| Quando o plano fecha | A regra nova substitui a antiga e o rótulo some. | A regra antiga é trocada e o registro novo é incorporado ou vira histórico. | O registro volta para "implementado". |
+| Quando o plano fecha | A regra nova substitui a antiga e o rótulo some. | O registro novo passa a "implementado", e o antigo passa a "substituído" e fica guardado como histórico. | O registro volta para "implementado". |
 | Mudança na skill | Um conceito novo e pequeno: o bloco de emenda dentro de um registro implementado. | Quase nada: os estados já existem; entram a linha de aviso no registro antigo e o momento em que ele vira "substituído". | Nenhuma. |
 
 **Como a opção 1 ficaria dentro de um registro:** o exemplo é inventado, porque não vi o registro
@@ -206,8 +215,8 @@ Depois de "registre as decisões", com o código ainda antigo:
     block may skip that comparison for the fields it owns.
 
     **Approved amendment, in implementation:** the `redmine_native` block is removed, and no
-    update may skip the remote comparison. Until this amendment is implemented, the code follows
-    the rule above.
+    update may skip the remote comparison. Until this amendment is implemented, the rule above
+    stays in force.
 ```
 
 Quando o plano fecha, o bloco some e a regra é reescrita:
@@ -221,8 +230,9 @@ Quando o plano fecha, o bloco some e a regra é reescrita:
 
 - Um lugar só. O bloco fica imediatamente abaixo da regra que ele muda, nunca numa seção de
   "emendas" no fim do arquivo.
-- A regra vigente continua sem marca, e o bloco diz com todas as letras que o código ainda segue o
-  texto de cima. Quem lê sabe o que vale hoje e o que está a caminho.
+- A regra vigente continua sem marca, e o bloco diz com todas as letras que a regra de cima
+  continua valendo. Ele não descreve o estado do código, porque o andamento mora no plano. Quem lê
+  sabe o que vale hoje e o que está a caminho.
 - No máximo uma emenda pendente por regra. Se você mudar de ideia, o bloco é reescrito, não
   empilhado.
 - É temporária e cobrada no fechamento. A `architecture-records` já tem uma passada obrigatória de
@@ -310,12 +320,17 @@ encher o registro antigo de blocos.
 nasce do registro emendado; a revisão independente examina os dois; depois vem código.
 Registrada no [plano](../active/decision-to-architecture-flow.md). Ela depende da opção 1 do
 D2, que você também já escolheu: a regra nova entra com a marca "emenda aprovada, em
-implementação", e por isso emendar primeiro não apresenta o futuro como comportamento atual. A
-revisão independente apontou, e o plano agora diz, que isto é uma exceção deliberada à regra da
-`plan-implementation` de revisar antes de qualquer passo, e não uma leitura do texto de hoje. A
-exceção tem limites: antes da revisão só entra o bloco rotulado do D2, ou o registro novo proposto
-com a linha de aviso; nenhum outro texto do registro, nenhum código e nenhum arquivo de instruções
-muda.
+implementação", e por isso emendar primeiro não apresenta o futuro como comportamento atual.
+
+**Esclarecimentos das revisões:** não fazem parte do que você decidiu; são o modo como o plano
+aplica a decisão, e a segunda revisão conferiu que eles preservam "emenda primeiro". As revisões
+independentes apontaram que emendar primeiro é uma exceção deliberada à regra da
+`plan-implementation` de revisar antes de qualquer passo, e não uma leitura do texto de hoje. Por
+isso o plano dá limites à exceção: antes da revisão só entra o bloco rotulado do D2, ou o registro
+novo proposto com a linha de aviso e a entrada dele no índice de arquitetura; nenhum outro texto do
+registro, nenhum código e nenhum arquivo de instruções muda. O que fazer quando mexer no registro
+obriga a uma mudança fora desses limites, como traduzir um registro que não está em inglês, é uma
+escolha sua: no D12 você decidiu que, nesse caso, a emenda recua para depois da revisão.
 
 **A pergunta para você:** qual é a ordem quando é o próprio plano que propõe a mudança de desenho.
 
@@ -392,11 +407,13 @@ do plano e a outra só implementa.
 `plan-implementation` manda abrir o brief do mesmo assunto. Se houver decisão com
 `registro pendente`, o plano não fecha. Se houver só item aberto, o agente avisa você na mensagem
 de fechamento, o plano anota isso e fecha. Registrada no
-[plano](../active/decision-to-architecture-flow.md). Esclarecimento da revisão independente: esta
-conferência não afrouxa nenhuma regra de fechamento que já existe. Um item aberto que represente
-uma validação, uma autorização ou um acesso obrigatório continua impedindo o fechamento pelas regras
-atuais da `plan-implementation`; "fecha" quer dizer que esta conferência, sozinha, não segura o
-plano.
+[plano](../active/decision-to-architecture-flow.md).
+
+**Esclarecimento das revisões:** não faz parte do que você decidiu; é o modo como o plano aplica a
+decisão, e a segunda revisão conferiu que ele a preserva. Esta conferência não afrouxa nenhuma
+regra de fechamento que já existe. Um item aberto que represente uma validação, uma autorização ou
+um acesso obrigatório continua impedindo o fechamento pelas regras atuais da
+`plan-implementation`; "fecha" quer dizer que esta conferência, sozinha, não segura o plano.
 
 **A pergunta para você:** quem confere, e quando, se sobrou um brief aberto sobre um assunto que já
 foi implementado.
@@ -761,6 +778,91 @@ arquivo curto e três linhas. Se uma frase de motivo por regra bastar para você
 aponta para ela, e é por isso que a escolha ficou com você. Pelo critério da simplicidade, a opção
 1 vence: não cria arquivo nem ligação entre skills, e o que se perde é só um ponteiro para o motivo
 completo, que continua guardado no plano concluído e neste brief.
+
+### D12 — E quando emendar o registro obriga a uma manutenção que a exceção do D3 não cobre?
+
+**Estado:** decidido
+
+**Decisão:** opção 1, recuar para a ordem comum. Quando mexer no registro obriga a uma mudança fora
+dos limites da exceção do D3, como traduzir um registro que não está em inglês ou remover um
+sumário manual, a exceção não vale: o agente avisa no chat, o item do brief mantém
+`registro pendente` para o registro, e a manutenção e a emenda entram como passos do plano, depois
+da revisão independente. A conferência por fase da `plan-implementation` ganha a ressalva "exceto o
+passo que registra a decisão naquele dono". Registrada no
+[plano](../active/decision-to-architecture-flow.md).
+
+**Esclarecimento das revisões:** não faz parte do que você decidiu; é o modo como o plano aplica a
+decisão. A terceira revisão mostrou que a ressalva, escrita só como "o passo", deixava duas brechas:
+alguém podia ler que a conferência inteira fica dispensada, inclusive a sua instrução de registrar,
+ou a tradução obrigatória continuava travada, por não ser ela o passo que registra a decisão. Por
+isso o plano define a unidade liberada: a emenda do registro junto com a manutenção que a
+`architecture-records` torna obrigatória para aquela edição, depois da revisão do plano. A ressalva
+dispensa só a pendência que essa unidade resolve. A sua instrução de registrar continua exigida,
+outras pendências e o trabalho que depende da emenda continuam passando pela conferência, e quem
+faz a unidade é a sessão da discussão, como no D4.
+
+**A pergunta para você:** no D3 você escolheu emendar o registro antes da revisão do plano. O que o
+agente faz quando mexer naquele registro obriga, pelas regras da `architecture-records`, a uma
+mudança maior do que o bloco de emenda.
+
+**O que aconteceu:** a primeira revisão independente fez o plano dar limites à exceção do D3: antes
+da revisão só entra o bloco rotulado, ou o registro novo proposto com a linha de aviso e a entrada
+no índice, e nenhum outro texto do registro muda. A segunda revisão mostrou que esses limites batem
+de frente com duas obrigações que a `architecture-records` já tem (conferido em 2026-09-19):
+
+- Se o registro não está em inglês, ou mistura idiomas, a skill manda traduzir o arquivo inteiro e
+  o índice na mesma mudança em que alguém mexe nele.
+- Se o registro tem um sumário manual, a skill manda removê-lo quando o registro é editado.
+
+Nos dois casos, para pôr um bloco de três linhas, o agente teria de reescrever o arquivo inteiro
+antes da revisão, o que os limites proíbem. Para o plano não ficar sem saída, escrevi nele um
+comportamento: a exceção não vale, o agente avisa, e a emenda fica para depois da revisão do plano.
+Isso é uma escolha entre alternativas, e você não a fez. Por isso virou este item, e a execução do
+plano espera por ele.
+
+**Exemplo:** o registro do Redmine está em português. Você decide remover o `redmine_native` e manda
+registrar. Para emendar, o agente tem de traduzir o registro todo para o inglês. Uma tradução pode
+mudar sem querer o sentido de uma regra, e nesse momento nenhuma revisão olhou para ela.
+
+**Opções:**
+
+1. Recuar para a ordem comum. A exceção não vale naquele caso: o agente avisa no chat, deixa o item
+   do brief com `registro pendente` para o registro, e a tradução ou limpeza e a emenda entram como
+   passos do plano, depois da revisão independente. Na skill isso é uma frase, junto dos limites
+   da exceção, com os dois exemplos dentro dela para um modelo mais fraco reconhecer o caso. Entra
+   também uma ressalva na conferência que a `plan-implementation` faz antes de cada fase. Essa
+   conferência não deixa começar uma fase afetada por uma decisão enquanto algum dono não a
+   recebeu; no recuo, o passo que emenda o registro é justamente o que entrega a decisão a esse
+   dono, e sem a ressalva "exceto o passo que registra a decisão naquele dono" ele ficaria
+   bloqueado por ela.
+2. Manutenção primeiro, como trabalho separado. O agente faz a tradução ou a limpeza sozinha, sem
+   mudar regra nenhuma, e só depois aplica a emenda antes da revisão, como o D3 manda.
+3. Perguntar a você caso a caso, mostrando o tamanho da manutenção.
+
+**Como fica na prática:**
+
+| O que acontece | Opção 1: recuar | Opção 2: manutenção primeiro | Opção 3: perguntar |
+| --- | --- | --- | --- |
+| Registro em português, decisão pequena | A emenda espera a revisão; o brief fica aberto com `registro pendente` para o registro. | O registro é traduzido inteiro antes da revisão, e depois recebe o bloco. | O agente para e pergunta. |
+| Registro com sumário manual | Igual: espera a revisão. | O sumário sai, e depois entra o bloco. | O agente para e pergunta. |
+| Registro em inglês e sem sumário, o caso comum | Não muda nada: emenda primeiro, como no D3. | Igual. | Igual. |
+| Texto novo nas skills | Uma frase, e uma ressalva de uma oração na conferência por fase. | Um procedimento a mais: o que conta como manutenção, e como garantir que ela não mudou regra. | Uma frase. |
+
+**Pontos negativos de cada opção:**
+
+- Opção 1: nesses casos volta o problema que o D3 queria evitar, porque a decisão fica um tempo sem
+  morar no dono dela. O D1 torna isso visível, já que o item mantém `registro pendente` e o brief
+  não fecha, mas o brief fica aberto por mais tempo. Depende da ressalva na conferência por fase;
+  sem ela, o passo que emenda o registro ficaria travado.
+- Opção 2: uma tradução inteira de um registro com regras é uma mudança grande feita antes de
+  qualquer revisão, e é justamente onde um sentido pode mudar sem ninguém ver. Precisa de regra
+  para separar manutenção de mudança de conteúdo, e a skill fica mais complicada.
+- Opção 3: é mais uma pergunta para você numa hora em que você só mandou registrar, e a resposta
+  tende a ser sempre a mesma.
+
+**Recomendação:** opção 1. O caso é raro, porque os registros novos já nascem em inglês e sem
+sumário; a regra cabe numa frase; e ela não faz nenhuma mudança grande passar antes da revisão. É a
+mais simples, que é o critério que você usou no D10 e no D11.
 
 ## Trabalho que posso fazer com sua autorização
 
