@@ -81,35 +81,84 @@ approval_mode = "prompt"
 [mcp_servers.kredmine.tools.abandon_create_reconciliation]
 approval_mode = "prompt"
 
+[mcp_servers.node_repl]
+args = []
+command = "/usr/lib/chatgpt/resources/cua_node/bin/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = "/usr/lib/chatgpt/resources/cua_node/lib/node_modules"
+NODE_REPL_NODE_PATH = "/usr/lib/chatgpt/resources/cua_node/bin/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/home/someuser/.codex:/usr/lib/chatgpt/resources/cua_node/lib/node_modules"
+CODEX_HOME = "/home/someuser/.codex"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+BROWSER_USE_TINYSKY_ENABLED = "1"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+BROWSER_USE_CODEX_APP_VERSION = "26.908.70816"
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/home/someuser/.codex/plugins/cache/openai-bundled/browser/26.908.70816/scripts/browser-service.mjs"}'
+CODEX_CLI_PATH = "/usr/lib/chatgpt/resources/codex"
+
+[mcp_servers.excalidraw]
+command = "node"
+args = [
+    "/myfiles/Programs/excalidraw-mcp/dist/index.js",
+    "--stdio",
+]
+
+[tui.model_availability_nux]
+gpt-6-astra = 4
+
+[desktop]
+followUpQueueMode = "steer"
+external-agent-import-sync-item-types = "all"
+external-agent-import-sync-enabled = true
+conversationDetailMode = "STEPS_COMMANDS"
+ambient-suggestions-enabled = true
+
+[marketplaces.openai-bundled]
+source_type = "local"
+source = "/home/someuser/.codex/.tmp/bundled-marketplaces/openai-bundled"
+
+[marketplaces.openai-primary-runtime]
+source_type = "local"
+source = "/home/someuser/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[plugins."codex-app-tools@openai-bundled"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."unified-computer-use@openai-bundled"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+DISABLE_AUTOUPDATER = "1"
+
 [projects."/home/someuser"]
 trust_level = "trusted"
 
-[projects."/myfiles/Programs/ExcaliDash"]
-trust_level = "trusted"
-
-[projects."/myfiles/Programs/pr-agent"]
-trust_level = "trusted"
-
-[projects."/myfiles/analytics/kredmine/workspace"]
-trust_level = "trusted"
-
-[projects."/myfiles/analytics/khognition-pipeline"]
-trust_level = "trusted"
-
-[projects."/"]
-trust_level = "trusted"
-
-[projects."/myfiles/analytics/kvoiceai"]
-trust_level = "trusted"
-
-[projects."/myfiles/analytics/recorder"]
-trust_level = "trusted"
-
-[projects."/myfiles/flow"]
-trust_level = "trusted"
-
-[projects."/myfiles/analytics/cluster-k8s-staging/config-data"]
-trust_level = "trusted"
-
-[projects."/myfiles/analytics/asr"]
-trust_level = "trusted"
