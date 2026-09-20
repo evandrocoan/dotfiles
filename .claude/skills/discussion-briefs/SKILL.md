@@ -54,9 +54,9 @@ contents and no commit-pinned evidence links.
 The brief ranks below every layer of the authority order that `plan-implementation` defines, and it
 is never an authority. It never replaces a plan or record that the task's governing instructions
 require. A user decision noted in the brief draws its authority from the user's statement, not from
-the brief. The item keeps the marker `registro pendente` until its owner records the decision;
-never overwrite that decision with the owner's older text. In every other disagreement with a plan
-or record, correct the brief.
+the brief. The item keeps the marker `registro pendente` until every owner named for the decision
+records it; never overwrite that decision with an owner's older text. In every other disagreement
+with a plan or record, correct the brief.
 
 Nothing in a brief authorizes work. An item describing work the agent could do, a recorded
 decision, or a note left in the file does not authorize implementation, external mutation, or a
@@ -100,9 +100,18 @@ Assume the user opens an item without the plan, the code, or the earlier convers
 - State why it matters and what stays blocked until it is settled.
 - For a decision, give each option with its consequence, cost, and risk, then your recommendation
   and its reason. Keep the recommendation visibly separate from the user's decision.
+- For work you could do, give the item the same depth: the question for the user, a concrete
+  example, what happens under each answer, which is do, do not, or defer, the cost and risk, and
+  your recommendation. A title alone does not tell the user what they would be authorizing.
 - Order items so the one that unblocks the most comes first.
 
-Number items sequentially, such as `D1`. Never renumber an item or give its number to another item.
+Give each section its own prefix and its own sequence starting at 1, so that every section reads in
+order: `D` for decisions between options, `T` for work you could do, and `E` for what depends on
+other people or on access. Never renumber an item or give its number to another item. When an item
+changes nature, such as work that becomes a choice between options, create a new item in the right
+section and mark the old one `descartado`, pointing to the new one. A brief that already numbers
+its items in one sequence keeps that numbering.
+
 When an item corresponds to a stage or requirement of the governing plan or record, cite that
 identifier inside the item's text together with what it means. Give every such identifier, acronym,
 component name, and merge-request or issue number used in the brief a one-line plain-language
@@ -144,20 +153,33 @@ marker `registro pendente`, and change no plan, architecture record, issue, or c
 decision contradicts an approved plan or record, say so in the chat reply and wait.
 
 Promote a decision only on the user's explicit instruction to record it, such as "registre as
-decisões". Promotion records the decision in its authoritative owner: the implementation plan, the
-architecture record, or the issue. It follows the owner's skill and language rules, including any
-plan or review that skill requires, and it never includes implementing the decision. When the
-decision contradicts an approved record, report that and let the record's own skill decide how the
-record changes. Treat a plan already under `completed/` as no owner. When no owner exists yet, say
-so in the item; `plan-implementation` absorbs the decided items when the user asks for a plan on
-the subject.
+decisões". Promotion records the decision in every owner it has, and you name those owners in the
+chat reply. A durable design decision belongs to the architecture record that governs it, the
+execution sequence belongs to the implementation plan, and an issue owns what it tracks. An owner is
+a document that records decisions; the code or skill text that a plan will change is the target of
+the work, not an owner. Promotion follows each owner's skill and language rules, including any plan
+or review that skill requires, and it never includes implementing the decision.
+
+While an owner has not received the decision, keep `registro pendente` in the item for that owner
+with the reason, do not conclude the brief, and say in the chat reply what was left out and why. A
+brief that reads as concluded while an owner still holds the old text hides the gap from the user.
+
+When the decision changes an approved architecture record, that record is one of its owners. Amend
+it in the promotion turn under the deliberate-decision procedure of `architecture-records`, which
+defines the amendment block, the new-record form, and the case in which the amendment waits for
+the plan review, and then record the execution sequence in the plan. Say in the chat reply that the
+decision is approved and recorded, and that the plan review still comes before any code changes, so
+that the user does not read the recording as the implementation. Treat a plan already under
+`completed/` as no owner. When no owner exists yet, say so in the item; `plan-implementation`
+absorbs the decided items when the user asks for a plan on the subject.
 
 Items keep their place and their full text for the whole life of the brief, so that the user can
-review each recorded decision beside the options it was chosen from. Once the owner records a
-decision, replace the `registro pendente` marker in the item's `Decisão` line with a link to where
-it was recorded. Mark a dropped item `descartado` with the reason in one line and leave it in
-place, so that its number is never given to another item. Because decided items no longer stand
-apart, name the items that are still open in the brief's summary.
+review each recorded decision beside the options it was chosen from. Once an owner records a
+decision, add to the item's `Decisão` line a link to where it was recorded, and remove the
+`registro pendente` marker only when every owner named for the decision has it. Mark a dropped item
+`descartado` with the reason in one line and leave it in place, so that its number is never given
+to another item. Because decided items no longer stand apart, name the items that are still open in
+the brief's summary.
 
 ## Keep chat a projection
 
@@ -168,6 +190,6 @@ paste the items or a list of their titles into chat unless the user asks.
 
 ## Close the brief
 
-When every item is decided, resolved, or dropped and each decision is recorded in its owner, set
-the brief's state to `concluído` and tell the user. Keep the file; remove it only when the user
-asks.
+When every item is decided, resolved, or dropped and each decision is recorded in every owner named
+for it, set the brief's state to `concluído` and tell the user. Keep the file; remove it only when
+the user asks.

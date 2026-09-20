@@ -25,11 +25,14 @@ authorize new work.
    the repository convention.
 3. Sol references an existing ready plan when one exists; otherwise Sol prepares the plan required
    by the task's governing instructions. Record the objective, scope, acceptance criteria, ordered
-   implementation work, and decisions already made. Do not replan or repeat a review solely to
-   create the handoff. Initialize the file under **Own and publish a turn**: publish `blocked` if
-   a required prerequisite is unavailable, `needs-user` if a user decision is missing, or
-   `implement` for Opus otherwise. Sol may deliver the initial Opus prompt only after a published
-   handoff names Opus as owner.
+   implementation work, and decisions already made. When that plan carries out a user decision that
+   changes an approved architecture record, Sol amends the record during this planning, as
+   `architecture-records` and `plan-implementation` prescribe, and tells Opus that the records are
+   already amended; that amendment records a decision and is not the implementation that Opus owns.
+   Do not replan or repeat a review solely to create the handoff. Initialize the file under **Own
+   and publish a turn**: publish `blocked` if a required prerequisite is unavailable, `needs-user`
+   if a user decision is missing, or `implement` for Opus otherwise. Sol may deliver the initial
+   Opus prompt only after a published handoff names Opus as owner.
 4. Each session checks that the path is inside its authorized workspace. Opus compares its
    canonical checkout root with the path in Sol's prompt before using the file. If the path, task
    ID, role, or checkout differs, stop and ask the user to correct the setup.

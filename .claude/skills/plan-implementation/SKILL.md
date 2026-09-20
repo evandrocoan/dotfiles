@@ -15,9 +15,10 @@ description: >-
 # Plan implementation
 
 Create the smallest plan that makes the requested delivery reliable. Keep durable design
-authority in architecture records. Keep every formal plan user-visible. When the persistence gate
-applies, keep detailed execution state in Markdown and project its current steps into the task
-plan.
+authority in architecture records, as `architecture-records` classifies it; that skill excludes the
+workflow rules of shared agent skills, which live in the skills themselves. Keep every formal plan
+user-visible. When the persistence gate applies, keep detailed execution state in Markdown and
+project its current steps into the task plan.
 
 ## Determine the planning mode
 
@@ -167,6 +168,12 @@ When a durable architecture record governs the change, use `architecture-records
 this skill. Treat the approved record as the design authority and derive the implementation plan
 from it. Do not alter the record to legitimize incidental current code.
 
+When the plan carries out a deliberate user decision that changes an approved record, the record is
+amended before the plan is written, under the deliberate-decision procedure of
+`architecture-records`. The session that conducted the discussion and writes the plan makes that
+amendment, because it holds the reasons behind the decision. Derive the plan from the amended
+record, and tell an implementing session that the records are already amended.
+
 Load the task-specific skills required by the work before planning their stages. In particular,
 use `test-quality` for executable validation, `documentation` for durable documentation,
 `dependency-decisions` for dependency choices, and the relevant delivery or infrastructure skill
@@ -295,6 +302,17 @@ Order work by dependency and feedback speed:
 10. Close routine work with direct outcome, validation, diff, and status checks; close formal plans
     with the risk-appropriate audit below.
 
+Step 1 has one exception. The record amendment that `architecture-records` allows for a deliberate
+user decision precedes the plan, and therefore its review, so that the decision lives in its owner
+at once and the reviewer reads the real wording. The exception covers only the labelled amendment
+block, or the `Proposed` record with its notice line and index entry. No other record text, code,
+configuration, or repository instruction file changes before the plan review. The review examines
+the amended record together with the plan, and a finding against the amendment is corrected in that
+block or record. When editing the record would require anything else, such as translating it or
+removing a manual table of contents, the exception does not apply, because an edit of that size
+could change a rule unseen before any review: say so, keep the decision pending for the record, and
+turn those edits and the amendment into plan steps that run after the plan review.
+
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
 update statuses to reflect reality rather than intent.
@@ -307,9 +325,18 @@ When a persistent plan exists, inspect its current step, prerequisites, and rele
 starting each new phase; do not reread the entire file solely because the phase changed. When a
 brief on the same subject exists under `briefs/`, also check it for decided items still marked
 `registro pendente`. Report them to the user, and do not start a phase that such a decision affects
-until the user instructs its recording and the plan carries it. After context compaction,
-interruption, session restart, material replan, or agent handoff, reread the entire plan before
-acting. Give every delegated agent the plan path and the exact step it owns.
+until the user instructs its recording and every owner named for it carries it. An owner is a
+document that records decisions: the plan, an architecture record, or an issue. The code or skill
+text that the plan will change is the target of the work, never an owner that must carry the
+decision first. One unit is exempt, so that the check cannot block what resolves it: after the plan
+review, the step that records the decision in the owner that still lacks it may start, together
+with the maintenance that `architecture-records` makes mandatory for that edit. The exemption
+waives only the pending marker that this unit resolves. The user's instruction to record stays
+required, every other pending decision and all work that depends on the amendment stay held, and
+the session that conducted the discussion performs the unit before any handoff.
+
+After context compaction, interruption, session restart, material replan, or agent handoff, reread
+the entire plan before acting. Give every delegated agent the plan path and the exact step it owns.
 
 ## Keep planning state in the correct place
 
@@ -392,6 +419,13 @@ requires otherwise. Measure the complete scenario rather than hiding retries or 
 
 ## Close work proportionally
 
+Before moving any formal plan to `completed/`, open the brief on the same subject under `briefs/`
+when one exists, because nothing else looks at a brief when the work ends. A decided item still
+marked `registro pendente` blocks the move until every owner named for the decision has it. An
+item that is merely open does not block through this check: report it to the user in the closing
+message and note it in the plan. This check relaxes no other gate; an open item that stands for a
+required validation, authorization, or access still blocks under the rules below.
+
 Routine work without a formal plan closes after verifying the requested outcome, running its cheap
 local validation, and checking the final diff and repository status. It needs no closure matrix or
 second pass.
@@ -468,14 +502,16 @@ validation, a scoped final diff, and an accurate report of limitations.
 
 For a non-trivial local and reversible formal plan, require the requested outcome, every affected
 consumer, proportional validation, a scoped final diff and status, a focused author pass, an
-accurate limitation report, and agreement between the persistent plan and task-plan statuses. Do
-not require a closure matrix, bidirectional traces, or an independent second pass at this level.
+accurate limitation report, the same-subject brief check above, and agreement between the
+persistent plan and task-plan statuses. Do not require a closure matrix, bidirectional traces, or
+an independent second pass at this level.
 
 For a bounded additive external action, require one authoritative external ID for every intended
 item; an exact match for its authorized target, request or content, multiplicity, and expected
-state; all governing reviews; no prohibited effect; no unresolved delivery result; and agreement
-between plan statuses. The implementer's authoritative read-back closes this path; do not require
-an independent second closure pass unless a stronger or inherited rule does.
+state; all governing reviews; no prohibited effect; no unresolved delivery result; the
+same-subject brief check above; and agreement between plan statuses. The implementer's
+authoritative read-back closes this path; do not require an independent second closure pass unless
+a stronger or inherited rule does.
 
 For a high-risk formal plan, do not mark the plan complete until all applicable gates pass:
 
@@ -490,6 +526,8 @@ For a high-risk formal plan, do not mark the plan complete until all applicable 
 - Remaining limitations, skipped validation, live cost, and operational uncertainty are reported
   accurately.
 - The persistent plan and task-plan projection agree on every material terminal status.
+- The same-subject brief check under **Close work proportionally** found no decided item still
+  marked `registro pendente`, and every item that is merely open was reported and noted in the plan.
 - The closure-audit matrix contains no `pending` or `unresolved` row and cites current evidence for
   every applicable requirement.
 - The architecture-to-implementation and implementation-to-authority traces are both complete.

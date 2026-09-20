@@ -1,10 +1,11 @@
 ---
 name: architecture-records
 description: >-
-  Create, organize, review, implement, audit, or supersede durable cross-component architecture
-  plans and decision records. Use when adding or moving architecture plans or ADRs, creating or
-  updating architecture/README.md, changing a record lifecycle status, promoting a proposed plan
-  to actual architecture, tracing architectural invariants through code and regression protection,
+  Create, organize, review, amend, implement, audit, or supersede durable cross-component
+  architecture plans and decision records. Use when adding or moving architecture plans or ADRs,
+  creating or updating architecture/README.md, changing a record lifecycle status, recording a
+  deliberate user decision that changes an approved record, promoting a proposed plan to actual
+  architecture, tracing architectural invariants through code and regression protection,
   investigating whether a recurring failure is architectural, or synchronizing current
   architectural invariants into the canonical AGENTS.md and operational behavior into README.md.
   Do not use for a temporary issue or merge-request checklist alone.
@@ -61,6 +62,11 @@ these concerns:
 - Risks, boundaries, migration constraints, or acceptance criteria needed to judge
   future changes.
 
+The workflow rules of shared agent skills are not architecture records. A skill states
+its own rules and gives the reason for each one in a sentence, because the skill is
+what every agent loads where the rule applies, while a record kept in one repository is
+out of reach from the others. Do not create an architecture record for them.
+
 Keep a task-specific checklist, rollout log, or merge sequence in the issue or merge
 request. A proposed architecture record may contain only the minimum prospective
 implementation order needed to constrain the design and its architectural acceptance
@@ -71,8 +77,8 @@ and describe the resulting architecture.
 An approved proposed record prescribes the implementation. Never retrofit it around
 whatever the code currently does. If implementation diverges, correct the code and
 its protection to match the approved record. Change the record first only when a
-deliberate architecture decision changes the approved design; never rationalize a
-defect by rewriting the plan after the fact.
+deliberate architecture decision changes the approved design, following section 7a;
+never rationalize a defect by rewriting the plan after the fact.
 
 ### 2a. Hand off implementation planning
 
@@ -134,7 +140,9 @@ Use an explicit English semantic state:
   execution detail instead of preserving an implementation diary. Keep only compact
   traceability to authoritative executable evidence.
 - **Superseded:** Preserve the record as a historical anchor, mark it superseded, and
-  link to its replacement. Do not maintain two records as concurrently authoritative.
+  link to its replacement. Do not maintain two texts as concurrently authoritative for
+  the same scope and phase. Section 7a defines the only split of authority: between
+  a rule in force and an approved change that is still being implemented.
 
 Do not mark a record implemented merely because code work started or most tasks are
 complete. Require the described behavior and its required validation to be complete.
@@ -215,6 +223,72 @@ Do not turn one provider response, log phrase, technology, or incident into a
 deterministic semantic exception. Deterministic logic may authenticate and normalize
 objective representation; semantic relevance and equivalence remain with the
 appropriate semantic decision boundary.
+
+### 7a. Record a deliberate decision that changes an approved record
+
+Apply this section when the user deliberately decides to change the design that an
+implemented record describes and instructs the recording of that decision. The code
+still follows the old rule at that moment, so the record must show the approved change
+without presenting it as current. Use one of two forms:
+
+- **Amendment block**, the default. Directly under the rule it changes, add a block
+  that starts with the label `**Approved amendment, in implementation:**`, states the
+  new rule, and says that the rule above stays in force until the amendment is
+  implemented. Leave the current rule unmarked and unchanged, so that a reader sees
+  what holds today and what is coming. Keep at most one pending block under a rule,
+  and rewrite it when the user changes the decision. The block says which rule is in
+  force, never the state of the code, and holds no date, plan link, or progress note,
+  because a record carries no execution diary.
+- **New record.** Create a record in `Proposed` that says which record it will
+  supersede, add its entry to the index, and add one notice line to the status of the
+  old record: a proposed replacement exists, with its link, and this record describes
+  current behavior until that one is implemented. The old record stays `Implemented`
+  and in force. Mark it `Superseded` only when the new record becomes `Implemented`;
+  superseding it earlier would leave no record describing what holds in the meantime.
+
+Choose the form by its purpose, which is to avoid noise in the old record when writing
+a new one would be easier. List the places in the record that the decision forces to
+change: rules, flow sections, diagrams, and tables. A short list of rules only gives
+the block. A long list, or one that includes a flow section, diagram, or table, gives
+the new record. Show that list in chat together with the form you chose, and ask before
+writing when in doubt. Do not compare the list with a fixed count of rules. The
+criterion of section 7 still bounds the choice: create or supersede a record only when
+the design actually changes, and when much changes without changing the design, use
+blocks and ask first. The nature of the change sets the rigor of its plan, not the
+form of the text; `plan-implementation` already treats an architecture change as high
+risk. The form is text written before any code, so the plan review may change it.
+
+For example, a decision that removes one exception from one rule, leaving its owner and
+flow as they are, takes a block. A decision that routes every write through a new
+reviewed stage, and so changes several rules, the flow section, and the owner of a
+check, takes a new record.
+
+This recording precedes the implementation plan and its review: the user decides, the
+record is amended, the plan is derived from the amended record, the plan review
+examines both, and only then does code change. It is a deliberate exception to the
+`plan-implementation` rule that the plan review precedes every implementation step.
+It exists so that the decision lives in its owner at once and the reviewer reads the
+real wording. The exception covers only the amendment block, or the `Proposed` record
+with its notice line and index entry. No other record text, code, configuration, or
+repository instruction file changes before the plan review, and the synchronization
+of section 8 waits for the implementation, because it would present proposed behavior
+as current. When editing the record would require anything else under this skill, such
+as translating a record that is not in English or removing a manual table of contents,
+do not use the exception, because an edit of that size could change a rule unseen
+before any review: say so, keep the decision pending for the record, and turn those
+edits and the amendment into plan steps that run after the plan review.
+
+The session that conducted the discussion and writes the plan makes this recording,
+before handing the work to another session, because it holds the reasons behind the
+decision. Tell the implementing session that the records are already amended and that
+it implements against them.
+
+While both texts coexist, the current rule stays in force for every consumer, and the
+amendment or the `Proposed` record prescribes only the work that its implementation
+plan authorizes. Partial progress lives in that plan, never in the record. When the
+implementation closes, rewrite the rule and remove the block, or remove the notice line
+and supersede the old record, whether or not the lifecycle state of the amended record
+changes.
 
 ### 8. Synchronize current behavior
 
@@ -302,6 +376,10 @@ summaries, and raw validation metrics. The resulting record must contain the
 decision, responsibilities, invariants, flow, failure semantics, risks, rejected
 alternatives, and a compact decision-to-code-to-test/replay trace.
 
+Apply the same pass when the implementation of an amendment recorded under section 7a
+closes, even though the amended record was already `Implemented`: rewrite the amended
+rule and remove the amendment block or the replacement notice.
+
 This closure pass is mandatory and blocking. If any diary residue remains, keep the
 record out of `Implemented`, do not hand it off as complete, and remove or relocate the
 residue before continuing. Never accept document growth or historical convenience as
@@ -319,6 +397,10 @@ Before handoff:
 - Confirm that real cross-component incidents have a faithful recorded replay when
   the required raw data exists, and that partial replays are not labeled end to end.
 - Confirm that obsolete paths cannot compete with the current source of authority.
+- Confirm that every amendment block sits directly under its rule, carries its label,
+  says that the rule above stays in force, and holds no diary content; that no rule
+  has more than one; and that no block or replacement notice remains for an
+  implementation that closed.
 - Confirm that every runtime terminal state remains observable and semantically
   consistent through rendering, persistence, retries, and reuse.
 - Fail the validation when diary residue exists: merge-request sequences, timestamps,

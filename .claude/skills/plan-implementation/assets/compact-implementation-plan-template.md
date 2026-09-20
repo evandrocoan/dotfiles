@@ -60,10 +60,13 @@ material premise before its dependent step and keep evidence concise rather than
   verification for every external item, or `Not applicable`>.
 - Focused author pass: Pending | Passed | Failed.
 - Unresolved limitations: <limitations, or `None`>.
+- Brief check: No brief on this subject | No `registro pendente`; open items reported and noted:
+  <items, or `None`>.
 - Verdict: Pending | Passed | Failed.
 
 Set the verdict to `Passed` only when the outcome and affected consumers are verified, proportional
-validation passed, the diff is scoped, statuses agree, the focused author pass completed, and no
-required evidence remains unresolved. For a bounded additive external action, also require every
-intended item's authoritative external ID, exact delivery match, completed governing reviews, no
-prohibited effect, and no unresolved delivery result.
+validation passed, the diff is scoped, statuses agree, the focused author pass completed, the brief
+check found no `registro pendente`, and no required evidence remains unresolved. For a bounded
+additive external action, also require every intended item's authoritative external ID, exact
+delivery match, completed governing reviews, no prohibited effect, and no unresolved delivery
+result.

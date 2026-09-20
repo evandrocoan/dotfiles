@@ -225,7 +225,8 @@ task-specific reference material to skills so they load only when relevant.
 Use the `architecture-records` skill when documentation changes a durable
 cross-component invariant, ownership boundary, stage order, failure meaning, or
 recovery rule. Keep the extended rationale in the architecture record and only
-the current load-bearing rule in agent instructions.
+the current load-bearing rule in agent instructions. That skill excludes the workflow
+rules of shared agent skills, which keep their reasons in the skill itself.
 
 ## Validate coupled documentation
 

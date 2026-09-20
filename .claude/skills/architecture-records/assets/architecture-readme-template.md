@@ -18,7 +18,8 @@ Keep lifecycle status in each record rather than duplicating it here.
 A proposed record describes intended behavior and is not current functionality. After
 implementation and validation, update it to describe actual behavior and mark it
 implemented. Preserve a superseded record as history, mark it superseded, and link to
-its replacement.
+its replacement. An implemented record stays in force, with a one-line notice of its
+proposed replacement, until that replacement is implemented.
 
 Keep temporary delivery checklists in the issue or merge request. Preserve durable
 rationale, boundaries, risks, and acceptance criteria here.
