@@ -25,6 +25,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Check health, storage and recovery](#check-health-storage-and-recovery)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
+      - [Recover VS Code from a stuck Crashpad handler](#recover-vs-code-from-a-stuck-crashpad-handler)
+      - [Increase the VS Code GPU watchdog timeout](#increase-the-vs-code-gpu-watchdog-timeout)
       - [Prevent memory-exhaustion lockups with earlyoom](#prevent-memory-exhaustion-lockups-with-earlyoom)
       - [Fix Skype Crash](#fix-skype-crash)
     - [Limit Docker storage growth](#limit-docker-storage-growth)
@@ -891,6 +893,73 @@ Review the proposed package removal list. Historical files under `/var/log/atop`
 and `/var/cache/netdata` can be removed separately once they are no longer needed.
 
 ### Fix system crash
+
+#### Recover VS Code from a stuck Crashpad handler
+
+A GPU process can exit while VS Code's Crashpad handler retains it as a traced zombie. The zygote
+then waits for that process, and the main VS Code process waits for the zygote. In the observed
+incident, terminating only the responsible Crashpad handler released this chain and restored the
+existing windows without restarting the editor. A similar failure and recovery are described in
+[Codex issue #33704](https://github.com/openai/codex/issues/33704); that report concerns the Codex
+desktop app, while this recovery was observed in VS Code.
+
+Use an external terminal to check whether a new freeze has the same signature. In the following
+commands, replace `ZOMBIE_PID` and `TRACER_PID` with the numeric PIDs found during the current freeze:
+
+1. Run `ps -C code -o pid,ppid,stat,comm` and look for a VS Code process in state `Z`.
+2. Run `rg '^(State|PPid|TracerPid):' /proc/ZOMBIE_PID/status`. Confirm the zombie state and note its
+   nonzero `TracerPid`.
+3. Run `readlink /proc/TRACER_PID/exe` and `ps -p TRACER_PID -o pid,args`. The executable must be
+   `/usr/share/code/chrome_crashpad_handler`, with the database belonging to this VS Code instance
+   (normally `~/.config/Code/Crashpad`).
+4. Only after confirming that match, run `kill -TERM TRACER_PID`. If this is the same failure, the
+   zombie should disappear and VS Code should resume with a replacement GPU process.
+5. Once the UI responds, check `code --status` and save the open work.
+
+Do not reuse old PIDs or terminate every Crashpad process: other applications have their own handlers.
+If there is no matching traced zombie, investigate the freeze separately. This is an emergency
+recovery, not a permanent fix; terminating the handler does not persistently disable crash reporting.
+Use the [historical performance recorders](#investigate-a-slow-period) to investigate any preceding
+storage or memory pressure. A large occupied swap value alone does not identify the trigger.
+
+#### Increase the VS Code GPU watchdog timeout
+
+The personal launcher [`.local/share/applications/code.desktop`](.local/share/applications/code.desktop)
+adds `--gpu-watchdog-timeout-seconds=120` to both normal startup and the **New Empty Window** action.
+It overrides `/usr/share/applications/code.desktop` for this user without modifying the packaged
+launcher. The longer timeout gives the GPU process more time to recover from temporary stalls;
+it has not yet been shown to prevent recurrence and does not repair the Crashpad failure above.
+A genuinely stuck GPU process can also take longer to be restarted.
+
+To recreate the override, copy the packaged launcher to `~/.local/share/applications/code.desktop`
+if no personal copy exists. When updating an existing copy, preserve its other customizations.
+Set the following `Exec` keys in their respective sections, keeping all other desktop-entry keys:
+
+```ini
+[Desktop Entry]
+Exec=/usr/share/code/code --gpu-watchdog-timeout-seconds=120 %F
+
+[Desktop Action new-empty-window]
+Exec=/usr/share/code/code --gpu-watchdog-timeout-seconds=120 --new-window %F
+```
+
+Validate the launcher and refresh the user desktop database:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+desktop-file-validate ~/.local/share/applications/code.desktop
+update-desktop-database ~/.local/share/applications
+```
+
+Save the open work, exit **all** VS Code windows, and launch it again through the updated menu entry.
+Opening another window or using **Reload Window** does not reconfigure an already running instance.
+For a terminal launch, use `code --gpu-watchdog-timeout-seconds=120`; the desktop override does not
+change plain `code` invocations. This option is a startup argument, not a setting loaded from `.env`.
+
+To undo the timeout override, remove the argument from both `Exec` lines, validate and refresh the
+desktop database again, then fully exit and reopen VS Code. When refreshing the personal launcher
+after a package update, preserve the argument in both actions if the workaround is still wanted.
 
 #### Prevent memory-exhaustion lockups with earlyoom
 
