@@ -209,8 +209,9 @@ When two loaded skills give incompatible guidance for the same change, name the
 conflict and present the options with their trade-offs before editing, instead
 of choosing one silently.
 
-- `architecture-records`: Create, review, implement, audit, or supersede durable
-  cross-component architecture records and lifecycle states. Load it together with
+- `architecture-records`: Create, review, amend, implement, audit, or supersede durable
+  cross-component architecture records and lifecycle states, including recording a
+  deliberate user decision that changes an approved record. Load it together with
   `documentation`; also load `plan-implementation` before implementing or making a
   non-trivial correction governed by a record.
 - `bash-scripts`: Create, edit, review, or debug Bash scripts and Bash snippets.

@@ -52,9 +52,10 @@ também de 2026-09-19, deu "pronto depois de corrigir os achados que bloqueiam".
 corrigi todos no plano; uma das correções escondia uma escolha sua, que virou o D12. A terceira
 revisão, da mesma data, deu o mesmo veredito, com três achados que bloqueiam, todos sobre precisão
 do plano e nenhum sobre decisão sua; também estão corrigidos. Essas últimas correções não mudam
-decisão, escopo nem ordem dos passos. Falta conferi-las, e depois o plano pode ser executado, com
-uma instrução sua. Se uma conferência levantar uma decisão nova, ela entra aqui como item novo e o
-brief reabre.
+nenhuma decisão nem a ordem dos passos; no escopo, só deixam explícito que o texto de explicação
+deste brief pode ser corrigido quando uma revisão mostra que está errado. O mesmo revisor conferiu
+as correções e deu o veredito "pronto para executar". A execução depende de uma instrução sua. Se
+ela levantar uma decisão nova, essa decisão entra aqui como item novo e o brief reabre.
 
 ## Glossário
 

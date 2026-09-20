@@ -108,7 +108,10 @@ something changes after the verdict.
   and completed matrix used for the verdict.
 - **Unresolved requirements:** List each unresolved row, or write `None` only after confirming the
   matrix contains no `pending` or `unresolved` status.
+- **Brief check:** No brief on this subject | No `registro pendente`; open items reported and noted:
+  <items, or `None`>.
 
 Set `Verdict` to `Passed` only when both trace directions are complete, every required validation
-has run, the second pass is complete, and unresolved requirements are `None`. Only then may the
+has run, the second pass is complete, the brief check found no `registro pendente`, and unresolved
+requirements are `None`. Only then may the
 plan status become `Completed`.

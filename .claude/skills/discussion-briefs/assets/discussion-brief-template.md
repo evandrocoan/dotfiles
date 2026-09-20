@@ -42,28 +42,40 @@ para quem não acompanhou o trabalho>
 **Recomendação:** <opção recomendada e o motivo>
 
 **Decisão:** <inclua esta linha só quando houver decisão: o que você decidiu, em uma ou duas frases,
-seguido de `registro pendente` e do motivo enquanto o plano, o registro ou a issue não a recebeu;
-depois do registro, troque a marca pelo link de onde a decisão foi registrada; num item descartado,
+seguido de `registro pendente` e do motivo enquanto algum dono da decisão, que pode ser o plano, o
+registro de arquitetura ou a issue, não a recebeu; a cada registro, acrescente o link de onde a
+decisão foi registrada, e tire a marca só quando todos os donos a tiverem; num item descartado,
 escreva o motivo em uma linha. O item continua neste lugar, com o texto inteiro>
 
 ## Trabalho que posso fazer com sua autorização
 
-### D2 — <o que seria feito>
+### T1 — <o que seria feito>
 
 **Estado:** aberto | decidido | descartado
 
-**O que é:** <o que seria feito e o resultado esperado>
+**A pergunta para você:** <o que você responde aqui: fazer, não fazer ou adiar>
 
-**Por que importa:** <o que melhora ou destrava, e o que acontece se não for feito>
+**O que é:** <o que seria feito e o resultado esperado, com um exemplo concreto, explicado para quem
+não acompanhou o trabalho>
+
+**Por que importa:** <o que melhora ou destrava>
+
+**O que acontece em cada resposta:**
+
+- Fazer: <o que eu faço e o que muda>
+- Não fazer: <o que fica como está e a consequência>
+- Adiar: <o que fica esperando e até quando>
 
 **Custo e risco:** <esforço, efeitos externos e o que pode dar errado>
+
+**Recomendação:** <resposta recomendada e o motivo>
 
 **Decisão:** <inclua esta linha só quando houver decisão: fazer, não fazer ou adiar, com as mesmas
 regras da linha "Decisão" do item anterior>
 
 ## Depende de outras pessoas ou de acesso
 
-### D3 — <o que falta>
+### E1 — <o que falta>
 
 **Estado:** aberto | resolvido | descartado
 
