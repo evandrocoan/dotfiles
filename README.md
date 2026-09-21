@@ -27,6 +27,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Fix system crash](#fix-system-crash)
       - [Recover VS Code from a stuck Crashpad handler](#recover-vs-code-from-a-stuck-crashpad-handler)
       - [Increase the VS Code GPU watchdog timeout](#increase-the-vs-code-gpu-watchdog-timeout)
+      - [Recover Chrome from a stuck Crashpad handler](#recover-chrome-from-a-stuck-crashpad-handler)
+      - [Increase the Chrome GPU watchdog timeout](#increase-the-chrome-gpu-watchdog-timeout)
       - [Prevent memory-exhaustion lockups with earlyoom](#prevent-memory-exhaustion-lockups-with-earlyoom)
       - [Fix Skype Crash](#fix-skype-crash)
     - [Limit Docker storage growth](#limit-docker-storage-growth)
@@ -960,6 +962,91 @@ change plain `code` invocations. This option is a startup argument, not a settin
 To undo the timeout override, remove the argument from both `Exec` lines, validate and refresh the
 desktop database again, then fully exit and reopen VS Code. When refreshing the personal launcher
 after a package update, preserve the argument in both actions if the workaround is still wanted.
+
+#### Recover Chrome from a stuck Crashpad handler
+
+Chrome can suffer the same traced-zombie blockage described for
+[VS Code](#recover-vs-code-from-a-stuck-crashpad-handler). In the observed Chrome incident, its
+Crashpad handler retained an exited child, the zygote waited for that child, and the main browser
+waited for a socket response. Terminating only that handler released the zombie and unblocked the
+existing browser process. This handler belongs to Chrome, independently of Ubuntu's Apport service.
+
+Use an external terminal and identify the processes again for each freeze. Replace `ZOMBIE_PID`
+and `TRACER_PID` below with the numeric PIDs from the current incident:
+
+1. Run `ps -C chrome -o pid,ppid,stat,comm` and look for a process in state `Z`.
+2. Run `rg '^(State|PPid|TracerPid):' /proc/ZOMBIE_PID/status`. Confirm the zombie state and a nonzero
+   `TracerPid`.
+3. Run `readlink /proc/TRACER_PID/exe` and `ps -p TRACER_PID -o pid,args`. For the installed Google
+   Chrome package, the handler is `/opt/google/chrome/chrome_crashpad_handler`. Verify that its
+   `--database` belongs to the affected profile, normally `~/.config/google-chrome/Crash Reports`.
+4. Only after confirming that match, run `kill -TERM TRACER_PID`. Check that the zombie disappears,
+   the browser responds, and existing tabs remain available.
+
+Do not reuse a historical PID, terminate the main browser, or kill all Crashpad handlers. If this
+signature is absent, investigate the freeze separately. The handler termination is an emergency
+recovery; it does not fix the original stall or persistently disable crash reporting. A full Chrome
+restart starts its crash-reporting handler again. Use the
+[historical performance recorders](#investigate-a-slow-period) to investigate preceding I/O or swap
+pressure.
+
+#### Increase the Chrome GPU watchdog timeout
+
+The personal launcher `~/.local/share/applications/google-chrome.desktop`
+sets `--gpu-watchdog-timeout-seconds=120` for normal startup, a new window, and an incognito window.
+The personal XFCE helper `~/.local/share/xfce4/helpers/google-chrome.desktop`
+also adds it when XFCE launches its preferred browser with `WebBrowser=google-chrome` in
+`~/.config/xfce4/helpers.rc`. These user overrides preserve the packaged files under `/usr/share`.
+The personal files remain local and ignored by Git; this runbook is the versioned recreation guide.
+
+To recreate the overrides, create the personal parent directories if needed and copy each packaged
+file only when its personal copy does not exist:
+
+| Packaged file | Personal copy |
+| --- | --- |
+| `/usr/share/applications/google-chrome.desktop` | `~/.local/share/applications/google-chrome.desktop` |
+| `/usr/share/xfce4/helpers/google-chrome.desktop` | `~/.local/share/xfce4/helpers/google-chrome.desktop` |
+
+Preserve other customizations when updating an existing copy. Set these launcher keys:
+
+```ini
+[Desktop Entry]
+Exec=/usr/bin/google-chrome-stable --gpu-watchdog-timeout-seconds=120 %U
+
+[Desktop Action new-window]
+Exec=/usr/bin/google-chrome-stable --gpu-watchdog-timeout-seconds=120
+
+[Desktop Action new-private-window]
+Exec=/usr/bin/google-chrome-stable --gpu-watchdog-timeout-seconds=120 --incognito
+```
+
+In the XFCE helper's `[Desktop Entry]` section, keep the remaining keys and set:
+
+```ini
+X-XFCE-Commands=%B --gpu-watchdog-timeout-seconds=120;
+X-XFCE-CommandsWithParameter=%B --gpu-watchdog-timeout-seconds=120 "%s";
+```
+
+Validate the application launcher and refresh the user desktop database:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+desktop-file-validate ~/.local/share/applications/google-chrome.desktop
+update-desktop-database ~/.local/share/applications
+```
+
+Save work in open tabs, fully exit Chrome, and reopen it through the updated launcher or XFCE browser
+shortcut. Ensure background Chrome processes have also exited; opening another window in the same
+running browser does not apply new startup arguments. Check `chrome://version` for the argument in
+**Command Line** after relaunch. For a direct terminal launch, use
+`google-chrome --gpu-watchdog-timeout-seconds=120`; plain terminal commands do not use these overrides.
+This is a startup argument, not a `.env` setting. It gives the GPU watchdog more time before recovery,
+but does not fix memory pressure or the Crashpad blockage and can delay recovery from a real GPU hang.
+
+To undo, remove the argument from all three launcher `Exec` keys and both XFCE helper command keys,
+refresh the desktop database, then fully exit and reopen Chrome. Preserve the argument when refreshing
+these personal copies after package updates if the workaround is still needed.
 
 #### Prevent memory-exhaustion lockups with earlyoom
 
