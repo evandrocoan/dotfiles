@@ -4,9 +4,10 @@
 
 **Alimenta:**
 
-- [plano de implementação](../active/decision-to-architecture-flow.md), que recebeu as doze
-  decisões, D1 a D12, em inglês. É o dono de todas elas até ser executado. Pelo D11, nenhum
-  registro de arquitetura é criado: as skills são a autoridade durável e recebem as regras na
+- [plano de implementação](../active/decision-to-architecture-flow.md), que recebeu as vinte e uma
+  decisões, D1 a D18 e D20 a D22, em inglês, e os pareceres de D19 e D21. O plano registra a
+  sequência das decisões promovidas. Pelo D11, nenhum registro de arquitetura é criado: as skills
+  são a autoridade durável e recebem as regras na
   execução do plano.
 
 Documento de trabalho: explica os pontos em aberto e resume o que já foi decidido. Não substitui o
@@ -15,47 +16,63 @@ decisão vale onde foi registrada.
 
 ## Resumo
 
-Em outra conversa, você decidiu num brief remover um bloco da integração com o Redmine, e essa
-decisão muda uma regra de um registro de arquitetura aprovado. Quando você mandou "registre as
-decisões", o agente copiou a decisão só para o plano, marcou o brief como concluído e deixou o
-registro de arquitetura para depois, sem avisar. Você só soube porque perguntou. O relato é o que
-você colou aqui; aquele repositório e aquele plano eu não vi (não verificado).
+Estado atualizado em 2026-09-21: você escolheu **D20.2**, deixando a `run-large-4` apenas como
+histórico, sem usá-la como evidência para fechar a obrigação de D16. A comprovação depende da nova
+rodada autorizada em D18, quando seus pré-requisitos forem atendidos. Se ela não bastar, a
+obrigação continua aberta, sem repetição ou enfraquecimento automático dos critérios.
 
-A falha foi em parte de comportamento e em parte das skills, que deixam três buracos quando uma
-decisão sua contraria um registro de arquitetura aprovado. Conferi os trechos das três skills nesta
-sessão, em 2026-09-18, e os buracos existem.
+As vinte e uma decisões estão registradas no plano. D17 conserva o adiamento até o parecer, D20
+resolve a escolha adiada, e D19 está resolvido como entrega da revisão anterior. D21 segue a
+recomendação de confirmar o plano corrigido e os testes com o Sol; você autorizou fazê-lo aqui
+com um subagente `gpt-5.6-sol` em `xhigh`, em contexto novo e somente leitura. D22 autoriza a
+preparação e uma rodada adicional com Terra xhigh, com os limites descritos no item. D21 foi
+concluído com a confirmação de prontidão do plano. Há **zero pontos abertos** e **zero decisões
+pendentes de registro**. O brief está concluído; a implementação do plano permanece pendente.
+D1 conserva a decisão anterior.
 
-Não há item aberto, e nenhum item tem `registro pendente`. Os doze itens estão decididos e
-registrados no [plano](../active/decision-to-architecture-flow.md). O dono de todos é o plano:
-pelo D11, nenhum registro de arquitetura é criado para este fluxo, e as skills recebem as regras
-quando o plano for executado. O D10 e o D11 vieram da primeira revisão independente do plano, que
-você rodou com o Astra em 2026-09-19. O veredito foi "não pronto", com oito achados que bloqueiam.
-Seis eu corrigi no próprio plano, porque não mudam nenhuma decisão sua. Dois dependiam de você. No
-D10 você decidiu como o agente escolhe entre o bloco de emenda e o registro novo: o objetivo decide,
-sem contagem de regras. No D11 você decidiu que as skills são a autoridade durável do fluxo; eu
-tinha declarado o plano "único dono" só pela falta da pasta `architecture/`, e essa escolha era sua.
-O D12 veio da segunda revisão e da revisão do advisor: quando emendar um registro obrigaria a uma
-manutenção maior do que a exceção do D3 permite, como traduzir o registro inteiro, você decidiu que
-a emenda recua para depois da revisão do plano.
+O parecer de D19 havia considerado o replanejamento não pronto. As correções e o desenho dos
+testes foram avaliados em D21 pelo subagente Sol xhigh, em contexto inicialmente novo e somente
+leitura. Depois de incorporar seus achados ao plano e conferir os deltas, o veredito final foi
+**pronto para implementação**, sujeito à instrução de retomada e aos pré-requisitos de cada etapa.
+Esta sessão Astra xhigh continua autora e não pode fornecer a próxima auditoria independente
+de fechamento. O advisor está indisponível.
 
-Das decisões anteriores, as seis escolhas entre opções são: o D1, nomear o dono de cada decisão e
-manter o brief aberto enquanto faltar um; o D2, a marca só na regra emendada quando a mudança é
-pequena, e um registro novo quando é grande; o D3, a emenda do registro antes da revisão
-independente; o D4, a emenda feita pela sessão que conduziu a discussão; o D7, conferir o brief no
-fechamento do plano; e o D8, um prefixo e uma sequência por seção nos briefs novos. Os três
-trabalhos que você decidiu fazer são: o D5, trocar a frase vaga da
-`discussion-briefs`; o D6, rodar o caso novo no teste com agente independente depois de aplicar as
-decisões; e o D9, dar aos itens de trabalho do modelo a mesma profundidade dos itens de decisão.
+D18 autoriza **uma única rodada adicional do caso grande**, em sessão independente que você abra,
+depois da revisão e das correções aprovadas, com modelo, pedido, critérios e limites registrados
+antes. Não autoriza repetição automática, rodadas dos outros casos, advisor ou subagentes no teste.
+A rodada ainda não pode começar: faltam a retomada, as correções e os controles. Planejei executar
+aqui os controles de teste, as comparações dos arquivos, o rejulgamento dos resultados antigos
+e a leitura dos critérios. Para o Sonnet, propus a única rodada D18: registrar a decisão do caso
+grande num ambiente isolado, sem acesso às respostas esperadas. O plano também exige conferir a
+ordem segura dos passos produzidos e a lista na resposta ao usuário. Nenhuma skill, script ou
+fixture foi alterada, e nenhum teste foi executado nesta etapa. O revisor de D21 apenas leu e
+relatou; não implementou nem executou os casos.
 
-Registrado não quer dizer aplicado: nenhuma skill mudou ainda. A segunda revisão independente,
-também de 2026-09-19, deu "pronto depois de corrigir os achados que bloqueiam". Eram quatro, e
-corrigi todos no plano; uma das correções escondia uma escolha sua, que virou o D12. A terceira
-revisão, da mesma data, deu o mesmo veredito, com três achados que bloqueiam, todos sobre precisão
-do plano e nenhum sobre decisão sua; também estão corrigidos. Essas últimas correções não mudam
-nenhuma decisão nem a ordem dos passos; no escopo, só deixam explícito que o texto de explicação
-deste brief pode ser corrigido quando uma revisão mostra que está errado. O mesmo revisor conferiu
-as correções e deu o veredito "pronto para executar". A execução depende de uma instrução sua. Se
-ela levantar uma decisão nova, essa decisão entra aqui como item novo e o brief reabre.
+A rodada Terra autorizada em D22 usa o mesmo caso grande, em outra cópia e com contexto limpo,
+depois do Sonnet. Eu abrirei o agente no Codex com `gpt-5.6-terra` em `xhigh`, depois da
+retomada da implementação, das correções e dos controles aprovados. A confirmação independente
+do desenho e o registro da autorização estão completos. Antes da rodada,
+a avaliação precisa reconhecer as transcrições do Codex: o leitor atual foi escrito para Claude
+e não pode aprovar um teste só porque deixou de reconhecer suas ferramentas. D21 incluiu a revisão
+desse desenho. Terra complementa a observação do Sonnet; não substitui sua rodada.
+
+A segunda auditoria de fechamento, anterior a este parecer, foi feita pelo `gpt-6-astra` em
+`xhigh` e deu **Failed**. Foi o mesmo modelo das revisões anteriores do plano, com o limite de
+pontos cegos correlacionados registrado. Seus bloqueios B1, B2 e B3 continuam reabertos no
+[plano](../active/decision-to-architecture-flow.md): a trava por fase, o controle defeituoso que
+conservava as regras e a revisão herdada ausente antes da frase e da rodada D16. As correções de
+redação N1, N2 e N3 foram consideradas coerentes pelo Sol.
+
+A `run-large-4` conserva observações históricas de promoção, forma e lista na resposta, mas, por
+D20.2, não será usada para fechar a obrigação de D16. Ela não demonstrou qualidade integral de um
+plano executável e seguro: o plano que produziu manda remover a proteção do consumidor antes de
+criar ou localizar o roteador, cuja existência não está estabelecida. Esses limites e a revisão
+prévia ausente continuam registrados, sem apagar ou alterar os arquivos antigos.
+Os casos pequeno e de recuo precederam D16. Nenhuma rodada antiga testa a redação proposta de B1;
+rejulgar arquivos guardados também não cria essa evidência comportamental.
+
+D1 a D16 permanecem com suas decisões originais registradas. O relato do outro repositório
+continua não verificado por esta sessão e não autoriza inspeção ou mudança lá.
 
 ## Glossário
 
@@ -72,8 +89,24 @@ ela levantar uma decisão nova, essa decisão entra aqui como item novo e o brie
 | estado do registro | Rótulo do registro inteiro: proposto, em implementação, implementado ou substituído. |
 | sessão que implementa | A conversa nova, no outro chat com o modelo Opus, que recebe o plano pronto e escreve testes e código. |
 | `references/` | Subpasta de uma skill com documentos que o agente só abre quando o `SKILL.md` manda, numa situação específica. |
-| Astra | O modelo `gpt-6-astra`, da OpenAI, que você rodou no Codex como revisor independente do plano, em contexto limpo e só lendo. |
+| advisor | Ferramenta da sessão anterior do Claude que consultava outro modelo para aconselhamento; está indisponível nesta sessão do Codex. |
+| juiz | Script meu que confere mecanicamente o resultado de uma rodada do teste: os arquivos, o diretório do Git e a transcrição. O que pede leitura, como a resposta do agente, eu confiro lendo. |
+| DLQ | A fila de reprocessamento (dead-letter queue) do repositório fictício usado nas rodadas; aparece numa regra do registro de arquitetura de teste. |
+| avanço/ack | Confirmação de que uma mensagem já foi consumida, para que a leitura da fila possa avançar; o teste deve preservar isso também quando uma mensagem de outro cliente é descartada. |
+| Sol | Modelo `gpt-5.6-sol`, que produziu em `xhigh` o parecer recebido em D19; também fez a primeira auditoria de fechamento. |
+| Sonnet | Modelo Claude proposto para a única rodada nova D18, em sessão que você abre; o identificador e a configuração disponíveis serão conferidos antes da execução. |
+| Terra xhigh | Configuração `gpt-5.6-terra` com esforço de raciocínio `xhigh`, autorizada e registrada em D22 para uma rodada adicional no Codex, ainda dependente dos pré-requisitos de execução. |
+| fixture | Conjunto isolado de arquivos de exemplo sobre o qual o agente do teste trabalha, sem alterar o projeto real. |
 | alto risco | Classificação da `plan-implementation` para mudanças que mexem em arquitetura, autorização ou regras de revisão; exige plano completo e revisão independente. |
+| Astra | Modelo `gpt-6-astra`, que fez as revisões anteriores do plano e a segunda auditoria; a sessão que agora escreve não pode revisar o próprio trabalho. |
+| B1 | Achado sobre a trava por fase impedir o registro que resolveria a pendência; sua correção ainda está proposta. |
+| B2 | Achado sobre um controle de teste que parecia remover regras, mas conservava seu significado em outra seção. |
+| B3 | Achado sobre a ausência da revisão independente herdada antes da frase e da rodada do D16. |
+| `run-large-4` | Quarta execução do caso grande, a única autorizada por D16; seus arquivos e sua resposta estão guardados. |
+| controle feito à mão | Resultado montado pelo autor para conferir se o juiz aceita um caso válido ou rejeita um defeito específico; não executa um agente. |
+| rejulgamento | Leitura e conferência de arquivos já produzidos, sem gerar nova resposta de modelo. |
+| rodada nova | Execução de um agente em uma cópia isolada do caso de teste; consome recursos e precisa de autorização própria. |
+| risco herdado | Continuação material que mantém as revisões e os critérios de fechamento do plano de alto risco a que pertence. |
 
 ## Decisões que dependem de você
 
@@ -865,6 +898,431 @@ mudar sem querer o sentido de uma regra, e nesse momento nenhuma revisão olhou 
 sumário; a regra cabe numa frase; e ela não faz nenhuma mudança grande passar antes da revisão. É a
 mais simples, que é o critério que você usou no D10 e no D11.
 
+### D13 — Quais conferências da `architecture-records` valem na hora de passar o plano para outra sessão?
+
+**Estado:** decidido
+
+**Decisão:** opção 1, separar os dois momentos numa frase no começo da seção 11 da
+`architecture-records`. Quando a sessão da discussão passa o registro emendado e o plano para quem
+vai implementar, valem só as conferências sobre a forma do registro. As conferências sobre
+implementação concluída valem quando a implementação fecha. Registrada no
+[plano](../active/decision-to-architecture-flow.md).
+
+**Esclarecimento das revisões:** a revisão independente do replanejamento achou que o plano tinha
+escrito o D13 como se cada conferência valesse em um momento só. Não é isso que este item diz: no
+fechamento da implementação valem todas as conferências, como hoje, e as de forma valem também na
+passagem do planejamento. A lista do plano também estava incompleta. Ficaram classificadas como de
+forma, além das que este item cita: nada de diário em nenhum ponto do registro, a inspeção de
+arquivos não rastreados e de diffs, o relato do que mudou e o limite de autorização do Git. Ficaram
+como de fechamento, além das citadas: nenhum caminho antigo concorrendo com o atual, estados finais
+consistentes, os rastros nos dois sentidos e a retirada dos blocos de emenda e dos avisos cuja
+implementação fechou. Para nenhuma conferência ficar de fora por esquecimento, a frase da skill vai
+nomear só as que esperam o fechamento; toda conferência que ela não nomear vale nos dois momentos.
+
+**A pergunta para você:** pelo D4, a sessão da discussão emenda o registro e só então passa o
+trabalho para a sessão que implementa. A `architecture-records` tem uma lista de conferências
+"antes do handoff". Falta dizer quais delas valem nessa passagem, que acontece antes de existir
+qualquer implementação.
+
+**O que aconteceu:** a segunda passada independente do fechamento, feita pelo Sol em 2026-09-19,
+achou uma colisão dentro da própria skill (conferi o texto, e ela existe). A seção 7a, nova, diz que
+a sessão da discussão faz a emenda "before handing the work to another session". A seção 11, que já
+existia, começa com "Before handoff:" e exige, entre outras coisas, que a matriz de fechamento do
+plano não tenha nada pendente e que a segunda passada de conformidade já tenha sido feita. Essas
+duas coisas só existem depois da implementação. Lidas juntas ao pé da letra, a sessão da discussão
+nunca poderia passar o trabalho adiante. A skill diz que todo "must" e "never" dela é uma trava de
+entrega, e o plano diz que a exceção do D3 não dispensa nenhuma outra obrigação da skill. Por isso
+escolher quais conferências valem em cada momento não é algo para eu resolver sozinho.
+
+**Exemplo:** você decide remover o `redmine_native`, e o agente emenda o registro e escreve o plano.
+Na hora de entregar para a sessão do Opus implementar, ele lê "antes do handoff, confirme que a
+segunda passada de conformidade foi concluída". Nada foi implementado ainda, então não há passada
+nenhuma para confirmar. Um agente cuidadoso trava; um descuidado pula a lista inteira.
+
+**Opções:**
+
+1. Separar os dois momentos numa frase no começo da seção 11. Na passagem do registro emendado e do
+   plano para quem vai implementar, valem só as conferências sobre a forma do registro: estado
+   explícito, índice com link para cada registro, comportamento proposto não descrito como atual,
+   o bloco de emenda correto, links válidos, nada de sumário manual e checagem de espaços. As
+   conferências sobre implementação concluída, que são rastreabilidade até o código, replay, matriz
+   de fechamento sem pendência e segunda passada, valem quando a implementação fecha.
+2. Mexer só na redação do D4, trocando "handing the work" por outra expressão, sem tocar na seção
+   11.
+
+**Como fica na prática:**
+
+| O que acontece | Opção 1: separar os momentos | Opção 2: só trocar a palavra |
+| --- | --- | --- |
+| Sessão da discussão passa o plano adiante | Confere a forma do registro e entrega. | Entrega, mas a lista "antes do handoff" continua lá, sem dizer se vale. |
+| Fechamento da implementação | Todas as conferências valem, como hoje. | Igual. |
+| Um registro proposto comum, fora deste fluxo | A mesma frase resolve a dúvida, que já existia antes. | A dúvida continua. |
+| Texto novo na skill | Uma frase na seção 11. | Uma palavra na seção 7a. |
+
+**Pontos negativos de cada opção:**
+
+- Opção 1: mexe numa seção de travas da skill, e a lista de quais conferências são "de forma"
+  precisa ficar certa; uma conferência posta do lado errado deixaria de ser cobrada na passagem.
+- Opção 2: não resolve a colisão, só a esconde; o próximo revisor acha de novo, e um agente pode
+  tanto travar quanto pular a lista inteira.
+
+**Recomendação:** opção 1. É uma frase, resolve também a dúvida que já existia para registros
+propostos, e não dispensa nenhuma conferência: só diz quando cada uma vale.
+
+### D14 — O teste do D6 fica aceito como está, ou você autoriza rodadas novas?
+
+**Estado:** decidido
+
+**Decisão:** opção 4. Você autoriza três rodadas novas do teste com agente independente, uma para
+cada caminho: o caso pequeno de novo, limpo; a variante grande do D2; e o recuo do D12, com um
+registro em português. O D13 entra na skill antes das rodadas. Se uma rodada falhar por defeito de
+skill, eu corrijo e a rodada daquele caso recomeça. Registrada no
+[plano](../active/decision-to-architecture-flow.md).
+
+**Esclarecimentos das revisões:** a revisão independente do replanejamento apertou os critérios das
+três rodadas, sem mudar o que você autorizou. No caso grande, o registro novo precisa trazer a sua
+decisão correta nas regras, no fluxo e no dono da conferência, e o plano precisa receber a decisão;
+antes, um registro com rótulos e links certos e a regra antiga dentro passaria. No caso pequeno, a
+resposta precisa mostrar a lista dos lugares que a decisão muda e a forma escolhida, que o D10
+exige. No recuo, o índice da pasta de arquitetura também fica em português, nada nessa pasta pode
+mudar, e o plano precisa ganhar, depois da revisão, os passos de tradução do registro e do índice e
+o da emenda. O plano prevê resultados defeituosos feitos à mão para os casos que ele lista, e o
+juiz tem de reprovar cada um antes das rodadas; nem todo critério novo tem um, e a lista do D10 na
+resposta do caso pequeno, por exemplo, eu confiro lendo. As duas rodadas antigas do D6 deixam de
+aparecer no plano como "passaram": ficam anotadas critério por critério, com os dois limites
+descritos abaixo.
+
+**A pergunta para você:** as duas rodadas do teste acertaram o que tinha falhado no outro chat, mas
+a segunda passada independente achou dois limites que eu não tinha visto. Você decide se isso basta
+ou se quer rodadas novas, que o D6 não autorizou.
+
+**O que as duas rodadas fizeram certo (conferido por mim e pelo Sol):** só o registro, o plano e o
+brief mudaram; o registro ganhou exatamente um bloco, com o rótulo, embaixo da regra certa, dizendo
+que a regra continua valendo; o brief ficou com os links para os dois donos e sem a marca
+`registro pendente`; a resposta separou "registrado" de "implementado" e disse que a revisão do
+plano vem antes do código; o código e o diretório do Git não mudaram; e as transcrições não
+mostram nenhum comando de Git que mude estado.
+
+**Os dois limites:**
+
+- Na primeira rodada, depois de fazer as edições, o agente consultou o advisor dele, embora o
+  pedido dissesse para trabalhar sozinho. Os arquivos não foram afetados, porque a consulta veio
+  depois, mas não dá para saber quanto a resposta final foi influenciada: o conteúdo da consulta
+  fica cifrado na transcrição. O meu juiz não olhava esse tipo de chamada; já corrigi o juiz, e ele
+  agora reprova a primeira rodada nesse ponto.
+- Na segunda rodada, o agente atualizou o passo do plano com o que você decidiu, mas não escreveu no
+  plano que a revisão vem antes do código; disse isso só na resposta. O critério que eu tinha
+  escrito, "o plano carrega a sequência", é ambíguo. O seu D6 diz "ele anota a sequência de execução
+  no plano", e nessa leitura as duas rodadas passam. O Sol leu o critério junto com o D3, como "a
+  ordem revisão e depois código está no plano", e nessa leitura só a primeira passa. O plano do
+  repositório de teste também ajudou nisso: eu o montei sem o passo de revisão que todo plano de
+  verdade tem.
+
+**Opções:**
+
+1. Aceitar como está, com os limites anotados no plano. Vale a leitura do seu D6 para o critério do
+   plano, e a consulta ao advisor fica registrada como desvio da primeira rodada.
+2. Autorizar duas rodadas novas, com as mesmas skills, o repositório de teste com o passo de
+   revisão no plano, o pedido proibindo também o advisor, e o critério do plano escrito sem
+   ambiguidade.
+3. Antes, reforçar a skill para o agente escrever a ordem "revisão antes do código" no plano quando
+   ele não a tiver, e depois rodar duas rodadas novas.
+4. Autorizar três rodadas, uma para cada caminho: o caso pequeno de novo, limpo, com o passo de
+   revisão no plano do repositório de teste e o advisor proibido no pedido; a variante grande do D2,
+   em que o esperado é um registro novo no estado proposto, com a linha de aviso, sem marcar o
+   antigo como substituído; e o recuo do D12, com um registro em português, em que o esperado é o
+   agente não emendar, avisar e manter `registro pendente` para o registro. O D13 entra na skill
+   antes das rodadas, para a evidência não ficar anterior a uma mudança de skill.
+
+**O que acontece em cada resposta:**
+
+| O que acontece | Opção 1: aceitar | Opção 2: duas rodadas novas | Opção 3: reforçar e rodar | Opção 4: três caminhos |
+| --- | --- | --- | --- | --- |
+| Custo | Nenhum. | Cerca de 250 mil tokens e dez minutos (estimativa pelas rodadas já feitas). | O mesmo, mais uma mudança de skill, que pede nova validação e nova conferência. | Cerca de 400 mil tokens e quinze minutos (estimativa), mais a montagem de dois repositórios de teste novos. |
+| Evidência que fica | Uma rodada completa com desvio de advisor e uma com o plano na leitura fraca; a falha do outro chat não apareceu em nenhuma. | Duas rodadas limpas, ou a descoberta de que o limite se repete. | Igual à opção 2, para um texto de skill mais exigente. | O caso pequeno limpo, e a primeira evidência de comportamento da variante grande, da escolha do D10 e do recuo do D12, que hoje só foram lidos. |
+| Risco | A matriz de fechamento fica com os limites escritos, e um revisor pode continuar achando pouco. | Um modelo pode consultar o advisor mesmo proibido; aí o limite fica confirmado, não removido. | Aumenta o texto da skill por causa de um detalhe do repositório de teste. | O mesmo risco do advisor. Uma rodada pode falhar por defeito de skill; aí eu corrijo e a rodada daquele caso recomeça, o que aumenta o custo. |
+
+**Pontos negativos de cada opção:**
+
+- Opção 1: a evidência fica menos limpa do que o critério pedia, e isso fica escrito para sempre no
+  plano concluído.
+- Opção 2: gasta tokens para melhorar a evidência de algo que já se comportou bem nas duas vezes.
+- Opção 3: muda a skill por causa de um plano de teste mal montado; num plano de verdade, o passo de
+  revisão já existe, porque a `plan-implementation` o exige como primeiro passo.
+- Opção 4: é a mais cara. Uma rodada por caminho é pouca evidência para cada um, e uma falha pode
+  abrir correções de skill e mais uma volta de fechamento. Cada caso novo precisa de um juiz
+  próprio, feito por mim, que também pode ter buracos, como o primeiro teve.
+
+**Recomendação:** opção 4. O caso pequeno já se comportou bem duas vezes, e repeti-lo ensina pouco.
+Os caminhos que nunca rodaram são justamente onde um modelo mais fraco tende a errar: na revisão
+anterior, o Sonnet substituiu um registro aprovado na hora, que é o erro que a variante grande
+procura, e um registro em português convida a traduzir tudo ou a pendurar um bloco em inglês. Se o
+custo pesar, a opção 1 continua defensável, porque a falha do outro chat não apareceu em nenhuma
+das duas rodadas; a opção 2 é a que menos vale o que custa, e a opção 3 eu não faria.
+
+### D15 — A segunda rodada do caso grande consultou o advisor proibido: a evidência basta ou rodo mais uma?
+
+**Estado:** decidido
+
+**Decisão:** opção 2. Você autoriza mais uma rodada do caso grande, com a proibição do advisor
+escrita no pedido da forma mais forte. Se o agente consultar o advisor de novo, vale a opção 1 e
+eu não rodo mais nada. Registrada no [plano](../active/decision-to-architecture-flow.md).
+
+**A pergunta para você:** das três rodadas que você autorizou no D14, duas passaram limpas. A do
+caso grande acertou o conteúdo, mas o agente consultou o advisor dele, que o pedido proibia. O D14
+só prevê rodada nova quando a falha é defeito de skill, e esta não é. Você decide se a evidência
+que sobrou basta ou se autoriza mais uma rodada desse caso.
+
+**Por que o advisor era proibido:** o teste existe para responder uma pergunta só: um modelo mais
+fraco, lendo apenas o texto das skills, faz a coisa certa sozinho? O advisor é um modelo mais forte
+que enxerga a conversa inteira do agente e devolve conselhos. Se o agente o consulta, o resultado
+passa a mostrar o que o Sonnet faz com a ajuda de um modelo mais forte, e não o que o texto da
+skill consegue sozinho. Três coisas pioram isso:
+
+- O conselho fica cifrado na transcrição. Eu vejo que a consulta aconteceu e o que o agente editou
+  depois, mas não o que foi sugerido, então não dá para separar o que veio do Sonnet do que veio do
+  advisor. Na segunda rodada do caso grande, foram cinco edições depois da consulta.
+- As skills são compartilhadas com o Codex e o Copilot, e nem toda sessão tem advisor. O texto
+  precisa funcionar sem ele.
+- Foi exatamente isso que o Sol apontou ao reprovar o fechamento: a primeira rodada do D6 tinha
+  consultado o advisor, e eu tinha contado a rodada como aprovada. Por isso a opção 4 do D14, que
+  você escolheu, já dizia "o advisor proibido no pedido".
+
+A proibição vale só dentro do teste. No trabalho de verdade o agente pode e deve consultar o
+advisor, como eu mesmo faço nesta sessão. O agente do teste desobedeceu porque o programa em que
+ele roda traz uma instrução fixa mandando consultar o advisor antes de dar o trabalho por pronto, e
+essa instrução pesou mais que o meu pedido. No recuo do D12 eu escrevi a proibição em uma linha
+separada, dizendo que ela vale também no fim do trabalho e passa por cima dessa instrução fixa, e o
+agente obedeceu.
+
+**O que aconteceu:**
+
+- **Caso pequeno:** passou em tudo. O agente não abriu advisor, revisor nem subagente. Um limite:
+  a resposta diz que o bloco foi para a regra 3, mas não explica por que escolheu o bloco.
+- **Recuo do D12 (registro em português):** passou em tudo. O agente não tocou na pasta de
+  arquitetura, pôs no plano a tradução do registro e do índice e depois a emenda, tudo depois da
+  revisão, manteve `registro pendente` para o registro com o motivo e não concluiu o brief.
+- **Caso grande, primeira rodada:** falhou na leitura, por uma lacuna da skill. O registro novo se
+  declarou substituto só de uma parte do antigo e disse que as regras da fila de reprocessamento
+  continuavam valendo no registro antigo. A `architecture-records` não dizia que o registro novo
+  substitui o antigo inteiro. Acrescentei essa frase, com o motivo, e rodei o caso de novo, como o
+  D14 prevê.
+- **Caso grande, segunda rodada:** com a frase nova, o agente escreveu certo: registro novo no
+  estado proposto, dizendo que substitui o antigo quando for implementado, com as regras que não
+  mudam copiadas, a entrada no índice, um aviso só no registro antigo, e o plano e o brief
+  atualizados. Aí, já com tudo pronto, ele consultou o advisor e fez mais cinco ajustes no registro
+  novo e no índice. O conteúdo da consulta fica cifrado na transcrição.
+
+**O que eu consegui recuperar:** a transcrição guarda cada edição que o agente fez, na ordem.
+Refiz os arquivos exatamente como estavam antes da consulta ao advisor, e o juiz aprova esse
+estado em todas as conferências de arquivo; li o registro novo e ele está correto. O que não dá
+para recuperar é a resposta final sem influência do advisor, porque ela foi escrita depois. A
+resposta do caso grande sem advisor só existe na primeira rodada, e lá ela cumpriu o que se pedia:
+mostrou a lista dos lugares que a decisão muda, a forma escolhida com o motivo, e separou
+"registrado" de "implementado".
+
+**Opções:**
+
+1. Aceitar a evidência como está: os arquivos de antes da consulta valem para o registro, o plano e
+   o brief, a resposta da primeira rodada vale para a resposta, e a consulta proibida fica anotada
+   no plano como desvio.
+2. Autorizar mais uma rodada do caso grande, com a proibição do advisor escrita no pedido da forma
+   mais forte que usei no recuo do D12, onde funcionou. Se o agente consultar o advisor de novo,
+   vale a opção 1 e não rodo mais nada.
+
+**Como fica na prática:**
+
+| O que acontece | Opção 1: aceitar | Opção 2: mais uma rodada |
+| --- | --- | --- |
+| Custo | Nenhum. | Cerca de 150 mil tokens e sete minutos (pelas rodadas já feitas). |
+| Evidência do caso grande | Arquivos de uma rodada e resposta de outra, com o desvio anotado. | Uma rodada inteira limpa, ou a confirmação de que o Sonnet consulta o advisor mesmo proibido. |
+| Fechamento do plano | Sigo direto para a conferência de fechamento e a passada do Sol. | O mesmo, depois da rodada. |
+| Risco com o Sol | Ele pode reprovar de novo, porque o critério diz que qualquer desvio reprova a rodada. | Menor, se a rodada sair limpa. |
+
+**Pontos negativos de cada opção:**
+
+- Opção 1: a evidência do caso grande fica montada de dois pedaços, e o plano registra uma rodada
+  reprovada como prova. Foi exatamente evidência fraca que reprovou o fechamento da primeira vez.
+- Opção 2: gasta tokens, e a rodada pode consultar o advisor de novo; a proibição mais forte
+  funcionou uma vez só, então não há garantia.
+
+**Recomendação:** opção 2. É barata perto do que já foi gasto, e dá a chance de fechar o caso
+grande com uma rodada inteira limpa. O limite fica combinado de antemão: se o advisor aparecer de
+novo, fico com a opção 1 e sigo para o fechamento.
+
+### D16 — A rodada nova não mostrou na conversa a lista dos lugares que a decisão muda: corrijo ou aceito?
+
+**Estado:** decidido
+
+**Decisão:** opção 2. A `discussion-briefs` ganha uma frase, no parágrafo da promoção, mandando a
+resposta trazer a lista e a forma que a `architecture-records` pede, e o caso grande roda mais uma
+vez, uma rodada só. Se a lista ainda não aparecer, vale a opção 1 e eu não rodo mais nada; a frase
+fica na skill mesmo assim. Registrada no [plano](../active/decision-to-architecture-flow.md).
+
+**A pergunta para você:** a rodada que você autorizou no D15 saiu sem advisor e acertou todos os
+arquivos. Falhou em uma coisa só, na leitura: a resposta ao usuário não mostrou a lista dos lugares
+do registro que a decisão muda. Você decide se isso vira mais uma frase numa skill, com mais uma
+rodada, ou se fica anotado como limite e o plano segue para o fechamento.
+
+**O que é essa lista:** é uma frase na resposta, não um bloco. Pelo D10, antes de escolher entre o
+bloco de emenda e o registro novo, o agente enumera os lugares do registro que a decisão obriga a
+mudar, só pelos nomes (regras, seção de fluxo, diagramas, tabelas), e diz na conversa essa lista
+junto com a forma que escolheu. No caso pequeno ficaria "muda só a regra 3, então usei o bloco de
+emenda". No caso grande, a primeira rodada escreveu "a mudança era grande demais (fluxo, dono da
+conferência e vários invariantes) para caber num bloco de emenda, então usei registro novo". Ela
+existe para você conferir a escolha na hora. Sem ela, você lê "criei um registro novo" e não tem
+como saber se um bloco bastava.
+
+**O que aconteceu:** na rodada nova, a resposta disse que criou um registro novo no estado
+proposto, que ele substitui o antigo quando for implementado, que o antigo ganhou o aviso e que a
+revisão do plano vem antes do código. A lista ("muda o fluxo, o dono da conferência e três das cinco
+regras") apareceu só nas notas internas da sessão, que você não veria. Juntando todas as rodadas:
+
+| Rodada | A resposta mostrou a lista com a forma? |
+| --- | --- |
+| D6, primeira rodada | Sim, mas essa rodada consultou o advisor antes de responder. |
+| D6, segunda rodada | Só disse qual regra mudou. |
+| Caso pequeno do D14 | Disse o único lugar (regra 3) e a forma (bloco), sem o motivo. |
+| Caso grande, primeira rodada | Sim: lista, forma e motivo. |
+| Caso grande, segunda rodada | Sim, mas a resposta foi escrita depois da consulta ao advisor. |
+| Caso grande, rodada do D15 | Não: só a forma. |
+| Caso grande, rodada do D16, já com a frase nova | Sim: lista, forma e motivo. |
+
+**Por que eu acho que acontece:** a ordem de mostrar a lista está na `architecture-records`, na
+parte que ensina a escolher a forma. Só que a resposta ao usuário é montada seguindo a
+`discussion-briefs`, que tem a sua própria relação do que a mensagem da conversa traz (link do
+brief, quantos itens abertos, o que mudou) e não cita a lista. O Sonnet segue a relação que está
+mais perto e esquece a outra. É uma hipótese; só uma rodada depois da correção mostra se é isso.
+Há uma segunda candidata, que é o próprio teste: o meu pedido manda o agente entregar a resposta ao
+usuário e, separado, notas da sessão, e foi nas notas que a lista caiu. A primeira rodada do caso
+grande pôs a lista na resposta com o mesmo pedido, então o pedido não impede, mas pode puxar a
+análise para as notas. Uma rodada nova não separa bem essas duas causas.
+
+**Opções:**
+
+1. Aceitar como limite. O plano anota que o Sonnet mostra a lista de forma irregular, o D10 fica
+   como verificado por leitura do texto e só em parte pelas rodadas, e eu sigo para o fechamento e
+   a passada do Sol.
+2. Acrescentar uma frase na `discussion-briefs`, no parágrafo da promoção, mandando a resposta
+   trazer a lista e a forma que a `architecture-records` pede, e rodar o caso grande mais uma vez.
+   Se a lista ainda não aparecer, vale a opção 1 e não rodo mais nada. A frase fica na skill mesmo
+   assim, porque ela só aponta para uma regra que a `architecture-records` já tem; a rodada testa
+   se o Sonnet passa a segui-la, e não se a regra está certa.
+
+**Como fica na prática:**
+
+| O que acontece | Opção 1: aceitar como limite | Opção 2: uma frase e uma rodada |
+| --- | --- | --- |
+| Custo | Nenhum. | Cerca de 150 mil tokens e sete minutos, mais a validação da skill. |
+| No uso de verdade | Em parte das vezes você lê "criei um registro novo" sem a lista, e tem de perguntar por quê. | A resposta tende a trazer a lista sempre; a rodada mostra se a frase resolve. |
+| Texto das skills | Não muda. | A `discussion-briefs` ganha uma frase que aponta para uma regra da `architecture-records`. |
+| Fechamento do plano | Sigo agora. A linha do D15 na matriz fica como "falhou em um critério, aceito por você". | Sigo depois da rodada. |
+| Risco com o Sol | Ele pode reprovar, porque o critério diz que qualquer falha reprova a rodada; a sua decisão escrita é o que sustenta o aceite. | Menor, se a rodada sair limpa. |
+
+**Pontos negativos de cada opção:**
+
+- Opção 1: o D10 nasceu justamente para você poder conferir a escolha da forma, e é essa parte que
+  fica funcionando só às vezes com modelos mais fracos.
+- Opção 2: é a segunda frase de skill que sai destas rodadas, e a mesma instrução passa a aparecer
+  em duas skills (uma manda, a outra lembra), o que é mais um ponto para manter igual no futuro.
+  Também não há garantia de que a rodada saia limpa: cada rodada até aqui achou alguma coisa.
+
+**Recomendação:** opção 2, com o limite já combinado de uma rodada só. A falha é pequena, mas cai
+exatamente no que o D10 promete a você, e a correção é uma frase. Se você estiver cansado do ciclo
+de rodadas, a opção 1 é defensável: os arquivos saíram certos em todas as rodadas sem advisor, e a
+lista é uma cortesia da resposta, não uma trava.
+
+### D17 — A rodada feita antes da revisão pode contar como evidência de fechamento?
+
+**Estado:** decidido
+
+**Decisão:** opção 3. Adiar a escolha sobre aceitar a evidência da `run-large-4` até receber o
+parecer do Sol em D19. Registrada no
+[plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
+
+**Situação atual:** o parecer foi recebido em 2026-09-21, com veredito não pronto. O adiamento
+escolhido não aceitava nem rejeitava a evidência. Depois do parecer, você escolheu D20.2: conservar
+a rodada antiga como histórico e não usá-la para fechar a obrigação de D16. As duas decisões
+estão registradas no plano.
+
+**O que é:** a `run-large-4`, autorizada no D16, produziu o registro novo, o plano e o brief de
+teste e mostrou na resposta a lista de lugares alterados. A auditoria leu esses resultados e não
+apontou falta na lista. Porém, a frase da skill e a rodada foram feitas antes da revisão
+independente que a continuação do plano exigia. Esse é o B3: houve uma falha real de ordem, e uma
+revisão feita agora não pode transformar aquela revisão ausente em revisão prévia.
+
+**Por que importa:** este item tratava de decidir se os resultados observados poderiam contribuir
+para fechar o caso grande apesar desse desvio; D20.2 resolveu essa escolha. Por exemplo, a resposta
+guardada prova que a lista apareceu
+naquela execução; ela não prova que a skill passou pela revisão exigida nem que um agente seguirá
+a proposta nova de B1. O autor pode separar esses fatos, mas não aceitar a lacuna por você. A
+obrigação de evidência de D16 depende da nova rodada autorizada em D18, conforme a escolha D20.2,
+e não se considera satisfeita antes de avaliar seu resultado.
+
+**Opções:**
+
+1. Aceitar o resultado como evidência comportamental limitada, depois da revisão independente do
+   texto atual e do replanejamento e da correção/reavaliação do B2. O plano mantém escrito que a
+   revisão prévia faltou; nenhuma revisão obrigatória futura é dispensada. Aproveita o material
+   já pago, mas o revisor ainda pode apontar cobertura insuficiente para alguma obrigação.
+2. Não aceitar essa rodada como evidência para fechar D16. Os arquivos e a falha de processo
+   continuam preservados como histórico. A obrigação fica sem evidência aceita, e uma alternativa
+   depende do que você decidir em D18; rejeitar não autoriza automaticamente outra rodada.
+3. Adiar a escolha até receber o parecer do Sol em D19. O revisor avalia a utilidade e os limites
+   do material, sem decidir por você; até sua resposta, a aceitação continua pendente.
+
+**Custo e risco:** aceitar não gasta tokens de uma execução nova, mas conserva a limitação de
+processo e pode não bastar para o fechamento. Rejeitar pode exigir outra fonte de evidência e
+prolongar o trabalho. Adiar evita decidir antes do parecer, mas mantém a pendência. Em qualquer
+opção, a revisão ausente continua registrada e a auditoria de fechamento ainda é obrigatória.
+
+**Recomendação:** opção 3, decidir depois do parecer do Sol. O replanejamento agora delimita o que
+os arquivos provam e o que não provam; a revisão deve conferir essa separação antes de você
+escolher.
+Isso não é uma decisão tomada por você nem uma aceitação provisória da rodada.
+
+### D20 — Depois do parecer do Sol, aproveitar a evidência limitada da rodada antiga?
+
+**Estado:** decidido
+
+**Decisão:** opção 2. Não usar a `run-large-4` como evidência para fechar a obrigação de D16.
+Preservar seus arquivos e observações como histórico e avaliar a evidência da nova rodada
+autorizada em D18, quando ela puder acontecer. Se a nova rodada não bastar, a obrigação continua
+aberta, sem repetição nem enfraquecimento automático do critério. Registrada no
+[plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
+
+**O que é:** você escolheu em D17 esperar o parecer antes de aceitar ou rejeitar a `run-large-4`.
+O parecer chegou e distingue duas coisas. A rodada mostrou promoção da decisão, forma do registro
+e lista na resposta. Porém, não comprova um plano executável e seguro: o plano de teste remove a
+proteção do consumidor antes de criar ou localizar o roteador e depende de uma premissa ainda não
+estabelecida. A revisão independente que deveria preceder a frase D16 e a rodada também faltou.
+
+**Por que importa:** decidir o que essa evidência pode sustentar é uma escolha sua. D18 autoriza
+uma execução nova sob condições, mas não aceita a antiga nem garante o resultado da futura. Esta
+escolha afeta a evidência de B3 no fechamento; não impede corrigir B1/B2 depois da revisão exigida.
+
+**Opções:**
+
+1. Aceitar a rodada antiga somente como evidência limitada de promoção, forma e lista na resposta,
+   com o desvio de revisão prévia e os problemas do plano de teste explícitos. Ela não demonstra
+   qualidade integral do plano nem comportamento da redação nova de B1. A revisão, a correção B2,
+   as validações aplicáveis e os requisitos da rodada D18 continuam obrigatórios.
+2. Não usar a rodada antiga como evidência para fechar a obrigação de D16. Preservar todos os
+   arquivos e observações como histórico e avaliar a evidência da rodada nova autorizada em D18,
+   quando ela puder acontecer. Se a nova rodada não bastar, a obrigação continua aberta; não há
+   repetição nem enfraquecimento automático do critério.
+
+**Custo e risco:** a primeira opção aproveita evidência existente, mas exige limitar cada conclusão
+para não apresentar um plano defeituoso como seguro. A segunda evita essa dependência no aceite,
+mas deixa a comprovação aguardando a rodada nova, que pode falhar. Nenhuma opção muda o custo ou
+amplia a autorização D18, e nenhuma reconstitui a revisão prévia que não ocorreu.
+
+**Recomendação:** opção 2, por ser a alternativa mais conservadora para o fechamento. A rodada
+antiga permanece como histórico, e a comprovação depende da nova rodada, após a revisão e as
+correções aprovadas. Como D18 já autoriza essa execução, esta escolha não acrescenta outra rodada
+nem muda o custo previsto. O resultado novo ainda precisa satisfazer os critérios; esta
+recomendação não registra uma decisão em seu nome.
+
 ## Trabalho que posso fazer com sua autorização
 
 Esta seção reúne tarefas que eu sei fazer e que não pedem uma escolha entre desenhos diferentes. O
@@ -1016,15 +1474,243 @@ item por item, que é o que a skill existe para evitar.
 
 **Recomendação:** fazer.
 
+### D18 — Autorizar uma rodada nova depois da revisão ou manter o limite atual?
+
+**Estado:** decidido
+
+**Decisão:** fazer. Você autoriza uma única rodada adicional do caso grande, em sessão
+independente que você abra, somente depois da revisão e das correções aprovadas. Modelo, pedido,
+critérios e limites precisam estar registrados antes; o agente do teste não abre advisor nem
+subagentes, não há repetição automática e outros casos não estão autorizados. Registrada no
+[plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
+
+**Situação atual:** a autorização foi dada, mas a rodada continua aguardando os pré-requisitos.
+As correções pedidas em D19 e o desenho dos testes estão no plano e foram confirmados em D21.
+A proposta usa Sonnet em sessão aberta por você; o autor prepara o ambiente e avalia o resultado.
+Nenhuma rodada nova foi executada nesta sessão.
+
+**A pergunta para você:** autorizar uma rodada nova delimitada, não autorizar, ou adiar essa
+escolha até a revisão do replanejamento. O D16 permitiu uma rodada só, e ela já aconteceu; sua
+instrução anterior proibia outra rodada e qualquer subagente. A decisão acima permite apenas
+a rodada delimitada em Fazer, depois de atendidos os pré-requisitos.
+
+**O que seria feito:** uma rodada nova executa outro agente em um ambiente isolado e produz
+arquivos e uma resposta novos. Isso é diferente da correção B2: nela o autor apenas corrige os
+controles feitos à mão e rejulga resultados guardados. O rejulgamento não mostra como um modelo
+reagirá à nova redação de B1. Uma rodada do caso grande também não demonstra, por si, o caminho de
+recuo com registro em português.
+
+**O que acontece em cada resposta:**
+
+- **Fazer:** autorizar uma única rodada adicional do caso grande, em sessão independente que você
+  abra, só depois da revisão e das correções aprovadas. O plano precisa registrar antes o modelo,
+  o pedido, os critérios e os limites; o agente do teste não abre advisor nem subagentes. Não há
+  repetição automática se falhar. Essa escolha não autoriza rodadas dos outros caminhos; se a
+  revisão mostrar que o caso necessário é outro, a proposta volta para você antes de executar.
+- **Não fazer:** manter zero rodadas novas. O trabalho se limita à revisão, aos controles, ao
+  rejulgamento e às evidências existentes que você aceitar em D17. Se isso não satisfizer uma
+  obrigação, ela continua aberta; o autor não a marca como verificada para concluir o plano.
+- **Adiar:** manter a proibição atual até o Sol apontar uma necessidade concreta, ou concluir que
+  não precisa de rodada. Você então decide com o caso e o ganho de evidência definidos. Silêncio
+  ou entrega do parecer não contam como autorização.
+
+**Custo e risco:** D16 estimava cerca de 150 mil tokens e sete minutos para uma rodada grande,
+com base nas anteriores; esse é um parâmetro histórico, não uma cotação ou duração verificada
+agora. A disponibilidade do modelo para uma futura rodada não está verificada. Outra execução
+pode falhar novamente e não corrige a ordem da rodada antiga. Não fazer economiza essa execução,
+mas pode deixar uma obrigação de validação sem atendimento.
+
+**Recomendação:** adiar até a revisão indicar qual propriedade precisaria de evidência nova.
+A correção do juiz e a leitura dos resultados existentes vêm primeiro. Não recomendo repetir o
+caso grande apenas para encobrir a revisão que faltou, nem ampliar o limite sem escolha explícita.
+
+### D22 — Autorizar a preparação e uma rodada adicional com Terra xhigh
+
+**Estado:** decidido
+
+**Decisão:** fazer. Autorizar a preparação da avaliação das transcrições do Codex e uma única
+rodada adicional do caso grande com `gpt-5.6-terra` em `xhigh`, iniciada por esta sessão, com
+contexto novo e depois do Sonnet, somente após a confirmação independente, as correções e os
+controles aprovados. Sem advisor, outros agentes dentro do teste, repetição automática,
+substituição de modelo ou rodadas dos outros casos. Registrada no
+[plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
+
+**Situação atual:** a escolha foi feita e promovida ao plano em 2026-09-21; o desenho foi
+confirmado em D21. A preparação e a rodada não começaram.
+
+**A pergunta para você:** fazer, não fazer ou adiar a preparação e uma única rodada adicional do
+caso grande com Terra xhigh, além da rodada Sonnet prevista em D18.
+
+**O que é:** testar as mesmas regras no Codex, com `gpt-5.6-terra` em `xhigh`. Eu abriria o agente
+com contexto novo, sem herdar esta conversa, depois que o Sonnet terminasse. Ele receberia outra
+cópia dos arquivos originais e o mesmo pedido de registrar as decisões, sem as respostas
+esperadas, os achados do Sol ou o resultado do Sonnet. Contexto novo não isola automaticamente
+o sistema de arquivos; os limites de acesso e a transcrição completa precisam ser verificáveis.
+
+**Por que importa:** um resultado do Sonnet no Claude não mostra como o Terra se comporta no
+Codex. Por exemplo, os dois podem produzir registros corretos, mas só um deles apresentar a
+lista de alterações na resposta. A comparação observaria o conjunto modelo e cliente; uma
+rodada de cada não estabelece qual modelo é superior nem mede uma taxa de sucesso.
+
+**O que precisa ser preparado:** o juiz atual reconhece ferramentas e transcrições do Claude.
+Seu leitor não pode tratar uma transcrição Codex vazia, incompleta ou desconhecida como sucesso.
+A proposta inclui identificar o formato em uma transcrição existente, cujo acesso esteja no
+escopo, preparar a leitura específica do Codex e verificá-la com controles feitos à mão. Eles
+incluem alteração fora da fixture, comando Git proibido, delegação, leitura das respostas
+ocultadas e falta de resultado de ferramenta. Isso não autoriza uma rodada exploratória de agente
+para descobrir o formato. Todos os arquivos antigos continuam protegidos.
+
+**O que acontece em cada resposta:**
+
+- **Fazer:** autorizar essa preparação e uma rodada Terra xhigh, depois da confirmação independente,
+  das correções e dos controles aprovados. Eu inicio o agente; você não precisa abrir uma sessão
+  Terra manualmente. Não há advisor, outros agentes dentro do teste, repetição automática,
+  substituição de modelo ou rodadas dos outros casos. A autorização precisa ser registrada no
+  plano antes da execução.
+- **Não fazer:** manter apenas a rodada Sonnet de D18. A ausência de teste Terra fica como limite;
+  não bloqueia o trabalho já autorizado nem inventa uma obrigação nova para fechar o plano.
+- **Adiar:** deixar Terra como proposta. A revisão D21, as correções e a rodada D18 podem avançar
+  com seus próprios pré-requisitos, sem aguardar essa escolha.
+
+**Custo e risco:** uma execução adicional de modelo, mais a preparação da leitura da transcrição.
+O custo e a duração ainda não foram medidos. O Terra pode falhar ou deixar evidência insuficiente;
+isso não autoriza repetir nem trocar o modelo. Se o primeiro teste exigir mudança nas skills ou
+no caso, a comparação precisa ser replanejada antes do Terra, sem orientar o segundo agente com
+os erros do primeiro. Um resultado Terra favorável não transforma uma falha do Sonnet em aprovação.
+
+**Recomendação:** fazer, se você pretende usar essas skills com Terra no Codex. A cobertura
+complementa a rodada Claude e mantém a avaliação igual por critério. Você escolheu fazer e mandou
+registrar; o Sol confirmou o desenho em D21. A execução depende dos demais pré-requisitos.
+
+## Depende de outras pessoas ou de acesso
+
+### D19 — Receber a revisão independente do replanejamento
+
+**Estado:** resolvido
+
+**Resultado recebido:** em 2026-09-21 você entregou o parecer do Sol. O relatório informa contexto
+novo e metadados de orquestração com `gpt-5.6-sol` em `xhigh`. A base informada é o HEAD
+`50531033fdb16ef7f2c4362413c768a3a2143a09`, branch `master`, sete commits à frente, quatro
+arquivos modificados e nada staged. O parecer declara trabalho somente de leitura e dá o veredito
+**não pronto para implementação**. A entrega foi cumprida; isso não aprova o plano.
+
+**O que foi revisado:** a proposta de mudança na trava por fase, a correção dos controles de teste,
+a preservação das evidências e o tratamento da revisão ausente em D16. O revisor também leu a
+frase D16 já escrita. Esta leitura não transforma a revisão ausente em revisão prévia.
+
+**Correções bloqueantes apontadas pelo Sol:**
+
+| Achado | Problema concreto | Correção pedida |
+| --- | --- | --- |
+| Ordem do recuo no consumidor | A `discussion-briefs` ainda manda emendar e só depois registrar a sequência no plano, embora D12 exija plano e revisão antes da emenda. | Explicitar registro → plano → revisão no fluxo comum e plano → revisão → manutenção/emenda → entrega no recuo. |
+| Cobertura do bloqueio por fase | O cenário question-only proíbe só registro e implementação, sem cobrir criar/alterar plano ou iniciar revisão; falta a mesma decisão pendente em um terceiro dono. | Conferir a proibição completa do turno de pergunta e manter a execução bloqueada até arquitetura, plano e terceiro dono receberem a decisão. |
+| Universo de preservação | Os manifests de hashes não definem todos os caminhos históricos protegidos. | Enumerar um conjunto fechado, incluindo o transcript D16 e o estado Git das fixtures; comparar os mesmos caminhos, preservar cópias verificadas dos dois fontes editáveis e recusar colisões também nos manifests. |
+
+**Correções não bloqueantes:** explicitar na matriz que a `run-large-4` não comprova a qualidade
+integral do plano produzido e esclarecer na sequência que D17/D18 não bloqueiam as correções B1/B2.
+Só decisões novas provocadas pelos achados da revisão poderiam bloquear essas correções. Os cinco
+achados são apresentados como correções, sem nova decisão substantiva necessária para tratá-los.
+
+**O que continua bloqueado:** editar skills, construtor ou juiz antes da instrução de retomada;
+executar a rodada autorizada em D18 antes dos requisitos;
+usar B3 como aceite para o fechamento; e fazer a auditoria final antes das correções e validações.
+A decisão sobre a evidência antiga é D20.2 e está registrada no plano. D18 foi autorizado pelo
+usuário em 2026-09-21, após a elaboração do relatório; sua autorização está registrada e continua
+condicional.
+
+**Registro:** parecer recebido e promovido ao
+[plano](../active/decision-to-architecture-flow.md#plan-review), com os achados e o veredito.
+
+**Encaminhamento cumprido:** as propostas foram corrigidas e confirmadas em D21 pelo subagente
+Sol xhigh. A implementação depende da instrução posterior de retomada prevista no plano. A futura
+auditoria independente de fechamento continua separada; o autor não pode fornecê-la.
+
+### D21 — Confirmar o plano corrigido e o desenho dos testes com o Sol
+
+**Estado:** resolvido
+
+**Decisão:** fazer o recomendado: confirmar o plano corrigido e o desenho dos testes com o Sol
+antes de preparar a rodada do Sonnet. Você autorizou a revisão aqui por um subagente
+`gpt-5.6-sol` em `xhigh`, em contexto novo e somente leitura, substituindo a abertura manual
+apenas para D21. O revisor não edita, não executa testes e não abre outros agentes. Registrada no
+[plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
+
+**Situação atual:** encaminhamento registrado e revisão concluída em 2026-09-21. O subagente Sol
+xhigh confirmou **pronto para implementação**, depois de conferir as correções do plano e a última
+frase histórica. Nenhuma decisão substantiva nova foi necessária. Skills, scripts e testes
+continuam intactos. Não há decisão nova sobre D1.
+
+**Resultado:** confirmação independente recebida. A revisão avaliou as correções de D19, o
+detalhamento dos testes e a preparação e a rodada Terra autorizadas em D22, sem receber uma
+orientação para aprovar. Os achados foram corrigidos no plano e conferidos pelo mesmo revisor;
+os hashes das versões examinadas e o veredito estão registrados no
+[plano](../active/decision-to-architecture-flow.md#d21-confirmation-of-the-revised-plan).
+D19 permanece resolvido como entrega do relatório anterior.
+
+**Achados de D21 e correções confirmadas no plano:**
+
+| Achado | Consequência | Correção no plano |
+| --- | --- | --- |
+| Ordem contraditória dentro da skill de planejamento | Um trecho manda sempre emendar antes do plano, mesmo quando D12 exige plano e revisão primeiro. | Incluir esse trecho entre os consumidores de B1 e distinguir as duas ordens, tanto para criar quanto para atualizar um plano existente. |
+| Perda do avanço/ack no caso grande | O resultado pode preservar o filtro e ainda impedir a leitura da fila de avançar. Os controles antigos do caso grande compartilham essa omissão. | Preservar a obrigação do registro original e exigir localizar e validar o responsável antes de remover a proteção. Os controles distinguem omissão no registro e omissão no plano. B2 passa a 26 resultados e o conjunto de conteúdo D18 a sete, herdado por Terra. As afirmações históricas amplas ficam qualificadas até o rejulgamento. |
+| Falta de controles da transcrição Claude | A avaliação atual ignora destinos de leituras e pode aceitar acesso às respostas ocultas ou transcrição incompleta. | Exigir controles feitos à mão de leituras, efeitos, caminhos e completude antes do Sonnet, incluindo leituras permitidas das instruções e skills. A preparação Codex não substitui essa conferência. |
+| Controles Codex menores que suas obrigações | Um leitor pode reconhecer patches e Git, mas ignorar outras escritas por shell, escapes de caminho ou a falta de conclusão da transcrição. | Reconstruir no formato Codex todos os controles de efeitos, leituras, caminhos e completude previstos para Claude, mais escrita aninhada permitida e proibida. Um resultado Claude não valida o leitor Codex. |
+
+O Sol considerou adequados os limites de preservação, o tratamento da evidência antiga, a
+ausência de Git na fixture e a separação entre Sonnet e Terra. Nenhum achado foi rejeitado.
+Se a investigação futura do avanço/ack revelar uma escolha real de arquitetura, ela volta para
+você; o plano não inventa agora um protocolo ou uma implementação do roteador.
+
+**O que mudou:** o plano agora separa a ordem comum da ordem de recuo, inclui a proibição completa
+no turno de pergunta e a mesma decisão ainda pendente em um terceiro dono, e define quais
+arquivos históricos serão preservados e comparados. Também divide a execução: os controles e o
+rejulgamento ficam comigo; a rodada autorizada fica com o Sonnet, em sessão nova aberta por você,
+como D18 já prevê. A rodada complementar Terra, iniciada por mim no Codex, foi autorizada em D22
+e está registrada no plano.
+
+**Pontos confirmados pelo revisor:** além da promoção da decisão, o teste novo deve detectar um
+plano que retire a proteção do consumidor antes de preparar e verificar o roteador. Foram
+propostos controles feitos à mão para essa falha, uma premissa inventada, a lista escondida nas
+notas e a substituição descrita como já concluída. A fixture nova preservará a ausência de Git
+do original guardado, para não criar um repositório sem autorização; o revisor aceitou esse
+limite. O teste não comprova comportamento específico de um repositório Git
+inicializado nem executa a migração descrita no plano produzido.
+O revisor também confirmou o desenho da leitura das ferramentas do Codex, seus controles contra
+aprovação indevida, a preservação dos arquivos e a separação entre as autorizações D18 e D22.
+
+**Por que importa:** o autor pode corrigir e preparar os testes, mas não fornecer a confirmação
+independente do próprio desenho. Um exemplo é um juiz que aceita um texto porque encontrou uma
+palavra, embora a regra tenha sido perdida; testar o próprio juiz antes da rodada do Sonnet reduz
+esse risco. Uma rodada nova não deve ser gasta enquanto o desenho de avaliação continuar falho.
+
+**O que fica aguardando:** as alterações nas skills e nos scripts e, depois delas, a rodada D18.
+Preparar ou executar a extensão Terra também exige os controles e o formato de transcrição previsto
+no plano. Com a confirmação já recebida e sua instrução de retomada, eu implemento as correções,
+executo os
+controles e preparo o pacote para você: caminho verificado da fixture, modelo escolhido, prompt
+pronto para colar e forma de conservar a resposta e a transcrição. O Sonnet executa uma vez; eu
+confiro os arquivos e a transcrição depois. Um resultado insuficiente não autoriza repetição.
+
+**Custo e risco:** a revisão foi somente de leitura, sem testes ou agentes adicionais pelo revisor.
+Casos novos de comportamento, como o recuo
+com registro em português, continuam fora da autorização D18; se forem exigidos, precisam de uma
+proposta própria antes da execução. Nenhum custo novo foi medido nesta etapa.
+
+**Recomendação:** confirmar o plano corrigido com o Sol antes de preparar a rodada do Sonnet.
+Você escolheu seguir essa recomendação, ela está registrada e o delta foi confirmado.
+Não é necessária outra escolha sobre D17, D18 ou D20. O
+[plano](../active/decision-to-architecture-flow.md#test-responsibilities-and-acceptance-contract)
+contém os critérios e a divisão de trabalho confirmados pelo parecer.
+
 ## Sem ação necessária
 
 - Não proponho regra global nova para o "resolveu sozinho e em silêncio". A sua regra de nomear
   conflitos entre skills e mostrar as opções antes de agir já cobre isso. A falha foi de
   comportamento, e o D1 põe o aviso obrigatório no lugar onde ela aconteceu.
-- Para o outro chat: no D3 você escolheu emendar o registro primeiro. Enquanto as skills não forem
-  mudadas, o agente de lá segue o texto de hoje, revisão independente antes da emenda, que também é
-  aceitável. Se quiser a ordem nova lá desde já, diga a ele para emendar o registro agora, com só
-  a parte do Redmine marcada como "emenda aprovada, em implementação", que é o formato do D2.
+- O procedimento de emenda D3 já está escrito nas skills, com o recuo D12. A compatibilidade do
+  bloqueio por fase é a pendência B1 deste plano; o conselho antigo de esperar a criação desse
+  procedimento não descreve mais o estado atual. A aplicação no outro repositório não foi
+  verificada e não faz parte desta continuação.
 - Aplicar D2, D3 e D4 muda a ordem de revisão e uma regra da skill de arquitetura. Pela
   `plan-implementation`, isso é mudança de alto risco: plano completo e revisão independente antes
   e depois. D1 e D5 são mudanças de redação só na `discussion-briefs`.

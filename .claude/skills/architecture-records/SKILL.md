@@ -242,7 +242,10 @@ without presenting it as current. Use one of two forms:
 - **New record.** Create a record in `Proposed` that says which record it will
   supersede, add its entry to the index, and add one notice line to the status of the
   old record: a proposed replacement exists, with its link, and this record describes
-  current behavior until that one is implemented. The old record stays `Implemented`
+  current behavior until that one is implemented. The new record replaces the old one
+  whole: carry over every rule that the decision does not change, and leave no part of
+  the old record governing after the replacement, because a superseded record keeps no
+  authority and a rule left only there would be lost. The old record stays `Implemented`
   and in force. Mark it `Superseded` only when the new record becomes `Implemented`;
   superseding it earlier would leave no record describing what holds in the meantime.
 
@@ -278,10 +281,11 @@ do not use the exception, because an edit of that size could change a rule unsee
 before any review: say so, keep the decision pending for the record, and turn those
 edits and the amendment into plan steps that run after the plan review.
 
-The session that conducted the discussion and writes the plan makes this recording,
-before handing the work to another session, because it holds the reasons behind the
-decision. Tell the implementing session that the records are already amended and that
-it implements against them.
+The session that conducted the discussion and writes the plan makes this recording
+before the planning handoff, which is the moment it passes the record and the plan to
+an implementing session, because it holds the reasons behind the decision. Section 11
+says which checks apply at that handoff. Tell the implementing session that the records
+are already amended and that it implements against them.
 
 While both texts coexist, the current rule stays in force for every consumer, and the
 amendment or the `Proposed` record prescribes only the work that its implementation
@@ -386,6 +390,16 @@ residue before continuing. Never accept document growth or historical convenienc
 a reason to bypass this gate.
 
 ### 11. Validate the result
+
+Apply this list at two moments, because a record is handed over both before and after
+its implementation exists: at the closure of the implementation, apply every check; at
+the planning handoff, when the session that recorded a decision passes the record and
+the plan to an implementing session, apply every check except the ones that presuppose
+a finished implementation, which are runtime traceability with its executable
+protection, recorded replay, competing obsolete paths, terminal states, the description
+of the resulting architecture, the plan reread with its closure-audit matrix, the two
+traces, the second conformance pass, and the removal of closed amendment blocks and
+replacement notices.
 
 Before handoff:
 
