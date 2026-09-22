@@ -164,12 +164,17 @@ While an owner has not received the decision, keep `registro pendente` in the it
 with the reason, do not conclude the brief, and say in the chat reply what was left out and why. A
 brief that reads as concluded while an owner still holds the old text hides the gap from the user.
 
-When the decision changes an approved architecture record, that record is one of its owners. Amend
-it in the promotion turn under the deliberate-decision procedure of `architecture-records`, which
-defines the amendment block, the new-record form, and the case in which the amendment waits for
-the plan review, and then record the execution sequence in the plan. Say in the chat reply that the
-decision is approved and recorded, and that the plan review still comes before any code changes, so
-that the user does not read the recording as the implementation. Give in that reply the list of
+When the decision changes an approved architecture record, that record is one of its owners.
+Follow `architecture-records` section 7a. When it permits bounded recording before review, amend
+the record first, then derive and record the execution sequence in the plan, and submit both to
+the required review. When mandatory maintenance puts the record edit outside those bounds,
+record the maintenance and amendment steps in the plan first, keep the decision pending for the
+record with the reason, and obtain the required plan review before performing that unit. The
+discussion/planning session completes the unit before the planning handoff. In either path,
+report the owners actually updated and those still pending; do not imply that partial recording
+updated every owner. Say that the user approved the decision and that all required recording
+and reviews precede dependent implementation. These two orders keep the fallback from requiring
+an amendment before the plan that must authorize its maintenance. Give in that reply the list of
 places in the record that the decision changes, together with the form you chose, as that procedure
 requires: the reply is composed under this skill, and without the list the user cannot check
 whether the other form would have served. Treat a plan already under `completed/` as no owner. When

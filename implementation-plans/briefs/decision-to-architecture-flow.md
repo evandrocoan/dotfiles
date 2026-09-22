@@ -1,11 +1,12 @@
 # Brief de discussão: o caminho de uma decisão até o registro de arquitetura
 
-**Estado:** concluído
+**Estado:** em discussão
 
 **Alimenta:**
 
-- [plano de implementação](../active/decision-to-architecture-flow.md), que recebeu as vinte e uma
-  decisões, D1 a D18 e D20 a D22, em inglês, e os pareceres de D19 e D21. O plano registra a
+- [plano de implementação](../active/decision-to-architecture-flow.md), que recebeu as decisões
+  tomadas, inclusive a autorização ampliada D24 e sua consequência para D23, em inglês, e os
+  pareceres de D19 e D21. O plano registra a
   sequência das decisões promovidas. Pelo D11, nenhum registro de arquitetura é criado: as skills
   são a autoridade durável e recebem as regras na
   execução do plano.
@@ -16,63 +17,84 @@ decisão vale onde foi registrada.
 
 ## Resumo
 
-Estado atualizado em 2026-09-21: você escolheu **D20.2**, deixando a `run-large-4` apenas como
-histórico, sem usá-la como evidência para fechar a obrigação de D16. A comprovação depende da nova
-rodada autorizada em D18, quando seus pré-requisitos forem atendidos. Se ela não bastar, a
-obrigação continua aberta, sem repetição ou enfraquecimento automático dos critérios.
+Você mandou terminar, e a implementação foi retomada após a confirmação do Sol em D21. As
+correções B1 nas skills, a correção B2 dos controles e o rejulgamento dos resultados antigos
+estão feitos. A frase de D16 foi preservada. As decisões originais e D23/D24 continuam registradas no
+plano; **nenhuma decisão está pendente de registro**. Não houve mudança na decisão D1.
 
-As vinte e uma decisões estão registradas no plano. D17 conserva o adiamento até o parecer, D20
-resolve a escolha adiada, e D19 está resolvido como entrega da revisão anterior. D21 segue a
-recomendação de confirmar o plano corrigido e os testes com o Sol; você autorizou fazê-lo aqui
-com um subagente `gpt-5.6-sol` em `xhigh`, em contexto novo e somente leitura. D22 autoriza a
-preparação e uma rodada adicional com Terra xhigh, com os limites descritos no item. D21 foi
-concluído com a confirmação de prontidão do plano. Há **zero pontos abertos** e **zero decisões
-pendentes de registro**. O brief está concluído; a implementação do plano permanece pendente.
-D1 conserva a decisão anterior.
+A conferência local cobriu onze cenários das regras, 26 controles corrigidos de documentos,
+sete controles de conteúdo D18 e 50 controles de transcrição Claude/Codex. Os controles de
+significado combinam verificações mecânicas com leitura explícita do autor; não são testes
+novos de comportamento de modelo. Os seis controles D6, os 24 controles D14 e os oito testes
+antigos também foram reavaliados, além do estado já salvo anterior ao advisor. O histórico não
+foi sobrescrito.
 
-O parecer de D19 havia considerado o replanejamento não pronto. As correções e o desenho dos
-testes foram avaliados em D21 pelo subagente Sol xhigh, em contexto inicialmente novo e somente
-leitura. Depois de incorporar seus achados ao plano e conferir os deltas, o veredito final foi
-**pronto para implementação**, sujeito à instrução de retomada e aos pré-requisitos de cada etapa.
-Esta sessão Astra xhigh continua autora e não pode fornecer a próxima auditoria independente
-de fechamento. O advisor está indisponível.
+O rejulgamento confirma que a `run-large-4` não pode fechar D16 e omite a garantia de avanço/ack.
+A versão anterior ao advisor da `run-large-2` preservava o commit do offset; a versão final o
+tratou como indefinido. Isso ficou registrado separadamente, sem transformar a cópia anterior
+em rodada independente. D20.2 continua valendo.
 
-D18 autoriza **uma única rodada adicional do caso grande**, em sessão independente que você abra,
-depois da revisão e das correções aprovadas, com modelo, pedido, critérios e limites registrados
-antes. Não autoriza repetição automática, rodadas dos outros casos, advisor ou subagentes no teste.
-A rodada ainda não pode começar: faltam a retomada, as correções e os controles. Planejei executar
-aqui os controles de teste, as comparações dos arquivos, o rejulgamento dos resultados antigos
-e a leitura dos critérios. Para o Sonnet, propus a única rodada D18: registrar a decisão do caso
-grande num ambiente isolado, sem acesso às respostas esperadas. O plano também exige conferir a
-ordem segura dos passos produzidos e a lista na resposta ao usuário. Nenhuma skill, script ou
-fixture foi alterada, e nenhum teste foi executado nesta etapa. O revisor de D21 apenas leu e
-relatou; não implementou nem executou os casos.
+A tentativa Sonnet foi recebida e avaliada em 21/09/2026. A transcrição confirma **Sonnet 5/high**,
+em vez do xhigh previsto. A resposta nomeou os donos, o fluxo e as regras afetadas, mas o plano
+produzido remove a proteção do consumidor antes de implementar o roteador e não exige validar
+quem garante o avanço das mensagens antes da remoção. Também chama o registro ainda vigente de
+substituído. **Resultado: reprovado**, independentemente da diferença de esforço. O registro
+novo preservou as duas garantias da DLQ e o commit dos offsets; não atribuí essa omissão ao
+registro. A sessão começou na pasta pessoal, com instruções do projeto real, e não passou pela
+conferência prévia de isolamento. A tentativa permanece reprovada; novas rodadas passam a seguir
+a autorização ampliada D24, sem apagar essa falha.
 
-A rodada Terra autorizada em D22 usa o mesmo caso grande, em outra cópia e com contexto limpo,
-depois do Sonnet. Eu abrirei o agente no Codex com `gpt-5.6-terra` em `xhigh`, depois da
-retomada da implementação, das correções e dos controles aprovados. A confirmação independente
-do desenho e o registro da autorização estão completos. Antes da rodada,
-a avaliação precisa reconhecer as transcrições do Codex: o leitor atual foi escrito para Claude
-e não pode aprovar um teste só porque deixou de reconhecer suas ferramentas. D21 incluiu a revisão
-desse desenho. Terra complementa a observação do Sonnet; não substitui sua rodada.
+Preservei a transcrição completa, os arquivos e a avaliação por critério em S
+`post-audit-b1-b3-410811bdf229/live/sonnet-result/`, onde S é o scratchpad identificado no plano.
+São artefatos temporários; o resultado e suas limitações também estão registrados no plano.
+E1 está resolvido como recebimento da sessão, sem afirmar que o teste ou sua preparação passaram.
 
-A segunda auditoria de fechamento, anterior a este parecer, foi feita pelo `gpt-6-astra` em
-`xhigh` e deu **Failed**. Foi o mesmo modelo das revisões anteriores do plano, com o limite de
-pontos cegos correlacionados registrado. Seus bloqueios B1, B2 e B3 continuam reabertos no
-[plano](../active/decision-to-architecture-flow.md): a trava por fase, o controle defeituoso que
-conservava as regras e a revisão herdada ausente antes da frase e da rodada D16. As correções de
-redação N1, N2 e N3 foram consideradas coerentes pelo Sol.
+Você autorizou os testes necessários em D24. O Sol xhigh revisou o novo lote e confirmou que
+podia começar, depois de corrigidas contradições no estado do plano e a cobertura de fechamento.
+As instruções atuais foram congeladas, preservando a alteração de Docker de outro trabalho.
 
-A `run-large-4` conserva observações históricas de promoção, forma e lista na resposta, mas, por
-D20.2, não será usada para fechar a obrigação de D16. Ela não demonstrou qualidade integral de um
-plano executável e seguro: o plano que produziu manda remover a proteção do consumidor antes de
-criar ou localizar o roteador, cuja existência não está estabelecida. Esses limites e a revisão
-prévia ausente continuam registrados, sem apagar ou alterar os arquivos antigos.
-Os casos pequeno e de recuo precederam D16. Nenhuma rodada antiga testa a redação proposta de B1;
-rejulgar arquivos guardados também não cria essa evidência comportamental.
+**Terra xhigh foi executado e reprovado.** Atualizou somente três arquivos de arquitetura;
+o plano e o brief ficaram idênticos ao original. Não carregou as skills de brief e planejamento,
+e o novo registro não preserva a garantia de avanço/ack. As 13 chamadas têm resultados, sem
+agentes auxiliares, mudança Git ou escrita fora do escopo observada. A mensagem inicial aparece
+cifrada na transcrição nativa; essa limitação de conferência ficou registrada separadamente.
 
-D1 a D16 permanecem com suas decisões originais registradas. O relato do outro repositório
-continua não verificado por esta sessão e não autoriza inspeção ou mudança lá.
+**Sonnet 5/xhigh também foi iniciado aqui, mas a preparação falhou.** A sessão tinha a pasta,
+o modelo e o esforço corretos. Porém, a leitura das instruções globais foi negada porque a
+execução automática não tinha interface de aprovação. Nenhuma skill foi carregada. O resultado
+foi preservado como falha de preparação, e não como reprovação do Sonnet xhigh sob as skills.
+A conferência inicial não provou essa permissão antes do pedido; essa falha foi minha.
+
+Os dois resultados, transcrições e avaliações estão em S
+`post-audit-b1-b3-410811bdf229/live/d24-batch-01/`. Os 21 arquivos compartilhados congelados
+permaneceram iguais. Não corrigi as saídas nem alterei skills ou juiz por causa das falhas.
+
+Você mandou que eu chamasse o Claude interativo. Abri a sessão em uma nova cópia original,
+confirmei Sonnet 5/xhigh na transcrição nativa e enviei o pedido congelado. As leituras globais
+e das skills foram aprovadas individualmente pela interface normal. **E3 está resolvido. A
+rodada Sonnet 5/xhigh terminou e foi reprovada por conteúdo.** O resultado está em S
+`post-audit-b1-b3-410811bdf229/live/d24-manual-02/sonnet-result/`.
+
+O plano produzido agora instala e valida o roteador antes de retirar a proteção do consumidor.
+Mas ainda não exige localizar e validar quem garante o avanço/ack das mensagens descartadas
+antes dessa retirada. O registro novo preserva o commit do offset e as duas garantias da DLQ,
+porém diz que o registro antigo continuará governando DLQ/replay: isso contradiz a substituição
+integral prevista. Esses dois defeitos impedem a aprovação.
+
+Os dois donos receberam a decisão, e a resposta final trouxe a lista de locais alterados e a
+forma escolhida. Conferi as 28 chamadas e seus resultados: apenas cinco documentos permitidos
+mudaram, sem código, agentes auxiliares ou mudança Git. Há duas imprecisões no relato do modelo:
+negou ter executado Git, embora tenha chamado `git status` somente de leitura, e negou leituras
+externas, embora tenha lido as instruções e skills permitidas. A captura está preservada;
+o leitor mecânico continua com limitações, complementadas pela conferência completa do autor.
+
+A rodada levou 9min14s incluindo esperas por aprovação e informou 33.186 tokens de saída;
+custo monetário desconhecido. Não corrigi a saída nem alterei critérios, skills ou juiz.
+Uma única rodada não demonstra que o esforço xhigh causou a melhora na ordem do plano.
+
+Há **um ponto externo aberto, E2, e nenhuma decisão pendente de registro**. E2 é a
+futura auditoria independente, depois da evidência necessária e da conferência do autor. O plano
+permanece ativo; nenhuma dessas tentativas autorizou declarar o fechamento.
 
 ## Glossário
 
@@ -94,12 +116,12 @@ continua não verificado por esta sessão e não autoriza inspeção ou mudança
 | DLQ | A fila de reprocessamento (dead-letter queue) do repositório fictício usado nas rodadas; aparece numa regra do registro de arquitetura de teste. |
 | avanço/ack | Confirmação de que uma mensagem já foi consumida, para que a leitura da fila possa avançar; o teste deve preservar isso também quando uma mensagem de outro cliente é descartada. |
 | Sol | Modelo `gpt-5.6-sol`, que produziu em `xhigh` o parecer recebido em D19; também fez a primeira auditoria de fechamento. |
-| Sonnet | Modelo Claude proposto para a única rodada nova D18, em sessão que você abre; o identificador e a configuração disponíveis serão conferidos antes da execução. |
-| Terra xhigh | Configuração `gpt-5.6-terra` com esforço de raciocínio `xhigh`, autorizada e registrada em D22 para uma rodada adicional no Codex, ainda dependente dos pré-requisitos de execução. |
+| Sonnet | Modelo Claude: a rodada high reprovou; a tentativa xhigh sem interação falhou na preparação; a rodada interativa xhigh carregou as skills e reprovou em dois critérios de conteúdo. |
+| Terra xhigh | Configuração `gpt-5.6-terra` com esforço `xhigh`; a rodada D24 foi executada e reprovada, com avaliação preservada. |
 | fixture | Conjunto isolado de arquivos de exemplo sobre o qual o agente do teste trabalha, sem alterar o projeto real. |
 | alto risco | Classificação da `plan-implementation` para mudanças que mexem em arquitetura, autorização ou regras de revisão; exige plano completo e revisão independente. |
 | Astra | Modelo `gpt-6-astra`, que fez as revisões anteriores do plano e a segunda auditoria; a sessão que agora escreve não pode revisar o próprio trabalho. |
-| B1 | Achado sobre a trava por fase impedir o registro que resolveria a pendência; sua correção ainda está proposta. |
+| B1 | Achado sobre a trava por fase impedir o registro que resolveria a pendência; a correção foi implementada e conferida localmente. |
 | B2 | Achado sobre um controle de teste que parecia remover regras, mas conservava seu significado em outra seção. |
 | B3 | Achado sobre a ausência da revisão independente herdada antes da frase e da rodada do D16. |
 | `run-large-4` | Quarta execução do caso grande, a única autorizada por D16; seus arquivos e sua resposta estão guardados. |
@@ -1323,6 +1345,69 @@ correções aprovadas. Como D18 já autoriza essa execução, esta escolha não 
 nem muda o custo previsto. O resultado novo ainda precisa satisfazer os critérios; esta
 recomendação não registra uma decisão em seu nome.
 
+### D23 — Como seguir com o Terra depois da mudança nas instruções compartilhadas
+
+**Estado:** decidido pela autorização de execução ampliada em D24
+
+**Decisão:** preservar as instruções atuais e estabelecer uma nova base documentada para o
+próximo lote, sem reverter o trabalho concorrente nem fingir igualdade com a rodada Sonnet high.
+A instrução para executar os testes necessários autoriza também esse preparo. Registrada no
+[plano](../active/decision-to-architecture-flow.md#current-authorization-and-next-validation-batch).
+
+**O que é:** o Terra deveria receber as mesmas instruções compartilhadas congeladas antes do
+Sonnet. Na conferência de 21/09/2026, `.codex/AGENTS.md` e a skill Docker mudaram enquanto eu
+avaliava a resposta. O delta amplia a orientação para escolher comandos de execução com Docker
+e seu gatilho no registro global. Não mexe diretamente nas três skills sob teste, mas o arquivo
+global faz parte da entrada congelada e sua mudança precisa ficar explícita.
+
+**Por que importa:** atualizar o hash sem registrar a diferença faria duas entradas distintas
+parecerem idênticas. Reverter esses arquivos para recuperar o hash apagaria trabalho alheio e
+não está autorizado. O Sonnet já terminou; sua tentativa high e suas falhas ficam preservadas
+em qualquer opção. Uma nova rodada Sonnet não está incluída nesta escolha.
+
+**Opções:**
+
+1. **Replanejar a base do Terra com as instruções atuais.** Preservar o trabalho concorrente,
+   conferir o delta após sua estabilização, registrar que as entradas globais diferem entre as
+   rodadas e submeter a alteração do contrato à revisão herdada antes de executar o único Terra
+   já autorizado. Manter a fixture original, o pedido, as skills testadas e os critérios; não
+   fornecer ao Terra a resposta nem as falhas do Sonnet. Custa a conferência e a revisão do
+   delta, sem consumir outra tentativa, e limita a comparação entre clientes.
+2. **Adiar o Terra.** Preservar o pacote e a tentativa ainda disponível. Não há gasto de modelo
+   agora, mas D22 e o fechamento continuam pendentes. Uma retomada ainda precisará resolver
+   a diferença de instruções; o adiamento sozinho não recupera a entrada antiga.
+
+**Recomendação:** opção 1. A mudança observada é de outro assunto, então vale preservá-la e
+avaliar explicitamente seu efeito sobre o experimento. Isso não aceita a tentativa Sonnet como
+aprovada e não altera os critérios para acomodar suas falhas.
+
+**O que bloqueia:** lançar o Terra com uma base diferente da previamente congelada. A condição
+vem do [contrato D22 no plano](../active/decision-to-architecture-flow.md#d22-one-complementary-terra-xhigh-run-in-codex).
+Essa escolha está registrada por meio da instrução de execução D24; a revisão do ajuste e a
+conferência das fontes precedem o novo lote.
+
+### D24 — Executar quantos testes forem necessários para concluir a validação
+
+**Estado:** decidido e registrado
+
+**Decisão:** você autorizou executar Sonnet, Terra e outros testes de modelo necessários, em
+quantidade suficiente para concluir a validação, e pediu o próximo passo, prompt ou instrução.
+Isso substitui os limites anteriores de uma única tentativa. A autorização inclui preparar a
+base atual e executar os testes; não exige outra rodada de confirmação só para registrar essa
+mesma ordem. Registrada no
+[plano](../active/decision-to-architecture-flow.md#current-authorization-and-next-validation-batch).
+
+**Como será executado:** primeiro Terra xhigh e depois Sonnet 5/xhigh, sequencialmente, com
+fixtures novas e a mesma base dentro do lote. Eu inicio o Terra aqui. Para o Sonnet, preparo a
+sessão isolada e o prompt; uma execução local só substitui a abertura manual se suas opções e
+captura puderem ser verificadas. Nenhuma configuração global será alterada.
+
+**Limites preservados:** cada rodada deve responder a uma hipótese, verificar outra configuração
+ou conferir uma correção revisada. Os critérios, os limites de Git, a proibição de auxiliares
+dentro dos testes e a revisão independente continuam valendo. Falhas ficam guardadas; o resultado
+de um modelo não transforma a falha de outro em aprovação. A autorização não permite enfraquecer
+um teste para fazê-lo passar nem gastar repetidamente sem obter informação nova.
+
 ## Trabalho que posso fazer com sua autorização
 
 Esta seção reúne tarefas que eu sei fazer e que não pedem uma escolha entre desenhos diferentes. O
@@ -1484,10 +1569,9 @@ critérios e limites precisam estar registrados antes; o agente do teste não ab
 subagentes, não há repetição automática e outros casos não estão autorizados. Registrada no
 [plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
 
-**Situação atual:** a autorização foi dada, mas a rodada continua aguardando os pré-requisitos.
-As correções pedidas em D19 e o desenho dos testes estão no plano e foram confirmados em D21.
-A proposta usa Sonnet em sessão aberta por você; o autor prepara o ambiente e avalia o resultado.
-Nenhuma rodada nova foi executada nesta sessão.
+**Situação atual:** a tentativa original foi executada com Sonnet 5/high e reprovada; E1 foi
+resolvido como recebimento, com os desvios de preparação preservados. D24 agora rege as novas
+rodadas Terra xhigh e Sonnet xhigh, mantendo os critérios e exigindo a conferência do lançamento.
 
 **A pergunta para você:** autorizar uma rodada nova delimitada, não autorizar, ou adiar essa
 escolha até a revisão do replanejamento. O D16 permitiu uma rodada só, e ela já aconteceu; sua
@@ -1516,7 +1600,8 @@ recuo com registro em português.
 
 **Custo e risco:** D16 estimava cerca de 150 mil tokens e sete minutos para uma rodada grande,
 com base nas anteriores; esse é um parâmetro histórico, não uma cotação ou duração verificada
-agora. A disponibilidade do modelo para uma futura rodada não está verificada. Outra execução
+agora. Você confirmou a disponibilidade do Sonnet 5; a seleção na sessão nova ainda precisa ser
+conferida. Outra execução
 pode falhar novamente e não corrige a ordem da rodada antiga. Não fazer economiza essa execução,
 mas pode deixar uma obrigação de validação sem atendimento.
 
@@ -1535,8 +1620,12 @@ controles aprovados. Sem advisor, outros agentes dentro do teste, repetição au
 substituição de modelo ou rodadas dos outros casos. Registrada no
 [plano](../active/decision-to-architecture-flow.md#governing-decisions-and-invariants).
 
-**Situação atual:** a escolha foi feita e promovida ao plano em 2026-09-21; o desenho foi
-confirmado em D21. A preparação e a rodada não começaram.
+**Situação atual:** preparação e controles concluídos. Uma transcrição existente do próprio
+D21 forneceu o formato real do Codex; o leitor é selecionado explicitamente e não aprova
+evidência desconhecida. Terra xhigh foi executado sob D24 e reprovado: arquitetura atualizada,
+plano e brief intocados. A transcrição e a avaliação por critério estão preservadas no plano.
+D24 resolveu D23 com a base atual; os hashes permaneceram iguais durante o lote.
+A decisão original acima permanece como histórico; os limites de novas rodadas seguem D24.
 
 **A pergunta para você:** fazer, não fazer ou adiar a preparação e uma única rodada adicional do
 caso grande com Terra xhigh, além da rodada Sonnet prevista em D18.
@@ -1574,7 +1663,7 @@ para descobrir o formato. Todos os arquivos antigos continuam protegidos.
 
 **Custo e risco:** uma execução adicional de modelo, mais a preparação da leitura da transcrição.
 O custo e a duração ainda não foram medidos. O Terra pode falhar ou deixar evidência insuficiente;
-isso não autoriza repetir nem trocar o modelo. Se o primeiro teste exigir mudança nas skills ou
+a autorização atual D24 permite novas rodadas com finalidade diagnóstica registrada. Se um teste exigir mudança nas skills ou
 no caso, a comparação precisa ser replanejada antes do Terra, sem orientar o segundo agente com
 os erros do primeiro. Um resultado Terra favorável não transforma uma falha do Sonnet em aprovação.
 
@@ -1637,8 +1726,10 @@ apenas para D21. O revisor não edita, não executa testes e não abre outros ag
 
 **Situação atual:** encaminhamento registrado e revisão concluída em 2026-09-21. O subagente Sol
 xhigh confirmou **pronto para implementação**, depois de conferir as correções do plano e a última
-frase histórica. Nenhuma decisão substantiva nova foi necessária. Skills, scripts e testes
-continuam intactos. Não há decisão nova sobre D1.
+frase histórica. Nenhuma decisão substantiva nova foi necessária. O revisor preservou skills,
+scripts e testes;
+o autor implementou as correções e executou os controles depois da sua instrução de terminar.
+Não há decisão nova sobre D1.
 
 **Resultado:** confirmação independente recebida. A revisão avaliou as correções de D19, o
 detalhamento dos testes e a preparação e a rodada Terra autorizadas em D22, sem receber uma
@@ -1683,13 +1774,12 @@ independente do próprio desenho. Um exemplo é um juiz que aceita um texto porq
 palavra, embora a regra tenha sido perdida; testar o próprio juiz antes da rodada do Sonnet reduz
 esse risco. Uma rodada nova não deve ser gasta enquanto o desenho de avaliação continuar falho.
 
-**O que fica aguardando:** as alterações nas skills e nos scripts e, depois delas, a rodada D18.
-Preparar ou executar a extensão Terra também exige os controles e o formato de transcrição previsto
-no plano. Com a confirmação já recebida e sua instrução de retomada, eu implemento as correções,
-executo os
-controles e preparo o pacote para você: caminho verificado da fixture, modelo escolhido, prompt
-pronto para colar e forma de conservar a resposta e a transcrição. O Sonnet executa uma vez; eu
-confiro os arquivos e a transcrição depois. Um resultado insuficiente não autoriza repetição.
+**O que fica aguardando:** E1 foi resolvido como recebimento da sessão Sonnet high reprovada.
+O lote D24 foi revisado e executado: Terra reprovou; a preparação do Sonnet xhigh negou a leitura
+global obrigatória. A rodada interativa posterior resolveu E3, com identidade, isolamento e
+retenção conferidos antes da tarefa, mas reprovou em dois critérios de conteúdo.
+Novas rodadas precisam da finalidade diagnóstica de D24; os critérios continuam iguais.
+E2 acompanha a auditoria independente de fechamento após as evidências exigidas.
 
 **Custo e risco:** a revisão foi somente de leitura, sem testes ou agentes adicionais pelo revisor.
 Casos novos de comportamento, como o recuo
@@ -1702,13 +1792,69 @@ Não é necessária outra escolha sobre D17, D18 ou D20. O
 [plano](../active/decision-to-architecture-flow.md#test-responsibilities-and-acceptance-contract)
 contém os critérios e a divisão de trabalho confirmados pelo parecer.
 
+### E1 — Receber a sessão Sonnet e sua transcrição completa
+
+**Estado:** resolvido como recebimento; a preparação e o teste não passaram
+
+Você abriu a sessão e forneceu sua resposta. Localizei a transcrição nativa completa da sessão
+`8876fc0b-1f63-46eb-b03f-8818a2e274f8` e conferi as 28 chamadas com resultados e a resposta final.
+Ela confirma Sonnet 5/high e o pedido preparado, mas começou na pasta pessoal, com outro projeto
+também disponível. Não houve a conferência de isolamento antes de enviar o pedido. Isso fica
+registrado como desvio, sem tentar restaurar retroativamente a preparação planejada.
+
+A tentativa original terminou e foi reprovada pelos defeitos de conteúdo descritos no resumo.
+Os arquivos, a resposta e a transcrição foram preservados. Resolver o recebimento não satisfaz
+D18 nem fecha D16. A autorização posterior D24 permite as novas rodadas e resolve D23 com
+a base atual; a reprovação original permanece registrada.
+
+### E2 — Receber a auditoria independente de fechamento após as rodadas
+
+**Estado:** aberto
+
+**O que é:** falta a segunda passagem sobre a implementação e suas evidências finais. A revisão
+D21 examinou o plano; não examinou as skills e os leitores que foram alterados depois dela. Esta
+sessão passou a ser autora e não pode emitir o parecer independente do próprio trabalho.
+
+**De quem depende:** uma sessão nova de revisão aberta por você, pela rota já registrada no plano.
+A autorização de subagente Sol foi específica para D21 e não trocou essa rota de fechamento.
+
+**O que bloqueia:** concluir o plano e movê-lo para `completed/`.
+
+**Próximo passo:** depois das evidências das rodadas e da auditoria do autor, eu preparo o prompt
+com o baseline e os artefatos finais para essa sessão. Não há razão para abri-la antes disso.
+
+### E3 — Abrir a sessão interativa do Sonnet xhigh
+
+**Estado:** resolvido como acesso e abertura; rodada avaliada e reprovada por conteúdo
+
+**O que aconteceu:** o Claude local negou `Read` para as instruções globais porque o comando
+não tinha interface de aprovação. O Sonnet continuou sem as skills. A saída fica preservada;
+não vou repetir essa leitura por outro caminho nem desabilitar as permissões.
+
+**Resolução:** você mandou que eu abrisse o Claude interativo. A nova sessão confirmou
+Sonnet 5/xhigh, a pasta isolada e nenhum diretório adicional antes de receber o pedido congelado.
+As leituras necessárias foram aprovadas uma a uma, sem ampliar permanentemente as permissões.
+
+**Evidência:** em S `post-audit-b1-b3-410811bdf229/live/d24-manual-02/`, o lançador original
+e seu erro foram preservados: `--mcp-config` consumia o prompt como outro argumento. Corrigi
+a ordem em `open-sonnet.interactive.sh`, antes de qualquer pedido ao modelo. A captura inicial
+e `interactive-preflight.json` registram a sessão. O cliente passou pela configuração inicial,
+com tema Auto, autenticação da conta existente e confiança na fixture; não afirmo que seu
+estado global de execução ficou intocado. Não alterei padrões globais de modelo, esforço ou
+permissão.
+
+**Limite:** resolver E3 não aprova o teste. A avaliação completa está em `sonnet-result/`:
+substituição integral e pré-requisito de avanço/ack reprovados, com os demais resultados e
+limitações discriminados. A sessão foi encerrada normalmente depois da resposta, sem pedido
+de correção ao modelo. E2 continua posterior às evidências exigidas e à auditoria do autor.
+
 ## Sem ação necessária
 
 - Não proponho regra global nova para o "resolveu sozinho e em silêncio". A sua regra de nomear
   conflitos entre skills e mostrar as opções antes de agir já cobre isso. A falha foi de
   comportamento, e o D1 põe o aviso obrigatório no lugar onde ela aconteceu.
 - O procedimento de emenda D3 já está escrito nas skills, com o recuo D12. A compatibilidade do
-  bloqueio por fase é a pendência B1 deste plano; o conselho antigo de esperar a criação desse
+  bloqueio por fase foi corrigida em B1; o conselho antigo de esperar a criação desse
   procedimento não descreve mais o estado atual. A aplicação no outro repositório não foi
   verificada e não faz parte desta continuação.
 - Aplicar D2, D3 e D4 muda a ordem de revisão e uma regra da skill de arquitetura. Pela
