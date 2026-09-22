@@ -1,6 +1,14 @@
 ---
 name: docker
-description: Create, edit, review, secure, build, run, and troubleshoot Dockerfiles, .dockerignore files, Docker BuildKit or Buildx workflows, and Docker Compose stacks. Use when Codex works on container image reproducibility, multi-stage or multi-platform builds, image size and cache behavior, container startup and signals, Compose services, profiles, healthchecks, volumes, networks, secrets, development containers, container-backed CI, or Docker runtime diagnostics.
+description: >-
+  Create, edit, review, secure, build, run, and troubleshoot Dockerfiles, .dockerignore,
+  BuildKit/Buildx, Compose stacks, and container runtime behavior. Covers image reproducibility,
+  multi-stage and multi-platform builds, caching, startup, signals, healthchecks, volumes,
+  networks, secrets, development containers, and container-backed CI. Also use before choosing
+  project dependency installation, build, test, or service startup commands when repository
+  instructions or files establish a Docker/Compose workflow, even if the request does not mention
+  containers. Code reading, source editing, and test authoring alone do not activate this additional
+  execution-routing trigger.
 ---
 
 # Docker and Docker Compose
@@ -47,12 +55,20 @@ debuggability, and parity between local development and CI.
 
 ## Preserve execution boundaries
 
-- Use the repository's documented Docker or Compose entry points. If the
-  repository requires container-only execution, keep the host limited to Docker,
-  Compose, Git, and read-only inspection.
-- Represent tests, migrations, setup, seed, documentation, and CLI tasks as
-  explicit one-shot services when they need the project runtime. Do not install
-  project dependencies on the host to bypass a missing container entry point.
+- Before proposing project dependency installation, build, test, or service startup
+  commands, inspect the repository's Docker/Compose workflow for the affected component and task.
+  Prefer its documented container entry points. A missing host dependency does not select host
+  installation, and a container for an auxiliary service does not establish an application runner.
+- If the container workflow is unavailable or does not cover the task, explain the concrete
+  impediment and the proposed host commands and effects before requesting an explicit host
+  exception. Generic approval to install dependencies or run tests does not by itself select the
+  host over containers. Honor an existing explicit user choice of host execution for that operation
+  without asking again; loading this skill does not authorize creating new container infrastructure.
+- If the repository requires container-only execution, keep the host limited to Docker, Compose,
+  Git, and read-only inspection.
+- When using the container workflow, represent tests, migrations, setup, seed, documentation, and
+  CLI tasks as explicit one-shot services when they need the project runtime. Do not install project
+  dependencies on the host as an unapproved fallback for a missing container entry point.
 - Reuse the same Compose services in local and CI workflows when practical. Keep
   CI orchestration thin and place the executable environment contract in the
   image and Compose model.

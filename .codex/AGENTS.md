@@ -227,7 +227,11 @@ of choosing one silently.
   implementation plan or architecture record and authorizes no work.
 - `docker`: Create, edit, review, build, run, or troubleshoot Dockerfiles, Compose,
   BuildKit/Buildx, container-backed CI, images, services, volumes, networks,
-  healthchecks, or container runtime behavior.
+  healthchecks, or container runtime behavior. Also load it before choosing project
+  dependency installation, build, test, or service startup commands when repository
+  instructions or files establish a Docker/Compose workflow, even if the request does
+  not mention containers. Code reading, source editing, and test authoring alone do
+  not activate this additional execution-routing trigger.
 - `documentation`: Create, edit, review, reorganize, or synchronize Markdown,
   README files, runbooks, changelogs, and AI-facing instruction files.
 - `excalidash-diagrams`: Create or edit structured, editable Excalidraw or
