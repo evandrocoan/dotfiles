@@ -140,10 +140,12 @@ subdirectory instruction boundary. Global and scoped instructions follow the
 layout of their owning client or tool.
 
 At a repository root, treat `AGENTS.md` as the only source of project-wide AI
-guidance. Whenever any of `AGENTS.md`, `CLAUDE.md`, or
-`.github/copilot-instructions.md` exists there, or a task creates or edits
-project-wide AI guidance, ensure all three paths exist without copying the
-canonical content.
+guidance. Apply the creation, consolidation, replacement, and validation steps
+below only when authorized work creates, edits, or sets up project-wide AI
+guidance, including the compatibility updates necessary for that work. In that
+scope, ensure `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md`
+exist without copying the canonical content. The presence of an instruction
+file alone does not authorize setup during read-only or unrelated work.
 
 Expose `AGENTS.md` through compatibility files:
 

@@ -229,7 +229,50 @@ appropriate semantic decision boundary.
 Apply this section when the user deliberately decides to change the design that an
 implemented record describes and instructs the recording of that decision. The code
 still follows the old rule at that moment, so the record must show the approved change
-without presenting it as current. Use one of two forms:
+without presenting it as current. Follow this sequence.
+
+#### 1. Identify the contract and choose the form
+
+Read the whole current record, including guarantees expressed in its flow or prose,
+not only its numbered invariants. Separate the changes the user approved from the
+behavior the resulting architecture must preserve; this keeps an unchanged guarantee
+from disappearing during a rewrite.
+
+Choose the form by its purpose, which is to avoid noise in the old record when writing
+a new one would be easier. List the places in the record that the decision forces to
+change: rules, flow sections, diagrams, and tables. A short list of rules only gives
+the block. A long list, or one that includes a flow section, diagram, or table, gives
+the new record. Show that list in chat together with the form you chose, and ask before
+writing when in doubt. Do not compare the list with a fixed count of rules. The
+criterion of section 7 still bounds the choice: create or supersede a record only when
+the design actually changes, and when much changes without changing the design, use
+blocks and ask first. The nature of the change sets the rigor of its plan, not the
+form of the text; `plan-implementation` already treats an architecture change as high
+risk. The form is text written before any code, so the plan review may change it.
+
+For example, a decision that removes one exception from one rule, leaving its owner and
+flow as they are, takes a block. A decision that routes every write through a new
+reviewed stage, and so changes several rules, the flow section, and the owner of a
+check, takes a new record.
+
+#### 2. Check the recording boundary, then record
+
+This recording precedes the implementation plan and its review: the user decides, the
+record is amended, the plan is derived from the amended record, the plan review
+examines both, and only then does code change. It is a deliberate exception to the
+`plan-implementation` rule that the plan review precedes every implementation step.
+It exists so that the decision lives in its owner at once and the reviewer reads the
+real wording. The exception covers only the amendment block, or the `Proposed` record
+with its notice line and index entry. No other record text, code, configuration, or
+repository instruction file changes before the plan review, and the synchronization
+of section 8 waits for the implementation, because it would present proposed behavior
+as current. When editing the record would require anything else under this skill, such
+as translating a record that is not in English or removing a manual table of contents,
+do not use the exception, because an edit of that size could change a rule unseen
+before any review: say so, keep the decision pending for the record, and turn those
+edits and the amendment into plan steps that run after the plan review.
+
+Within that boundary, use the selected form:
 
 - **Amendment block**, the default. Directly under the rule it changes, add a block
   that starts with the label `**Approved amendment, in implementation:**`, states the
@@ -249,37 +292,27 @@ without presenting it as current. Use one of two forms:
   and in force. Mark it `Superseded` only when the new record becomes `Implemented`;
   superseding it earlier would leave no record describing what holds in the meantime.
 
-Choose the form by its purpose, which is to avoid noise in the old record when writing
-a new one would be easier. List the places in the record that the decision forces to
-change: rules, flow sections, diagrams, and tables. A short list of rules only gives
-the block. A long list, or one that includes a flow section, diagram, or table, gives
-the new record. Show that list in chat together with the form you chose, and ask before
-writing when in doubt. Do not compare the list with a fixed count of rules. The
-criterion of section 7 still bounds the choice: create or supersede a record only when
-the design actually changes, and when much changes without changing the design, use
-blocks and ask first. The nature of the change sets the rigor of its plan, not the
-form of the text; `plan-implementation` already treats an architecture change as high
-risk. The form is text written before any code, so the plan review may change it.
+#### 3. Derive the implementation plan
 
-For example, a decision that removes one exception from one rule, leaving its owner and
-flow as they are, takes a block. A decision that routes every write through a new
-reviewed stage, and so changes several rules, the flow section, and the owner of a
-check, takes a new record.
+For bounded recording before review, derive the plan from the amended record. For the
+maintenance fallback, first plan the maintenance and proposed amendment while the
+record remains unchanged; obtain the required review before that unit, then reconcile
+the plan with the amended record before handoff. In either path, for every guarantee
+affected by an ownership or flow change, connect the resulting rule to the responsible
+path, an execution step and its validation under `plan-implementation`. A guarantee
+can need a new implementation path even when its behavior is unchanged; preserving its
+wording alone does not establish that path. Keep unverified ownership as an
+investigation prerequisite, not an assumed implementation fact.
 
-This recording precedes the implementation plan and its review: the user decides, the
-record is amended, the plan is derived from the amended record, the plan review
-examines both, and only then does code change. It is a deliberate exception to the
-`plan-implementation` rule that the plan review precedes every implementation step.
-It exists so that the decision lives in its owner at once and the reviewer reads the
-real wording. The exception covers only the amendment block, or the `Proposed` record
-with its notice line and index entry. No other record text, code, configuration, or
-repository instruction file changes before the plan review, and the synchronization
-of section 8 waits for the implementation, because it would present proposed behavior
-as current. When editing the record would require anything else under this skill, such
-as translating a record that is not in English or removing a manual table of contents,
-do not use the exception, because an edit of that size could change a rule unseen
-before any review: say so, keep the decision pending for the record, and turn those
-edits and the amendment into plan steps that run after the plan review.
+#### 4. Cross-check before the planning handoff
+
+Read the resulting record and plan together before reporting the recording complete.
+For a whole replacement, check that every unchanged guarantee is present and that no
+section leaves the old record governing after supersession. Excluding a behavior change
+from the decision's goals does not exclude that behavior's rules from a whole replacement.
+Check that the plan carries the affected guarantees through the prerequisites and
+validation of the changed path. This checks the written handoff, not completed code;
+the independent review and implementation closure still follow their own gates.
 
 The session that conducted the discussion and writes the plan makes this recording
 before the planning handoff, which is the moment it passes the record and the plan to

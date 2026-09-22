@@ -2,7 +2,601 @@
 
 **Status:** In progress
 
-## Current authorization and next validation batch
+Current discussion: [closure brief](../briefs/decision-to-architecture-closure.md). The
+[previous brief](../briefs/decision-to-architecture-flow.md) preserves the recorded decisions.
+This navigation change supplies no new execution authorization and changes no closure gate.
+
+## Current execution: T1 corrections and T2 deferral
+
+The user explicitly instructed recording the decisions and executing T1. This section is the
+current execution contract; the completed comparisons below remain evidence. This plan is the
+sole recording owner under D11. The skills are implementation targets, not additional owners.
+
+| Decision | Recorded scope and disposition |
+| --- | --- |
+| [T1](../briefs/decision-to-architecture-closure.md#t1--corrigir-os-dois-defeitos-textuais-encontrados) | Do both narrow textual corrections: bind documentation's root compatibility setup to authorized instruction work, and clarify where a whole replacement carries preserved guarantees. Implement after the inherited review. |
+| [T2](../briefs/decision-to-architecture-closure.md#t2--reorganizar-agora-as-skills-para-separar-as-fases-do-trabalho) | Defer broad skill reorganization. Reconsider after T1 and useful evidence about the transition failure; that condition does not automatically authorize T2. It adds no closure requirement. |
+
+The outcome for T1 is unambiguous instruction scope and placement of preserved rules. It does
+not establish that a model will perform the complete recording task or plan a safe transition.
+Do not change D18/D22 acceptance, D20.2, D24, or E2. Do not create an architecture record for
+shared-skill workflow rules, reorganize phases, change global instructions, repair historical
+results, or mutate Git state. Preserve all pre-existing working-tree changes.
+
+### T1 evidence, candidate, and review boundary
+
+Risk remains high under this existing plan; the compatibility trigger also affects authorization
+scope. Advisor unavailable. Obtain a fresh read-only Sol xhigh plan review before editing either
+source. The review examines this bounded continuation, its candidates, affected consumers, and
+inherited gates. No desired verdict is supplied. The later E2 remains the user-opened independent
+review of the whole delivery, after required validation and the author audit.
+
+Authenticated defects are R1/R2 in **Skill source review**. The current documentation paragraph
+triggers setup from the mere existence of a root instruction file. The architecture template
+says to carry mandatory rules "here" inside Non-goals. Current source copies and hashes, the
+plan/brief baseline, and Git state are retained in T, the exclusive temporary evidence directory
+`decision-to-architecture-t1-zltv4fon` under the operating system's temporary root. This storage
+is not durable retention. Existing history is read-only; new evidence goes only into T.
+
+In `.claude/skills/documentation/SKILL.md`, replace only the paragraph beginning "At a repository
+root" in **Keep one source of truth for agent instructions** with:
+
+```text
+At a repository root, treat `AGENTS.md` as the only source of project-wide AI
+guidance. Apply the creation, consolidation, replacement, and validation steps
+below only when authorized work creates, edits, or sets up project-wide AI
+guidance, including the compatibility updates necessary for that work. In that
+scope, ensure `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md`
+exist without copying the canonical content. The presence of an instruction
+file alone does not authorize setup during read-only or unrelated work.
+```
+
+The scope qualification governs the whole procedure, including its final validation. Keep
+the root-only boundary, canonical authority, exact import and relative symlink, unique-guidance
+preservation, conflict handling, and verification requirements unchanged. No compatibility
+files are created as a side effect of editing this shared skill.
+
+In `.claude/skills/architecture-records/assets/architecture-record-template.md`, replace only
+the two Non-goals bullets with:
+
+```text
+- State nearby behavior changes intentionally excluded from this decision.
+- In a whole replacement, excluding a behavior change does not exclude its existing rules.
+  Carry those rules into the appropriate normative sections, such as Architecture, Failure
+  semantics, and Invariants, so this record governs them once implemented. Until then, the
+  current record remains in force.
+```
+
+This does not prescribe which heading must own every guarantee. The record's actual contract
+determines placement; Non-goals excludes changes, not preservation. Whole replacement and
+current authority remain as section 7a requires. No architecture skill rule changes.
+
+### T1 sequence and validation
+
+| Status | Step | Evidence and completion boundary |
+| --- | --- | --- |
+| completed | Record T1 and T2 in this owner and link both decisions from the current brief. | User's explicit recording and execution instruction; no skill implementation before review. |
+| completed | Obtain independent readiness review of the concrete candidates and validation. | Sol xhigh returned READY with no findings requiring correction; details under Plan review. |
+| completed | Apply the reviewed two-file delta and inspect affected consumers. | Exact reviewed candidate installed in both canonical files; related architecture, plan, and discussion rules need no edit. |
+| completed | Validate the packages and perform the semantic walkthrough below. | Four package checks and source/format/link checks passed; eight author scenarios recorded. Extra Git index-byte preservation failed, separately qualified below; no behavioral pass is claimed. |
+| completed | Record the author assessment and an independent source-conformance check of T1. | Fresh Sol xhigh returned CONFORMS for T1 with no source correction required. The metadata limitation remains recorded; this is not E2 or whole-plan closure. |
+
+Use the installed skill-creator validator without installing dependencies. Read every scenario
+against the complete affected sections, not a keyword-matching test or a fabricated gate that
+implements the same prose. Record permitted actions, retained constraints, and why the old
+wording failed where applicable:
+
+| Scenario | Required reading result |
+| --- | --- |
+| Read-only review; root AGENTS exists and compatibility paths are missing | Presence alone does not require creation, consolidation, replacement, or all-path delivery validation. No write is authorized. |
+| Unrelated README edit in the same situation | Stay within the requested documentation change; no incidental instruction setup. |
+| Authorized project-wide guidance creation, edit, or compatibility setup | All three root paths and their exact topology remain required, including necessary coupled updates and validation. |
+| Existing guidance differs between clients | Within authorized setup, inspect all versions, preserve unique guidance, and resolve material conflicts before replacement. |
+| Global client, skill package, or scoped subdirectory | Root compatibility topology remains inapplicable there. |
+| Whole replacement excludes changing a preserved behavior | Carry its existing rules into appropriate normative sections; no residual old-record authority after implementation. Before implementation the current record still governs. |
+| Unchanged guarantee's runtime owner moves | Architecture section 7a and the plan's replacement-before-removal prerequisite remain intact. Template clarification alone is not proof that a model follows that prerequisite. |
+| Decision recording, D3/D12 review order, and E2 closure | Their governing texts and obligations remain unchanged; T1 and deferred T2 have no pending recording owner. |
+
+No new live model task is necessary to establish these two source corrections. A new full-flow
+run would need its own recorded hypothesis, freeze, and inherited review under D24; the existing
+failed attempts and unresolved full-flow requirements remain in the closure matrix. Replan if
+review finds a policy choice beyond T1, source drift invalidates the baseline, or another owner
+must change. Do not resolve such findings by silently expanding into deferred T2.
+
+### T1 implementation evidence
+
+Both installed files match the exact reviewed candidates in T `review-input.json` and
+`candidate.diff`. Four validator invocations passed: documentation and architecture-records,
+each through its canonical and exposed path. Changed prose formatting, new relative links and
+anchors, file modes, exposed symlinks, and focused `git diff --check` passed. Source hashes confirm
+the other skills, global instructions, and preserved brief were not edited by this continuation.
+`validation.json` retains every individual result; `implemented.diff` is relative to the
+pre-existing working tree, not HEAD, so it separates T1 from earlier uncommitted work.
+
+The eight scenarios passed the author's semantic reading, recorded with their source hashes,
+allowed actions, retained constraints, and old-text limitations in `author-walkthrough.json`.
+The author finds the installed source faithful to T1; T2 is deferred in its sole owner. This is
+source conformance, not automated behavioral evidence or the complete parent-plan author audit.
+
+An extra byte-level check of `.git/index` failed and remains failed in `validation.json`.
+Read-only reconciliation found the same HEAD and an empty staged diff. The readiness reviewer
+reports ordinary `git status` calls without optional-lock suppression, which can refresh index
+metadata; the exact cause is not established because intermediate index copies were not captured.
+No index repair or Git mutation command was issued. `git-state-reading.json` records this limit;
+do not claim byte-identical Git metadata or overwrite the failed observation with a green result.
+The source checks above are distinct from that extra metadata check. The independent conformance
+review observed another index-byte change despite optional-lock suppression; HEAD and staged
+content were still unchanged. The cause remains unestablished and `validation.json` keeps its
+aggregate false result.
+
+**T1 source verdict: conforms.** Fresh reviewer `/root/t1_source_conformance` confirmed the exact
+installed candidates, every hash in `postedit-review-input.json`, decision fidelity, retained
+consumers/gates, and the limited validation claim. No source correction was required. This
+completes T1's source task; the parent plan stays In progress with T2 deferred and its existing
+full-flow, complete author-audit, and E2 obligations unresolved.
+
+## Current continuation: skill review and model comparison
+
+This completed continuation is retained as evidence; the T1 execution section above governs
+current changes.
+
+The user requests a review of skill quality and complementary evaluation with Terra xhigh,
+Sol high or medium, and Opus high or medium. Select high for Sol and Opus within those bounds.
+This authorizes review and three bounded comparative runs, not edits to the skills. Preserve
+the current five modified files and HEAD `fd12a99ca5f246ac06ce6fd0056d2f05db223ec4`.
+Only this plan and its brief change in the repository. Evidence is exclusive temporary storage
+under S `post-audit-b1-b3-410811bdf229/live/skill-quality-comparison-01/`.
+
+Review the four central skills and their relevant templates for correct rules, clear triggers,
+scope, phase routing, dependencies, contradictory obligations and evidence requirements.
+Use skill-creator's concision/progressive-disclosure criteria. Distinguish a demonstrated rule
+defect, an ergonomic risk, a model's failure to follow adequate instructions, and a test/author
+defect. Cite exact current sources. Do not treat line count or a model miss as proof of cause.
+
+After the inherited independent review, run one fresh extraction task per configuration,
+sequentially: `gpt-5.6-terra`/`xhigh`, `gpt-5.6-sol`/`high`, then Opus/high. Codex subjects use
+`fork_turns="none"`; Claude uses the already verified interactive route with normal individual
+read approvals. Resolve the `opus` alias through a metadata-only bootstrap and record its exact
+model ID before the task. An unavailable requested family/effort stops that arm; do not substitute.
+Keep the bootstrap task-free. Retain its complete native context and tool catalog.
+
+Use fresh byte/mode-equivalent copies of the same original fixture and the exact previous
+extraction prompt, changing only its workspace path. Keep its original semantic rubric 1–5;
+generalize rubric 6's model/client identity to the requested configurations and explicitly
+account for Codex's inherited client cwd versus the prompt's logical fixture boundary.
+The previous Sonnet5/xhigh extraction is a reference observation with identical shared-source
+hashes, not a new randomized contemporaneous arm. Keep current-source identification, retained
+obligations, validation/transition, lifecycle and instruction/effect compliance separate.
+
+Freeze sources, fixtures, prompts, rubric and existing control evidence before each task. The
+three semantic controls and unchanged Claude/Codex reader controls already have recorded
+assessments; inspect their applicability rather than rerunning unrelated suites. Subjects may
+read only their original task files and applicable shared instructions, with no writes, Git,
+fixture-code execution, parent-plan/answer/history reads, helpers or corrective follow-ups.
+Preserve every terminal or interrupted result. Source drift holds later arms for assessment.
+
+Audit native identity/context, every call/result, source delivery, final output and inventories.
+If Codex encrypts the initial task, retain caller prompt/configuration and ciphertext identity,
+but mark native plaintext verification UNVERIFIED; do not claim full launch verification from
+configuration alone. Likewise retain mechanical-reader UNVERIFIED separately from author
+classification. Unknown mandatory launch/effect evidence prevents complete-task PASS while
+the observed answer can still receive its bounded content verdict. Record actual usage/time
+and reported cost with their scope and limits, without comparing client timings as model speed.
+
+Stop after these three attempts regardless of outcome. One observation per model/client can
+show whether the failure repeats on this case; it cannot establish a model ranking, isolate
+skill complexity from client/context differences, validate the full recording workflow, or
+close D18/D22/E2. Recommendations are review findings, not authority to modify instructions.
+
+| Status | Step | Evidence |
+| --- | --- | --- |
+| completed | Independently review this bounded continuation and comparison contract. | Sol xhigh delta review READY; no blocking finding. Frozen plan/rubric/prompts and input equivalence confirmed. |
+| completed | Complete the source review and run the three isolated tasks sequentially. | Terra xhigh, Sol high and native claude-opus-5/high completed once each. Frozen input and rubric, terminal traces and per-criterion assessments retained. |
+| completed | Synthesize skill defects versus execution failures and verify preservation. | Source findings and comparative results below. All three fixtures, 21 shared sources, 2,646 prior evidence entries and 23 decision paragraphs preserved; links/anchors and diff checks passed. No full-plan closure. |
+
+### Skill source review
+
+Reviewed the four central entrypoints and five relevant templates; checked the coupled loop
+routing. This is not an audit of every installed skill. The four entrypoints total 1,529 lines
+and 13,634 words. Size is a maintenance/context cost, not evidence of the cause of a model miss.
+The independent Sol xhigh reviewer confirmed the first two findings and the adequacy of the
+preservation rules. Findings remain recommendations; no skill changed in this continuation.
+
+| Finding | Current source | Assessment and recommended correction |
+| --- | --- | --- |
+| R1: overbroad compatibility-file trigger | `documentation/SKILL.md`, root guidance compatibility, lines 142–165 versus scope lines 17–36 | The presence of any root instruction file triggers an obligation to create all three compatibility paths, including during unrelated/read-only review. Higher-priority scope still prohibits those writes. Limit mutation to authorized instruction-file work or a demonstrated necessary coupled change; report other missing paths. Confirmed scope defect. |
+| R2: preserved rules under Non-goals | `architecture-records/assets/architecture-record-template.md`, lines 17–21 | “Carry unchanged behavior's rules here” can mean the Non-goals section or the entire replacement. Say that changing that behavior is excluded, while preserved rules belong in the appropriate normative sections. Confirmed ambiguity, not a normative contradiction. The earlier extraction Sonnet did not read this template, so it cannot explain that result. |
+| R3: phase selection and duplicated rules | `architecture-records/SKILL.md`, lines 427–473; `plan-implementation/SKILL.md`, lines 301–367 and 446–565 | A shared checklist subtracts nine exception categories for planning handoff, and several entrypoints repeat phase/review rules. Prefer explicit phase routing and fewer duplicated normative passages, preserving D11 and all approved gates. Usability risk; no remaining contradiction in the central preservation contract established. |
+| R4: excessive history in author documents | This active plan and brief versus `plan-implementation/SKILL.md`, lines 371–375, and `discussion-briefs/SKILL.md`, lines 17–18 and 125–133 | The active documents have accumulated investigation narration despite their current-state purpose. Condense the brief's current summary, retain historical results in the plan/evidence, and consider a separately scoped plan cleanup. Subjects could not read these parent documents; their length does not explain blind test failures. |
+
+The central rules are adequate: architecture section 7a explicitly preserves prose/flow rules,
+keeps the current record authoritative until replacement implementation, and distinguishes an
+unknown responsible path from an optional guarantee. The plan skill requires locating and
+validating the moved path before removal, or a safe atomic transition. A source defect and a
+model's failure to follow an adequate instruction can coexist; neither establishes causality
+for the other. Detailed source classification is in `source-review.final.json` under the
+comparison evidence directory.
+
+### Comparative extraction results
+
+All three fresh attempts completed without coaching, correction or reroll. The earlier
+Sonnet5/xhigh extraction is a historical same-source reference. The fixture and semantic rubric
+are identical apart from workspace paths and explicit client-specific launch accounting.
+All four identified the old offset commit; only the three new attempts explicitly retained
+progress as mandatory when its future owner/mechanism is unknown.
+
+| Frozen criterion | Earlier Sonnet 5/xhigh | Terra xhigh | Sol high | Opus 5/high |
+| --- | --- | --- | --- | --- |
+| 1. Identify the current guarantees | PASS | PASS | PASS | PASS |
+| 2. Classify only authorized changes/preserved rules | PASS | PASS | PASS | FAIL: G7 expands the DLQ restriction into a universal ban on replayable storage. |
+| 3. Preserve progress despite unknown implementation | FAIL | PASS | PASS | PASS |
+| 4. Observable validation and safe transition | FAIL | FAIL | FAIL | FAIL |
+| 5. Lifecycle and analysis scope | FAIL: authority ends at recording rather than implementation. | PASS | FAIL: same premature authority boundary in prose. | PASS |
+| 6. Launch, required reads and effects | FAIL: documentation skill omitted; no prohibited effects. | UNVERIFIED native plaintext; observed reads/effects comply. | UNVERIFIED native plaintext; observed reads/effects comply. | PASS by complete author audit; mechanical unknowns retained separately. |
+| Complete task | FAIL | FAIL | FAIL | FAIL |
+
+Criterion 4 has different depth of failure. Terra and Sol propose progress, own-tenant and DLQ
+checks, but do not require locating and validating the moved progress path before removing old
+protection. Opus explicitly orders filter validation before removing the consumer check; its
+G2 proposes lag/redelivery validation, but does not bind that progress guarantee to the same
+pre-removal gate. The frozen rubric explicitly says filtering alone is insufficient. These
+misses are not failed identification or lost future obligations in the three new attempts.
+
+Opus G7 says the discard cannot reach *any replayable storage* and presents that as an unchanged
+mandatory rule. The source prohibits foreign-tenant records in this DLQ because replay would
+target the wrong tenant; it does not authorize the broader universal storage ban. A possible
+design recommendation must not be promoted into an approved preserved obligation. No actual
+document or code was changed by any subject, so all semantic risks here are prospective.
+
+Native verification: `gpt-5.6-terra`/`xhigh`, `gpt-5.6-sol`/`high`, and
+`claude-opus-5`/`high`. Codex subjects were fresh `fork_turns="none"` agents with explicit
+fixture command cwd. The client still injected home cwd and global/home instructions; this is
+a logical task boundary, not a sandbox. Their initial task bodies are encrypted natively.
+Exact frozen caller prompts, configuration and matching parent/child ciphertext are retained,
+but plaintext delivery remains UNVERIFIED. Opus had fixture-only cwd, no extra directory,
+metadata-only bootstrap, exact task once, normal one-use read approvals, terminal reply and
+normal exit 0. No client permission bypass or model-directed helper was used.
+
+| Attempt | Paired calls/results | Full file delivery | Task elapsed | Task output tokens | Mechanical reader |
+| --- | --- | --- | --- | --- | --- |
+| Terra xhigh | 8/8 | 6, including global instructions and architecture/documentation skills | 146.936 s | 7,145, including 4,728 reported reasoning | 8 PASS / 10 UNVERIFIED |
+| Sol high | 11/11 | 8, including global instructions and architecture/documentation skills | 280.075 s | 8,051, including 4,510 reported reasoning | 8 PASS / 24 UNVERIFIED |
+| Opus 5/high | 16/16 | 13, including global instructions and all four central skills | 376.347 s | 13,059; task-only thinking unknown | 15 PASS / 129 UNVERIFIED |
+
+All observed calls and paired outputs were individually classified; source slices/content
+were matched exactly to files, and all fixture inventories stayed unchanged. Unsupported native
+envelopes stay mechanical UNVERIFIED even when the complete author audit resolves their effects.
+Claude reported US$1.3813725 for its whole session, including bootstrap and auxiliary Haiku;
+this is a client estimate, not a confirmed bill. Its whole-session Opus thinking count was
+6,779; do not mistake the capture helper's absent-field default zero for a measured task count.
+Codex monetary cost is unknown. Timings include orchestration/approval waits and are not a
+model-speed comparison. Native IDs, hashes, usage and complete per-event audits are in each
+arm's `result/`; no failed artifact was overwritten.
+
+Conclusion: the source review found a real scope defect and an ambiguous template sentence,
+with further ergonomic risks. The preservation contract itself is explicit and was followed
+by three different model configurations in this extraction task. This weakens an explanation
+based on an unintelligible or absent rule, while neither proving the cause of Sonnet's miss
+nor proving full workflow reliability. The other models also made distinct errors. One sample
+per model/client cannot rank general capability or isolate the effect of skill complexity.
+
+Recommended next change: narrowly fix R1/R2, then consider phase routing/duplication separately
+without adding a scenario-specific exception or weakening existing gates. Any subsequent
+experiment needs a defined purpose and reviewed frozen criteria; these three attempts are done.
+This review does not authorize those edits, close D18/D22, or replace the final independent E2.
+
+Scoped preservation checks passed: 15 unchanged entries per fixture, all 21 frozen shared
+sources unchanged, all 2,646 pre-existing scratchpad entries unchanged, and all 23 original
+decision paragraphs identical to the before snapshot and HEAD. Repository changes remain the
+same five pre-existing paths; this continuation edits only the plan and brief, with an empty
+index. Local Markdown links/anchors and `git diff --check` passed. The source review and bounded
+comparison are complete; the parent implementation plan remains in progress.
+
+<a id="current-continuation-guarantee-extraction-diagnostic"></a>
+
+## Completed guarantee-extraction diagnostic
+
+The user instructed `teste` after the recommendation to test explicit extraction before further
+writing. Run one fresh read-only Sonnet 5/xhigh session with the current skills unchanged. This
+is a new diagnostic purpose under D24: determine whether the model can enumerate and classify
+the existing guarantees when that intermediate result is the entire requested output. It is
+not another full recording attempt and cannot close D18/D22 or E2.
+
+Baseline: HEAD `fd12a99ca5f246ac06ce6fd0056d2f05db223ec4`, with the five local changes from
+the completed procedure-clarity experiment preserved. Only this plan and its brief change in
+this continuation; skill files, global instructions, judges and historical outputs stay fixed.
+Evidence uses a new exclusive directory under S
+`post-audit-b1-b3-410811bdf229/live/guarantee-extraction-01/`. It is temporary storage; retain
+the result and limits here. The prior pair and its stop condition remain historical facts.
+
+### Diagnostic contract and boundaries
+
+Use a fresh byte/mode-equivalent copy of `forward-test-d14/control-large-base.original`, outside
+Git worktrees. Reuse the verified interactive CLI route and metadata-only bootstrap, with a
+fresh session ID and fixture path. Confirm actual model/effort, only-fixture cwd, no extra
+directories, complete native capture and normal approval access before sending the task once.
+Freeze the actual common sources, original/copy inventories, prompt and diagnostic rubric.
+Check their hashes before launch and after completion. Do not alter global settings or bypass
+permissions. Client-owned session bookkeeping is distinct from model-directed task writes.
+
+The task asks for a source-grounded table of current guarantees, D1's authorized changes,
+remaining obligations, known or unverified future responsibilities, and observable validation.
+It explicitly asks to include prose and flow and to distinguish behavior from uncertain
+implementation. It does not name progress/ack, offsets, the failed criterion, expected rows,
+prior outcomes or the desired verdict. The model can read original task files and applicable
+shared instructions only. It may not write files, record the decision, generate the new record
+or plan, execute fixture code, run Git, delegate, call another model or inspect withheld evidence.
+The prompt differs materially from the realistic recording task; report that scaffolding limit.
+
+The pre-run semantic rubric requires all source guarantees, including discarded-record
+progress/ack and both DLQ restrictions, without inventing a future protocol or runtime owner.
+D1's check/log/counter changes must be correct; own-tenant forwarding and failure/replay stay
+preserved. Unknown implementation does not make the guarantee optional. Proposed validation
+must cover the actual behavior, and moved guarantees require locating and validating their
+responsible path before removing the old protection, or an explicitly safe atomic transition.
+Grouping and paraphrase are accepted by meaning; exact row count or wording is not an oracle.
+Score identification/classification (rubric 1–3) separately from validation/transition (rubric 4).
+A validation-only miss fails the complete requested table, but does not show failed extraction.
+
+Before launch, read three author-constructed semantic controls: a complete table, the same table
+without progress, and the same table treating progress as undecided because its future owner is
+unknown. Record why the latter two fail while other semantics remain equal. Use the existing
+native capture/effects assessment machinery without changing the historical judge. Evaluate
+all tool/results and shell commands; retain unsupported mechanical envelopes as UNVERIFIED
+beside the complete hash-bound author classification. Missing mandatory evidence blocks PASS.
+
+Stop after this one diagnostic regardless of result. A pass would establish one successful
+explicit extraction; it would not prove that old failures happened only during composition,
+that context complexity caused them, or that a later rewrite will preserve the table. A failure
+would demonstrate a miss in this narrower task. Neither result authorizes skill changes or a
+same-session conversion/correction. Preserve all outputs, costs when known, elapsed time and
+usage limits. Terra and final user-opened E2 keep their separate obligations.
+
+### Diagnostic execution steps
+
+| Status | Step | Evidence |
+| --- | --- | --- |
+| completed | Independent Sol xhigh review of this bounded diagnostic plan, exact prompt and rubric. | READY; separate extraction/classification from validation-path results. No blocking findings. Exact reviewed hashes below. |
+| completed | Validate semantic controls and freeze a fresh input/session. | Three author-read controls match expectations; original-equivalent input outside Git; all 21 sources unchanged. Native bootstrap confirms Sonnet5/xhigh, fixture-only cwd and zero tools. |
+| completed | Submit the extraction request once and preserve terminal evidence. | Fresh native Sonnet5/xhigh, exact task once, terminal reply and normal exit 0. Nine paired calls; no coaching or corrective follow-up. |
+| completed | Assess, record and check the bounded result. | FAIL on preserved-obligation classification and validation, with separate lifecycle/instruction findings. Full effects reading, preservation and local document checks recorded below. Full-plan closure stays pending. |
+
+### Extraction result
+
+**Overall verdict: FAIL.** The smaller task did not reliably preserve the critical obligation.
+Current-source identification passed: table row 2 explicitly mentions the old consumer committing
+the offset. Future preservation failed: the same row keeps only the destination restrictions,
+while offset handling becomes an implementation question without a mandatory progress guarantee.
+This distinction matters: the model noticed the source sentence but did not retain its obligation.
+
+| Frozen criterion | Result and evidence in the final reply |
+| --- | --- |
+| 1. Current guarantees and sources | PASS: rows 1–4 and 6–9 cover the current check, discard, offset commit, log/count, own-tenant forwarding and both DLQ restrictions. Grouped coverage counts; a separate progress row was not required. |
+| 2. Approved changes | PASS for the required classification: router ownership, metric name and exact log limit are present; own-tenant and DLQ behavior remain. Unnecessary questions about the input flow and a consumer fallback are additional ambiguities, not adopted architecture decisions. |
+| 3. Critical preservation | FAIL: citing the old offset commit and investigating future offset management never establishes mandatory confirmation/progress after discards. No other table row supplies that obligation. |
+| 4. Observable validation and transition | FAIL: no confirmation/continued-processing check and no prerequisite locating and validating that path before removing old protection. Rows 6 and 8 explicitly dispense with new validation of the own-tenant path and replayable DLQ. Row 1's statement that there must be no gap is not a validated transition prerequisite. |
+| 5. Lifecycle and scope | FAIL on the explanation's lifecycle boundary: it says the old record remains in force until formal recording, instead of until the replacement is implemented. Read-only scope itself passes; no file was superseded and no concrete router implementation was invented. |
+| 6. Launch, reads and effects | FAIL on complete applicable-skill loading: it deliberately skipped `documentation`, although the architecture skill's opening and global registry require it. Launch/capture, required task reads and observed read-only effects pass. |
+
+Identification/classification (1–3): **FAIL**, specifically preservation rather than recognition.
+Validation/transition (4): **FAIL**. Complete task (1–6): **FAIL**. The missing skill is a separate
+instruction failure; this run does not establish that it caused the semantic miss. Likewise,
+the lifecycle wording is an explanatory defect, not an observed early status mutation.
+
+Evidence under `live/guarantee-extraction-01/result/` includes the complete native transcript,
+post-exit capture, final reply, final fixture, source/inventory checks, per-criterion assessment
+and hash-bound author classification of all 86 post-exit events and nine calls/results. The six
+Read results reconstruct the complete bytes of the global instructions, fixture instructions,
+architecture index, brief, current record and architecture skill. Three shell calls only list
+fixture directories. No model-directed write, Git operation, helper, withheld read or fixture
+code execution was observed. The first root listing preceded instruction-read completion;
+record this order deviation without treating it as the cause of the content miss.
+
+All 21 shared sources, the original-equivalent fixture and 2,573 historical scratchpad entries
+remain unchanged. The frozen mechanical reader reports **8 PASS / 0 FAIL / 88 UNVERIFIED**;
+its unsupported native envelopes remain unverified mechanically, separate from the complete
+author effects classification. Native Git metadata remains unreliable; the actual preflight
+confirmed that the fixture was outside a worktree. Normal client permissions are not a sandbox.
+
+Native session: `681ee7f0-23f5-4e2c-877c-c1dba4802597`, Sonnet 5/xhigh throughout the task.
+Captured trace SHA-256: `6c78ac6ba17d3a06ba75c8c17a48f82cde7dab1e62798561f200faaf21391c4f`.
+Post-exit trace: `3dfb11848c73828c376faa8e922d55cc5824829c777b7dcea392d20cc02e55ef`.
+The frozen task was submitted exactly once. It took 210.482 seconds including approval waits
+and reported 17,764 task output tokens. Task-only thinking tokens are unknown. Post-exit client
+metadata reports 12,681 Sonnet thinking tokens for the session, including bootstrap, and
+USD 0.368911 total estimated session cost, including auxiliary Haiku usage. This is client
+accounting, not verified billing or a model-directed helper invocation; its auxiliary purpose
+is not established. Do not confuse session aggregates with task-only measurements.
+
+The three prelaunch author-constructed controls met their expected semantic outcomes. The
+positive table passed; deleting progress or making its obligation undecided failed. No language
+judge was automated or changed. Local checks preserve all 23 original decision paragraphs,
+links, formatting and the empty index; this continuation changes only the plan and brief.
+
+The attempt ended without a correction, rerun, skill change or conversion into documents.
+This shows a miss even with explicit table scaffolding on this input. It does not isolate the
+cause of earlier failures, prove skill complexity, or establish model-wide reliability. The
+bounded diagnostic is complete; D14/D16/D18/D22, final author closure and independent E2 remain
+unresolved. The prior A/B pair and every earlier failure retain their original outcomes.
+
+<a id="current-continuation-procedure-clarity-experiment"></a>
+
+## Completed procedure-clarity experiment
+
+The user accepted the recommendation to try an ordered recording procedure after the
+read-only investigation of the interactive Sonnet failure. This authorizes the narrow
+usability experiment below, without claiming a missing rule or a proved cause of failure.
+It supplements D24's diagnostic purposes: an explicitly requested presentation and
+clarification experiment may proceed after independent review even though the existing
+whole-replacement and invariant-trace requirements are already correct. No acceptance
+criterion, authorization boundary, historical verdict or closure route changes.
+
+Baseline: HEAD `fd12a99ca5f246ac06ce6fd0056d2f05db223ec4`, clean working tree before this
+planning update. All 21 common sources still match the last interactive freeze. The four
+central skills contain 1,487 lines and 13,255 whitespace-delimited words. Their full contents
+reached the failed Sonnet run; no denied or truncated skill read explains its misses. The
+model left residual authority in the old record and omitted the plan prerequisite for a
+preserved guarantee. Instruction dispersion is a hypothesis, not an established cause.
+
+### Candidate and semantic boundaries
+
+The concrete candidate is retained under S
+`post-audit-b1-b3-410811bdf229/live/procedure-clarity-01/`, in `before/`, `candidate/`,
+`candidate.diff` and `candidate-manifest.json`; the first reviewed proposal remains in
+`candidate-v1/` with its own diff and manifest. These temporary artifacts supplement this
+persistent contract; they are not durable retention. The reviewed candidate was applied only
+after arm A reached terminal completion and its full output was preserved.
+
+Reorganize `architecture-records` section 7a into four steps: identify the whole contract and
+choose the form; check the recording boundary and record; derive the implementation plan;
+cross-check before the planning handoff. Preserve the existing form selection, amendment
+syntax, whole replacement, D3/D12 order, D4 handoff, current authority and closure paragraphs.
+The boundary check moves before the write forms so that the exception is tested before use.
+
+Add only these generic operational clarifications, with no fixture names or expected answers:
+
+- Read guarantees in prose and flow as well as numbered invariants; separate approved changes
+  from behavior that must remain true.
+- Carry guarantees affected by an ownership/flow change into the plan's responsible path,
+  execution step and validation, even when the behavior itself is unchanged. Unknown ownership
+  is an investigation prerequisite, not an established implementation fact.
+- Before reporting recording complete, read the resulting record and plan together. A whole
+  replacement must preserve unchanged guarantees without leaving future authority in the old
+  record. The written plan must carry those guarantees through transition prerequisites.
+- In `plan-implementation`, beside the execution-contract requirements, make the existing
+  invariant/owner/validation trace explicit before removal of a responsibility or protection,
+  or within an explicitly atomic transition whose prerequisites and validation rule out gaps.
+- In the architecture template's Non-goals, distinguish excluding a behavior change from
+  excluding that behavior's rules from the whole replacement, keeping the old record current
+  until the replacement is implemented.
+
+This is reorganization plus explicit application of existing rules, not a pure permutation or
+a reduction of total context: section 7a grows from 70 to 103 lines. No separate checklist file,
+new required user artifact, registry change, global instruction change or package split is
+introduced. The four-step path groups related instructions; its usability benefit remains unproved.
+
+| Candidate element | Existing authority whose meaning must be preserved |
+| --- | --- |
+| Whole-contract reading and carry-over | `architecture-records` 7a already requires every unchanged rule in a whole replacement; sections 2a and 6 trace governing invariants, owners, consumers and protection. Prose does not exempt a guarantee. |
+| Plan transition prerequisites | `plan-implementation` execution-contract items 3, 5 and 6 bind invariants, proved material premises and validation; its sequence establishes the authoritative path before removing obsolete paths. |
+| Final cross-check | Section 7a already preserves whole authority and delegates planning-handoff checks to section 11. This operationalizes that reading without demanding completed-code evidence at promotion. |
+| Non-goals clarification | The template scopes the decision's changes; section 7a requires the new record to replace the old one whole. Unchanged behavior and excluded authority are different. |
+| Reordered detail | All existing amendment, purpose-test, D3/D12, handoff, coexistence and closure limits remain normative. No form or status changes early. |
+
+The first independent review found three issues in the proposal, all accepted before any
+canonical edit or live run: Step 3 needed an explicit D12 branch that plans and reviews while
+the record is unchanged; the transition paragraph must preserve the permitted atomic path;
+and the template must express future authority rather than suggesting a Proposed record
+already governs current behavior. The candidate now states each distinction explicitly.
+The same reviewer confirmed those corrections and the final formatting/closure-row fixes.
+
+### Ordered execution and comparison
+
+| Status | Step | Prerequisite and observable evidence |
+| --- | --- | --- |
+| completed | Independent read-only plan/candidate review by fresh Sol xhigh. | READY after all three semantic findings and two consistency fixes; exact reviewed hashes under Plan review. Advisor unavailable; no self-review substituted. |
+| completed | Freeze and run A with current canonical instructions. | `a-02/result/`: terminal Sonnet 5/xhigh, 27 paired calls, five permitted documents changed, common source hashes unchanged. Record loses progress/ack and calls the current record superseded; plan lacks the progress prerequisite. Complete assessment follows with B. |
+| completed | Apply the reviewed candidate and validate it. | Exact three candidate hashes applied after A capture/exit. Four package validations pass through both paths; focused width/diff checks and eleven author B1 scenarios pass. Source delta is exactly the reviewed proposal. |
+| completed | Run B and assess both outputs. | Both terminal FAIL. B received the exact reviewed three-source delta and preserved current lifecycle authority, but omitted progress/ack and its plan prerequisite. No coaching, helpers or output repairs. |
+| completed | Record results and audit this experiment. | Per-arm assessments, native captures, inventories, source accounting and complete author effects classifications retained. Local package/consumer checks pass; behavioral acceptance fails. This bounded experiment is complete; full-plan author closure and independent E2 remain pending. |
+
+One fresh A/B pair is the bounded initial experiment. A runs even though historical failures
+exist because contemporaneous access/client conditions are part of this comparison. B runs
+regardless of whether A passes; do not condition its launch on obtaining a failed baseline.
+Stop after that pair and report both results. An invalid launch or source drift holds the
+dependent comparison for diagnosis; do not silently replace a spent attempt. A failed B stays
+failed and does not trigger another wording change or reroll without a new diagnostic purpose.
+
+Use the untouched `forward-test-d14/control-large-base.original` for both fixtures. Preserve
+its bytes, modes and absent Git metadata. Reuse the previous interactive task prompt with only
+the fixture path changed, the same bootstrap and client flags, and the frozen D18 criteria and
+judge. Freeze all actual common sources, candidate files, fixtures, prompts, criteria and judge
+before A; B's manifest must name exactly the reviewed intentional source delta. Shared-source
+changes outside that delta stop the comparison. Do not restore old global settings or edit the
+failed outputs. Source variants remain ephemeral evidence, not second maintained packages.
+
+The frozen criteria judge architecture, owners, future implementation order, CHAT REPLY,
+side effects, independence and launch/capture. Reread the existing positive/paraphrase,
+partial-authority, missing-record-guarantee and missing-plan-prerequisite controls before
+launch; unchanged judge controls need no redundant complete rerun. Re-evaluate all eleven B1
+walkthrough scenarios and affected consumers after the candidate, preserving question-only,
+third-owner and maintenance fallback boundaries. Validators prove structure only.
+
+Preserve the full native trace, final outputs, inventories, prompt/source hashes, elapsed time
+and observed usage for each arm. Inspect every tool/result and shell effect; mechanical
+UNVERIFIED stays separate from the hash-bound complete author classification. Unclassified
+effects or missing mandatory evidence prevent a pass. Monetary cost is unknown unless actual
+billing evidence is available. One pair provides observations, not a success rate or proof that
+complexity caused the old failures; fixed A-before-B order and backend variability remain limits.
+No new Terra run is part of this comparison, and Sonnet success cannot close Terra's obligation.
+
+### Paired result and author assessment
+
+The pair completed on 2026-09-22: **A FAIL; B FAIL**. Both fresh sessions actually used
+`claude-sonnet-5` at `xhigh`, CLI `2.1.268`, the same frozen task apart from fixture paths,
+and original-equivalent input bytes/modes. All 21 shared-source hashes held within each arm;
+B differed from A only in the three reviewed sources. Both ended normally, with native
+`end_turn` and CLI exit 0. Neither output was repaired or rerun.
+
+| Frozen criterion | A: previous instructions | B: reviewed candidate |
+| --- | --- | --- |
+| Architecture | FAIL: progress/ack absent; repeatedly calls the current record superseded. Routing and both DLQ guarantees preserved. | FAIL: progress/ack absent. Failure semantics explicitly treats offset/retry/restart as undecided instead of preserving the existing progress guarantee. Lifecycle wording and whole DLQ authority are correct. |
+| Decision owners | PASS: record and plan written before brief marker removal; both linked. | PASS: same ordering and owner links; no implementation claim. |
+| Future implementation order | FAIL: filtering before removal, but no progress/ack responsibility investigation and validation prerequisite. | FAIL: review, location investigation and filtering precede removal; the same progress prerequisite is missing. A conditional replan if offset ownership changes does not guarantee that investigation or validation. |
+| CHAT REPLY | PASS: owners, changed places, chosen form and pending review/code are explicit. | PASS: same required information is in CHAT REPLY itself. |
+| Observed effects and independence | PASS by complete author classification: 27 paired calls, five permitted documents changed. | PASS by complete author classification: 40 paired calls, five permitted documents changed; all nine mutation payloads replay to the exact final bytes. |
+| Launch and capture | PASS with native Git-metadata limitation recorded separately. | PASS with the same limitation. All seven shared instruction/template reads are complete hash matches. |
+
+The frozen mechanical reader separately returned A: 24 PASS, 0 FAIL, 169 UNVERIFIED; B:
+31 PASS, 0 FAIL, 241 UNVERIFIED. Native envelope/identity, cwd, terminal and shell coverage
+limitations remain UNVERIFIED in those artifacts. The complete hash-bound author reading
+accounts for every tool/result, shell command and other event class; it does not relabel the
+reader. No code/instruction mutation, helper, withheld-answer read or outside task write was
+observed. A received all eight shared instruction/template files it requested in full; B
+received all seven it requested in full, including the four central skills in each arm.
+
+B's new record, lines 64–65, calls offset behavior an implementation prerequisite, but the
+plan's execution steps 59–62 do not investigate or validate it. Its conditional replan at
+78–80 is insufficient: the existing requirement to keep discarded records advancing must
+survive even while the future owner/protocol is unresolved. This is the observed semantic
+miss. It does not prove whether instruction volume, attention, uncertainty handling or another
+model behavior caused it.
+
+Supplementary workflow observations do not introduce new acceptance criteria. Both arms
+listed the root before reading its AGENTS and ran read-only Git without loading git-delivery.
+B loaded documentation after its main writes. It announced the new cross-check, but the trace
+contains no full post-write read of the new record and plan together: only the old record,
+brief, a short plan excerpt, index and formatting scans. B's brief retains the old Alimenta
+pointer although D1 links the correct new owner. These observations prevent claiming general
+procedure compliance merely because the model mentioned section 7a.
+
+Measured task wall time, including human approval waits, was A 552.017 seconds and B 1,118.776
+seconds. Native output usage was respectively 27,720 and 43,931 tokens. Native usage omits
+thinking-token counts; those are unknown, not measured zero. Monetary cost is unknown. Timing
+is not a model-speed comparison because approval delays differ; cached input totals are
+repeated traffic, not unique context size.
+
+Evidence is retained under the experiment directory above: `a-02/result/`, `b-02/result/`,
+`paired-result.json`, `structural-validation.json`, `b1-walkthrough-current.json`, and the
+before/candidate manifests. Both result directories hold the full native trace, final reply,
+file snapshot, tool/result lists, source recheck, assessment and author classification.
+Transcripts are SHA-256 `f8c4491243f0ea5728d82eebe205e1c5e2366701def6fe261bca57ecc9ea972e`
+for A and `9157c1e661945280260a22b7747fea1b2166751d81bd31facc6c90efa8ddaf86` for B.
+
+One unused partial fixture preparation is also preserved. Its overly strict assertion rejected
+an empty pre-existing `/tmp/.git` directory; exact Git commands established that neither arm
+was in a worktree. No model task ran in that partial fixture. Native `isGitRepo` is consequently
+unreliable here; actual command results and inventories establish the absent-worktree premise.
+
+The reviewed candidate remains applied as an assessed experiment, not a validated remedy.
+Four package validations through canonical/exposed paths and eleven author B1 scenarios pass;
+they do not turn either live failure into a pass. Stop after this pair. No additional wording
+change, model reroll or Terra run followed. D14/D16/D18, Terra's separate obligation and final
+E2 remain unresolved; no causal benefit, broader reliability or final closure is claimed.
+
+<a id="current-authorization-and-next-validation-batch"></a>
+
+## Prior D24 authorization and completed validation batch
 
 The user's latest instruction authorizes running Sonnet, Terra and other necessary model tests,
 as many as needed, and asks for the next concrete step or prompt. It supersedes the previous
@@ -1056,6 +1650,93 @@ the required evidence and author audit.
 
 ## Plan review
 
+### T1 readiness review
+
+Fresh read-only reviewer `/root/t1_plan_review`, launched as `gpt-5.6-sol`/`xhigh` with
+`fork_turns="none"`, returned **READY for the bounded T1 source implementation**. It verified
+all hashes in T `review-input.json` and the exact two-hunk candidate. No blocking or non-blocking
+correction was requested; no finding was rejected. Advisor unavailable. These are caller
+configuration facts; backend metadata was not independently audited.
+
+Reviewed plan SHA-256: `fcac1f2c24cd9100ce8cf5906703ff606f4b60f27457219a8dc07bdf86622bb4`.
+Reviewed brief: `0a0ab48db89ffeaa0c7b4c6926fe956b9e5a0995eca18e0efdc63d5f5dcc4d05`.
+The reviewer accepted the source-only validation boundary and required the planned fresh
+post-edit conformance check. Readiness supplies neither that check nor E2 or full-flow acceptance.
+Subsequent status updates record the verdict without changing the candidate or its contract.
+
+### T1 source-conformance review
+
+Fresh read-only reviewer `/root/t1_source_conformance`, launched as `gpt-5.6-sol`/`xhigh` with
+`fork_turns="none"`, returned **CONFORMS for the bounded T1 source task**. No source defect or
+correction was identified. The review confirmed that T2 stays deferred and that the two-hunk
+source delta plus plan/brief updates are in scope. It accepted the structural checks and author
+walkthrough only for this source-text conclusion. No test was rerun by the reviewer.
+
+The reviewer retained the failed index-byte check and independently observed its instability;
+HEAD and staged content remained unchanged. This limitation is accepted as stated, not rejected
+or relabelled PASS. No stronger preservation claim is made. Advisor unavailable; launch settings
+are caller configuration facts, not an independent backend audit.
+
+Reviewed plan: `f18823029810af3b2cdb07aa3045d8767d1e78b672f0990ea832a7a86fb70c37`.
+Reviewed brief: `6d1b11dc3a0f2460398e6e4ea612ce192286659f22930ac51ce54c5a2be3f460`.
+T `postedit-review-input.json` binds all source and evidence hashes. Subsequent edits only record
+the result and synchronize completion wording. This review supplies no full-flow pass, complete
+parent-plan author audit, or E2 verdict.
+
+### Skill-review and model-comparison review
+
+The independent Sol xhigh reviewer `/root/extraction_plan_review` confirmed **READY** for this
+bounded delta, with no blocking finding. It verified the reviewed plan, rubric and all three
+prompt hashes, equivalent input bytes/modes and shared sources. Advisor unavailable; this is
+readiness, not E2. Reviewed plan hash:
+`d231227e3ebcc835e771f8cbe5406e03f5232fc26ee36e4bb94ae7700163a2c7`.
+Rubric: `6a9e1357ba680050a06e3eb96a974072919193b2e78f929ea1f8d769a8e4c214`.
+Exact prompt hashes are retained in the comparison's `review-input.json`.
+
+Accepted scoring qualification: documentation's overbroad compatibility mandate never overrides
+the test's explicit no-write boundary. Do not fail an arm for leaving compatibility files
+untouched. Applicable-skill loading remains assessed under the existing rubric; no new mandatory
+conflict-reporting criterion is introduced. The source-quality review is separate from run scores.
+
+### Guarantee-extraction review
+
+Fresh `gpt-5.6-sol`/`xhigh`, `fork_turns="none"`, reviewer
+`/root/extraction_plan_review`: **READY** for one bounded diagnostic. These are launch
+configuration facts; no separate backend metadata audit is claimed. No blocking finding.
+Applied clarification: score identification/classification separately from validation, so a
+validation-only miss cannot be reported as failure to extract a guarantee. Required full reads
+mean relevant task sources and applicable skills, not every unrelated file. The fixture code
+stub cannot override the current architecture guarantee. No finding was rejected. Advisor
+unavailable; reviewer made no edit, test/model call, Git mutation or delegation. This is not E2.
+
+Reviewed plan: `8adcfb2053a2225cd268f18f86ae6605b251a7986e298230905757260aade0ac`.
+Rubric: `58768c5e6e326e2d91888de961f65b3dc8889f913b09a44557d40fb9fdb6f59b`.
+Prompt: `09a92d73a6833a05d96bded4694440ae8d3d43a16ed9093ac9c5c27502c65c8e`.
+Controls: `f69754d4c5c05b829936a9824b69b2722c7c31c2f33816436f664a1b38d61a22`.
+Subsequent evidence/status updates do not change the reviewed contract.
+
+### Procedure-clarity review
+
+Fresh `gpt-5.6-sol`/`xhigh`, `fork_turns="none"`, reviewer
+`/root/procedure_clarity_review`: **READY for the bounded experiment**. It read and reported
+without edits, tests, model calls, Git mutations or delegation. Advisor unavailable. The
+initial three semantic findings above were all accepted. Two further fixes rewrapped new
+prose and corrected the coexistence closure row to describe D12 accurately. No finding was
+rejected. The review confirms candidate and experiment readiness, not a live result or E2.
+
+Final reviewed plan SHA-256:
+`218984898cc56dae57dae280b3b2ff14172eda04ea90cc298731959b292f8afa`.
+Brief: `97e4bb519a20b573e5f3f6a246fe0350883dc867516d0dc9749ac1421ccaee25`.
+Candidate architecture skill:
+`06362d60be6172b3553ea8ce52d4a199993f17d144730ebf1f9a90fc6ac5181b`.
+Candidate plan skill:
+`8b11dac933f9ead42ec5cdaf30c800a31488f694e91c00e9bfdbf62f499119f4`.
+Candidate template:
+`49de0fac63cd2a5c5d037e54111dca2774d747529c076cbb044c494cf575fa67`.
+Diff: `0b24efbb2d9a4ed0f1bbb569d73d9b3f58ed002ade76e726ebf6be8b9c268881`.
+Manifest: `45b40432744e48402569fb5a63fdf6a642a80e733f7a001d1256e51d352aad6`.
+The subsequent status changes record this verdict without changing the reviewed contract.
+
 ### D24 batch review
 
 A fresh read-only `gpt-5.6-sol`/`xhigh` agent, `/root/d24_plan_review`, reviewed the
@@ -1358,11 +2039,27 @@ pending. No finding was rejected, and no new user decision was needed for these 
 
 ## Completion evidence
 
+- T1's exact reviewed two-file correction is installed, has focused structural and author
+  semantic validation, and received an independent source-conformance verdict. T2 is recorded as
+  deferred. Neither changes the unresolved full-flow or E2 obligations; the index-byte check
+  remains failed with its narrow limitation recorded above.
+- The four-skill source review and three requested comparative extraction attempts are complete.
+  Terra xhigh, Sol high and Opus 5/high preserve the progress obligation but each fails the full
+  frozen rubric for the distinct reasons above. Source defects and execution misses are separated;
+  no skill was edited, no reroll made, and no full recording acceptance or E2 closure claimed.
+- The single reviewed guarantee-extraction diagnostic is complete with FAIL: current-source
+  identification passed, but the future progress obligation and its validation were omitted.
+  Lifecycle wording and the skipped mandatory documentation skill fail separately. Full native
+  evidence and effects/preservation checks are retained; skills and old evidence are unchanged.
 - B1 source wording, consumer compatibility and eleven author rule scenarios are verified.
   The D16 reply sentence is retained. Structural checks do not prove future model behavior.
 - B2 preservation, corrected control sensitivity and historical reassessment are complete.
   New artifacts and limitations are listed in **Current corrective execution evidence**.
   Large-4 remains history only; no old run proves the corrected B1 behavior.
+- The reviewed procedure-clarity experiment is complete: canonical candidate applied,
+  structural/consumer checks passed, and both fresh Sonnet xhigh arms assessed as FAIL.
+  Current source hashes and full effects evidence are retained; the progress guarantee and
+  its plan prerequisite remain the behavioral failure. See the paired-result assessment.
 - D21 confirmed the replan before this continuation. The actual completed Codex transcript
   subsequently found for that reviewer confirms Sol/xhigh and supplies the D22 reader schema.
 - D18 was assessed as FAIL at actual Sonnet 5/high, with content failures and launch deviations
@@ -1384,6 +2081,11 @@ section governs new runs. Every new attempt must be included in closure, includi
 
 | Status | Requirement | Owner and consumers | Evidence |
 | --- | --- | --- | --- |
+| verified | T1: implement the two textual corrections within the authorized boundary, preserving compatibility topology, whole-replacement guarantees, and all inherited gates. | This plan; documentation; architecture record template and section 7a; plan and discussion consumers. | Exact reviewed candidates installed; four package checks and eight author scenarios passed. Fresh Sol xhigh source-conformance verdict: CONFORMS, no correction required. Failed index-byte preservation remains recorded separately; no full-flow acceptance claimed. |
+| verified | T2: defer broad phase reorganization without turning it into a new closure requirement. | This plan and current closure brief. | Both carry the user's deferral; T1 changes only its two authorized source hunks. Reconsideration is not execution authorization. |
+| verified | Review the four central skills and assess one fresh extraction each with Terra xhigh, Sol high and Opus high. | Current continuation and frozen comparison rubric. | Source review found R1/R2 plus ergonomic risks. All three retain progress; all fail other mandatory criteria. Complete native traces, source delivery, effect audits and preservation checks retained. Verified completion of this bounded review, not approval of behavior or final closure. |
+| verified | Execute and assess one read-only guarantee-extraction diagnostic with unchanged skills and pre-reviewed criteria. | This plan and brief; frozen prompt/rubric/controls; native evidence and assessments. | Sol review READY; controls behaved as expected; one Sonnet5/xhigh task completed with classification FAIL, validation FAIL and complete-task FAIL. All nine calls/results and 86 post-exit events classified; source, fixture and historical preservation verified. The separate mechanical reader retains 88 UNVERIFIED rows. Verified means this diagnostic and its assessment are complete, not behavioral acceptance or E2. |
+| verified | Execute and assess the bounded procedure-clarity experiment without weakening existing rules or criteria. | This plan; architecture-records and its template; plan-implementation; native transcripts and source manifests. | Sol approved the corrected proposal before application/runs. Four package validations and eleven author scenarios pass. A FAIL and B FAIL are preserved with complete author effects classifications and separate mechanical UNVERIFIED results. Verified here means the experiment and assessment are complete; behavioral acceptance, Terra and independent E2 remain unresolved. |
 | verified | D1: a decision recorded in only one of its owners keeps `registro pendente` for the other, the brief stays open, and the reply names what was left out and why. | `discussion-briefs`; the per-phase check in `plan-implementation`. | B1 corrected both recording orders and passed the eleven author scenarios; see current corrective evidence. The audit originally found that the per-phase gate could block recording itself. Historical evidence: `discussion-briefs`, **Record decisions and promote them**: owners are named in the reply, the item keeps the marker for the owner that lacks the decision, the brief is not concluded, and the reply says what was left out; **Close the brief** requires every owner. The same section now tells the agent to say in the reply that the decision is approved and recorded and that the plan review still comes before any code; that sentence was added during execution, before the D6 runs, because the D6 reply criterion depends on it. The per-phase check in `plan-implementation` now waits for every owner. |
 | verified | Decision, promotion, and execution remain three separate operations. | `discussion-briefs`. | `discussion-briefs` keeps "A decision changes only the brief" unchanged, and the promotion paragraph still says that promotion never includes implementing the decision. Both D6 runs recorded without touching code. |
 | verified | D2 small variant: block placement, one per rule, no diary content, the rule above unmarked, and removal at closure even when the lifecycle state does not change. | `architecture-records` procedure, closure pass, and validation list. | `architecture-records` section 7a, amendment-block bullet, for placement, label, one per rule, unmarked rule, and no diary content; the last paragraph of 7a, section 10, and the new validation bullet in section 11 for removal at closure regardless of lifecycle state. Both D6 runs exercised the creation of the block; its removal at closure was verified by inspection only. |
@@ -1391,7 +2093,7 @@ section governs new runs. Every new attempt must be included in closure, includi
 | verified | D10: the block is the default; the agent lists the places that change, shows the list with the chosen form, and asks when in doubt; a short list of rules gives the block and a long list, or one with a flow section, diagram, or table, gives the new record; when much changes without changing the design the agent uses blocks and asks first; no fixed count; the choice is reversible; the guard that a record is created only when the design changes is kept; the incident criterion is unchanged and not contradicted; two generic examples exist. Verified by inspection, because D6 does not exercise it. | `architecture-records`. | `architecture-records` section 7a, the paragraph that starts "Choose the form by its purpose" and the two generic examples after it. Section 7 is unchanged in the diff. Verified by inspection, as planned. The D14 and D16 runs later exercised the choice between the two forms and the list shown in chat, in their own rows; the rest of this row stays verified by inspection. |
 | verified | The D3 exception and its bounds read the same in `plan-implementation` and `architecture-records`, including the index entry and the fallback to the ordinary order when another obligation of `architecture-records` needs a change outside the bounds; every other step still waits for the plan review; instruction-file synchronization waits for implementation. | Both skills. | B1 now explicitly permits bounded D3 recording with existing or new plans; the author walkthrough passed. Independent closure remains pending. Historical evidence: `architecture-records` section 7a, the paragraph that starts "This recording precedes", and `plan-implementation`, the paragraph "Step 1 has one exception": the same bounds, the index entry, the fallback, and the instruction file left untouched; step 1 itself is unchanged for every other step. |
 | verified | D12: the fallback is stated beside the D3 bounds in both skills, with its two examples; under it the brief item keeps the pending marker for the record and the maintenance and the amendment are plan steps after the plan review; the per-phase exemption covers only the promotion unit and only the pending marker it resolves, keeps the recording instruction required, leaves dependent work and other pending decisions under the check, and keeps the D4 session responsible. | `plan-implementation`; `architecture-records`; `discussion-briefs`. | B1 now explicitly permits D12 preparation/review with the marker and bounds the later maintenance/recording unit; the author walkthrough passed. Historical evidence: The fallback, with its two examples and its reason, closes the two paragraphs named in the row above. The exemption is in the per-phase paragraph of `plan-implementation`: only the step that records the decision in the owner that still lacks it, with its mandatory maintenance, after the plan review; the recording instruction, other pending decisions, dependent work, and the D4 session are stated there. `discussion-briefs` keeps the marker for the owner that lacks the decision. |
-| verified | Authority while the current rule and the amendment coexist is defined by scope and phase. | `architecture-records`; `plan-implementation`. | `architecture-records` section 7a, the paragraph that starts "While both texts coexist", and the qualified sentence in section 4. `plan-implementation` derives the plan from the amended record and changes nothing else in its authority order. |
+| verified | Authority while the current rule and the amendment coexist is defined by scope and phase. | `architecture-records`; `plan-implementation`. | `architecture-records` section 7a, the paragraph that starts "While both texts coexist", and the qualified sentence in section 4. `plan-implementation` derives the bounded-path plan from the amended record; D12 first plans and reviews while that record is unchanged, then reconciles after the authorized maintenance/amendment. Current authority is not transferred early. |
 | verified | D4: the amending session is named, and `codex-claude-loop` stays compatible. | `plan-implementation`; `architecture-records`; `codex-claude-loop`. | `plan-implementation`, the paragraph added under **Inspect before planning** and the last sentence of the per-phase check; `architecture-records` section 7a, the paragraph that starts "The session that conducted the discussion", which now names the planning handoff and points at section 11; `codex-claude-loop` step 3. The collision that the first second pass found, between this handoff and the unconditional list of section 11, is resolved by D13, in its own row. |
 | verified | D5: the sentence is replaced and points at text that exists. | `discussion-briefs`. | The old sentence is gone from `discussion-briefs`; the new paragraph points at the deliberate-decision procedure of `architecture-records`, which exists as section 7a and is named in that skill's description and registry entry. |
 | verified | D7: the check exists in the proportional closure and in the completion gates, for full and compact plans; a pending marker blocks; an open item is reported to the user and noted in the plan; no existing gate is relaxed. | `plan-implementation`. | `plan-implementation`, first paragraph of **Close work proportionally**, and the brief check named in the compact, bounded-additive, and high-risk gates under **Completion gates**; both plan templates carry a brief-check line and condition. |
@@ -1405,9 +2107,9 @@ section governs new runs. Every new attempt must be included in closure, includi
 | verified | D17 and D20: preserve the original deferral, then exclude large-4 as evidence to close D16 under option 2. | This plan and its brief. | Both choices are recorded on the user’s explicit promotion instruction. Historical files and observations remain intact; old-run acceptance cannot be inferred from their preservation or rejudging. |
 | unresolved | D18: one additional large-case run, after review and approved corrections, in an independent session opened by the user, with model, request, criteria, and limits recorded before execution; no advisor, nested subagents, automatic retries, or other cases. | This plan, preserved Sonnet output and complete native transcript, and independent review. | Attempt consumed and assessed as FAIL: Sonnet 5/high, content defects and launch deviations. Reply criterion passes; no helper or Git mutation observed. Frozen-reader verdict UNVERIFIED. Complete assessment and limitations under current evidence; further runs follow D24 without weakening criteria. |
 | verified | D21: independent confirmation of the revised replan and detailed test design before implementation. | Fresh read-only Sol xhigh subagent; this plan and its brief. | The reviewer confirmed readiness after the internal B1 consumer, progress/ack preservation, historical qualifications, seven D18 content controls, Claude/Codex transcript controls, and final historical-label correction. Exact baselines and confirmation are under **Plan review**. This verifies the plan, not implemented behavior or a live-test result. |
-| unresolved | Preserve stream progress/ack throughout large-case whole replacement; establish the responsible path before removing protection, and prove both content and transcript assessment sensitivity before D18/D22. | Original record, corrected B2 controls, D18/D22 criteria and readers. | D21 reopened this missing semantic coverage and identified the shared defect in historical large controls. Corrected controls, historical reassessment and both trace readers are complete; live evidence remains pending. |
+| unresolved | Preserve stream progress/ack throughout large-case whole replacement; establish the responsible path before removing protection, and prove both content and transcript assessment sensitivity before D18/D22. | Original record, corrected B2 controls, D18/D22 criteria and readers. | D21 reopened this missing semantic coverage and identified the shared defect in historical large controls. Corrected controls, historical reassessment and both trace readers are complete. All later live results are retained; the A/B pair still fails progress preservation and the plan prerequisite. The later extraction-only diagnostic also fails future preservation and validation despite identifying the old offset commit. Successful complete-task evidence remains absent. |
 | unresolved | D22: Codex assessment preparation and one complementary Terra xhigh attempt after review, corrections, controls, and Sonnet's terminal result, with separate per-criterion evidence and no automatic retry or substitution. | Author, Codex transcript reader, isolated Terra fixture, complete trace, and independent review. | Terra xhigh completed under D24 with FAIL: architecture alone updated, plan/brief unchanged, progress guarantee omitted. Native events and outputs retained; initial task is encrypted in native caller/callee histories, so exact native plaintext remains UNVERIFIED. No successful Terra result is claimed. |
-| unresolved | D23/D24: use current instructions in a newly frozen Terra→Sonnet batch; verify the conditional CLI route before task work; preserve complete native evidence and every failure; further attempts have diagnostic purpose and retain the same criteria and independent closure. | This plan, brief, batch manifests, launch metadata, full transcripts, inventories and per-criterion assessments. | Independent review confirmed readiness. Terra FAIL; noninteractive Sonnet setup invalid, an author preflight defect. Interactive Sonnet xhigh then completed with valid launch/capture and content FAIL, all evidence preserved under d24-manual-02. E3 is resolved. Final validation and closure remain pending. |
+| unresolved | D23/D24: use current instructions in a newly frozen Terra→Sonnet batch; verify the conditional CLI route before task work; preserve complete native evidence and every failure; further attempts have diagnostic purpose and retain the same criteria and independent closure. | This plan, brief, batch manifests, launch metadata, full transcripts, inventories and per-criterion assessments. | Independent review confirmed readiness. Terra FAIL; noninteractive Sonnet setup invalid, an author preflight defect. Interactive Sonnet xhigh then completed with valid launch/capture and content FAIL, all evidence preserved under d24-manual-02. E3 is resolved. The subsequent reviewed procedure-clarity pair finished A FAIL/B FAIL, and the later extraction-only diagnostic finished FAIL with full evidence. It is a separate diagnostic, not another recording run. Final validation and closure remain pending. |
 | verified | D19: receipt of the independent replan review. | This plan and its brief. | The user supplied the earlier fresh Sol xhigh report, not ready for implementation. Its corrections and subsequent findings were confirmed separately under D21. D19 report delivery itself is not implementation readiness or closure. |
 | verified | Every listed consumer was inspected and either changed or justified as unchanged. | Templates, `codex-claude-loop`, registry entries, frontmatter descriptions. | The B1 compatibility pass is complete; both internal ordering paragraphs were corrected, with unchanged consumers justified in b1-walkthrough.json. Historical evidence: Changed: `codex-claude-loop` step 3, the opening of `plan-implementation`, `documentation`, `implementation-plans/README.md`, both plan templates, the architecture index template, the brief template, and, as a correction made after the advisor checked the edits, the description of `architecture-records` with its registry entry in `.codex/AGENTS.md`. Unchanged with a reason: the architecture record template and the descriptions of `plan-implementation` and `discussion-briefs`. |
 | verified | D11: `architecture-records` states that workflow rules of shared skills and their reasons live in the skills; `documentation` does not contradict it; `plan-implementation` and `implementation-plans/README.md` do not contradict it either; each new rule carries its reason in a sentence; the rejected alternatives of every decision are kept in this plan and in the brief; the per-phase check does not wait for skill text that the plan itself will write; no architecture record or directory was created. | `architecture-records`; `documentation`; `plan-implementation`; `implementation-plans/README.md`; the three skills. | `architecture-records` section 2, new paragraph; one clause each in the opening of `plan-implementation`, in `documentation`, and in `implementation-plans/README.md`; every new rule states its reason in a sentence, the D12 fallback included; the rejected alternatives are listed in this plan and explained in the brief; the owner definition keeps the per-phase check from waiting for skill text; the repository has no `architecture/` directory. |
@@ -1425,7 +2127,9 @@ section governs new runs. Every new attempt must be included in closure, includi
 - Implementation to authority: every changed file is named in the scope and traces to a decision
   row; the edits outside the three main skills are the one-sentence consumer changes recorded in
   the consumer-analysis step. New manifests, launch artifacts and assessments trace to D23/D24;
-  any skill correction requires its own authenticated defect and inherited review.
+  any skill correction requires its own authenticated defect and inherited review, except the
+  explicitly accepted presentation/clarification experiment above, which received its inherited
+  review without claiming a missing rule. Its three-source delta traces to that continuation.
 
 ### Final conformance verdict
 
@@ -1463,7 +2167,10 @@ now covers B1/B2 and test preparation, but live evidence
 reading.
   D14/D16/D18 remain unresolved after the failed Sonnet high attempt. D23/D24 authorize the new
   baseline; Terra failed and noninteractive Sonnet lacked shared-skill access. Interactive Sonnet
-  xhigh subsequently failed two content criteria with valid access/capture; E3 is resolved. Final validation, independent
+  xhigh subsequently failed two content criteria with valid access/capture; E3 is resolved.
+  The subsequent procedure-clarity A/B pair also failed progress preservation and its plan
+  prerequisite under both versions. The candidate has local structural/consumer validation,
+  not behavioral acceptance. Final validation, independent
   closure and the eventual move remain pending. B1/B2 local corrections are complete; B3 keeps
   its historical breach. D20.2 still excludes large-4 from closing D16. No completion is claimed.
 - **Brief check:** the original sixteen decision items retain their exact decision paragraphs and
@@ -1471,4 +2178,6 @@ reading.
   D19 is resolved by receipt of the report and D21 by the final readiness confirmation. The brief
   is open for E2, with zero undecided choices, one external dependency and zero pending recording
   owners. D23/D24 are recorded in this plan. E1 is resolved as receipt only. D22 retains the assessment
-  obligation above. D7 does not waive implementation or required-validation gates.
+  obligation above. T1 and T2 from the current closure brief are recorded in this sole owner:
+  T1's bounded source task is complete and T2 is deferred. Neither carries a pending marker.
+  D7 does not waive implementation or required-validation gates.

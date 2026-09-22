@@ -16,7 +16,11 @@ cross-component record.
 
 ## Non-goals
 
-- State nearby behavior intentionally excluded from this decision.
+- State nearby behavior changes intentionally excluded from this decision.
+- In a whole replacement, excluding a behavior change does not exclude its existing rules.
+  Carry those rules into the appropriate normative sections, such as Architecture, Failure
+  semantics, and Invariants, so this record governs them once implemented. Until then, the
+  current record remains in force.
 
 ## Current state
 
