@@ -168,11 +168,16 @@ When a durable architecture record governs the change, use `architecture-records
 this skill. Treat the approved record as the design authority and derive the implementation plan
 from it. Do not alter the record to legitimize incidental current code.
 
-When the plan carries out a deliberate user decision that changes an approved record, the record is
-amended before the plan is written, under the deliberate-decision procedure of
-`architecture-records`. The session that conducted the discussion and writes the plan makes that
-amendment, because it holds the reasons behind the decision. Derive the plan from the amended
-record, and tell an implementing session that the records are already amended.
+When the plan carries out a deliberate user decision that changes an approved record, follow
+the deliberate-decision procedure in `architecture-records` section 7a. When it permits bounded
+recording before review, the discussion/planning session amends the record first, then creates
+or updates the plan from that amended record and submits both to the required review. When
+mandatory maintenance puts the record edit outside those bounds, create or update the plan
+with the maintenance and amendment steps first, keep the decision pending for the record with
+the reason, and obtain the required plan review before performing that unit. Complete the
+authorized recording before the implementing-session handoff; describe which owners were
+actually updated without presenting pending recording or implementation as completed. The
+fallback must not be overridden by an unconditional amendment-before-plan instruction.
 
 Load the task-specific skills required by the work before planning their stages. In particular,
 use `test-quality` for executable validation, `documentation` for durable documentation,
@@ -324,16 +329,31 @@ faster.
 When a persistent plan exists, inspect its current step, prerequisites, and relevant scope before
 starting each new phase; do not reread the entire file solely because the phase changed. When a
 brief on the same subject exists under `briefs/`, also check it for decided items still marked
-`registro pendente`. Report them to the user, and do not start a phase that such a decision affects
-until the user instructs its recording and every owner named for it carries it. An owner is a
-document that records decisions: the plan, an architecture record, or an issue. The code or skill
-text that the plan will change is the target of the work, never an owner that must carry the
-decision first. One unit is exempt, so that the check cannot block what resolves it: after the plan
-review, the step that records the decision in the owner that still lacks it may start, together
-with the maintenance that `architecture-records` makes mandatory for that edit. The exemption
-waives only the pending marker that this unit resolves. The user's instruction to record stays
-required, every other pending decision and all work that depends on the amendment stay held, and
-the session that conducted the discussion performs the unit before any handoff.
+`registro pendente`. Report them to the user and hold each affected phase until the user instructs
+recording and every owner named for the decision carries it, subject only to the recording paths
+below. An owner is a document that records decisions: the plan, an architecture record, or an
+issue. The code or skill text the plan will change is a work target, never such an owner.
+
+With the user's instruction to record, the marker for that decision must not block the work that
+resolves it. Distinguish these paths:
+
+- When `architecture-records` section 7a permits recording before plan review, allow only its
+  amendment block, or Proposed record with the notice and index entry, before deriving and
+  recording the plan and reviewing both. This also applies when a persistent plan already exists.
+  No other record text, code, configuration, or repository instruction changes before that review.
+- When section 7a requires recording after plan review, allow the read-only inspection to scope it,
+  the preparation and recording of the plan, and its required review while the architecture
+  record still lacks the decision. Keep the marker and its reason; change no architecture file
+  during this preparation or review. Do not move the maintenance or amendment ahead of review.
+- After the required review, allow the unit that records the decision in its missing document
+  owner, together with only the maintenance that owner's skill makes mandatory for that edit.
+  For that fallback this is the maintenance and amendment of the architecture record.
+
+Each path waives only the pending marker for the decision it resolves, not recording authority,
+other pending decisions, or any other prerequisite. Keep the marker until every named owner
+carries the decision. Dependent implementation remains held until recording and all required
+reviews are complete. The discussion/planning session performs the architecture recording before
+handing the plan and record to an implementing session, as section 7a requires.
 
 After context compaction, interruption, session restart, material replan, or agent handoff, reread
 the entire plan before acting. Give every delegated agent the plan path and the exact step it owns.
