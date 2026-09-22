@@ -210,6 +210,15 @@ Name the behavior boundary, the affected owner or consumer, and the evidence tha
 step complete. Mention exact paths or symbols only after inspecting them; do not invent locations
 to make a plan look concrete.
 
+When ownership or flow changes, carry each affected architectural guarantee into that sequence,
+including unchanged behavior whose implementation path moves. Before a step removes an existing
+responsibility or protection, require evidence that the replacement path preserves its
+guarantees. Establish that path first, or use an explicitly atomic transition whose
+prerequisites and validation rule out a protection or progress gap. If ownership is unknown,
+make its investigation a prerequisite. An architectural assignment is not evidence that the
+runtime path already exists. This applies the invariant-to-owner trace to the transition itself,
+so a correct final design does not hide a gap in the steps that reach it.
+
 Review plans proportionally before implementation:
 
 Evaluate high-risk triggers first; any match overrides locality, reversibility, or apparent
