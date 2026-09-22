@@ -169,9 +169,12 @@ it in the promotion turn under the deliberate-decision procedure of `architectur
 defines the amendment block, the new-record form, and the case in which the amendment waits for
 the plan review, and then record the execution sequence in the plan. Say in the chat reply that the
 decision is approved and recorded, and that the plan review still comes before any code changes, so
-that the user does not read the recording as the implementation. Treat a plan already under
-`completed/` as no owner. When no owner exists yet, say so in the item; `plan-implementation`
-absorbs the decided items when the user asks for a plan on the subject.
+that the user does not read the recording as the implementation. Give in that reply the list of
+places in the record that the decision changes, together with the form you chose, as that procedure
+requires: the reply is composed under this skill, and without the list the user cannot check
+whether the other form would have served. Treat a plan already under `completed/` as no owner. When
+no owner exists yet, say so in the item; `plan-implementation` absorbs the decided items when the
+user asks for a plan on the subject.
 
 Items keep their place and their full text for the whole life of the brief, so that the user can
 review each recorded decision beside the options it was chosen from. Once an owner records a
