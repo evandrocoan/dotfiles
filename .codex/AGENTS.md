@@ -140,6 +140,9 @@ that is not listed there:
   status or branch, process or service state, file existence, and the active
   client configuration. Stable facts from an already-read file do not need
   revalidation merely because the turn changed unless the file may have changed.
+  For searches in any directory, include relevant content reached through
+  symbolic links. Verify that their targets are within the authorized scope
+  before following them, for example with `rg --follow`.
   When a claim that something is absent materially supports safety, scope, or
   task completion, verify the search scope. Include a known-present control when
   a wrong root, matcher, pathspec, filter, exclusion, or inaccessible source could
@@ -220,10 +223,6 @@ task appears familiar or because another skill also applies. When a skill is add
 renamed, or removed under `~/.agents/skills/`, update this registry in the same
 change. If the registry and filesystem disagree, inspect the filesystem, report the
 stale registry, and correct it before relying on the missing entry.
-
-When searching skill contents under `~/.agents/skills/`, follow directory
-symlinks (for example, with `rg --follow`) so exposed packages are included in
-the search.
 
 When two loaded skills give incompatible guidance for the same change, name the
 conflict and present the options with their trade-offs before editing, instead
