@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -35,7 +36,8 @@ def positive_integer(value: str) -> int:
 def parse_arguments() -> argparse.Namespace:
     default_codex_home = Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
     parser = argparse.ArgumentParser(
-        description="List the longest Codex executions recorded in local session history."
+        description="List the longest Codex executions recorded in local session history.",
+        epilog="Use 'codex-session-stats find --help' to search Codex and Claude conversations.",
     )
     parser.add_argument(
         "--limit",
@@ -667,7 +669,382 @@ def print_csv(records: list[dict[str, object]]) -> None:
     writer.writerows(records)
 
 
+def parse_search_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="codex-session-stats find",
+        description="Search local Codex and Claude messages without changing client data.",
+        epilog="Prefer a complete MR URL to distinguish projects. A match is evidence of a mention, "
+        "not proof that a review was performed. Search is literal and case-insensitive.",
+    )
+    parser.add_argument("query", nargs="?", help="literal text or complete MR URL")
+    parser.add_argument("--mr", type=positive_integer, help="MR number in a URL, MR 34, or !34 notation")
+    parser.add_argument("--agent", choices=("both", "codex", "claude"), default="both")
+    parser.add_argument("--project", help="literal filter on cwd, current title, or matching message")
+    parser.add_argument("--session", help="exact session ID")
+    parser.add_argument("--role", choices=("both", "user", "assistant"), default="both")
+    parser.add_argument("--since", metavar="YYYY-MM-DD", help="earliest local message date")
+    parser.add_argument("--until", metavar="YYYY-MM-DD", help="latest local message date (inclusive)")
+    parser.add_argument("--timezone", default="America/Sao_Paulo")
+    parser.add_argument("--limit", type=positive_integer, default=20, help="maximum conversations")
+    parser.add_argument("--matches-per-session", type=positive_integer, default=3)
+    parser.add_argument("--max-description", type=positive_integer, default=280, help="excerpt length")
+    parser.add_argument("--format", choices=("markdown", "json", "csv"), default="markdown")
+    parser.add_argument("--all-agents", action="store_true", help="include subagents and automatic reviewers")
+    parser.add_argument("--include-inherited", action="store_true", help="include labelled compacted history; original dates may be unknown")
+    parser.add_argument("--codex-home", type=Path, default=Path(os.environ.get("CODEX_HOME", "~/.codex")))
+    parser.add_argument("--claude-home", type=Path, default=Path(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude")))
+    args = parser.parse_args(sys.argv[2:])
+    if not (args.query and args.query.strip()) and args.mr is None:
+        parser.error("provide literal query text or --mr")
+    return args
+
+
+def search_patterns(arguments: argparse.Namespace) -> tuple[list[re.Pattern], list[re.Pattern]]:
+    patterns = []
+    byte_patterns = []
+    if arguments.query:
+        pattern = re.escape(arguments.query)
+        if re.search(r"/merge_requests/\d+$", arguments.query):
+            pattern += r"(?!\d)"
+        patterns.append(pattern)
+        if arguments.query.isascii() and not any(c in arguments.query for c in '\\"\n\r\t'):
+            byte_patterns.append(re.compile(pattern.encode(), re.IGNORECASE))
+    if arguments.mr is not None:
+        patterns.append(r"(?:/merge_requests/|\bMR\s*!?\s*|\bmerge\s+request\s*!?\s*|!)"
+                        + str(arguments.mr) + r"(?!\d)")
+        # Notation whitespace may be JSON-escaped; only the number is a safe prefilter.
+        byte_patterns.append(re.compile(str(arguments.mr).encode() + rb"(?!\d)"))
+    text_patterns = [re.compile(p, re.IGNORECASE) for p in patterns]
+    # Unicode queries and escaped Unicode JSON need decoding; ASCII queries can reject most
+    # lines before JSON parsing. Tools, world-state snapshots and reasoning stay unsearchable.
+    return text_patterns, byte_patterns
+
+
+def conversation_text(content: object) -> str:
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return ""
+    return "\n".join(
+        part["text"] for part in content
+        if isinstance(part, dict) and part.get("type") in {"text", "Text", "input_text", "output_text"}
+        and isinstance(part.get("text"), str)
+    )
+
+
+def conversation_messages(item: dict, agent: str, inherited: bool = False):
+    """Yield role, text, timestamp, origin, preference; never flatten tool/thinking payloads."""
+    kind = item.get("type")
+    timestamp = item.get("timestamp")
+    if agent == "claude":
+        message = item.get("message")
+        if kind in {"user", "assistant"} and isinstance(message, dict):
+            if item.get("isCompactSummary"):
+                if inherited:
+                    yield kind, conversation_text(message.get("content")), None, "inherited", 0
+            else:
+                yield kind, conversation_text(message.get("content")), timestamp, "message", 2
+        return
+    payload = item.get("payload")
+    if not isinstance(payload, dict):
+        return
+    if kind == "response_item":
+        if payload.get("type") == "message" and payload.get("channel") not in {"analysis", "summary"}:
+            role = payload.get("role")
+            if role in {"user", "assistant"}:
+                yield role, conversation_text(payload.get("content")), timestamp, "message", 2
+    elif kind == "event_msg":
+        event_type = payload.get("type")
+        if event_type in {"user_message", "agent_message"}:
+            role = "user" if event_type == "user_message" else "assistant"
+            yield role, conversation_text(payload.get("message")), timestamp, "message", 1
+        elif event_type == "item_completed":
+            message = payload.get("item") or {}
+            if isinstance(message, dict) and message.get("type") in {"AgentMessage", "UserMessage"}:
+                role = "assistant" if message["type"] == "AgentMessage" else "user"
+                yield role, conversation_text(message.get("content")), timestamp, "message", 1
+    elif kind == "compacted" and inherited:
+        history = payload.get("replacement_history")
+        for message in history if isinstance(history, list) else []:
+            if not isinstance(message, dict):
+                continue
+            for role, text, _, _, _ in conversation_messages(
+                {"type": "response_item", "payload": message}, "codex"
+            ):
+                yield role, text, message.get("timestamp"), "inherited", 0
+
+
+def search_json(line: bytes, coverage: dict) -> dict:
+    try:
+        value = json.loads(line)
+        if isinstance(value, dict):
+            return value
+    except (ValueError, UnicodeDecodeError):
+        pass
+    coverage["malformed_records"] += 1
+    return {}
+
+
+def search_titles(codex_home: Path, coverage: dict) -> dict:
+    titles = {}
+    path = codex_home / "session_index.jsonl"
+    if not path.exists():
+        return titles
+    try:
+        with path.open("rb") as handle:
+            for number, line in enumerate(handle, 1):
+                item = search_json(line, coverage)
+                if item.get("id") and item.get("thread_name"):
+                    titles[item["id"]] = {
+                        "title": item["thread_name"], "path": str(path), "line": number,
+                        "timestamp": item.get("updated_at"), "rank": 3,
+                    }
+    except OSError as error:
+        coverage["errors"].append(f"{path}: {error}")
+    return titles
+
+
+def history_files(root: Path, coverage: dict):
+    if not root.exists():
+        coverage["missing_roots"].append(str(root))
+        return
+
+    def on_error(error):
+        coverage["errors"].append(str(error))
+
+    for directory, directories, filenames in os.walk(root, onerror=on_error):
+        directories.sort()
+        for name in sorted(filenames):
+            if name.endswith(".jsonl"):
+                yield Path(directory) / name
+
+
+def safe_message_timestamp(value: object) -> float | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return parse_timestamp(value)
+    except (ValueError, OverflowError):
+        return None
+
+
+def search_excerpt(text: str, patterns: list[re.Pattern], maximum: int) -> str:
+    text = " ".join(text.split())
+    if len(text) <= maximum:
+        return text
+    found = next((p.search(text) for p in patterns if p.search(text)), None)
+    start = max(0, found.start() - maximum // 3) if found else 0
+    return ("…" if start else "") + text[start:start + maximum] + ("…" if start + maximum < len(text) else "")
+
+
+def remember_search_match(matches: dict, fingerprint: str, match: dict) -> None:
+    # Mirror events differ slightly in timestamp. Repeated messages on another date are
+    # separate evidence and must survive date filtering; copied rollouts remain one hit.
+    occurrences = matches.setdefault(fingerprint, [])
+    for index, previous in enumerate(occurrences):
+        left, right = previous["epoch"], match["epoch"]
+        same_time = left == right or (left is not None and right is not None and abs(left - right) <= 2)
+        if same_time:
+            if match["preference"] > previous["preference"]:
+                occurrences[index] = match
+            return
+    occurrences.append(match)
+
+
+def scan_history_file(path: Path, agent: str, args: argparse.Namespace, patterns: list,
+                      byte_patterns: list, titles: dict, coverage: dict, sessions: dict) -> None:
+    metadata = {"session_id": path.stem, "cwd": "", "title": "", "rank": 0}
+    matches = {}
+    # Top-level types occur before large content fields in both clients' JSONL envelopes.
+    type_pattern = re.compile(rb'"type"\s*:\s*"([^"]+)"')
+    title_kinds = {"custom-title", "ai-title", "summary"}
+    try:
+        modified = path.stat().st_mtime_ns
+        with path.open("rb") as handle:
+            for number, raw in enumerate(handle, 1):
+                header = type_pattern.search(raw, 0, 1024)
+                kind = header.group(1).decode("ascii", errors="replace") if header else ""
+                if kind not in {"session_meta", "response_item", "event_msg", "compacted", "user", "assistant"} | title_kinds:
+                    continue
+                if kind == "compacted" and not args.include_inherited:
+                    continue
+                if kind == "response_item":
+                    payload_type = type_pattern.search(raw, header.end(), 1024)
+                    if payload_type and payload_type.group(1) != b"message":
+                        continue
+                metadata_line = kind == "session_meta" or kind in title_kinds
+                needs_claude_identity = agent == "claude" and not metadata["cwd"] and kind in {"user", "assistant"}
+                candidate = (b"\\u" in raw or b"\\/" in raw or all(p.search(raw) for p in byte_patterns))
+                if not metadata_line and not needs_claude_identity and not candidate:
+                    continue
+                item = search_json(raw, coverage)
+                if not item:
+                    continue
+                if agent == "codex" and kind == "session_meta":
+                    meta = item.get("payload") or {}
+                    if not isinstance(meta, dict):
+                        continue
+                    if not args.all_agents and ("subagent" in str(meta.get("source", "")).lower()
+                                               or meta.get("agent_path")
+                                               or meta.get("thread_source") not in {None, "", "user"}):
+                        coverage["subagent_files_skipped"] += 1
+                        return
+                    metadata["session_id"] = meta.get("id") or meta.get("session_id") or path.stem
+                    metadata["cwd"] = meta.get("cwd") or ""
+                    if args.session and args.session != metadata["session_id"]:
+                        coverage["session_files_skipped"] += 1
+                        return
+                    continue
+                if agent == "claude":
+                    if not args.all_agents and item.get("isSidechain"):
+                        continue
+                    metadata["session_id"] = item.get("sessionId") or metadata["session_id"]
+                    metadata["cwd"] = item.get("cwd") or metadata["cwd"]
+                    if args.session and args.session != metadata["session_id"]:
+                        coverage["session_files_skipped"] += 1
+                        return
+                    title = item.get("customTitle") or item.get("aiTitle") or item.get("summary")
+                    rank = 2 if kind == "custom-title" else 1
+                    if kind in title_kinds and isinstance(title, str) and rank >= metadata["rank"]:
+                        metadata.update(title=title, rank=rank, path=str(path), line=number,
+                                        timestamp=item.get("timestamp"))
+                for role, text, timestamp, origin, preference in conversation_messages(item, agent, args.include_inherited):
+                    if not text:
+                        continue
+                    if not metadata["title"] and role == "user":
+                        metadata["title"] = " ".join(text.split())[:160]
+                    if args.role not in {"both", role} or not all(p.search(text) for p in patterns):
+                        continue
+                    match = {
+                        "role": role, "origin": origin, "epoch": safe_message_timestamp(timestamp),
+                        "path": str(path), "line": number,
+                        "excerpt": search_excerpt(text, patterns, args.max_description),
+                        "project_match": bool(args.project and args.project.casefold() in text.casefold()),
+                        "preference": preference,
+                    }
+                    key = hashlib.sha256((role + "\0" + origin + "\0" + text).encode()).hexdigest()
+                    remember_search_match(matches, key, match)
+        coverage["files_scanned"] += 1
+    except OSError as error:
+        coverage["errors"].append(f"{path}: {error}")
+        return
+    if agent == "codex" and metadata["session_id"] in titles:
+        metadata.update(titles[metadata["session_id"]])
+    key = (agent, metadata["session_id"])
+    session = sessions.setdefault(key, {"agent": agent, "matches": {}, "metadata_order": (-1, -1)})
+    order = (metadata["rank"], modified)
+    if order > session["metadata_order"]:
+        session.update(metadata)
+        session["metadata_order"] = order
+    for key, occurrences in matches.items():
+        for match in occurrences:
+            remember_search_match(session["matches"], key, match)
+
+
+def find_conversations(args: argparse.Namespace) -> dict:
+    timezone = ZoneInfo(args.timezone)
+    since = local_date_boundary(args.since, timezone, False) if args.since else None
+    until = local_date_boundary(args.until, timezone, True) if args.until else None
+    if since is not None and until is not None and since >= until:
+        raise RuntimeError("--since must not be later than --until")
+    patterns, byte_patterns = search_patterns(args)
+    coverage = {"files_discovered": 0, "files_scanned": 0, "subagent_files_skipped": 0,
+                "session_files_skipped": 0, "malformed_records": 0, "missing_roots": [], "errors": []}
+    sessions = {}
+    codex_home = args.codex_home.expanduser().resolve()
+    claude_home = args.claude_home.expanduser().resolve()
+    titles = search_titles(codex_home, coverage) if args.agent in {"both", "codex"} else {}
+    roots = []
+    if args.agent in {"both", "codex"}:
+        roots.append(("codex", codex_home / "sessions"))
+        if (codex_home / "archived_sessions").exists():
+            roots.append(("codex", codex_home / "archived_sessions"))
+    if args.agent in {"both", "claude"}:
+        roots.extend(("claude", claude_home / name) for name in ("projects", "sessions"))
+    for agent, root in roots:
+        for path in history_files(root, coverage):
+            coverage["files_discovered"] += 1
+            if agent == "claude" and not args.all_agents and "subagents" in path.relative_to(root).parts:
+                coverage["subagent_files_skipped"] += 1
+                continue
+            scan_history_file(path, agent, args, patterns, byte_patterns, titles, coverage, sessions)
+    results = []
+    for session in sessions.values():
+        if args.session and session["session_id"] != args.session:
+            continue
+        matches = [match for occurrences in session["matches"].values() for match in occurrences]
+        if args.role == "both" and session.get("rank", 0) > 0 and all(p.search(session["title"]) for p in patterns):
+            matches.append({"role": "metadata", "origin": "title", "epoch": safe_message_timestamp(session.get("timestamp")),
+                            "path": session["path"], "line": session["line"],
+                            "excerpt": search_excerpt(session["title"], patterns, args.max_description), "project_match": False})
+        project_match = not args.project or args.project.casefold() in (
+            session.get("cwd", "") + "\n" + session.get("title", "")).casefold()
+        matches = [m for m in matches if (project_match or m["project_match"])
+                   and (since is None or m["epoch"] is not None and m["epoch"] >= since)
+                   and (until is None or m["epoch"] is not None and m["epoch"] < until)]
+        if not matches:
+            continue
+        matches.sort(key=lambda m: m["epoch"] if m["epoch"] is not None else float("-inf"), reverse=True)
+        public_matches = []
+        for match in matches[:args.matches_per_session]:
+            public_matches.append({
+                "timestamp": format_local_timestamp(match["epoch"], timezone) if match["epoch"] is not None else None,
+                **{field: match[field] for field in ("role", "origin", "path", "line", "excerpt")},
+            })
+        results.append({"agent": session["agent"], "session_id": session["session_id"],
+                        "title": session.get("title") or session["session_id"], "cwd": session.get("cwd", ""),
+                        "match_count": len(matches), "matches": public_matches,
+                        "latest": matches[0]["epoch"] or float("-inf")})
+    results.sort(key=lambda r: (-r["latest"], r["agent"], r["session_id"]))
+    total = len(results)
+    results = results[:args.limit]
+    for result in results:
+        result.pop("latest")
+    return {"conversations": results, "total_conversations": total, "timezone": str(timezone), "coverage": coverage}
+
+
+def search_main() -> int:
+    args = parse_search_arguments()
+    try:
+        result = find_conversations(args)
+    except (OSError, RuntimeError, sqlite3.Error, ZoneInfoNotFoundError) as error:
+        print(f"codex-session-stats find: {error}", file=sys.stderr)
+        return 1
+    coverage = result["coverage"]
+    summary = (f"Scanned {coverage['files_scanned']} of {coverage['files_discovered']} history files; "
+               f"skipped {coverage['subagent_files_skipped']} subagent files; "
+               f"{coverage['session_files_skipped']} files outside --session; "
+               f"{coverage['malformed_records']} malformed candidate/metadata records.")
+    print(summary, file=sys.stderr)
+    for root in coverage["missing_roots"]:
+        print(f"History root absent: {root}", file=sys.stderr)
+    for error in coverage["errors"]:
+        print(f"Incomplete search: {error}", file=sys.stderr)
+    if args.format == "json":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif args.format == "csv":
+        fields = ["agent", "session_id", "title", "cwd", "match_count", "timestamp", "role", "origin", "path", "line", "excerpt"]
+        writer = csv.DictWriter(sys.stdout, fieldnames=fields)
+        writer.writeheader()
+        for conversation in result["conversations"]:
+            for match in conversation["matches"]:
+                writer.writerow({**{key: conversation[key] for key in fields[:5]}, **match})
+    else:
+        print(f"Found {result['total_conversations']} conversations; showing {len(result['conversations'])}. Times: {result['timezone']}.")
+        for conversation in result["conversations"]:
+            print(f"\n**{markdown_escape(conversation['title'])}** — {conversation['agent']}")
+            print(f"\nSession: `{conversation['session_id']}` · Directory: `{conversation['cwd']}` · Matches: {conversation['match_count']}")
+            print()
+            for match in conversation["matches"]:
+                location = f"{match['path']}:{match['line']}"
+                print(f"- {match['timestamp'] or 'date unknown'} · {match['role']} · {match['origin']} · "
+                      f"[source](<{location}>) — {markdown_escape(match['excerpt'])}")
+    return 0
+
+
 def main() -> int:
+    if sys.argv[1:2] == ["find"]:
+        return search_main()
     arguments = parse_arguments()
     codex_home = arguments.codex_home.expanduser().resolve()
     try:
