@@ -29,8 +29,9 @@ Classify the request before editing:
   after presenting it.
 - **Plan and execute:** When the user asks to change, fix, build, or implement, create the plan and
   continue through it without requesting separate approval for routine in-scope steps.
-- **No formal plan:** Skip a formal plan when the request meets the routine, local, and reversible
-  criteria under **Review plans proportionally**. Still identify the expected outcome and verify it.
+- **No formal plan:** Skip a formal plan for routine local reversible work or a **Routine external
+  editorial correction** below, unless another persistence condition applies. Still identify the
+  expected outcome and verify it.
 
 Use a formal plan for every high-risk request and for non-trivial work with dependent stages,
 cross-component consumers, migration or replay, paid validation, or material scope uncertainty.
@@ -41,7 +42,9 @@ A bounded additive external action that meets every condition under **Bounded ad
 action** uses the compact persistent path. Eligibility selects risk, template, and closure; it never
 overrides an explicit plan-only request or supplies permission to execute. When execution is
 authorized, use plan-and-execute mode. External mutation still activates the persistence gate even
-though externality alone does not make that narrowly defined action high risk.
+though externality alone does not make that narrowly defined action high risk. A routine external
+editorial correction uses the direct path below; its external location alone requires neither a
+formal plan nor independent review. Neither path overrides authorization or plan-only mode.
 
 ## Materialize the plan visibly
 
@@ -65,16 +68,18 @@ The persistent plan is mandatory when any of these conditions applies:
 - multiple agents or people may act on the plan;
 - several dependent phases or cross-component consumers must remain coordinated;
 - the task implements or materially audits an architecture record;
-- migration, recorded replay, end-to-end validation, paid validation, or external mutation is
-  required;
+- migration, recorded replay, end-to-end validation, paid validation, or external mutation outside
+  the **Routine external editorial correction** path is required;
 - losing a constraint, non-goal, authenticated fact, or validation obligation could produce an
-  incorrect delivery.
+  incorrect delivery. The ordinary pre-write snapshot, payload, and read-back checks of a routine
+  editorial correction do not alone activate this condition.
 
 Persistence and risk are independent. Persistence determines where the execution contract
 survives; it does not promote non-trivial local work or a bounded additive external action to high
-risk. A persistent non-trivial local plan and a bounded additive external action use the compact
-template and their proportional closure below. A high-risk or architecture-governed plan uses the
-full template, closure matrix, bidirectional traces, full reread, and independent second pass.
+risk. A persistent non-trivial local plan, a bounded additive external action, and a routine external
+editorial correction with an independent persistence trigger use the compact template and their
+proportional closure below. A high-risk or architecture-governed plan uses the full template,
+closure matrix, bidirectional traces, full reread, and independent second pass.
 
 If otherwise routine work later meets the persistence gate because of handoff, interruption,
 multiple actors, or another listed condition, treat it as non-trivial for planning ceremony and use
@@ -113,10 +118,11 @@ repository-backed plan at:
 implementation-plans/active/<task-slug>.md
 ```
 
-Use `assets/compact-implementation-plan-template.md` for persistent non-trivial local work and
-bounded additive external actions. Use `assets/implementation-plan-template.md` for high-risk or
-architecture-governed work. Use a concise lowercase hyphenated task slug. Keep one active file for
-one delivery objective; do not create a new file for every retry or replanning event.
+Use `assets/compact-implementation-plan-template.md` for persistent non-trivial local work, bounded
+additive external actions, and editorial corrections that independently require persistence.
+Use `assets/implementation-plan-template.md` for high-risk or architecture-governed work. Use a
+concise lowercase hyphenated task slug. Keep one active file for one delivery objective; do not
+create a new file for every retry or replanning event.
 
 When using the default lifecycle, close a successfully completed plan by moving the same file,
 after its final conformance verdict passes, to:
@@ -227,8 +233,9 @@ simplicity. Then distinguish the remaining levels:
 - **High risk:** Requires advisor review when available and a fresh-context independent review.
   High risk includes architecture, protocol or state-transition changes, security or authorization
   boundaries, migration or data-loss risk, destructive actions, authorized and verifiable external
-  mutations that do not meet every remaining condition under **Bounded additive external action**,
-  production-wide impact, and expensive or irreversible validation. Changes to shared agent
+  mutations that qualify for neither **Bounded additive external action** nor **Routine external
+  editorial correction**, production-wide impact, and expensive or irreversible validation.
+  Changes to shared agent
   instructions, skills, or permission allowlists are also high risk when they alter authorization,
   safety safeguards, risk classification, or mandatory review and closure gates; ordinary wording
   and narrowly scoped skill edits do not become high risk solely because of their location.
@@ -238,10 +245,47 @@ simplicity. Then distinguish the remaining levels:
 - **Routine, local, and reversible:** Uses no formal plan and needs no advisor or independent
   reviewer. Routine means one obvious owner, no material uncertainty, and cheap local validation.
   File count and the number of obvious mechanical steps do not change that classification alone.
+- **Routine external editorial correction:** Uses the direct procedure below. Independent
+  persistence triggers select a compact plan; other high-risk triggers and inherited risk prevail.
 
 Here, local means effects remain confined to the working tree or an isolated development
 environment, with no external or production mutation. Reversible means the intended operation has
 no credible data-loss or recovery hazard.
+
+### Routine external editorial correction
+
+Use this path for a bounded correction of prose or references in an identified existing record,
+such as fixing a source permalink or distinguishing a verified fact from an unmeasured inference.
+All of these conditions must hold:
+
+- The user authorized the target record, fields, and intended correction. The exact outgoing diff
+  is directly reviewable, and authoritative reads can verify the current and resulting record.
+- Known effects are limited to the editorial update and ordinary notifications. The edit changes
+  no requirements, acceptance criteria, decisions, policy, permissions, commitments, workflow state,
+  executable content, or automation behavior, and does not erase substantive historical evidence.
+- No other high-risk trigger applies, and the correction is not part of an existing high-risk plan.
+  Every substantive review required by the user or another applicable authority still applies.
+
+Missing authorization, unknown effects, or unavailable authoritative read-back block writing;
+high-risk review cannot substitute for those prerequisites. When they are established but another
+eligibility condition fails, use the normal risk classification above.
+
+Perform only the verification needed for the correction; do not turn it into a new investigation:
+
+1. Read the current record, verify changed claims and references under the applicable domain
+   skill, and inspect the exact outgoing diff. Preserve unrelated content and metadata.
+2. Immediately before writing, revalidate the target and compare against the read baseline. Use a
+   version precondition when available. If concurrent edits appear, preserve them and re-review
+   the revised diff within the authorized scope before writing; request direction for scope drift.
+3. Update only authorized fields. Read back the record and verify the exact intended text and
+   preservation of unrelated content and metadata, allowing expected server timestamps.
+4. After an ambiguous result, reconcile through authoritative reads before another write. If the
+   correction landed, do not retry. Retry only after confirming non-application and repeating the
+   pre-write check. Stop on unresolved or unexpected results; never blindly retry or roll back.
+
+These checks close the direct path without a closure matrix, extra review, or persistent evidence
+bundle. When another persistence trigger applies, record the same checks in the compact plan and
+close with its focused author pass. Existing higher-risk plans retain their closure requirements.
 
 ### Bounded additive external action
 
@@ -457,7 +501,10 @@ required validation, authorization, or access still blocks under the rules below
 
 Routine work without a formal plan closes after verifying the requested outcome, running its cheap
 local validation, and checking the final diff and repository status. It needs no closure matrix or
-second pass.
+second pass. A routine external editorial correction instead closes with its exact diff and
+authoritative read-back checks above; local repository checks apply only if local files changed.
+When it independently requires a compact plan, also record its author verdict and complete the
+same-subject brief check; no independent second pass is added solely for the external edit.
 
 For a non-trivial local and reversible formal plan, inspect the plan's outcome, scope, current
 steps, completion evidence, verdict, and relevant governing instructions. After compaction,
@@ -527,7 +574,9 @@ unrelated validation.
 ## Completion gates
 
 For routine work without a formal plan, require the requested outcome, proportional local
-validation, a scoped final diff, and an accurate report of limitations.
+validation, a scoped final diff, and an accurate report of limitations. For routine external
+editorial corrections, use their direct verification and closure procedure above, including when
+an independent persistence trigger requires a compact plan.
 
 For a non-trivial local and reversible formal plan, require the requested outcome, every affected
 consumer, proportional validation, a scoped final diff and status, a focused author pass, an
@@ -570,8 +619,9 @@ acceptance criteria.
 ## Compact plan format
 
 Use `assets/compact-implementation-plan-template.md` for a persistent non-trivial local and
-reversible plan or bounded additive external action. Its conditional external-action section
-records the authorization binding, items, governing-review status, read-back authority,
+reversible plan, bounded additive external action, or routine external editorial correction with
+an independent persistence trigger. Its conditional external-action section records the
+authorization binding, items, governing-review status, read-back authority,
 reconciliation state, and delivery evidence; omit that section for local work. Use the following
 concise form for a task-plan projection or for a non-trivial local and reversible formal plan that
 does not meet the persistence gate. High-risk work always meets that gate and uses the full
