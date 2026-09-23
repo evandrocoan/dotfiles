@@ -52,28 +52,6 @@ enabled = true
 startup_timeout_sec = 30
 tool_timeout_sec = 300
 default_tools_approval_mode = "writes"
-enabled_tools = [
-    "search_issues",
-    "get_issue",
-    "list_projects",
-    "get_project_options",
-    "sync_issue",
-    "prepare_sync_issue",
-    "create_issue_draft",
-    "get_issue_draft",
-    "update_issue_draft",
-    "prepare_create_issue_from_draft",
-    "prepare_create_issue",
-    "prepare_update_issue",
-    "get_proposal",
-    "inspect_reconciliation",
-    "link_reconciliation_issue",
-    "abandon_create_reconciliation",
-    "finalize_reconciliation",
-    "apply_proposal",
-    "cancel_proposal",
-    "retry_backup",
-]
 
 [mcp_servers.kredmine.tools.apply_proposal]
 approval_mode = "prompt"
