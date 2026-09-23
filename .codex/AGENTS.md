@@ -27,6 +27,22 @@ the relevant read-only local history before claiming that it is unavailable:
 - Claude: `~/.claude/projects/` and `~/.claude/sessions/`.
 - Copilot: its locally available conversation history.
 
+For Codex and Claude, start with `codex-session-stats find "literal text or full MR URL"
+--format json` (one command). It searches messages and current titles, groups matching rollouts
+by client/session, and returns the current chat name, session ID, date, excerpt, source path,
+and line. Use `--agent codex` or `--agent claude` to narrow the client; use `--mr 34 --project
+some-project` when only a number and project are known. Prefer the complete MR URL because the
+same number may identify unrelated MRs, and project filtering also matches the working directory
+and chat title. See `codex-session-stats find --help` for dates, roles, session IDs and output limits.
+
+Open the returned source before concluding what happened: a mention or migration is not evidence
+of a code review. Report the current chat title and session ID so the user can find renamed chats.
+Tools, reasoning and subagents are excluded by default; `--all-agents` includes subagents, while
+`--include-inherited` explicitly includes labelled compacted context with possibly unknown dates.
+Inspect the coverage diagnostics before reporting no match; missing roots, read errors or malformed
+candidate records mean the search may be incomplete. The command streams files without a persistent
+index and performs no client-state writes, so it can also be used for read-only question turns.
+
 Treat this as local agent data rather than repository discovery. Never alter
 session, history, or runtime files while searching.
 

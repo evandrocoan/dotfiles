@@ -417,6 +417,24 @@ codex-session-stats
 Use `codex-session-stats --help` to see the available filters, output formats,
 timezone selection, and options for including active executions or subagents.
 
+To locate a prior Codex or Claude conversation, run
+`codex-session-stats find "literal text"`. The search reads both clients' local histories and
+shows the current chat title, client, session ID, date, matching excerpts, and source file links
+with line numbers. Existing duration reports keep the same command and options.
+
+Prefer a full merge-request URL as the query to distinguish projects. When only the number is
+known, use `codex-session-stats find --mr 34 --project some-project`; the project filter matches
+the working directory, title, or matching message. This finds mentions, so read the source before
+assuming the conversation contains a review. `--agent claude` or `--agent codex` selects one client.
+
+Use `codex-session-stats find --help` for date, role, session, output-format and result-limit options.
+Searches stream the histories without creating an index or changing client files. JSON output
+includes coverage diagnostics; text diagnostics go to standard error in every format. Missing
+roots and unreadable or malformed candidate records must be considered before treating an empty
+result as conclusive. Subagents and inherited compacted transcripts are opt-in; tools and reasoning
+are excluded. Identical mirrored messages are grouped while repeated messages at distinct times
+remain separately searchable.
+
 
 ### Repository tests
 
