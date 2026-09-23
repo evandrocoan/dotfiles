@@ -96,6 +96,19 @@ follow the confirmation contract that tool itself states, such as kredmine's
 proposal confirmation. It ships with the tool and stays current with its
 behavior.
 
+## Verify source evidence before publication
+
+When drafting or updating an issue, pull request, merge request, or review that
+cites source code or configuration as evidence, load `documentation` and apply
+its [Use immutable source evidence](../documentation/SKILL.md#use-immutable-source-evidence)
+section.
+
+Immediately before an authorized remote write, inspect the exact outgoing text,
+including descriptions and comments. Verify each source-evidence link's
+revision, file, and any line anchors against the content read at that revision.
+Apply the documentation skill's handling of moving or unverifiable references
+before sending. Repeat this check when the outgoing text changes.
+
 ## Use GitLab push options only as a fallback
 
 When GitLab CLI and MCP capabilities are unavailable, create the requested merge
