@@ -14,6 +14,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Add a new dependency](#add-a-new-dependency)
       - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
+    - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Repository tests](#repository-tests)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
@@ -434,6 +435,41 @@ roots and unreadable or malformed candidate records must be considered before tr
 result as conclusive. Subagents and inherited compacted transcripts are opt-in; tools and reasoning
 are excluded. Identical mirrored messages are grouped while repeated messages at distinct times
 remain separately searchable.
+
+
+### Codex VS Code history patch
+
+[The local history patcher](scripts/codex-vscode-history-fix/patch.cjs) increases the extension's
+recent local conversation window to the limit defined by `LIMIT` in that file. It preserves the
+extension's existing handling of open conversations, which may remain visible beyond that window.
+It requires Node.js, already used by the local tooling, and no npm packages.
+
+After updating the **Codex extension**, reapply and verify the patch:
+
+```text
+node ~/scripts/codex-vscode-history-fix/patch.cjs --apply
+node ~/scripts/codex-vscode-history-fix/patch.cjs --check
+node --test ~/scripts/codex-vscode-history-fix/test.cjs
+```
+
+Then run **Developer: Reload Window** in each VS Code window that needs the change. Updating VS Code
+itself does not replace the extension bundle unless the extension is also updated.
+
+The patcher reads the desktop VS Code extension registry to select the installed version. Use
+`--extension-dir DIRECTORY` to explicitly target another installation. It recognizes the inspected
+bundle layout and earlier local patches; unfamiliar or ambiguous code causes an error before the
+bundle is changed. If a new release changes that layout, inspect the new code and adapt the patcher
+and test before retrying. Do not bypass the checks or reuse an older extension bundle.
+
+The test executes the installed pagination and UI list-selection functions with controlled server
+responses. It checks the configured boundary, repeated refreshes and the former UI truncation; it
+does not launch VS Code. This check depends on a local extension installation and is separate from
+the portable repository CI gate.
+
+The original bundle is saved beside the asset with a `.codex-original` suffix. Repeated application
+preserves that backup. To undo the patch, run
+`node ~/scripts/codex-vscode-history-fix/patch.cjs --restore`, then reload the window. Extension
+updates may replace both the patched asset and its backup. Conversation history is not modified.
 
 
 ### Repository tests
