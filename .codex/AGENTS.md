@@ -221,6 +221,10 @@ renamed, or removed under `~/.agents/skills/`, update this registry in the same
 change. If the registry and filesystem disagree, inspect the filesystem, report the
 stale registry, and correct it before relying on the missing entry.
 
+When searching skill contents under `~/.agents/skills/`, follow directory
+symlinks (for example, with `rg --follow`) so exposed packages are included in
+the search.
+
 When two loaded skills give incompatible guidance for the same change, name the
 conflict and present the options with their trade-offs before editing, instead
 of choosing one silently.
