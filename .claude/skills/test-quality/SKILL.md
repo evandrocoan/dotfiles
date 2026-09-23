@@ -45,6 +45,42 @@ test as evidence only when the same test would fail after the behavior under tes
   by the system under test.
 - Verify both the expected boundary interaction and the resulting state when orchestration is the
   behavior under test.
+- Exercise orchestration through the production entry point or a production function actually used
+  by it. Never reconstruct its decisions, transaction sequence, or writes in a test helper and
+  treat that helper's success as evidence for the application's flow.
+
+## Preserve integration fidelity
+
+- State the tested boundary. Real queries against a real database prove query integration; direct
+  handler calls prove component integration. Neither proves application startup, route wiring,
+  middleware, or HTTP parsing. When the claimed behavior depends on that complete boundary, start
+  the application through its supported entry point and send requests through the real transport.
+  Keep focused component tests alongside that coverage; not every query test needs a running app.
+- Build disposable integration databases with the application's authoritative schema setup,
+  normally its real migration chain, including required schemas, types, constraints, and triggers.
+  Do not handcraft, copy, or simplify application tables in test code, helpers, or SQL files as a
+  substitute. Running a real database engine does not make an invented schema faithful.
+- Fixture helpers prepare explicit scenario data in that schema. Raw SQL for seeding, assertions,
+  or synchronization is acceptable; relocating copied DDL does not repair schema divergence. For a
+  migration test, establish the prior schema through the authoritative migration history before
+  exercising the target migration; applying only that migration to invented predecessor tables
+  does not prove upgrade compatibility.
+- A deliberately permissive schema is allowed only for a focused defensive test whose subject is
+  handling an invalid state that the real schema prevents. Explain the exact departure and its
+  purpose, keep it isolated, and do not count it as production-schema integration coverage. Retain
+  faithful coverage for valid application behavior.
+- If authoritative schema setup fails or is unavailable, report that failure or coverage gap.
+  Never replace it with a reduced schema, disable integrity rules, or skip a required integration
+  test to make the suite pass.
+
+## Verify authorization decisions
+
+- Pair permitted scenarios with separate denials for each independent gate, such as operation
+  permission, privileged role, and tenant or organization scope. Keep the other gates satisfied so
+  each case fails for its intended reason.
+- Assert the exact denial and absence of protected reads, writes, or external effects. Checking that
+  a permission helper was called does not prove its negative result was enforced. A test for a gate
+  must fail if production ignores that gate while still calling the helper.
 
 ## Replay recorded failures when possible
 
@@ -117,6 +153,9 @@ Apply these rules to both levels:
   failure whenever the production path implements those behaviors.
 - Coordinate concurrent tests with barriers, events, fake clocks, or controllable executors. Do not
   use arbitrary sleeps as proof of ordering or race safety.
+- Drive competing operations through the production flow. Keep its lock acquisition, revalidation,
+  transaction, and writes real. Mock invocation order alone does not prove completion order: verify
+  that a dependent read or write cannot proceed until the awaited lock or operation completes.
 - Assert both the terminal result and durable side effects. Verify that duplicate or retried work
   does not publish, persist, charge, or mutate more than the contract permits.
 - Force each recoverable and terminal failure at its real boundary. Assert retry count, backoff
@@ -222,6 +261,9 @@ Search all test roots and review candidates for:
 - branches, alternative-result assertions, adaptive response parsing, and silent skips;
 - broad `try`/`except`, `try`/`catch`, `raises(Exception)`, and suppression contexts;
 - mocks or monkeypatches applied to the system under test;
+- handcrafted application schemas or copied orchestration inside integration fixtures and helpers;
+- integration claims broader than the production boundaries actually exercised;
+- authorization checks with no isolated denial case or no assertion against forbidden effects;
 - assertions that only repeat a mock's configured value;
 - async calls without `await` or returned promises;
 - fixtures that query arbitrary existing data instead of creating exact data.
