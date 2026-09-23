@@ -147,6 +147,10 @@
 !/scripts/
 !/scripts/*
 
+!/scripts/codex-vscode-history-fix/
+!/scripts/codex-vscode-history-fix/patch.cjs
+!/scripts/codex-vscode-history-fix/test.cjs
+
 /scripts/.env*
 /scripts/check_*_playwright.py
 !/scripts/.env.example
