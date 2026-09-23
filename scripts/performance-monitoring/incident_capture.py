@@ -367,6 +367,49 @@ def source_fingerprints():
     return {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths if path.is_file()}
 
 
+def collector_pid(child):
+    pid = child.pid
+    # Never coerce mocks, bools or special kill(2) IDs into signal targets.
+    if type(pid) is not int or pid <= 1:
+        raise ValueError("invalid collector PID")
+    return pid
+
+
+def collector_exited(child):
+    # Keep the direct child unreaped until group cleanup so its PID cannot be reused.
+    return os.waitid(os.P_PID, collector_pid(child),
+                     os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None
+
+
+def signal_collector(child, sig):
+    pid = collector_pid(child)
+    if child.returncode is not None:
+        raise ValueError("collector already reaped")
+    # waitid verifies parenthood without releasing the PID, even for an exited leader.
+    collector_exited(child)
+    if os.getpgid(pid) != pid or os.getsid(pid) != pid:
+        raise ValueError("collector does not own an isolated process group and session")
+    os.killpg(pid, sig)
+
+
+def observe_host(budget, config, stop, sampler):
+    start = time.monotonic()
+    deadline, next_sample = start + config["capture_seconds"], start
+    reason = "window_complete"
+    while True:
+        now = time.monotonic()
+        if stop():
+            reason = "cancelled"
+            break
+        if now >= deadline:
+            break
+        if now >= next_sample:
+            budget.write("host.jsonl", encoded(sampler()), append=True)
+            next_sample = now + 1
+        time.sleep(min(.2, max(0, min(next_sample, deadline) - time.monotonic())))
+    return {"reason": reason, "seconds": time.monotonic() - start}
+
+
 def run_collectors(budget, config, stop, commands=None, sampler=host_sample):
     commands = collectors() if commands is None else commands
     result, children, files = {}, {}, {}
@@ -399,8 +442,9 @@ def run_collectors(budget, config, stop, commands=None, sampler=host_sample):
             child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      env={**os.environ, "PYTHONUNBUFFERED": "1", "LC_ALL": "C", "TZ": "UTC"},
                                      start_new_session=True)
+            pid = collector_pid(child)
             children[name] = child
-            result[name] = {"pid": child.pid, "ready": False, "lost_events": False,
+            result[name] = {"pid": pid, "ready": False, "lost_events": False,
                             "started_utc": utc(), "command": command}
             for kind, stream in (("stdout", child.stdout), ("stderr", child.stderr)):
                 os.set_blocking(stream.fileno(), False)
@@ -411,7 +455,7 @@ def run_collectors(budget, config, stop, commands=None, sampler=host_sample):
             if stop():
                 reason = "cancelled"
                 break
-            if any(child.poll() is not None for child in children.values()):
+            if any(collector_exited(child) for child in children.values()):
                 reason = "collector_exited"
                 break
             if ready_start is None and all(r["ready"] for r in result.values()):
@@ -431,22 +475,32 @@ def run_collectors(budget, config, stop, commands=None, sampler=host_sample):
     finally:
         capture_end = time.monotonic()
         # SIGTERM avoids SIGINT swallowed inside BCC's ctypes callback under heavy I/O.
-        for child in children.values():
+        shutdown_errors = {}
+        for name, child in children.items():
             try:
-                os.killpg(child.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+                signal_collector(child, signal.SIGTERM)
+            except (OSError, ValueError) as error:
+                shutdown_errors[name] = f"{type(error).__name__}: {error}"
         end = time.monotonic() + 3
         for name, child in children.items():
             try:
-                child.wait(timeout=max(.01, end - time.monotonic()))
-            except subprocess.TimeoutExpired:
-                os.killpg(child.pid, signal.SIGKILL)
-                child.wait(timeout=2)
+                if name not in shutdown_errors:
+                    while not collector_exited(child) and time.monotonic() < end:
+                        time.sleep(min(.01, max(0, end - time.monotonic())))
+                    # The leader can exit while a descendant ignores TERM. Keep its PID
+                    # reserved until the whole original group has received final cleanup.
+                    signal_collector(child, signal.SIGKILL)
+                    child.wait(timeout=2)
+            except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+                shutdown_errors[name] = f"{type(error).__name__}: {error}"
             result[name]["returncode"] = child.returncode
             result[name]["finished_utc"] = utc()
             if reason == "window_complete" and child.returncode not in (0, -signal.SIGTERM):
                 reason = "collector_shutdown_failed"
+        if shutdown_errors:
+            reason = "collector_shutdown_failed"
+            for name, error in shutdown_errors.items():
+                result[name]["shutdown_error"] = error
         try:
             # Drain finite pipe contents after termination, retaining final error/loss diagnostics.
             while selector.get_map():
@@ -471,6 +525,8 @@ def report_text(manifest, summary):
     lines = ["Performance incident", f"Started (UTC): {manifest['created_utc']}",
              f"Trigger: {manifest['trigger']}", f"Status: {manifest['status']}",
              "", "I/O byte deltas for surviving process identities (top 20):"]
+    if manifest.get("capture_mode") == "lightweight":
+        lines.insert(4, "Detailed tracing was not requested; host and process observation only.")
     for row in sorted(summary["processes"],
                       key=lambda r: sum(r["io_delta_bytes"][k] or 0 for k in ("read_bytes", "write_bytes")),
                       reverse=True)[:20]:
@@ -510,7 +566,9 @@ def capture(config, reason, history=(), stop=lambda: False, directory=LOG_DIR,
         path = directory / ("incident-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") +
                             "-" + uuid.uuid4().hex[:8])
         path.mkdir(mode=0o700)
+        lightweight = reason.startswith("pressure:")
         manifest = {"schema": SCHEMA, "status": "recording", "trigger": reason,
+                    "capture_mode": "lightweight" if lightweight else "detailed",
                     "created_utc": utc(), "created_epoch": time.time(), "config": config,
                     "kernel": os.uname().release, "boot_id": read_text("/proc/sys/kernel/random/boot_id").strip(),
                     "delayacct_runtime": read_text("/proc/sys/kernel/task_delayacct").strip(),
@@ -524,13 +582,21 @@ def capture(config, reason, history=(), stop=lambda: False, directory=LOG_DIR,
                 budget.write("host-before.jsonl", encoded(sample), append=True)
             before = snapshotter()
             budget.write("processes-before.json", encoded(before))
-            tracing = run_collectors(budget, config, stop, commands, sampler)
+            if lightweight:
+                tracing = {"reason": "not_requested", "collectors": {}}
+                manifest["tracing"] = tracing
+                observation = observe_host(budget, config, stop, sampler)
+            else:
+                tracing = run_collectors(budget, config, stop, commands, sampler)
+                observation = {"reason": tracing["reason"],
+                               "seconds": tracing["ready_window_seconds"]}
+            manifest["observation"] = observation
             manifest["tracing"] = tracing
             after = snapshotter()
             budget.write("processes-after.json", encoded(after))
             excluded = [os.getpid()] + [c["pid"] for c in tracing["collectors"].values()]
             summary = summarize(before, after, excluded)
-            success = (tracing["reason"] == "window_complete" and
+            success = (observation["reason"] == "window_complete" and
                        not any(c["lost_events"] for c in tracing["collectors"].values()) and
                        not summary["snapshot_incomplete"])
             manifest["status"] = "complete" if success else "partial"

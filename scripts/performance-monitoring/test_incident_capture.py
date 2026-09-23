@@ -9,13 +9,15 @@ import os
 import re
 from pathlib import Path
 import signal
+import select
 import socket
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import incident_capture as recorder
 import bcc_ready
@@ -228,25 +230,292 @@ static int __trace_req_done(struct start_key key)
         settings = {**self.config, "capture_seconds": .05, "startup_timeout_seconds": .4, **changes}
         return settings, {"probe": command("import time; print('READY', flush=True); time.sleep(30)")}
 
+    def test_signal_rejects_invalid_ids_without_any_system_lookup(self):
+        for pid in (MagicMock(), True, False, None, "42", 42.0, -2, -1, 0, 1):
+            for sig in (signal.SIGTERM, signal.SIGKILL):
+                with self.subTest(pid=repr(pid), signal=sig), \
+                        patch.object(recorder.os, "killpg") as send, \
+                        patch.object(recorder.os, "waitid") as wait:
+                    with self.assertRaisesRegex(ValueError, "invalid collector PID"):
+                        recorder.signal_collector(SimpleNamespace(pid=pid, returncode=None), sig)
+                    send.assert_not_called()
+                    wait.assert_not_called()
+
+    def test_signal_requires_unreaped_owned_isolated_child(self):
+        child = SimpleNamespace(pid=42, returncode=None)
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            with self.subTest(signal=sig), patch.object(recorder.os, "killpg") as send, \
+                    patch.object(recorder.os, "waitid", return_value=None) as wait, \
+                    patch.object(recorder.os, "getpgid", return_value=42) as group, \
+                    patch.object(recorder.os, "getsid", return_value=42) as session:
+                recorder.signal_collector(child, sig)
+                send.assert_called_once_with(42, sig)
+                wait.assert_called_once_with(os.P_PID, 42, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+                send.reset_mock()
+                child.returncode = 0
+                with self.assertRaisesRegex(ValueError, "already reaped"):
+                    recorder.signal_collector(child, sig)
+                child.returncode = None
+                wait.side_effect = ChildProcessError("not our child")
+                with self.assertRaises(ChildProcessError):
+                    recorder.signal_collector(child, sig)
+                wait.side_effect = None
+                group.return_value = 99
+                with self.assertRaisesRegex(ValueError, "isolated"):
+                    recorder.signal_collector(child, sig)
+                group.return_value = 42
+                session.return_value = 99
+                with self.assertRaisesRegex(ValueError, "isolated"):
+                    recorder.signal_collector(child, sig)
+                send.assert_not_called()
+
+    def test_fabricated_process_never_reaches_real_cleanup(self):
+        settings, commands = self.fake_collectors()
+        with patch.object(recorder.subprocess, "Popen", return_value=MagicMock()), \
+                patch.object(recorder.os, "killpg") as send:
+            result = recorder.run_collectors(recorder.Budget(self.root), settings,
+                                             lambda: True, commands, sample)
+        self.assertEqual(result["reason"], "error: ValueError: invalid collector PID")
+        self.assertEqual(result["collectors"], {})
+        send.assert_not_called()
+
+    def test_unowned_cleanup_is_reported_as_failure(self):
+        settings, commands = self.fake_collectors()
+        child = SimpleNamespace(pid=42, returncode=None, stdout=io.BytesIO(), stderr=io.BytesIO())
+        with patch.object(recorder.subprocess, "Popen", return_value=child), \
+                patch.object(recorder.os, "waitid", side_effect=ChildProcessError("not our child")), \
+                patch.object(recorder.os, "killpg") as send:
+            result = recorder.run_collectors(recorder.Budget(self.root), settings,
+                                             lambda: True, commands, sample)
+        self.assertEqual(result["reason"], "collector_shutdown_failed")
+        self.assertEqual(result["collectors"]["probe"]["shutdown_error"],
+                         "ChildProcessError: not our child")
+        send.assert_not_called()
+
+    def test_exited_leader_keeps_ownership_until_descendant_cleanup(self):
+        descendant = "import os,time; print(os.getpid(),flush=True); time.sleep(30)"
+        program = f"import subprocess,sys; subprocess.Popen([sys.executable,'-u','-c',{descendant!r}])"
+        child = subprocess.Popen([sys.executable, "-u", "-c", program], start_new_session=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            self.assertEqual(select.select([child.stdout], [], [], 3)[0], [child.stdout])
+            descendant_pid = int(child.stdout.readline())
+            os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOWAIT)
+            self.assertTrue(recorder.collector_exited(child))
+            self.assertIsNone(child.returncode)
+            recorder.signal_collector(child, signal.SIGTERM)
+            output, errors = child.communicate(timeout=3)
+            self.assertEqual((output, errors, child.returncode), (b"", b"", 0))
+            # A killed grandchild may still be a zombie until its new parent reaps it.
+            try:
+                state = recorder.parse_stat(Path(f"/proc/{descendant_pid}/stat").read_text())["state"]
+            except FileNotFoundError:
+                state = "Z"
+            self.assertEqual(state, "Z")
+        finally:
+            if child.returncode is None:
+                recorder.signal_collector(child, signal.SIGKILL)
+                child.communicate(timeout=3)
+
+    def test_partial_startup_failure_cleans_up_started_child(self):
+        settings, commands = self.fake_collectors()
+        commands["second"] = commands["probe"]
+        real_launch, children = subprocess.Popen, []
+
+        def launch(*args, **kwargs):
+            if children:
+                raise OSError("fixture second launch failed")
+            child = real_launch(*args, **kwargs)
+            children.append(child)
+            return child
+
+        try:
+            with patch.object(recorder.subprocess, "Popen", side_effect=launch):
+                result = recorder.run_collectors(recorder.Budget(self.root), settings,
+                                                 lambda: False, commands, sample)
+            self.assertEqual(result["reason"], "error: OSError: fixture second launch failed")
+            self.assertEqual(result["collectors"]["probe"]["returncode"], -signal.SIGTERM)
+            self.assertEqual(len(children), 1)
+            with self.assertRaises(ProcessLookupError):
+                os.kill(children[0].pid, 0)
+        finally:
+            for child in children:
+                if child.returncode is None:
+                    recorder.signal_collector(child, signal.SIGKILL)
+                    child.communicate(timeout=3)
+
+    def test_cleanup_kills_term_resistant_descendant_after_leader_exit(self):
+        settings, _ = self.fake_collectors()
+        for early_exit, expected_reason in ((False, "window_complete"), (True, "collector_exited")):
+            with self.subTest(early_exit=early_exit):
+                directory = self.root / str(early_exit)
+                directory.mkdir()
+                descendant = ("import os,signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); "
+                              f"marker={str(directory)!r}; "
+                              "print('DESCENDANT '+str(os.getpid()),flush=True); time.sleep(30)")
+                leader = ("import subprocess,sys,time; "
+                          f"child=subprocess.Popen([sys.executable,'-u','-c',{descendant!r}], "
+                          "stdout=subprocess.PIPE,text=True); "
+                          "print(child.stdout.readline().strip(),flush=True); "
+                          "print('READY',flush=True); " + ("sys.exit(0)" if early_exit else "time.sleep(30)"))
+                descendant_pid = None
+                try:
+                    result = recorder.run_collectors(recorder.Budget(directory), settings,
+                                                     lambda: False, {"probe": command(leader)}, sample)
+                    output = (directory / "probe.stdout.log").read_text()
+                    descendant_pid = int(re.search(r"DESCENDANT (\d+)", output).group(1))
+                    deadline = time.monotonic() + 2
+                    while True:
+                        try:
+                            state = recorder.parse_stat(Path(f"/proc/{descendant_pid}/stat").read_text())["state"]
+                        except FileNotFoundError:
+                            state = "Z"
+                        if state == "Z" or time.monotonic() >= deadline:
+                            break
+                        time.sleep(.01)
+                    self.assertEqual(state, "Z", "collector descendant survived group cleanup")
+                    self.assertEqual(result["reason"], expected_reason)
+                    with self.assertRaises(ProcessLookupError):
+                        os.kill(result["collectors"]["probe"]["pid"], 0)
+                finally:
+                    # Even a broken cleanup must not leave this disposable fixture running.
+                    if descendant_pid is not None:
+                        try:
+                            fd = os.pidfd_open(descendant_pid)
+                        except ProcessLookupError:
+                            pass
+                        else:
+                            try:
+                                cmdline = Path(f"/proc/{descendant_pid}/cmdline").read_bytes()
+                                if str(directory).encode() in cmdline:
+                                    signal.pidfd_send_signal(fd, signal.SIGKILL)
+                            except (FileNotFoundError, ProcessLookupError):
+                                pass
+                            finally:
+                                os.close(fd)
+
     def test_trigger_replay_reaches_a_real_terminal_capture_and_persists_cooldown(self):
         settings, commands = self.fake_collectors()
+        before, after = snapshot(), snapshot()
+        after["processes"][0]["io"]["read_bytes"] += 4096
+        snapshots = iter((before, after))
         capture = partial(recorder.capture, directory=self.root / "reports", lock_path=self.root / "lock",
-                          commands=commands, snapshotter=snapshot, sampler=sample)
+                          commands=commands, snapshotter=lambda: next(snapshots), sampler=sample)
         monitor = recorder.Monitor(settings, self.root / "state", capture)
-        results = [monitor.step(sample(6), tick, 2000 + tick) for tick in range(11)]
+        with patch.object(recorder.subprocess, "Popen",
+                          side_effect=AssertionError("lightweight capture must not spawn")) as launch:
+            results = [monitor.step(sample(6), tick, 2000 + tick) for tick in range(11)]
+        launch.assert_not_called()
         self.assertEqual(results[:10], [None] * 10)
         path = results[10]
         manifest = json.loads((path / "manifest.json").read_text())
         self.assertEqual(manifest["status"], "complete")
         self.assertEqual(manifest["trigger"], "pressure:io")
-        self.assertEqual(manifest["tracing"]["reason"], "window_complete")
+        self.assertEqual(manifest["capture_mode"], "lightweight")
+        self.assertEqual(manifest["tracing"], {"reason": "not_requested", "collectors": {}})
+        self.assertEqual(manifest["observation"]["reason"], "window_complete")
+        self.assertGreaterEqual(manifest["observation"]["seconds"], settings["capture_seconds"])
         self.assertEqual(len((path / "host-before.jsonl").read_text().splitlines()), 11)
-        self.assertEqual(json.loads((path / "summary.json").read_text())["processes"][0]["pid"], 42)
+        self.assertEqual(json.loads((path / "summary.json").read_text())["processes"][0]["io_delta_bytes"],
+                         {"read_bytes": 4096, "write_bytes": 0, "cancelled_write_bytes": 0})
+        self.assertEqual(json.loads((path / "processes-before.json").read_text()), before)
+        self.assertEqual(json.loads((path / "processes-after.json").read_text()), after)
+        self.assertEqual(len((path / "host.jsonl").read_text().splitlines()), 1)
+        self.assertIn("Detailed tracing was not requested", (path / "report.txt").read_text())
         restored = recorder.Monitor(settings, self.root / "state", capture)
         for tick in range(20, 41):
             self.assertIsNone(restored.step(sample(6), tick, 2000 + tick))
         self.assertEqual(len(list((self.root / "reports").glob("incident-*"))), 1)
         self.assertEqual(json.loads((self.root / "state/state.json").read_text())["last_attempt_epoch"], 2010)
+
+    def test_manual_replay_starts_detailed_collectors(self):
+        settings, commands = self.fake_collectors()
+        marker = self.root / "collector-started"
+        commands["probe"] = command(f"from pathlib import Path; import time; "
+                                    f"Path({str(marker)!r}).write_text('started'); "
+                                    "print('READY', flush=True); time.sleep(30)")
+        capture = partial(recorder.capture, directory=self.root / "reports", lock_path=self.root / "lock",
+                          commands=commands, snapshotter=snapshot, sampler=sample)
+        monitor = recorder.Monitor(settings, self.root / "state", capture)
+        monitor.request()
+        path = monitor.step(sample(), 0, 2000)
+        manifest = json.loads((path / "manifest.json").read_text())
+        self.assertEqual(marker.read_text(), "started")
+        self.assertEqual(manifest["capture_mode"], "detailed")
+        self.assertEqual(manifest["status"], "complete")
+        self.assertEqual(manifest["tracing"]["reason"], "window_complete")
+        self.assertTrue(manifest["tracing"]["collectors"]["probe"]["ready"])
+
+    def test_lightweight_cancelled_observation_is_partial_without_children(self):
+        with patch.object(recorder.subprocess, "Popen",
+                          side_effect=AssertionError("lightweight capture must not spawn")) as launch:
+            path = recorder.capture(self.config, "pressure:io", stop=lambda: True,
+                                    directory=self.root, lock_path=self.root / "lock",
+                                    snapshotter=snapshot, sampler=sample)
+        launch.assert_not_called()
+        manifest = json.loads((path / "manifest.json").read_text())
+        self.assertEqual(manifest["status"], "partial")
+        self.assertEqual(manifest["observation"]["reason"], "cancelled")
+        self.assertEqual(manifest["tracing"]["reason"], "not_requested")
+        self.assertEqual(json.loads((path / "processes-after.json").read_text()), snapshot())
+
+    def test_lightweight_cancellation_during_observation_preserves_samples(self):
+        settings, _ = self.fake_collectors(capture_seconds=5)
+        clock, sampled = [0.0], []
+
+        def sampler():
+            sampled.append(sample())
+            return sampled[-1]
+
+        with patch.object(recorder.subprocess, "Popen",
+                          side_effect=AssertionError("lightweight capture must not spawn")) as launch, \
+                patch.object(recorder.time, "monotonic", side_effect=lambda: clock[0]), \
+                patch.object(recorder.time, "sleep", side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+            path = recorder.capture(settings, "pressure:memory", stop=lambda: bool(sampled),
+                                    directory=self.root, lock_path=self.root / "lock",
+                                    snapshotter=snapshot, sampler=sampler)
+        manifest = json.loads((path / "manifest.json").read_text())
+        self.assertEqual(manifest["status"], "partial")
+        self.assertEqual(manifest["observation"], {"reason": "cancelled", "seconds": .2})
+        self.assertEqual([json.loads(line) for line in (path / "host.jsonl").read_text().splitlines()],
+                         [sample()])
+        launch.assert_not_called()
+
+    def test_lightweight_incomplete_snapshot_is_partial(self):
+        settings, _ = self.fake_collectors()
+        path = recorder.capture(settings, "pressure:io", directory=self.root,
+                                lock_path=self.root / "lock", sampler=sample,
+                                snapshotter=lambda: {**snapshot(), "incomplete": True})
+        manifest = json.loads((path / "manifest.json").read_text())
+        self.assertEqual(manifest["status"], "partial")
+        self.assertEqual(manifest["observation"]["reason"], "window_complete")
+        self.assertEqual(manifest["tracing"], {"reason": "not_requested", "collectors": {}})
+
+    def test_lightweight_sampler_failure_is_recorded(self):
+        settings, _ = self.fake_collectors()
+        def fail_sample():
+            raise OSError("fixture sample failed")
+        path = recorder.capture(settings, "pressure:io", directory=self.root,
+                                lock_path=self.root / "lock", sampler=fail_sample,
+                                snapshotter=snapshot)
+        manifest = json.loads((path / "manifest.json").read_text())
+        self.assertEqual(manifest["status"], "failed")
+        self.assertEqual(manifest["error"], "OSError: fixture sample failed")
+        self.assertEqual(manifest["tracing"], {"reason": "not_requested", "collectors": {}})
+
+    def test_term_ignoring_collector_is_killed_and_reaped(self):
+        settings, _ = self.fake_collectors()
+        commands = {"probe": command("import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                                     "print('READY',flush=True); time.sleep(30)")}
+        path = recorder.capture(settings, "manual", directory=self.root, lock_path=self.root / "lock",
+                                commands=commands, snapshotter=snapshot, sampler=sample)
+        manifest = json.loads((path / "manifest.json").read_text())
+        self.assertEqual(manifest["status"], "partial")
+        self.assertEqual(manifest["tracing"]["reason"], "collector_shutdown_failed")
+        child = manifest["tracing"]["collectors"]["probe"]
+        self.assertEqual(child["returncode"], -signal.SIGKILL)
+        with self.assertRaises(ProcessLookupError):
+            os.kill(child["pid"], 0)
 
     def test_manual_request_and_duplicate_during_capture(self):
         reasons = []
