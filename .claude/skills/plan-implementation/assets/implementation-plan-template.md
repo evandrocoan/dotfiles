@@ -5,8 +5,8 @@
 
 Use this full template for high-risk or architecture-governed work. Use
 `compact-implementation-plan-template.md` for persistent non-trivial local and reversible work or
-for an external action that meets every condition under **Bounded additive external action** in
-`SKILL.md`.
+for a qualifying **Bounded additive external action**. A **Routine external editorial correction**
+uses the compact template only when another persistence trigger applies, as defined in `SKILL.md`.
 
 ## Outcome
 

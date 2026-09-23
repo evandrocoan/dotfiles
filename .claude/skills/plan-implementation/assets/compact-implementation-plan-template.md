@@ -2,10 +2,12 @@
 
 **Status:** Planned
 **Mode:** Plan only | Plan and execute
-**Risk:** Non-trivial local and reversible | Bounded additive external action
+**Risk:** Non-trivial local and reversible | Bounded additive external action |
+Routine external editorial correction
 
 Use this compact persistent template only when the work meets the skill's non-trivial local and
-reversible criteria or every condition under **Bounded additive external action** in `SKILL.md`.
+reversible criteria, **Bounded additive external action**, or **Routine external editorial
+correction** with an independent persistence trigger in `SKILL.md`.
 Reclassify to high risk and use `implementation-plan-template.md` when a high-risk trigger applies.
 Delete the conditional external-action section for local work.
 
@@ -21,18 +23,19 @@ Delete the conditional external-action section for local work.
 - Verified: <current behavior or failure and authoritative artifact>.
 - Open assumption: <material unverified premise, or `None`>.
 
-## Bounded additive external action
+## External action
 
 - Authorization binding: <approved destination, operation, finite item set, exact payload or inputs,
   and target identifiers or preconditions>.
-- Intended effects: <finite ordered list of new records and their targets>.
+- Intended effects: <new records and targets, or existing record IDs, authorized fields, and
+  editorial corrections>.
 - Governing review: Not required | <authority, reviewer, and verdict> | Required reviewer
   unavailable — execution blocked.
-- Read-back authority: <source that returns external IDs, requests or content, targets,
-  multiplicity, and state>.
-- Reconciliation state: Not needed | Confirmed created | Confirmed not created | Unresolved.
-- Prohibited effects: <existing-record, workflow, authority, commitment, deployment, operational,
-  and destructive changes that must remain absent>.
+- Read-back authority: <source that verifies IDs, targets, exact content, and state; for creation,
+  also multiplicity; for correction, the baseline and preserved unrelated content/metadata>.
+- Reconciliation state: Not needed | Confirmed applied | Confirmed not applied | Unresolved.
+- Prohibited effects: <changes outside the authorized creation or editorial fields, plus workflow,
+  authority, commitment, deployment, operational, and destructive effects>.
 
 ## Execution
 
@@ -56,8 +59,8 @@ material premise before its dependent step and keep evidence concise rather than
 ## Completion
 
 - Evidence: <outcome, consumers, validation, diff or authoritative external IDs, and status>.
-- Delivery read-back: <target, exact request or content, multiplicity, state, and prohibited-effect
-  verification for every external item, or `Not applicable`>.
+- Delivery read-back: <target, exact request or content, state, and prohibited-effect verification;
+  creation multiplicity or preservation of unrelated content/metadata, or `Not applicable`>.
 - Focused author pass: Pending | Passed | Failed.
 - Unresolved limitations: <limitations, or `None`>.
 - Brief check: No brief on this subject | No `registro pendente`; open items reported and noted:
@@ -66,7 +69,7 @@ material premise before its dependent step and keep evidence concise rather than
 
 Set the verdict to `Passed` only when the outcome and affected consumers are verified, proportional
 validation passed, the diff is scoped, statuses agree, the focused author pass completed, the brief
-check found no `registro pendente`, and no required evidence remains unresolved. For a bounded
-additive external action, also require every intended item's authoritative external ID, exact
-delivery match, completed governing reviews, no prohibited effect, and no unresolved delivery
-result.
+check found no `registro pendente`, and no required evidence remains unresolved. For either external
+path, also require authoritative IDs, an exact delivery match, completed governing reviews, no
+prohibited effect, and no unresolved delivery result. Editorial corrections additionally verify
+that unrelated content and metadata were preserved.
