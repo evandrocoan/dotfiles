@@ -15,6 +15,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
+    - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Repository tests](#repository-tests)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
@@ -470,6 +471,28 @@ The original bundle is saved beside the asset with a `.codex-original` suffix. R
 preserves that backup. To undo the patch, run
 `node ~/scripts/codex-vscode-history-fix/patch.cjs --restore`, then reload the window. Extension
 updates may replace both the patched asset and its backup. Conversation history is not modified.
+
+
+### Codex VS Code first-run patch
+
+[The first-run patcher](scripts/codex-vscode-history-fix/patch-first-run.cjs) prevents the Codex
+onboarding walkthrough from reappearing when a new editor tab opens. It changes only the local
+extension bundle; it does not write a completion flag or alter conversation history.
+
+After updating the **Codex extension**, reapply and verify this patch separately from the history
+patch:
+
+```text
+node ~/scripts/codex-vscode-history-fix/patch-first-run.cjs --apply
+node ~/scripts/codex-vscode-history-fix/patch-first-run.cjs --check
+node --test ~/scripts/codex-vscode-history-fix/test-first-run.cjs
+```
+
+Then run **Developer: Reload Window** in the affected VS Code window. The patcher saves the
+original bundle beside the asset with a `.codex-first-run-original` suffix. To undo the change,
+run `node ~/scripts/codex-vscode-history-fix/patch-first-run.cjs --restore` and reload the window.
+If an update changes the bundle layout, the patcher refuses to edit it until its matching rule and
+test are adapted to the new version.
 
 
 ### Repository tests

@@ -150,6 +150,8 @@
 !/scripts/codex-vscode-history-fix/
 !/scripts/codex-vscode-history-fix/patch.cjs
 !/scripts/codex-vscode-history-fix/test.cjs
+!/scripts/codex-vscode-history-fix/patch-first-run.cjs
+!/scripts/codex-vscode-history-fix/test-first-run.cjs
 
 /scripts/.env*
 /scripts/check_*_playwright.py
