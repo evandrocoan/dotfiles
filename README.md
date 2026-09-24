@@ -16,6 +16,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Codex session statistics](#codex-session-statistics)
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
+    - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
     - [Repository tests](#repository-tests)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
@@ -493,6 +494,28 @@ original bundle beside the asset with a `.codex-first-run-original` suffix. To u
 run `node ~/scripts/codex-vscode-history-fix/patch-first-run.cjs --restore` and reload the window.
 If an update changes the bundle layout, the patcher refuses to edit it until its matching rule and
 test are adapted to the new version.
+
+
+### Codex VS Code empty-tab header patch
+
+[The empty-tab header patcher](scripts/codex-vscode-history-fix/patch-empty-header.cjs) shows the
+existing navigation header, including recent chats and settings, in a new Codex editor tab before
+the first message. It changes only the local extension bundle and is independent of the history
+and first-run patches.
+
+After updating the **Codex extension**, reapply and verify it:
+
+```text
+node ~/scripts/codex-vscode-history-fix/patch-empty-header.cjs --apply
+node ~/scripts/codex-vscode-history-fix/patch-empty-header.cjs --check
+node --test ~/scripts/codex-vscode-history-fix/test-empty-header.cjs
+```
+
+Then run **Developer: Reload Window** in the affected VS Code window. The patcher saves the
+original bundle beside the asset with a `.codex-empty-header-original` suffix. To undo the
+change, run `node ~/scripts/codex-vscode-history-fix/patch-empty-header.cjs --restore` and reload
+the window. If an update changes the bundle layout, inspect the new version and adapt the patcher
+and test before retrying.
 
 
 ### Repository tests
