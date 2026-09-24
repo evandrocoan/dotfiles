@@ -418,6 +418,15 @@ execution detail. Keep it compact and current; do not append a chronological dia
 when status, scope, evidence, dependencies, validation obligations, blockers, or the chosen
 execution route materially changes.
 
+At the end of a phase or before a material continuation, reconcile the active plan instead of
+adding another account of the attempt. Replace obsolete "current" headings and steps with the
+live outcome, next action, prerequisites, blockers, and closure state. Summarize a completed
+attempt by its verdict, material limitations, and pointers to preserved evidence; keep detailed
+protocols, transcripts, and per-run reviews in durable evidence artifacts. Preserve governing
+decisions, unresolved obligations, and evidence needed for audit rather than deleting history
+whose only surviving copy is in the plan. A reader should be able to find the current execution
+contract without first reading completed attempts.
+
 Keep conversational updates as a projection of that artifact: state the outcome or current status
 and link the file. Do not reproduce the complete persistent plan or full external-action payloads in
 chat unless the user asks for them.
