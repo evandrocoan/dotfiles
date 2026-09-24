@@ -152,6 +152,8 @@
 !/scripts/codex-vscode-history-fix/test.cjs
 !/scripts/codex-vscode-history-fix/patch-first-run.cjs
 !/scripts/codex-vscode-history-fix/test-first-run.cjs
+!/scripts/codex-vscode-history-fix/patch-empty-header.cjs
+!/scripts/codex-vscode-history-fix/test-empty-header.cjs
 
 /scripts/.env*
 /scripts/check_*_playwright.py
