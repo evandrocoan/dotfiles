@@ -43,6 +43,10 @@ test as evidence only when the same test would fail after the behavior under tes
 - Do not use a configured mock return value as the sole evidence. Also assert the real
   transformation, routing decision, persisted state, emitted request, or other behavior performed
   by the system under test.
+- If a test returns a fixed mock payload and compares the response with that payload, count it as
+  evidence only for independently asserted behavior in the real code, such as parameter mapping or
+  serialization. Name that narrower boundary; the comparison does not prove the mocked query,
+  authorization decision, or persistence.
 - Verify both the expected boundary interaction and the resulting state when orchestration is the
   behavior under test.
 - Exercise orchestration through the production entry point or a production function actually used
@@ -254,7 +258,8 @@ Apply these rules to both levels:
 
 ## Audit for false positives
 
-Search all test roots and review candidates for:
+For a project-wide false-positive audit, search all test roots. For a focused test change, inspect
+the affected tests and the production path they claim to cover. Review candidates for:
 
 - constant assertions, self-comparisons, and exception-variable tautologies;
 - test functions with no direct or delegated validation;
@@ -274,10 +279,17 @@ mocks may be correct for orchestration tests.
 
 ## Prove test sensitivity
 
-Before trusting a new or rewritten test, identify a plausible defect that should make it fail. When
-safe and practical, run a temporary negative control by changing the observed value, injecting the
-wrong boundary result, or locally mutating the relevant behavior. Restore temporary changes
-immediately and verify that the unmodified implementation passes.
+Before trusting a new or rewritten test, identify its claim, the real production path exercised,
+the mocked boundaries, an observation independent of configured mock returns, and a plausible
+defect that should make the test fail. If the test only checks its mock's configured result or
+cannot fail for the claimed defect, narrow its claim or strengthen the test before counting it as
+protection. Record what remains unproved by its boundary.
+
+When safe and practical, run a temporary negative control by changing the observed value,
+injecting the wrong boundary result, or locally mutating the relevant behavior. Restore temporary
+changes immediately and verify that the unmodified implementation passes. When a negative control
+cannot run, explain why and name the specific defect the existing assertion would detect; do not
+present an untested sensitivity claim as measured evidence.
 
 Do not weaken an assertion merely to make a failing test green. Fix missing fixture data, the
 implementation, or the expectation according to the contract.
@@ -301,6 +313,32 @@ implementation, or the expectation according to the contract.
    for the prescribed automated tests.
 6. Report exact pass, fail, skip, and blocked results. Distinguish product failures from
    infrastructure, quota, credential, or dependency failures.
+
+## Review test evidence before closure
+
+For each added or materially changed test, check that its claimed behavior, exercised production
+boundary, independent observation, and sensitivity evidence agree. A passing suite cannot fill a
+gap between a routing test and a database, authorization, or startup claim. Report the narrower
+coverage and add the missing test when that broader behavior is part of the requested contract.
+
+Obtain a fresh-context independent review for a project-wide false-positive audit or when changed
+tests are primary evidence for behavior classified as high risk by `plan-implementation`, including
+authorization, destructive state changes, and data integrity. A focused routine test change needs
+the author check above, not automatic delegation. Reuse an independent plan or closure review when
+it examines the final tests against this section; do not duplicate a qualifying review. Honor a
+user-requested reviewer and effort, such as Astra xhigh. Otherwise choose the strongest available
+independent reviewer suited to the risk. If the preferred model is unavailable, use another capable
+independent reviewer and disclose the substitution. If no independent reviewer is available for a
+required review, keep that requirement unresolved and do not claim completion.
+
+Give the reviewer the request, applicable instructions, tests, real implementation, relevant
+fixtures, CI route, and validation and negative-control results. Withhold the intended verdict and
+prior candidate classifications. For a broad audit, ask the reviewer to inspect every test root
+for the patterns above and verify each candidate against the real implementation. Require file and
+line, false-positive mechanism, actual behavior to observe, and corrected code for confirmed
+findings; distinguish valid boundary mocks and state which categories produced no confirmed issue.
+Resolve findings, rerun checks invalidated by changes, and repeat the review if the reviewed test
+evidence changes materially.
 
 ## Report audit findings
 
