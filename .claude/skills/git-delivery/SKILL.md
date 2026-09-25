@@ -1,9 +1,6 @@
 ---
 name: git-delivery
-description: >-
-  Prepare or perform safe Git delivery and scoped tracking changes while preserving local work
-  and explicit authorization boundaries. Use for commits, pushes, pull or merge requests, remote
-  reviews and pipelines, repository issues, or requests to keep planning documents local.
+description: Prepare or perform safe Git delivery while preserving local work and explicit authorization boundaries. Use when drafting or creating commits, pushing branches, creating or updating pull requests or GitLab merge requests, reviewing remote changes, working with repository issues, or investigating remote pipelines.
 ---
 
 # Git delivery
@@ -30,41 +27,6 @@ pull request, or merge request authorizes only its routine, in-scope Git steps.
    or include them merely to obtain a clean status.
 6. If the requested delivery scope is ambiguous, identify the exact files or
    actions in question and ask before mutating Git state.
-
-Execution plans and discussion briefs are working artifacts. Local persistence,
-lifecycle moves, and prior tracking do not by themselves place them in a code or
-documentation commit. Include them when the user's explicit commit scope covers
-them (including requests to commit all changes or the staged set), or when a
-concrete repository requirement makes them part of the requested delivery.
-Possible future handoff or audit alone is not such a requirement. For a tracked
-plan moved from `active/` to `completed/`, excluding it means excluding both the
-old-path deletion and new-path addition. Preserve existing work and index state;
-do not unstage, untrack, change ignore rules, or delete documents merely to
-omit them from a commit.
-
-## Apply an expressly chosen local-only policy
-
-When the user requests a repository-wide local-only policy for specified plans
-or briefs, inspect its existing plan-root convention, tracked files, and
-references before changing anything. Add narrow `.gitignore` rules where
-needed for the chosen working-document paths, and resolve links from tracked
-documents to files that will leave Git. Explain in the plan-root
-`README.md` which files remain local, their lifecycle, and that other clones
-will not receive them. Do not ignore that README, architecture records,
-templates, or other artifacts outside the chosen scope.
-
-Ignore rules do not affect files already tracked. Remove their exact entries
-from the index only when the user's request covers that tracking change. Check
-for existing staged edits first; do not force a removal over them. Use a
-cached-only removal so local files remain, verify each file still exists with
-unchanged content and is ignored, and inspect the staged set. Preserve
-unrelated staged work.
-
-No current handoff, an uncommitted plan, or an ordinary code commit alone
-authorizes this repository-wide transition. If a later commit request clearly
-includes the local planning files, honor that scope within the repository's
-ignore and authorization rules; ask when its relationship to the local-only
-policy is ambiguous before changing Git state.
 
 ## Use local and remote tools correctly
 

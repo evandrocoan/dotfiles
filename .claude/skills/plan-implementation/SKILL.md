@@ -90,6 +90,7 @@ this default root for repository-backed work:
 
 ```text
 implementation-plans/
+├── .gitignore
 ├── README.md
 ├── active/
 └── completed/
@@ -100,6 +101,24 @@ establishes it. Before planning, read a brief there on the same subject and abso
 user decided into the plan's authorities and evidence, in English. A brief supplies user decisions
 only; it holds no execution authority and is not evidence of current behavior.
 
+When establishing a new default root, including when `discussion-briefs` establishes it first,
+create `implementation-plans/.gitignore` with these rules:
+
+```gitignore
+/active/*.md
+/completed/*.md
+/briefs/*.md
+```
+
+These rules keep default plans and briefs local while leaving the root `README.md`, `.gitignore`,
+and files outside those Markdown paths visible. Architecture records and templates stay in their
+own locations. Account for any parent allowlist so the README and `.gitignore` can be tracked when
+Git delivery is requested.
+
+Do not apply this default retroactively to an existing root as a side effect of planning; follow
+its current convention unless the user explicitly requests a tracking change for that repository.
+Ignore rules do not untrack existing files, and creating the root does not authorize index changes.
+
 Create `implementation-plans/README.md` when establishing this root. If the default root already
 exists without that file, add it before the next plan is created, moved, or closed. Keep the README
 concise and require it to define:
@@ -109,6 +128,10 @@ concise and require it to define:
 - moving the same file between lifecycle directories without retaining a duplicate;
 - the repository's plan naming and any additional lifecycle states; and
 - the boundary between temporary execution authority and durable architecture records.
+
+For a new default root, also explain that the ignored plans and briefs remain in the local
+checkout across lifecycle moves but are not delivered to other clones. The README and ignore
+rules remain shareable.
 
 Do not maintain a manual inventory of individual plans in the README; the plan files present in the
 lifecycle directories are the inventory and cannot drift from a copied list. Place an active
