@@ -5,6 +5,18 @@
 Define each check once in a repository-owned executable contract, then invoke it from both local development and CI.
 The contract can be a one-shot Compose service, a strict shell wrapper, or both.
 
+Any auxiliary service dependency created for a CI job must be declared and started
+through the repository's Compose model. Do not use GitLab `services:`, a direct
+`docker run`, a bare server command, or a background helper to supply it.
+Service-free wrappers remain valid; wrappers that start service dependencies must
+invoke Compose. A client of an already-running external service does not start one.
+
+Compose requires an approved Docker daemon already available through runner
+infrastructure. Verify this prerequisite before migrating service startup. If it
+is unavailable, report the missing runner capability and stop that migration.
+Compose cannot bootstrap the daemon it needs to run. Runner or daemon provisioning
+changes require their own authorized scope.
+
 - Let GitLab select the pipeline source, exact revision, runner, credentials, dependencies, and retention policy.
 - Let the repository wrapper select the lint, unit, integration, documentation, or smoke command.
 - Let Compose define services, health checks, profiles, mounts, and container exit behavior.
@@ -96,10 +108,10 @@ container, reads its recorded exit status, tears down only the isolated Compose 
 returns the terminal status. Do not replace that lifecycle with sleeps, log matching, or an
 unbounded polling loop.
 
-If a dependency cannot be modeled as a Compose service, use a bounded, strict readiness helper: refuse to execute the
-payload after timeout, preserve the readiness exit status, and `exec` the payload after success. When a CI shell block
-must start a local helper in the background, capture its PID, install a cleanup trap, wait for readiness, preserve the
-test status, and terminate the helper. Prefer a Compose service and healthcheck whenever practical.
+If a dependency requires a custom readiness probe, put it in a Compose healthcheck
+or a bounded helper executed inside its Compose service. Refuse to run the payload
+after timeout and preserve the readiness exit status. Do not start the helper as
+an unmanaged process in the GitLab job.
 
 Do not begin with a broad `down`, delete shared runner directories, or ignore setup and teardown errors as routine
 cleanup. Serialize jobs with `resource_group` when they mutate one shared external environment; a unique Compose name
