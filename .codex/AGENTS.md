@@ -288,9 +288,9 @@ of choosing one silently.
   policy. Also load it for a material continuation, replan, or follow-up under an
   existing formal plan. Use its persistent Markdown plan whenever its persistence
   gate applies, and complete its risk-appropriate closure before declaring success.
-- `codex-claude-loop`: Coordinate Codex Sol planning and review with Claude Opus
-  implementation through one shared local handoff file, with optional periodic
-  checks until completion or a user decision.
+- `codex-claude-loop`: Coordinate Codex planning and review with Claude Code
+  implementation in one checkout, through supervised local CLI turns or a
+  shared handoff between two sessions with optional periodic checks.
 - `skill-creator`: Create or update a skill package with appropriately scoped
   instructions and supporting resources. Written for Codex skills: ignore its
   `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
