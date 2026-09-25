@@ -199,6 +199,7 @@
 !/.claude/settings.json
 !/.claude/skills/
 !/.claude/skills/**
+/.claude/skills/synced/
 !/.claude/agents/
 !/.claude/agents/**
 
