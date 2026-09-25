@@ -1,15 +1,17 @@
 # Sol–Opus handoff
 
 Use this skill only for a task where the user wants two separate sessions to cooperate in the same
-local checkout. Sol is the Codex planner and reviewer; Opus high is the Claude implementer. Model
-and reasoning settings remain the user's choice. Loading this skill does not start a scheduler or
-authorize new work.
+local checkout. Sol is the Codex coordinator and final reviewer; Opus is the sole checkout
+implementer. For complex work, use the recommended model, effort, and independent review profile
+in the entrypoint unless the user chooses otherwise. Loading this skill does not start a scheduler
+or authorize new work.
 
 ## Establish the handoff
 
-1. Sol identifies the authorized repository root, reads its instructions, checks the branch and
-   existing changes, and chooses a unique task ID. Both sessions must use that same checkout. Do
-   not use a second worktree or a remote repository as a substitute for it.
+1. Sol identifies the authorized repository root, reads its instructions, checks the branch,
+   staged index, unstaged changes, and untracked files, and chooses a unique task ID. Both sessions
+   must use that same checkout and preserve the baseline. Do not use a second worktree or a remote
+   repository as a substitute for it.
 2. Sol chooses one task-specific Markdown path inside that repository, such as
    `.agent-handoff/<task-id>.md`. Do not overwrite another task's file or write a machine-specific
    checkout path into the skill or a tracked handoff file. Do not commit the handoff file merely
@@ -17,10 +19,11 @@ authorize new work.
    the repository convention.
 3. Sol references an existing ready plan when one exists; otherwise Sol prepares the plan required
    by the task's governing instructions. Record the objective, scope, acceptance criteria, ordered
-   implementation work, and decisions already made. When that plan carries out a user decision that
-   changes an approved architecture record, Sol amends the record during this planning, as
-   `architecture-records` and `plan-implementation` prescribe, and tells Opus that the records are
-   already amended; that amendment records a decision and is not the implementation that Opus owns.
+   implementation work, and decisions already made. When the plan carries out a user decision that
+   changes an approved architecture record, Sol completes only the authorized recording through
+   the conditional procedure in `architecture-records` and `plan-implementation`: the required
+   review precedes an amendment that needs mandatory maintenance. Tell Opus which records were
+   actually updated before implementation; recording a decision is not Opus's implementation.
    Do not replan or repeat a review solely to create the handoff. Initialize the file under **Own
    and publish a turn**: publish `blocked` if a required prerequisite is unavailable, `needs-user`
    if a user decision is missing, or `implement` for Opus otherwise. Sol may deliver the initial
@@ -35,6 +38,25 @@ On every owned turn, apply the applicable instructions and recheck repository st
 reread instruction files when their governing startup rules require it.
 The handoff does not replace a formal implementation plan or architecture record required by the
 task's own instructions.
+Neither role stages, unstages, resets, commits, or performs live or external actions without the
+user's authorization. The reviewer reads and reports; it never writes the checkout or handoff.
+Before implementation, each session checks that its selected model and effort are available and
+that the checkout, active configuration, startup behavior, and permissions are trusted for its
+assigned work. A CLI-backed Claude session checks its CLI version and flags against the selected
+model's requirements; the Claude session confirms provider and account access rather than treating
+public model documentation as proof. If a prerequisite fails, publish `blocked` or `needs-user`
+under the existing protocol and present the required decision. Do not silently change models,
+update the CLI or dependencies, switch checkouts, or bypass permissions.
+
+Before publishing an `implement` turn that includes high-risk changes, Sol obtains the required
+independent, fresh-context, read-only plan review and resolves its findings. If high-risk work is
+discovered later, Opus stops implementation and publishes `review`, `needs-user`, or `blocked` as
+appropriate; Sol arranges the review before returning ownership to Opus. For a complex task, Sol
+obtains the independent closure review after its author audit and before publishing `done`.
+If the required reviewer is unavailable, keep the dependent work on hold and report the blocker.
+Reviewers have no protocol owner or state: during an owned review turn, Sol retains the lock,
+confirms that Opus is no longer implementing, gives the reviewer the current baseline, and alone
+publishes the next handoff after considering all findings.
 
 ## File contract
 
@@ -157,15 +179,16 @@ user-directed transition unless the task is already terminal.
    cancellation, or resumption under **Own and publish a turn**. If an owned revision reappears
    after an interrupted attempt, inspect partial work before resuming; do not duplicate it.
 3. If this session owns the turn, acquire the lock under **Own and publish a turn** and recheck
-   instruction applicability, branch, status, objective, acceptance criteria, and current request.
-   Reconcile any partial changes from an interrupted prior attempt before continuing; never blindly
-   repeat a mutation or test with external effects.
+   instruction applicability, branch, index, status, objective, acceptance criteria, and current
+   request. Reconcile any partial changes or external effects from an interrupted prior attempt
+   before continuing; never blindly repeat a mutation or test with external effects.
 4. Opus implements only the assigned work, runs relevant verification, and reports exact results
    before handing review to Sol. If an assumption fails or a choice changes the agreed plan, stop
    and use the appropriate paused state instead of silently changing course.
-5. Sol compares the actual changes and verification with the plan and acceptance criteria. Write
-   actionable corrections for Opus or mark `done` only when the whole task and applicable
-   instructions are satisfied. Sol does not edit the implementation in this workflow.
+5. Sol compares actual changes and verification with the plan and acceptance criteria. Obtain the
+   independent closure review when required; write actionable corrections for Opus or mark `done`
+   only when the whole task and applicable instructions are satisfied. Sol does not edit the
+   implementation in this workflow.
 6. Publish the result while still holding the lock. A changed revision, state, or owner prevents
    this session from overwriting a newer handoff. Follow the manual reentry rule above after
    publication.

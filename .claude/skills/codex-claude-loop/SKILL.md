@@ -10,13 +10,31 @@ description: >-
 
 Use this skill only for an authorized task that assigns work to both Codex and Claude. Loading it
 does not launch Claude, create a handoff, schedule checks, or authorize new work. Model and
-reasoning settings specified by the user take precedence; otherwise Codex selects them for each
-supervised CLI task.
+reasoning settings specified by the user take precedence over this skill's recommendations.
 
-Codex owns planning, assignment, review, and the final verdict. Claude implements the assigned
-scope. Both use the same authorized local checkout and its applicable instructions. Preserve
-existing changes and the user's Git and external-action boundaries. A task has one active
-implementer; do not run the CLI mode alongside an owned two-session handoff for the same task.
+Codex owns planning, assignment, supervision, integration assessment, verification, and the final
+verdict. Claude alone implements the assigned checkout changes; Codex may write authorized plans
+and handoff artifacts. Both use the same authorized local checkout and its applicable instructions.
+Before work, record staged, unstaged, and untracked changes. Preserve the Git index and existing
+work; do not stage, unstage, reset, commit, or perform external or live actions without the user's
+authorization. A task has one active implementer; do not run the CLI mode alongside an owned
+two-session handoff for the same task.
+
+## Recommended profile for complex work
+
+Use Codex Sol xhigh to plan, supervise, integrate findings, and verify; Claude Opus 5.5 xhigh as
+the sole checkout implementer; and Codex Astra xhigh for independent, read-only reviews with fresh
+context before high-risk edits and at closure. This is a recommendation, not a model override:
+honor each explicit user choice of model and effort. Check that the selected roles and settings are
+available before assigning work. If a required reviewer cannot run, hold the dependent high-risk
+work or closure and report the decision needed; do not silently substitute another reviewer.
+
+The coordinator gives the independent reviewer the user request, applicable instructions, plan,
+repository baseline, and relevant diff without an intended verdict. The reviewer reports findings
+without editing or publishing a handoff. The coordinator evaluates and reports all findings,
+including disagreements; Claude implements any accepted correction. After a material correction,
+repeat the affected validation and closure review before claiming completion. Keep these reviews
+within the ownership rules of the selected mode.
 
 ## Choose the mode
 
