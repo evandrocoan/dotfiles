@@ -549,6 +549,19 @@ item that is merely open does not block through this check: report it to the use
 message and note it in the plan. This check relaxes no other gate; an open item that stands for a
 required validation, authorization, or access still blocks under the rules below.
 
+Before any completion verdict, apply `test-quality`'s **Review test evidence before closure** to
+every added or materially changed test and to existing tests cited as decisive evidence for the
+requested outcome. For each, check the claimed behavior against the production boundary exercised,
+an observation independent of configured mocks, and sensitivity evidence for a plausible defect.
+Record the supported claim and any coverage gap in the proportional completion evidence; skipped
+or quarantined tests provide no passing evidence.
+
+Use the focused author check for routine tests and obtain a fresh-context independent test review
+only when `test-quality` requires one, including for project-wide false-positive audits. The
+absence of a second plan conformance pass in a routine or compact path does not waive that review.
+Reuse an independent plan or closure review only if it examined the final tests against these
+criteria. Leave required evidence or review unresolved until it is supplied.
+
 Routine work without a formal plan closes after verifying the requested outcome, running its cheap
 local validation, and checking the final diff and repository status. It needs no closure matrix or
 second pass. A routine external editorial correction instead closes with its exact diff and
