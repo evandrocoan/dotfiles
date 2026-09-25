@@ -20,6 +20,12 @@ work; do not stage, unstage, reset, commit, or perform external or live actions 
 authorization. A task has one active implementer; do not run the CLI mode alongside an owned
 two-session handoff for the same task.
 
+After required planning and review gates, assign Claude the authorized implementation, regression
+work, and applicable test execution in the repository-prescribed environment. An evidence gate may
+sequence that work, but does not transfer its owner. Codex supervises and reviews the diff and test
+evidence; an authorized independent rerun by Codex adds verification, not a substitute for tests
+assigned to Claude. Honor an explicit user choice of a different division of work.
+
 ## Recommended profile for complex work
 
 Use Codex Sol xhigh to plan, supervise, integrate findings, and verify; Claude Opus 5.5 xhigh as
