@@ -19,11 +19,12 @@ or authorize new work.
    the repository convention.
 3. Sol references an existing ready plan when one exists; otherwise Sol prepares the plan required
    by the task's governing instructions. Record the objective, scope, acceptance criteria, ordered
-   implementation work, and decisions already made. When the plan carries out a user decision that
-   changes an approved architecture record, Sol completes only the authorized recording through
-   the conditional procedure in `architecture-records` and `plan-implementation`: the required
-   review precedes an amendment that needs mandatory maintenance. Tell Opus which records were
-   actually updated before implementation; recording a decision is not Opus's implementation.
+   implementation work, applicable test execution, and decisions already made. When the plan
+   carries out a user decision that changes an approved architecture record, Sol completes only
+   the authorized recording through the conditional procedure in `architecture-records` and
+   `plan-implementation`: the required review precedes an amendment that needs mandatory
+   maintenance. Tell Opus which records were actually updated before implementation; recording
+   a decision is not Opus's implementation.
    Do not replan or repeat a review solely to create the handoff. Initialize the file under **Own
    and publish a turn**: publish `blocked` if a required prerequisite is unavailable, `needs-user`
    if a user decision is missing, or `implement` for Opus otherwise. Sol may deliver the initial
@@ -182,13 +183,17 @@ user-directed transition unless the task is already terminal.
    instruction applicability, branch, index, status, objective, acceptance criteria, and current
    request. Reconcile any partial changes or external effects from an interrupted prior attempt
    before continuing; never blindly repeat a mutation or test with external effects.
-4. Opus implements only the assigned work, runs relevant verification, and reports exact results
-   before handing review to Sol. If an assumption fails or a choice changes the agreed plan, stop
-   and use the appropriate paused state instead of silently changing course.
-5. Sol compares actual changes and verification with the plan and acceptance criteria. Obtain the
-   independent closure review when required; write actionable corrections for Opus or mark `done`
-   only when the whole task and applicable instructions are satisfied. Sol does not edit the
-   implementation in this workflow.
+4. Opus implements the assigned work and runs applicable baseline and post-change tests in the
+   repository-prescribed environment before handing review to Sol. A required evidence gate may
+   sequence these steps without transferring execution to Sol. If a needed test permission is
+   unavailable, publish the concrete blocker or user decision; do not silently assign the test to
+   Sol. Report exact results. If an assumption fails or a choice changes the agreed plan, stop and
+   use the appropriate paused state instead of silently changing course.
+5. Sol compares actual changes and test evidence with the plan and acceptance criteria. Sol may
+   independently rerun authorized checks, but those runs do not replace Opus's assigned tests.
+   Obtain the independent closure review when required; write actionable corrections for Opus or
+   mark `done` only when the whole task and applicable instructions are satisfied. Sol does not
+   edit the implementation in this workflow.
 6. Publish the result while still holding the lock. A changed revision, state, or owner prevents
    this session from overwriting a newer handoff. Follow the manual reentry rule above after
    publication.

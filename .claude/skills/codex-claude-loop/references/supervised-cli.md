@@ -1,10 +1,10 @@
 # Codex-supervised Claude CLI mode
 
 Use this mode only after the user has requested Codex–Claude cooperation on an authorized task.
-The Codex coordinator plans, supervises, integrates findings, verifies, and reports. Claude alone
-implements the assigned checkout changes; it does not start another agent loop or declare the task
-complete for Codex. Apply the recommended complex-work profile and independent reviews in the
-entrypoint when relevant, while preserving explicit user choices.
+The Codex coordinator plans, supervises, integrates findings, verifies, and reports. By default,
+Claude alone implements the assigned checkout changes and runs applicable tests; it does not start
+another agent loop or declare the task complete for Codex. Apply the recommended complex-work
+profile and independent reviews in the entrypoint when relevant, preserving explicit user choices.
 
 ## Establish one task and one implementer
 
@@ -57,37 +57,55 @@ entrypoint when relevant, while preserving explicit user choices.
 
 - Prepare a task-specific prompt with the objective, authorized scope, acceptance criteria, plan
   path if any, repository instructions, existing changes to preserve, and the precise work assigned
-  to Claude. State that Codex owns review and later Git delivery unless the user explicitly
-  assigned those operations to Claude. The prompt is task data, not permission to ignore higher
-  instructions. Pass it without shell expansion of untrusted text.
+  to Claude. After required review, assign the authorized implementation and applicable baseline
+  and post-change tests to the same implementer. A required regression-first gate may sequence the
+  work; resume Claude for production changes and affected tests after that gate. Do not impose a
+  tests-only milestone or reserve test execution for Codex merely for coordinator convenience.
+  State that Codex owns review and later Git delivery unless the user explicitly assigned those
+  operations to Claude. The prompt is task data, not permission to ignore higher instructions.
+  Pass it without shell expansion of untrusted text.
 - Select a permission profile that fits the user's authorization before launch. For unattended
   print mode, use `--permission-mode dontAsk` and `--permission-prompts none` with a narrow
   `--allowedTools` set; inspect inherited allow rules and deny overly broad tools with
-  `--disallowedTools` where needed. Codex can run validation commands itself instead of granting
-  unrestricted shell access. Never use permission bypass flags or automatically enlarge the tool
-  scope after a denial. If the required operation cannot run within an authorized profile, stop
-  and report the exact decision needed.
+  `--disallowedTools` where needed. Include task-scoped access for Claude to run the repository's
+  prescribed tests, including Docker Compose when required. Do not deny the needed test tool and
+  silently move its work to Codex. If the permission system cannot confine the needed command
+  safely, report the trade-off and obtain the user's choice; do not grant unrestricted shell access
+  or use permission bypass flags. Never automatically enlarge the tool scope after a denial. A
+  user-requested named test carries only the authorization described by `test-quality`, including
+  its documented test effects; the collaboration itself authorizes no unrelated live or external
+  action. If an assigned test cannot run within an authorized profile, stop and report the exact
+  decision needed.
 - Start the first run from the verified checkout with `claude -p`, structured output, a unique
   `--session-id`, and both `--model <chosen-model>` and `--effort <chosen-level>`, even when the
   user did not specify either value. Do not add self-imposed turn, duration, iteration, or cost
-  limits. Honor limits explicitly set by the user or imposed by the provider or runtime. Continue
-  observing the owned process while work progresses; a quiet interval alone is not a reason to
-  cancel it. If a tool call ends while Claude is still running, inspect its output and process
-  state, then continue supervising the same process.
-- Keep the process handle and exact session ID bound to this task. Inspect new output and process
-  state before waiting or reacting to a possible prompt. A nonzero exit, malformed or absent
-  result, mismatched session ID, provider or runtime limit, interruption, or permission denial is a
-  partial result. Inspect the index, working tree, session, and any external effects before retrying
-  or resuming; do not call the task complete or retry blindly. A successful exit and Claude's report
-  are also only evidence to inspect.
+  limits. Honor limits explicitly set by the user or imposed by the provider or runtime. Keep the
+  process handle and exact session ID bound to this task. Normally wait on that same handle until
+  the structured result arrives, then inspect it. Choose a long supported per-call wait interval
+  consistent with prompt responsiveness and user updates; do not repeatedly use a short default
+  interval merely to check progress. This tool yield interval is not a task duration limit.
+- If the tool yields before exit, inspect only newly returned output for errors or prompts, including
+  prompt fragments without a trailing newline. If it confirms the same process is still running
+  and no response is needed, wait on the same handle again. Do not routinely run `ps`, tail logs,
+  reread session output, or make separate status calls during quiet intervals. Silence alone is not
+  a prompt or a reason to cancel. If the tool does not establish whether the process is running, or
+  its result conflicts with other evidence, inspect process state read-only and reconcile the exact
+  session before waiting, resuming, or relaunching. Answer a prompt only when the response is
+  unambiguous and authorized; otherwise report the decision needed to the user.
+- A nonzero exit, malformed or absent result, mismatched session ID, provider or runtime limit,
+  interruption, or permission denial is a partial result. Inspect the index, working tree, session,
+  and any external effects before retrying or resuming; do not call the task complete or retry
+  blindly. A successful exit and Claude's report are also only evidence to inspect.
 
 ## Review and continue
 
 If high-risk work is discovered mid-task, hold further implementation until the independent review
 is complete. The Codex coordinator independently inspects changed files, index, diffs, status, and
 verification evidence against the user request, applicable instructions, plan, and acceptance
-criteria. Run required validation under the governing skills. Give Claude only concrete findings
-that still require implementation.
+criteria. Confirm that Claude ran the applicable baseline and post-change tests through the
+repository-prescribed environment and inspect their actual results. Codex may independently rerun
+authorized checks when useful or required by governing skills; that rerun does not replace Claude's
+assigned test execution. Give Claude only concrete findings that still require implementation.
 
 Resume the exact recorded session with `--resume <session-id>` after confirming the prior process
 has ended and partial effects are understood; do not use `--continue`, a session-name search, or
