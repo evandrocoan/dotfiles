@@ -71,13 +71,20 @@ check, an incomplete check, and a skipped check.
   non-trivial shell blocks embedded in CI YAML.
 - Load the repository's dependency-decision workflow before adding an image, package, analyzer,
   service, or CLI that is not already authorized by the project.
+- Before choosing a new CI test command, image, runner, or service route, compare it with the
+  repository's documented local and CI wrappers and Compose workflow. Keep an existing approved
+  route when it covers the requested behavior; an open merge request or favorable review does not
+  authorize a different route.
 - Start every auxiliary service dependency created for a CI job through a
   repository-owned Docker Compose model. Do not declare GitLab `services:` in
   CI YAML or start such dependencies with `docker run`, a bare server command,
   or a shell background process. Apply this rule to included templates and
   repository wrappers as well. Service-free wrappers and Compose log followers
-  remain valid. When modifying a job that starts auxiliary services directly,
-  migrate that lifecycle to Compose after verifying approved daemon access.
+  remain valid. When modifying a job that already starts auxiliary services directly, report that
+  lifecycle separately. Migrate it only when the requested change includes that lifecycle or the
+  requested behavior cannot be achieved within the existing approved route, after verifying
+  approved daemon access.
+  An unrelated job edit does not authorize runner or daemon provisioning.
 - Use GitLab repository and pipeline tools before shell, generic HTTP, or credential-based
   fallbacks for remote GitLab state. Infer GitLab from the remote URL. Keep read-only inspection
   separate from remote mutation.

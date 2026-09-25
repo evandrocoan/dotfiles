@@ -45,9 +45,10 @@ the environment. A separate question is unnecessary only when the user already
 selected the strategy or an explicit repository rule leaves no meaningful
 alternative; state that basis before proceeding.
 
-When an import or package is missing, report the exact evidence. Ask whether to
-install the dependency or use an alternative already available. Never install
-the missing package automatically.
+When an import or package is missing, verify the repository's prescribed environment and
+report the exact evidence. If a meaningful strategy choice remains, ask whether to install
+the dependency or use an alternative already available. A missing import alone never
+authorizes installation; an already selected user or repository strategy needs no new question.
 
 ## Apply the approved choice
 

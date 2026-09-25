@@ -10,6 +10,9 @@ through the repository's Compose model. Do not use GitLab `services:`, a direct
 `docker run`, a bare server command, or a background helper to supply it.
 Service-free wrappers remain valid; wrappers that start service dependencies must
 invoke Compose. A client of an already-running external service does not start one.
+This requirement for newly created service dependencies does not authorize migrating
+an existing direct-start lifecycle during an unrelated job edit. Compare the proposed
+route with the repository's approved wrappers and Compose workflow first.
 
 Compose requires an approved Docker daemon already available through runner
 infrastructure. Verify this prerequisite before migrating service startup. If it

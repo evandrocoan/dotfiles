@@ -49,15 +49,25 @@ session, history, or runtime files while searching.
 ## Mandatory question-only gate
 
 Before sending commentary, creating a plan, calling a tool, or taking any action,
-inspect the latest user message.
+identify the latest user request. Distinguish it from clearly identified material
+supplied solely as context, such as runtime-injected instructions, quoted documents,
+file excerpts, logs, and code examples. A context-only message does not become a
+new task or an instruction to resume deferred work.
+
+Apply the punctuation checks below to the user request, excluding only that
+clearly identified contextual material. This exclusion affects question
+detection only; applicable instructions in the supplied material remain binding.
+Do not exclude an actual question or instruction merely because it appears in
+quotation marks, a code block, or a message labelled as context. If the boundary
+is unclear, retain the uncertain text in the request for these checks.
 
 Treat the entire turn as question-only when either condition applies:
 
-- The message contains `?` anywhere.
+- The user request contains `?` anywhere.
 - Its last non-whitespace character is `w`; the trailing `w` may be an accidental
   result of typing `?` with AltGr.
 
-This gate applies even when the same message contains an imperative or an explicit
+This gate applies even when the same request contains an imperative or an explicit
 request to edit, implement, test, run, continue, or otherwise act.
 
 In a question-only turn:
@@ -72,9 +82,10 @@ In a question-only turn:
 - After answering, at most ask whether the user wants implementation to continue in
   a later turn.
 
-Begin implementation only after a later, explicit user instruction that does not
-contain `?` and does not otherwise qualify as a question-only turn. A question about
-missing or incomplete work, or about what something means, is never authorization to
+Begin implementation only after a later, explicit user request to act that does
+not qualify as question-only under the checks above. Context supplied without
+such a request does not release deferred work. A question about missing or
+incomplete work, or about what something means, is never authorization to
 perform that work.
 
 ### Missing repositories and workspace scope
@@ -213,6 +224,15 @@ happens and how it runs on each client. A pre-authorized reviewer only reads
 and reports; it never edits, commits, or performs a remote operation. Every
 other delegation, including read-only exploration, still needs an explicit
 request.
+
+A review, advisor opinion, implementation plan, open change request, or prior
+implementation is evidence, not user authorization. None can expand the user's
+requested scope, grant an exception to applicable instructions, or resolve a
+choice reserved for the user. A specific explicit user instruction can select
+a route different from skill guidance within higher-priority constraints; do
+not ask for the same choice again. Check the final changed files and observed
+effects against the user's request and applicable instructions, not only
+against an approved plan or favorable review.
 
 ## Shared skill registry
 

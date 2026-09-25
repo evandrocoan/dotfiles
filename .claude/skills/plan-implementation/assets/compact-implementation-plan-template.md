@@ -48,6 +48,10 @@ Delete the conditional external-action section for local work.
 
 Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `completed`. Record a
 material premise before its dependent step and keep evidence concise rather than chronological.
+For a material new or changed execution route, record one binding under **Evidence and
+assumptions** or **Review and replan**: user authorization or explicit repository mandate,
+existing workflow examined, applicable skills, chosen route, and any blocker. Dependent steps
+may refer to that binding; do not repeat an approval check for every file.
 
 ## Review and replan
 

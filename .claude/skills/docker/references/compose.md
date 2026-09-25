@@ -3,16 +3,6 @@
 Use this reference for Compose models, service lifecycle, storage, networks,
 resources, and container-backed local or CI workflows.
 
-## Contents
-
-- [Treat the rendered model as authoritative](#treat-the-rendered-model-as-authoritative)
-- [Model service lifecycles](#model-service-lifecycles)
-- [Express readiness, not creation order](#express-readiness-not-creation-order)
-- [Classify storage by intent](#classify-storage-by-intent)
-- [Design connectivity deliberately](#design-connectivity-deliberately)
-- [Bound resources and special hardware](#bound-resources-and-special-hardware)
-- [Align development and CI](#align-development-and-ci)
-
 ## Treat the rendered model as authoritative
 
 - Use the Compose v2 command form, `docker compose`, unless the repository
@@ -38,9 +28,11 @@ resources, and container-backed local or CI workflows.
 
 - Keep core runtime services enabled by default. Put optional tools, CLI tasks,
   tests, GPU paths, and alternative backends behind capability-oriented profiles.
-- Represent migrations, setup, seed, documentation, CLI, and tests as explicit
-  one-shot services. Use `restart: "no"` for work that must not repeat
-  automatically.
+- Reuse an approved entry point when it covers the task. For authorized new
+  Compose entries for migrations, setup, seed, documentation, CLI, and tests,
+  use explicit one-shot services. Use `restart: "no"` for work that must not
+  repeat automatically. Do not create a service solely to run a check already
+  covered by the repository's approved container workflow.
 - Make setup operations idempotent and bounded. Prefer a healthcheck or
   protocol-level retry with a deadline over a fixed sleep or an unbounded wait
   loop.
