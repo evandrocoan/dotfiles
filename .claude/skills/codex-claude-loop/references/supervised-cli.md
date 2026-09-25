@@ -22,6 +22,28 @@ the assigned work; it does not start another agent loop or declare the task comp
    profile. Do not silently switch to `--bare`: it skips discovered instructions and
    customizations and has different authentication requirements.
 
+## Choose Claude's model and effort
+
+- Before launch, choose and record both values for this task. Preserve a model or effort explicitly
+  chosen by the user independently; choose only the unspecified value. For short, mechanical work,
+  prefer `sonnet` at low or medium effort; for ordinary implementation, prefer `sonnet` at high
+  effort; for complex debugging, broad changes, or consequential decisions, consider `opus` at
+  high or xhigh effort. Reserve more capable models and deeper effort for work
+  that warrants their latency and cost. Consider `fable` for unusually hard or long tasks only
+  after confirming access and any usage-credit cost. These are starting points, not fixed defaults.
+- Check the installed CLI, provider, current
+  [model configuration](https://code.claude.com/docs/en/model-config), and known organization
+  restrictions for the chosen model and effort. Some models do not support effort, and a requested
+  level can be reduced by model support or an organization cap. Do not pair a model that lacks
+  effort support with a required `--effort` flag or silently replace a user-specified value. If
+  the requested pair cannot run as intended, report the constraint and obtain the user's choice.
+- Record the selected pair and why it fits this task. Keep the requested model and effort distinct
+  from what later output actually confirms. Inspect structured result model usage and any warnings
+  for model substitution; reconcile an unexpected primary model before another turn. Structured
+  output may silently clamp effort and does not itself confirm the applied level. Check known caps
+  before launch, treat any known conflict as a decision to resolve, and report unconfirmed applied
+  effort as a limitation rather than claiming the requested level was observed.
+
 ## Launch a bounded implementation turn
 
 - Prepare a task-specific prompt with the objective, authorized scope, acceptance criteria, plan
@@ -37,9 +59,10 @@ the assigned work; it does not start another agent loop or declare the task comp
   scope after a denial. If the required operation cannot run within an authorized profile, stop
   and report the exact decision needed.
 - Start the first run from the verified checkout with `claude -p`, structured output, a unique
-  `--session-id`, an explicit finite `--max-turns`, and the user's model and effort choices when
-  specified. Supervise the process with a finite deadline. Set an overall finite limit for
-  implementation/review iterations before the first launch. If using a cost cap, account for the
+  `--session-id`, an explicit finite `--max-turns`, and both `--model <chosen-model>` and
+  `--effort <chosen-level>`, even when the user did not specify either value. Supervise the
+  process with a finite deadline. Set an overall finite limit for implementation/review iterations
+  before the first launch. If using a cost cap, account for the
   fact that `--max-budget-usd` applies per invocation, including a resumed invocation. On deadline
   expiry, interrupt the owned process and confirm termination before inspecting partial effects.
   If termination cannot be confirmed, stop further work and report the active-process uncertainty.
@@ -56,8 +79,9 @@ the user request, applicable instructions, plan, and acceptance criteria. Run re
 under the governing skills. Give Claude only concrete findings that still require implementation.
 Resume the exact recorded session with `--resume <session-id>` after confirming the prior process
 has ended and partial effects are understood; do not use `--continue`, a session-name search, or
-`--fork-session`. Keep the same checkout, permission boundary, and finite limits. Do not start a
-new session merely because a response or tool call failed.
+`--fork-session`. Pass the recorded `--model` and `--effort` again on every resumed invocation;
+do not depend on saved or restored defaults. Keep the same checkout, permission boundary, and
+finite limits. Do not start a new session merely because a response or tool call failed.
 
 Stop the loop when Codex verifies completion, a user decision or prerequisite is missing, a
 permission is denied, a required check cannot be completed, the iteration limit is reached, or

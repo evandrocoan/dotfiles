@@ -10,7 +10,8 @@ description: >-
 
 Use this skill only for an authorized task that assigns work to both Codex and Claude. Loading it
 does not launch Claude, create a handoff, schedule checks, or authorize new work. Model and
-reasoning settings remain the user's choice.
+reasoning settings specified by the user take precedence; otherwise Codex selects them for each
+supervised CLI task.
 
 Codex owns planning, assignment, review, and the final verdict. Claude implements the assigned
 scope. Both use the same authorized local checkout and its applicable instructions. Preserve
