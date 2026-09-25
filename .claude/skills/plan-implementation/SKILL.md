@@ -148,7 +148,7 @@ another automatically cleaned location for a persistent plan. An issue or merge-
 may replace the local file only when it is the established execution authority and all agents can
 read and update it. A chat message or hidden model state never replaces the persistent plan.
 
-Apply this authority order:
+Apply this order among planning artifacts:
 
 ```text
 approved architecture or product decision
@@ -158,7 +158,12 @@ approved architecture or product decision
 ```
 
 Resolve disagreement by correcting the lower layer. Never let the task-plan projection silently
-override the persistent plan or let the persistent plan override approved architecture.
+override the persistent plan or let the persistent plan override approved architecture. This order
+does not grant authorization. The user's authorized request, applicable global and repository
+instructions, and task-specific skills constrain every layer. A plan, advisor,
+reviewer, open change request, or prior implementation cannot expand scope or waive those
+constraints. Honor a specific explicit user choice over skill guidance within higher-priority
+limits; do not request the same decision again.
 
 ## Inspect before planning
 
@@ -210,6 +215,14 @@ Record these elements before implementation:
 6. **Validation:** Bind each material slice to focused protection and bind the completed flow to
    proportional integration, replay, end-to-end, or operational validation.
 7. **Replanning conditions:** State the discoveries that would invalidate the current route.
+
+Before a material step or replan adds or replaces a CI job, runner, container service, test
+runtime, dependency, owner, or other execution route, inspect the existing approved workflow for
+that task. Bind the chosen route once to the user request or explicit repository mandate, the
+applicable skills, and the reason the existing route does not suffice (or the user's explicit
+choice to depart). Dependent steps may cite that binding; do not demand a separate decision per
+file. If a required premise or authorization is missing, leave the dependent step pending and
+resolve it before editing. Technical review cannot supply the missing authorization.
 
 Do not use vague steps such as “fix the logic,” “add tests,” or “verify everything.”
 Name the behavior boundary, the affected owner or consumer, and the evidence that will prove the
@@ -338,9 +351,11 @@ When an independent reviewer is required, prefer a different model from the advi
 another family or provider. An explicit user decision that pins the same model for both roles is
 authoritative; record that choice and the residual risk of correlated model blind spots. In every
 case, preserve review independence with fresh context, an authoritative evidence baseline, and a
-prompt that withholds the intended verdict. If the client cannot open a required reviewer, record
-that it was unavailable. State which mechanism each applicable review used and record findings that
-changed the plan plus findings rejected with a reason.
+prompt that withholds the intended verdict. Include the original user request and applicable
+instructions in that baseline so the reviewer can detect a plan that exceeds them. If the client
+cannot open a required reviewer, record that it was unavailable. State which mechanism each
+applicable review used and record findings that changed the plan plus findings rejected with a
+reason.
 
 ## Build an executable sequence
 
@@ -413,10 +428,10 @@ the entire plan before acting. Give every delegated agent the plan path and the 
 
 ## Keep planning state in the correct place
 
-When the persistence gate applies, treat the persistent plan as the sole current authority for
-execution detail. Keep it compact and current; do not append a chronological diary. Update it only
-when status, scope, evidence, dependencies, validation obligations, blockers, or the chosen
-execution route materially changes.
+When the persistence gate applies, treat the persistent plan as the current record of execution
+detail, bounded by the authorization and instructions above. Keep it compact and current; do not
+append a chronological diary. Update it only when status, scope, evidence, dependencies,
+validation obligations, blockers, or the chosen execution route materially changes.
 
 At the end of a phase or before a material continuation, reconcile the active plan instead of
 adding another account of the attempt. Replace obsolete "current" headings and steps with the
@@ -468,6 +483,9 @@ Replan immediately when:
 Update the persistent plan before taking a materially different implementation route. Preserve the
 current outcome and governing invariants, replace superseded steps instead of appending a narrative,
 and synchronize the task-plan projection.
+Updating the plan does not satisfy a missing user decision or bypass the global rule to stop when
+a required assumption proves false. Recheck the material-route binding before executing the new
+route and keep dependent steps pending until its prerequisites are resolved.
 
 Change only the execution plan when the approved design remains valid. Amend or supersede the
 architecture record first when ownership, authority, stage order, terminal meaning, recovery policy,
@@ -534,11 +552,12 @@ higher-risk formal plan.
 For a high-risk formal plan, treat closure as a separate blocking phase, not as a summary written
 from memory. After the candidate implementation and required validation are complete:
 
-1. Reread the entire persistent plan, every governing architecture record, and coupled repository
-   instruction file. Do not rely only on task-plan labels or remembered intent.
-2. Reconstruct the implemented runtime path from code, configuration, tests, fixtures, and actual
-   validation artifacts. A report that a command passed is evidence only for what that command
-   asserted.
+1. Reread the entire persistent plan, the user's original request and later explicit decisions,
+   every governing architecture record, coupled global and repository instructions, and applicable
+   skills. Do not rely only on task-plan labels or remembered intent.
+2. Reconstruct the implemented runtime path from the full diff, including new files, code,
+   configuration, tests, fixtures, observed effects, and actual validation artifacts. A report
+   that a command passed is evidence only for what that command asserted.
 3. Complete the plan's closure-audit matrix with concise evidence pointers rather than execution
    history. Account for every outcome, scope boundary, governing invariant, affected consumer,
    replan condition, and required validation obligation. Group entries when they share the same
@@ -547,7 +566,8 @@ from memory. After the candidate implementation and required validation are comp
 
    ```text
    architecture invariant -> implementation-plan step -> code/config owner -> consumers -> test/replay
-   changed code/config/test -> authorized plan scope -> governing invariant or explicit local objective
+   changed file/effect -> user authorization and applicable instructions -> authorized plan scope
+                       -> governing invariant or explicit local objective
    ```
 
    The forward trace detects omitted implementation. The reverse trace detects unauthorized work,
@@ -558,8 +578,9 @@ from memory. After the candidate implementation and required validation are comp
    consumer, cost, time, or an unexplained scope addition is `unresolved`; it is never implicitly
    satisfied by another passing row.
 6. Perform a second conformance pass after the implementer's pass. Use a separate agent with fresh
-   task context and give it the plan, governing records, final diff, and validation artifacts
-   without the intended verdict. Apply the independent-review model rule above. When a required
+   task context and give it the original user request and decisions, applicable instructions and
+   skills, plan, governing records, final diff, observed effects, and validation artifacts without
+   the intended verdict. Apply the independent-review model rule above. When a required
    independent pass is unavailable, report that limitation instead of calling it independent.
 7. If either pass finds a mismatch, reopen the affected execution steps, correct the lowest
    incorrect authority, rerun invalidated validation, and repeat the complete closure audit. Do not

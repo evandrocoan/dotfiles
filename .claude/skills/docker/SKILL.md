@@ -66,9 +66,11 @@ debuggability, and parity between local development and CI.
   without asking again; loading this skill does not authorize creating new container infrastructure.
 - If the repository requires container-only execution, keep the host limited to Docker, Compose,
   Git, and read-only inspection.
-- When using the container workflow, represent tests, migrations, setup, seed, documentation, and
-  CLI tasks as explicit one-shot services when they need the project runtime. Do not install project
-  dependencies on the host as an unapproved fallback for a missing container entry point.
+- Reuse an approved container entry point that covers the requested task. When authorized work
+  adds a Compose entry point for tests, migrations, setup, seed, documentation, or CLI tasks that
+  need the project runtime, model it as an explicit one-shot service. Running a check or loading
+  this skill does not itself authorize a new service. Do not install project dependencies on the
+  host as an unapproved fallback for a missing container entry point.
 - Reuse the same Compose services in local and CI workflows when practical. Keep
   CI orchestration thin and place the executable environment contract in the
   image and Compose model.

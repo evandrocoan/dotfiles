@@ -53,6 +53,10 @@ Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `com
 Record a premise only when it is material and non-obvious. Write it before starting the dependent
 step. An unverified material premise stays under **Open assumptions** and blocks that step. Keep
 table cells concise; store decisive evidence and final results, not a chronological command diary.
+For a material new or changed execution route, record one binding under **Governing decisions and
+invariants** or **Current evidence and assumptions**: user authorization or explicit repository
+mandate, existing workflow examined, applicable skills, chosen route, and any blocker. Dependent
+steps may refer to that binding; do not repeat an approval check for every file.
 
 ## Plan review
 
@@ -94,8 +98,9 @@ Record both closure directions:
 
 - Architecture to implementation: every governing invariant reaches an implementation owner,
   every affected consumer, and proportional executable protection.
-- Implementation to authority: every changed runtime, configuration, test, fixture, and durable
-  document is authorized by this plan and a governing invariant or explicit local objective.
+- Implementation to authority: every changed file and observed effect, including new files, traces
+  through user authorization, applicable instructions and skills, this plan, and a governing
+  invariant or explicit local objective.
 
 Record the required independent second pass and apply the skill's material-change rule when
 something changes after the verdict.
@@ -104,8 +109,9 @@ something changes after the verdict.
 
 - **Verdict:** Pending | Passed | Failed
 - **Second pass:** Pending | Independent
-- **Auditor and evidence:** Identify the reviewer and link the final diff, validation artifacts,
-  and completed matrix used for the verdict.
+- **Auditor and evidence:** Identify the reviewer and link the original user request and decisions,
+  applicable instructions and skills, final diff and effects, validation artifacts, and completed
+  matrix used for the verdict.
 - **Unresolved requirements:** List each unresolved row, or write `None` only after confirming the
   matrix contains no `pending` or `unresolved` status.
 - **Brief check:** No brief on this subject | No `registro pendente`; open items reported and noted:
