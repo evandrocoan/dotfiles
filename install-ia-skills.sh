@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPOSITORY="evandrocoan/dotfiles"
 REF="master"
+MODE="remote"
 DESTINATION="${HOME}"
 STATE_FORMAT_VERSION="1"
 STATE_DIRECTORY=""
@@ -20,10 +21,12 @@ DISOWNED_COUNT=0
 
 declare -A PREVIOUS_MANAGED_ENTRIES=()
 declare -A PREVIOUS_MANAGED_ENTRY_DIGESTS=()
+declare -A PREVIOUS_MANAGED_ENTRY_KINDS=()
 declare -a PREVIOUS_MANAGED_ENTRY_ORDER=()
 declare -A DESIRED_MANAGED_ENTRIES=()
 declare -A NEXT_MANAGED_ENTRIES=()
 declare -A NEXT_MANAGED_ENTRY_DIGESTS=()
+declare -A NEXT_MANAGED_ENTRY_KINDS=()
 declare -a NEXT_MANAGED_ENTRY_ORDER=()
 declare -A SOURCE_SKILL_DIGESTS=()
 
@@ -34,13 +37,13 @@ declare -a GLOBAL_INSTRUCTION_PATHS=(
 )
 
 function printhelp() {
+    local exit_status="${1}"
 cat >&1 <<EOF
 
     Usage: bash ${0} [arguments]
 
-    Download and install the Claude, Codex, and GitHub Copilot skills and
-    global instructions from https://github.com/${REPOSITORY} without cloning
-    the dotfiles repository.
+    Install the Claude, Codex, and GitHub Copilot skills and global instructions
+    from https://github.com/${REPOSITORY} or link a local checkout.
 
     Skills are installed canonically in ~/.claude/skills and shared with Codex
     and Copilot through relative links in ~/.agents/skills. Existing files are
@@ -50,22 +53,22 @@ cat >&1 <<EOF
     Modified discontinued skills are preserved and removed from the control
     file.
 
-    bash ${0} -h | --help                 (show this help)
-    bash ${0} -r | --ref REF              (branch or tag, default: master)
-    bash ${0} -d | --destination PATH     (home directory, default: \$HOME)
-    bash ${0} -f | --force                (replace current and remove discontinued managed skills)
-    bash ${0} -n | --dry-run              (show changes without installing)
+    -h, --help                  Show this help
+    -m, --mode MODE             remote or local (default: remote)
+    -r, --ref REF               Remote branch or tag (default: master)
+    -d, --destination PATH      Home directory (default: \$HOME)
+    -f, --force                 Replace current and remove discontinued managed skills
+    -n, --dry-run               Show changes without installing
 
 EOF
-    exit 1
+    exit "${exit_status}"
 }
 
 # ${1} - Option (for example, --ref)
 # ${2} - Invalid argument (for example, -f)
 function invalidargument() {
     printf 'Error: Invalid argument "%s" for option "%s".\n' "${2}" "${1}" >&2
-    printhelp
-    exit 1
+    printhelp 1
 }
 
 function checkargsvalid() {
@@ -79,7 +82,7 @@ function checkexpectedargs() {
     local argument_value="${2--}"
     if [[ "${argument_value}" != '-'* ]]; then
         printf 'Error: The command "%s" does not expect any arguments, but got "%s".\n' "${1}" "${argument_value}" >&2
-        printhelp
+        printhelp 1
     fi
 }
 
@@ -106,7 +109,7 @@ function checkdependencies() {
         fi
     done
 
-    if ! commandexists curl && ! commandexists wget; then
+    if [[ "${MODE}" == "remote" ]] && ! commandexists curl && ! commandexists wget; then
         printf 'Error: Either "curl" or "wget" is required to download the skills.\n' >&2
         exit 1
     fi
@@ -132,6 +135,14 @@ function calculateskilldigest() {
     printf '%s\n' "${digest_output%% *}"
 }
 
+function calculatelinkdigest() {
+    local link_target="${1}"
+    local digest_output
+
+    digest_output="$(printf '%s' "${link_target}" | sha256sum)"
+    printf '%s\n' "${digest_output%% *}"
+}
+
 function invalidstate() {
     local reason="${1}"
 
@@ -148,6 +159,7 @@ function loadstate() {
     local entry_payload
     local skill_name
     local skill_digest
+    local canonical_kind
 
     if [[ ! -e "${STATE_PATH}" ]] && [[ ! -L "${STATE_PATH}" ]]; then
         return
@@ -187,7 +199,13 @@ function loadstate() {
                         entry_payload="${line#canonical=}"
                         skill_name="${entry_payload%% sha256=*}"
                         skill_digest="${entry_payload#* sha256=}"
-                        if [[ "${line}" != "canonical=${skill_name} sha256=${skill_digest}" ]] ||
+                        canonical_kind="copy"
+                        if [[ "${skill_digest}" == *" mode=link" ]]; then
+                            skill_digest="${skill_digest% mode=link}"
+                            canonical_kind="link"
+                        fi
+                        if { [[ "${line}" != "canonical=${skill_name} sha256=${skill_digest}" ]] &&
+                            [[ "${line}" != "canonical=${skill_name} sha256=${skill_digest} mode=link" ]]; } ||
                             [[ ! "${skill_digest}" =~ ^[0-9a-f]{64}$ ]]; then
                             invalidstate "invalid canonical skill digest on line ${line_number}"
                         fi
@@ -197,6 +215,7 @@ function loadstate() {
                         entry_type="shared-link"
                         skill_name="${line#shared-link=}"
                         skill_digest=""
+                        canonical_kind="shared-link"
                         entry="shared-link=${skill_name}"
                         ;;
                     *)
@@ -214,6 +233,7 @@ function loadstate() {
                         fi
                         PREVIOUS_MANAGED_ENTRIES["${entry}"]="${entry_type}"
                         PREVIOUS_MANAGED_ENTRY_DIGESTS["${entry}"]="${skill_digest}"
+                        PREVIOUS_MANAGED_ENTRY_KINDS["${entry}"]="${canonical_kind}"
                         PREVIOUS_MANAGED_ENTRY_ORDER+=("${entry}")
                         ;;
                     *)
@@ -238,6 +258,7 @@ function markdesired() {
 function markmanaged() {
     local entry="${1}"
     local skill_digest="${2-}"
+    local canonical_kind="${3-copy}"
 
     if [[ -n "${NEXT_MANAGED_ENTRIES["${entry}"]+present}" ]]; then
         return
@@ -249,9 +270,14 @@ function markmanaged() {
                 printf 'Error: Cannot manage canonical skill without a valid SHA-256 digest: %s\n' "${entry}" >&2
                 exit 1
             fi
+            if [[ "${canonical_kind}" != "copy" ]] && [[ "${canonical_kind}" != "link" ]]; then
+                printf 'Error: Invalid canonical skill kind: %s\n' "${canonical_kind}" >&2
+                exit 1
+            fi
             ;;
         shared-link=*)
             skill_digest=""
+            canonical_kind="shared-link"
             ;;
         *)
             printf 'Error: Cannot manage unknown entry: %s\n' "${entry}" >&2
@@ -261,6 +287,7 @@ function markmanaged() {
 
     NEXT_MANAGED_ENTRIES["${entry}"]=1
     NEXT_MANAGED_ENTRY_DIGESTS["${entry}"]="${skill_digest}"
+    NEXT_MANAGED_ENTRY_KINDS["${entry}"]="${canonical_kind}"
     NEXT_MANAGED_ENTRY_ORDER+=("${entry}")
 }
 
@@ -268,7 +295,8 @@ function recordskippedmanagement() {
     local entry="${1}"
 
     if [[ -n "${PREVIOUS_MANAGED_ENTRIES["${entry}"]+present}" ]]; then
-        markmanaged "${entry}" "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${entry}"]}"
+        markmanaged "${entry}" "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${entry}"]}" \
+            "${PREVIOUS_MANAGED_ENTRY_KINDS["${entry}"]}"
     else
         UNMANAGED_SKIPPED_COUNT=$((UNMANAGED_SKIPPED_COUNT + 1))
     fi
@@ -295,7 +323,11 @@ function writestate() {
         for entry in "${NEXT_MANAGED_ENTRY_ORDER[@]}"; do
             case "${entry}" in
                 canonical=*)
-                    printf '%s sha256=%s\n' "${entry}" "${NEXT_MANAGED_ENTRY_DIGESTS["${entry}"]}"
+                    if [[ "${NEXT_MANAGED_ENTRY_KINDS["${entry}"]}" == "link" ]]; then
+                        printf '%s sha256=%s mode=link\n' "${entry}" "${NEXT_MANAGED_ENTRY_DIGESTS["${entry}"]}"
+                    else
+                        printf '%s sha256=%s\n' "${entry}" "${NEXT_MANAGED_ENTRY_DIGESTS["${entry}"]}"
+                    fi
                     ;;
                 shared-link=*)
                     printf '%s\n' "${entry}"
@@ -386,6 +418,26 @@ function installrelativelink() {
     INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
 }
 
+function installcanonicallink() {
+    local link_target="${1}"
+    local target_path="${2}"
+    local managed_entry="${3}"
+    local managed_digest="${4}"
+    local target_directory="${target_path%/*}"
+
+    if ! preparetarget "${target_path}" "canonical skill link"; then
+        recordskippedmanagement "${managed_entry}"
+        return
+    fi
+
+    if [[ "${DRY_RUN}" -eq 0 ]]; then
+        mkdir -p -- "${target_directory}"
+        ln -s -- "${link_target}" "${target_path}"
+    fi
+    markmanaged "${managed_entry}" "${managed_digest}" "link"
+    INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+}
+
 function installskills() {
     local source_directory="${1}/.claude/skills"
     local source_path
@@ -417,7 +469,11 @@ function installskills() {
 
         FOUND_SKILL_COUNT=$((FOUND_SKILL_COUNT + 1))
         skill_source_paths+=("${source_path}")
-        SOURCE_SKILL_DIGESTS["${skill_name}"]="$(calculateskilldigest "${source_path}")"
+        if [[ "${MODE}" == "local" ]]; then
+            SOURCE_SKILL_DIGESTS["${skill_name}"]="$(calculatelinkdigest "${source_path}")"
+        else
+            SOURCE_SKILL_DIGESTS["${skill_name}"]="$(calculateskilldigest "${source_path}")"
+        fi
         markdesired "canonical=${skill_name}"
         markdesired "shared-link=${skill_name}"
     done
@@ -427,8 +483,17 @@ function installskills() {
         claude_target_path="${DESTINATION}/.claude/skills/${skill_name}"
         managed_entry="canonical=${skill_name}"
 
-        installarchiveentry "${source_path}" "${claude_target_path}" "canonical skill" \
-            "${managed_entry}" "${SOURCE_SKILL_DIGESTS["${skill_name}"]}"
+        if [[ "${MODE}" == "local" ]]; then
+            if [[ "${source_path}" == "${claude_target_path}" ]]; then
+                printf 'Error: Local source and destination skill are the same path: %s\n' "${source_path}" >&2
+                exit 1
+            fi
+            installcanonicallink "${source_path}" "${claude_target_path}" \
+                "${managed_entry}" "${SOURCE_SKILL_DIGESTS["${skill_name}"]}"
+        else
+            installarchiveentry "${source_path}" "${claude_target_path}" "canonical skill" \
+                "${managed_entry}" "${SOURCE_SKILL_DIGESTS["${skill_name}"]}"
+        fi
     done
 
     for source_path in "${skill_source_paths[@]}"; do
@@ -484,7 +549,8 @@ function prunediscontinuedentries() {
         if [[ "${FORCE}" -eq 0 ]]; then
             printf 'Preserved discontinued managed skill: %s (use --force to remove)\n' "${skill_name}"
             if [[ "${canonical_is_managed}" -eq 1 ]]; then
-                markmanaged "${canonical_entry}" "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${canonical_entry}"]}"
+                markmanaged "${canonical_entry}" "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${canonical_entry}"]}" \
+                    "${PREVIOUS_MANAGED_ENTRY_KINDS["${canonical_entry}"]}"
                 SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
             fi
             if [[ "${shared_link_is_managed}" -eq 1 ]]; then
@@ -497,12 +563,20 @@ function prunediscontinuedentries() {
         changed_managed_item=0
         if [[ "${canonical_is_managed}" -eq 1 ]] &&
             { [[ -e "${canonical_target_path}" ]] || [[ -L "${canonical_target_path}" ]]; }; then
-            if [[ -L "${canonical_target_path}" ]] || [[ ! -d "${canonical_target_path}" ]]; then
-                changed_managed_item=1
-            else
-                installed_digest="$(calculateskilldigest "${canonical_target_path}")"
-                if [[ "${installed_digest}" != "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${canonical_entry}"]}" ]]; then
+            if [[ "${PREVIOUS_MANAGED_ENTRY_KINDS["${canonical_entry}"]}" == "link" ]]; then
+                if [[ ! -L "${canonical_target_path}" ]] ||
+                    [[ "$(calculatelinkdigest "$(readlink -- "${canonical_target_path}")")" != \
+                        "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${canonical_entry}"]}" ]]; then
                     changed_managed_item=1
+                fi
+            else
+                if [[ -L "${canonical_target_path}" ]] || [[ ! -d "${canonical_target_path}" ]]; then
+                    changed_managed_item=1
+                else
+                    installed_digest="$(calculateskilldigest "${canonical_target_path}")"
+                    if [[ "${installed_digest}" != "${PREVIOUS_MANAGED_ENTRY_DIGESTS["${canonical_entry}"]}" ]]; then
+                        changed_managed_item=1
+                    fi
                 fi
             fi
         fi
@@ -530,7 +604,12 @@ function prunediscontinuedentries() {
         fi
 
         if [[ "${canonical_is_managed}" -eq 1 ]]; then
-            if [[ -d "${canonical_target_path}" ]] && [[ ! -L "${canonical_target_path}" ]]; then
+            if [[ -L "${canonical_target_path}" ]]; then
+                printf 'Removing discontinued managed canonical link: %s\n' "${canonical_target_path}"
+                if [[ "${DRY_RUN}" -eq 0 ]]; then
+                    rm -- "${canonical_target_path}"
+                fi
+            elif [[ -d "${canonical_target_path}" ]]; then
                 printf 'Removing discontinued managed canonical skill: %s\n' "${canonical_target_path}"
                 if [[ "${DRY_RUN}" -eq 0 ]]; then
                     rm -rf -- "${canonical_target_path}"
@@ -570,7 +649,22 @@ function installglobalinstructions() {
             exit 1
         fi
 
-        installarchiveentry "${source_path}" "${target_path}" "global instructions" "" ""
+        if [[ "${MODE}" == "local" ]]; then
+            if [[ "${source_path}" == "${target_path}" ]]; then
+                printf 'Error: Local source and destination instructions are the same path: %s\n' "${source_path}" >&2
+                exit 1
+            fi
+            if ! preparetarget "${target_path}" "global instructions link"; then
+                continue
+            fi
+            if [[ "${DRY_RUN}" -eq 0 ]]; then
+                mkdir -p -- "${target_path%/*}"
+                ln -s -- "${source_path}" "${target_path}"
+            fi
+            INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+        else
+            installarchiveentry "${source_path}" "${target_path}" "global instructions" "" ""
+        fi
     done
 }
 
@@ -578,7 +672,12 @@ while [[ $# -gt 0 ]]; do
     case "${1}" in
         -h|--help)
             checkexpectedargs "${1}" "${2--}"
-            printhelp
+            printhelp 0
+            ;;
+        -m|--mode)
+            checkargsvalid "${1}" "${2-}"
+            MODE="${2}"
+            shift 2
             ;;
         -r|--ref)
             checkargsvalid "${1}" "${2-}"
@@ -602,13 +701,27 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             printf 'Error: Unknown parameter "%s".\n' "${1}" >&2
-            printhelp
+            printhelp 1
             ;;
     esac
 done
 
+if [[ "${MODE}" != "local" ]] && [[ "${MODE}" != "remote" ]]; then
+    invalidargument "--mode" "${MODE}"
+fi
+
 if [[ ! "${REF}" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "${REF}" == *..* ]]; then
     invalidargument "--ref" "${REF}"
+fi
+
+if [[ "${MODE}" == "local" ]]; then
+    REF="local"
+    SOURCE_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+    DESTINATION="$(cd -- "${DESTINATION}" && pwd -P)"
+    if [[ "${SOURCE_DIRECTORY}" == "${DESTINATION}" ]]; then
+        printf 'Error: Local source and destination must differ to protect the checkout.\n' >&2
+        exit 1
+    fi
 fi
 
 STATE_DIRECTORY="${DESTINATION}/.local/state/install-ia-skills"
@@ -618,14 +731,16 @@ checkdependencies
 trap cleanup EXIT
 loadstate
 
-TEMP_DIRECTORY="$(mktemp -d)"
-ARCHIVE_PATH="${TEMP_DIRECTORY}/dotfiles.tar.gz"
-SOURCE_DIRECTORY="${TEMP_DIRECTORY}/source"
-ARCHIVE_URL="https://codeload.github.com/${REPOSITORY}/tar.gz/${REF}"
+if [[ "${MODE}" == "remote" ]]; then
+    TEMP_DIRECTORY="$(mktemp -d)"
+    ARCHIVE_PATH="${TEMP_DIRECTORY}/dotfiles.tar.gz"
+    SOURCE_DIRECTORY="${TEMP_DIRECTORY}/source"
+    ARCHIVE_URL="https://codeload.github.com/${REPOSITORY}/tar.gz/${REF}"
 
-mkdir -p -- "${SOURCE_DIRECTORY}"
-downloadarchive "${ARCHIVE_URL}" "${ARCHIVE_PATH}"
-tar -xzf "${ARCHIVE_PATH}" -C "${SOURCE_DIRECTORY}" --strip-components=1
+    mkdir -p -- "${SOURCE_DIRECTORY}"
+    downloadarchive "${ARCHIVE_URL}" "${ARCHIVE_PATH}"
+    tar -xzf "${ARCHIVE_PATH}" -C "${SOURCE_DIRECTORY}" --strip-components=1
+fi
 
 installskills "${SOURCE_DIRECTORY}"
 

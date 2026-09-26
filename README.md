@@ -8,7 +8,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 - [My linux configurations (or Dotfiles)](#my-linux-configurations-or-dotfiles)
     - [To install them](#to-install-them)
-    - [Install AI skills on Windows](#install-ai-skills-on-windows)
+    - [Install AI skills](#install-ai-skills)
     - [Python scripts environment](#python-scripts-environment)
       - [Install Poetry (if not already installed)](#install-poetry-if-not-already-installed)
       - [Create the virtual environment](#create-the-virtual-environment)
@@ -368,7 +368,34 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       ```
 
 
-### Install AI skills on Windows
+### Install AI skills
+
+Both installers support local links, remote copies from GitHub, a selected
+revision, a destination home, a dry run, and explicit replacement with `force`.
+The Bash installer defaults to remote mode; the Windows installer defaults to
+local mode. Without `force`, existing paths are preserved. With `force`, current
+skill paths are replaced and discontinued managed skills are removed only when
+their installed content or link is unchanged. Modified discontinued skills are
+preserved and removed from the control file.
+
+With the Bash script, install from GitHub in remote mode:
+
+```bash
+bash install-ia-skills.sh --mode remote --dry-run
+bash install-ia-skills.sh --mode remote
+```
+
+To link a separate local checkout on Linux, run
+`bash install-ia-skills.sh --mode local --destination PATH`. The source is the
+directory containing the script. The source and destination must differ; when
+this repository is the home directory itself, the skills are already in place
+and local installation is unnecessary. To use remote mode without a checkout,
+download just the Bash script from this repository first:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/evandrocoan/dotfiles/master/install-ia-skills.sh -o /tmp/install-ia-skills.sh
+bash /tmp/install-ia-skills.sh --mode remote
+```
 
 From PowerShell in this checkout, link its skills into the Windows user profile:
 
@@ -404,12 +431,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -Mode Remote
 ```
 
 Use `-Destination 'C:\path\to\another\home'` to target a different Windows user
-home. Both modes preserve existing paths, including Claude's `skills\synced`;
-warnings identify conflicts to inspect manually. To switch modes or refresh a
-remote copy, remove only the affected installed skill paths and run the desired
-mode again. Leave unrelated entries such as `skills\synced` and Codex's `.system`
-skills in place. If Windows denies symbolic-link creation, enable Developer Mode
-or run PowerShell as administrator.
+home. Use `-Force` on Windows or `--force` on Linux to replace installed entries
+or switch modes; preview the changes with `-DryRun` or `--dry-run` first. The
+installers never select Claude's `skills\synced` or Codex's `.system` skills.
+Windows keeps its control file at
+`%USERPROFILE%\.local\state\install-ia-skills\windows-manifest.json`; Bash uses
+`~/.local/state/install-ia-skills/manifest`. Keep using the same installer for
+updates to a given destination because these control files are independent. If
+Windows denies symbolic-link creation, enable Developer Mode or run PowerShell
+as administrator.
 
 ### Python scripts environment
 
