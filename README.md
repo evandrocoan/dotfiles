@@ -8,7 +8,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 - [My linux configurations (or Dotfiles)](#my-linux-configurations-or-dotfiles)
     - [To install them](#to-install-them)
-    - [Use local AI skills on Windows](#use-local-ai-skills-on-windows)
+    - [Install AI skills on Windows](#install-ai-skills-on-windows)
     - [Python scripts environment](#python-scripts-environment)
       - [Install Poetry (if not already installed)](#install-poetry-if-not-already-installed)
       - [Create the virtual environment](#create-the-virtual-environment)
@@ -368,30 +368,48 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       ```
 
 
-### Use local AI skills on Windows
+### Install AI skills on Windows
 
-Keep this repository checked out anywhere on a Windows drive. From PowerShell in
-the checkout, preview and create links into the Windows user profile:
+From PowerShell in this checkout, link its skills into the Windows user profile:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1 -DryRun
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1
 ```
 
-[The Windows installer](install-ia-skills-windows.ps1) links each skill from the
-checkout into `%USERPROFILE%\.claude\skills` and adds a relative link for Codex
-under `%USERPROFILE%\.agents\skills`. It also links the shared global
-instructions for Claude, Codex, and Copilot. It does not download or copy skill
-files, replace existing paths, or touch Claude's `skills\synced` directory.
-Warnings identify paths that need manual inspection before they can be linked.
+[The Windows installer](install-ia-skills-windows.ps1) defaults to `-Mode Local`:
+it links each skill from this checkout into `%USERPROFILE%\.claude\skills`,
+adds a relative link for Codex under `%USERPROFILE%\.agents\skills`, and links
+the shared global instructions for Claude, Codex, and Copilot. Keep the checkout
+at its current path; edits and `git pull` updates then flow through the links.
+Run the installer again after adding a new skill.
+
+To install without relying on a local checkout, use `-Mode Remote`. This mode
+downloads the selected GitHub ref and copies the skill directories and global
+instructions into the Windows profile. It still creates relative links for Codex:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1 -Mode Remote -DryRun
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1 -Mode Remote
+```
+
+Use `-Ref branch-or-tag` to select another GitHub revision. Remote dry runs also
+download the archive so they can list the skills it contains. The script can be
+downloaded and run by itself; a checkout is needed only for local mode:
+
+```powershell
+$installer = Join-Path $env:TEMP 'install-ia-skills-windows.ps1'
+Invoke-WebRequest 'https://raw.githubusercontent.com/evandrocoan/dotfiles/master/install-ia-skills-windows.ps1' -OutFile $installer -UseBasicParsing
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -Mode Remote
+```
 
 Use `-Destination 'C:\path\to\another\home'` to target a different Windows user
-home. Keep the checkout available at its current path: the links follow edits and
-`git pull` updates there. Run the installer again after adding a new skill. To
-remove the integration, delete only the symbolic links it created in the
-profile directories; keep other entries such as `skills\synced` and Codex's
-`.system` skills. If Windows denies symbolic-link creation, enable Developer
-Mode or run PowerShell as administrator.
+home. Both modes preserve existing paths, including Claude's `skills\synced`;
+warnings identify conflicts to inspect manually. To switch modes or refresh a
+remote copy, remove only the affected installed skill paths and run the desired
+mode again. Leave unrelated entries such as `skills\synced` and Codex's `.system`
+skills in place. If Windows denies symbolic-link creation, enable Developer Mode
+or run PowerShell as administrator.
 
 ### Python scripts environment
 
