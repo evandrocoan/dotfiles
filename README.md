@@ -8,6 +8,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
 
 - [My linux configurations (or Dotfiles)](#my-linux-configurations-or-dotfiles)
     - [To install them](#to-install-them)
+    - [Use local AI skills on Windows](#use-local-ai-skills-on-windows)
     - [Python scripts environment](#python-scripts-environment)
       - [Install Poetry (if not already installed)](#install-poetry-if-not-already-installed)
       - [Create the virtual environment](#create-the-virtual-environment)
@@ -366,6 +367,31 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       OCO_HOOK_AUTO_UNCOMMENT=false
       ```
 
+
+### Use local AI skills on Windows
+
+Keep this repository checked out anywhere on a Windows drive. From PowerShell in
+the checkout, preview and create links into the Windows user profile:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1 -DryRun
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1
+```
+
+[The Windows installer](install-ia-skills-windows.ps1) links each skill from the
+checkout into `%USERPROFILE%\.claude\skills` and adds a relative link for Codex
+under `%USERPROFILE%\.agents\skills`. It also links the shared global
+instructions for Claude, Codex, and Copilot. It does not download or copy skill
+files, replace existing paths, or touch Claude's `skills\synced` directory.
+Warnings identify paths that need manual inspection before they can be linked.
+
+Use `-Destination 'C:\path\to\another\home'` to target a different Windows user
+home. Keep the checkout available at its current path: the links follow edits and
+`git pull` updates there. Run the installer again after adding a new skill. To
+remove the integration, delete only the symbolic links it created in the
+profile directories; keep other entries such as `skills\synced` and Codex's
+`.system` skills. If Windows denies symbolic-link creation, enable Developer
+Mode or run PowerShell as administrator.
 
 ### Python scripts environment
 
