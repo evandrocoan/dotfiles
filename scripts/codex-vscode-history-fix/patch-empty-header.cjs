@@ -6,17 +6,36 @@ const { randomUUID } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const { installedExtension } = require('./patch.cjs');
 
-const headerAsset = 'header-4be255c13706.js';
-const stockImport = 'import{r as k,t as A}from"./codex-home-announcements-bd7d6b208bdb.js";function j(){';
-const patchedImport = `import{r as k,t as A}from"./codex-home-announcements-bd7d6b208bdb.js";import{Header as H}from"./${headerAsset}";function j(){`;
+const variants = [
+  { announcements: 'codex-home-announcements-bd7d6b208bdb.js', headerAsset: 'header-4be255c13706.js' },
+  { announcements: 'codex-home-announcements-542acae4cec5.js', headerAsset: 'header-1cd60bc1da4f.js' },
+].map(({ announcements, headerAsset }) => ({
+  headerAsset,
+  stockImport: `import{r as k,t as A}from"./${announcements}";function j(){`,
+  patchedImport: `import{r as k,t as A}from"./${announcements}";import{Header as H}from"./${headerAsset}";function j(){`,
+}));
 const stockBody = 'children:[s,(0,F.jsx)(`div`,{className:`flex h-full flex-col`';
 const patchedBody = 'children:[s,(0,F.jsx)(H,{}),(0,F.jsx)(`div`,{className:`flex h-full flex-col`';
-const edits = [
-  { stock: stockImport, patched: patchedImport },
-  { stock: stockBody, patched: patchedBody },
-];
+
+function variantFor(source) {
+  const matches = variants.filter(variant => source.includes(variant.stockImport)
+    || source.includes(variant.patchedImport));
+  if (matches.length !== 1) {
+    throw new Error('Unsupported or ambiguous new-tab bundle. Inspect the new extension before adapting the patch.');
+  }
+  return matches[0];
+}
+
+function editsFor(source) {
+  const variant = variantFor(source);
+  return [
+    { stock: variant.stockImport, patched: variant.patchedImport },
+    { stock: stockBody, patched: patchedBody },
+  ];
+}
 
 function normalize(source) {
+  const edits = editsFor(source);
   const states = edits.map(edit => {
     const stockCount = source.split(edit.stock).length - 1;
     const patchedCount = source.split(edit.patched).length - 1;
@@ -32,6 +51,7 @@ function normalize(source) {
 }
 
 function patchSource(source) {
+  const edits = editsFor(source);
   return edits.reduce((result, edit) => result.replace(edit.stock, edit.patched), normalize(source));
 }
 
@@ -59,12 +79,13 @@ function loadTarget(directory = installedExtension()) {
       return source.includes(`/extension/panel/new`) && source.includes(`./${path.basename(target.file)}`);
     });
   if (routeOwners.length !== 1) throw new Error('Cannot verify the new-tab route owns this bundle.');
-  const headerFile = fs.realpathSync(path.join(assets, headerAsset));
+  const variant = variantFor(target.source);
+  const headerFile = fs.realpathSync(path.join(assets, variant.headerAsset));
   if (!headerFile.startsWith(root + path.sep)
     || !fs.readFileSync(headerFile, 'utf8').includes('export{t as Header}')) {
     throw new Error('Cannot verify the existing navigation header export.');
   }
-  return { ...target, version: manifest.version };
+  return { ...target, version: manifest.version, variant };
 }
 
 function validateSyntax(source) {
@@ -139,7 +160,7 @@ function main(args) {
   }
 }
 
-module.exports = { headerAsset, edits, normalize, patchSource, loadTarget, update };
+module.exports = { variants, editsFor, normalize, patchSource, loadTarget, update };
 if (require.main === module) {
   try { main(process.argv.slice(2)); }
   catch (error) { console.error(`Error: ${error.message}`); process.exitCode = 1; }

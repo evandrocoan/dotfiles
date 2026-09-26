@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const test = require('node:test');
 const { stock, patched, normalize, patchSource, loadTarget, update } = require('./patch-first-run.cjs');
 
-const target = loadTarget();
+const target = loadTarget(process.env.CODEX_EXTENSION_DIR);
 const original = normalize(target.source);
 const changed = patchSource(original);
 

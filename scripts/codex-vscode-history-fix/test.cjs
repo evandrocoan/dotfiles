@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const test = require('node:test');
 const { LIMIT, edits, normalize, patchSource, installedExtension, loadTarget, update } = require('./patch.cjs');
 
-const target = loadTarget();
+const target = loadTarget(process.env.CODEX_EXTENSION_DIR);
 const stock = normalize(target.source);
 const patched = patchSource(stock);
 const assets = path.dirname(target.file);
