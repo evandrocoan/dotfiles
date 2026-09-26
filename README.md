@@ -28,6 +28,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Check health, storage and recovery](#check-health-storage-and-recovery)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
+      - [Manual XFCE recovery](#manual-xfce-recovery)
+      - [Shared XFWM launcher](#shared-xfwm-launcher)
       - [Recover VS Code from a stuck Crashpad handler](#recover-vs-code-from-a-stuck-crashpad-handler)
       - [Increase the VS Code GPU watchdog timeout](#increase-the-vs-code-gpu-watchdog-timeout)
       - [Recover Chrome from a stuck Crashpad handler](#recover-chrome-from-a-stuck-crashpad-handler)
@@ -995,6 +997,69 @@ Review the proposed package removal list. Historical files under `/var/log/atop`
 and `/var/cache/netdata` can be removed separately once they are no longer needed.
 
 ### Fix system crash
+
+#### Manual XFCE recovery
+
+[`scripts/recover_xfce.py`](scripts/recover_xfce.py) provides manual recovery of the configuration
+daemon, window manager, settings daemon, desktop and custom panel. It requires a surviving local
+XFCE X11 session and X server; it does not restore applications or rebuild a terminated login.
+Keep it beside `launch_xfwm4.py` under `~/scripts/`. No service installation or enablement is needed.
+Run as the desktop user, without sudo, from any working directory:
+
+| Command | Purpose |
+| --- | --- |
+| `python3 ~/scripts/recover_xfce.py --help` | Show options and component choices |
+| `python3 ~/scripts/recover_xfce.py` | Read-only diagnosis; no component or lock is created |
+| `python3 ~/scripts/recover_xfce.py --component panel` | Diagnose the panel and its prerequisites |
+| `python3 ~/scripts/recover_xfce.py --start` | Start missing components in dependency order |
+| `python3 ~/scripts/recover_xfce.py --start --component panel` | Recover the panel and its configuration/WM/settings prerequisites |
+
+Start with diagnosis: `running` means the existing component was verified, `absent` means it can be
+considered for startup, and `blocked` means a check prevented that decision. An absent component in
+diagnostic output has not been started. Add `--start` to recover all missing components, or combine
+it with `--component` to select a component and its prerequisites. Selecting the panel does not
+start the desktop. After recovery, run diagnosis again to inspect the resulting state.
+
+Exit status `0` means diagnosis completed or the selected recovery completed; diagnosis can return
+`0` while components are absent. Status `1` reports a refused or unconfirmed operation, and `2`
+reports invalid command-line arguments. Healthy components are preserved. Unresponsive services,
+ambiguous ownership or an outstanding unit block new starts. A failure stops the remaining sequence
+and reports completed steps; it never kills, replaces or rolls back components. Readiness confirms
+process identity and service responsiveness, not the visual state of every window or panel plugin.
+
+The command uses the configured local/vendor xfconf daemon and the custom panel with its plugin
+paths. Manual recovery disables session-manager registration for new GUI processes. It shares the
+existing XFWM lock with [`launch_xfwm4.py`](scripts/launch_xfwm4.py), including while other components
+are starting. Direct launches and D-Bus activation remain outside that cooperative lock.
+
+New components use transient user units named `xfce-recovery-COMPONENT-SESSION.service`; the WM
+retains `xfwm4-launch-SESSION.service`. Use the exact unit reported by an error with
+`systemctl --user status UNIT` and `journalctl --user -u UNIT`. No unit is enabled for login, and
+collection after process exit is not a logout hook. These scripts do not modify startup or saved
+sessions. Startup tests use isolated fixtures; development validation on the real desktop is
+limited to read-only diagnosis.
+
+#### Shared XFWM launcher
+
+[`scripts/launch_xfwm4.py`](scripts/launch_xfwm4.py) checks the active local XFCE X11 session.
+Run `python3 ~/scripts/launch_xfwm4.py` for a read-only diagnosis. To start an absent window manager,
+run `python3 ~/scripts/launch_xfwm4.py --start` as the desktop user, without sudo. It preserves an
+existing manager and refuses ambiguous sessions, unverifiable ownership or an outstanding launch.
+It currently supports one graphical session and one X screen (multiple monitors on that screen
+are supported).
+
+Startup uses a per-session lock and a transient user unit named `xfwm4-launch-SESSION.service`.
+If startup is not confirmed, inspect that exact unit with `systemctl --user status UNIT` and
+`journalctl --user -u UNIT`; the script does not retry, replace processes or undo a partial start.
+The unit is collected after the component exits, not automatically at logout. No permanent service,
+timer or watcher is installed. Keep the runtime lock file in place while the user session runs.
+
+Creating or updating this script does not change XFCE login, saved-session restoration or restart
+commands. Those paths still need deliberate integration before all XFWM starts share the lock;
+direct XFWM invocations can bypass it. The existing XFWM binary and settings are retained.
+`--sm-client-id` is reserved for a caller inside the verified graphical session with its matching
+`SESSION_MANAGER`; recovery outside that context disables session-manager registration. Live startup
+has not been exercised during development; automated tests use isolated fixtures.
 
 #### Recover VS Code from a stuck Crashpad handler
 
