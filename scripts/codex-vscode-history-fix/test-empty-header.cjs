@@ -6,11 +6,12 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const test = require('node:test');
-const { headerAsset, edits, normalize, patchSource, loadTarget, update } = require('./patch-empty-header.cjs');
+const { variants, editsFor, normalize, patchSource, loadTarget, update } = require('./patch-empty-header.cjs');
 
-const target = loadTarget();
+const target = loadTarget(process.env.CODEX_EXTENSION_DIR);
 const original = normalize(target.source);
 const changed = patchSource(original);
+const edits = editsFor(original);
 
 function newTabTree(source) {
   const start = source.indexOf('function j(){');
@@ -64,8 +65,17 @@ test('the original empty tab omits navigation; the patch renders it above chat',
 test('the new tab imports the existing initialized header export', () => {
   assert.ok(changed.includes(edits[0].patched));
   assert.ok(!original.includes(edits[0].patched));
-  const header = fs.readFileSync(path.join(path.dirname(target.file), headerAsset), 'utf8');
+  const header = fs.readFileSync(path.join(path.dirname(target.file), target.variant.headerAsset), 'utf8');
   assert.ok(header.includes('export{t as Header}'));
+});
+
+test('both inspected bundle variants use their matching initialized header', () => {
+  for (const variant of variants) {
+    const source = original.replace(target.variant.stockImport, variant.stockImport);
+    assert.ok(source.includes(variant.stockImport));
+    assert.ok(patchSource(source).includes(variant.patchedImport));
+    assert.equal(normalize(patchSource(source)), source);
+  }
 });
 
 test('patching is idempotent and rejects missing, duplicated, or partial anchors', () => {
@@ -87,7 +97,7 @@ test('apply and restore preserve the original and refuse unrelated edits', conte
   fs.writeFileSync(file, original);
   fs.writeFileSync(path.join(assets, 'app-initial-test.js'),
     'route("/extension/panel/new");import("./new-thread-panel-page-test.js")');
-  fs.writeFileSync(path.join(assets, headerAsset), 'export{t as Header}');
+  fs.writeFileSync(path.join(assets, target.variant.headerAsset), 'export{t as Header}');
   assert.equal(update(loadTarget(root), 'apply').changed, true);
   assert.equal(fs.readFileSync(file, 'utf8'), changed);
   assert.equal(fs.readFileSync(file + '.codex-empty-header-original', 'utf8'), original);
