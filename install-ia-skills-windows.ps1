@@ -121,6 +121,12 @@ function Remove-InstalledPath {
     }
     if ($item.PSIsContainer -and -not (Test-IsLink $item)) {
         Remove-Item -LiteralPath $Path -Recurse -Force
+    } elseif (Test-IsLink $item) {
+        if ($item.PSIsContainer) {
+            [System.IO.Directory]::Delete($Path, $false)
+        } else {
+            [System.IO.File]::Delete($Path)
+        }
     } else {
         Remove-Item -LiteralPath $Path -Force
     }
@@ -308,6 +314,7 @@ function Set-SkillLink {
 
     $parent = Split-Path -Parent $LinkPath
     Ensure-Directory $parent
+    $resolvedTarget = Get-NormalizedTarget $LinkPath $Target
     # Enumerating the parent also finds dangling symbolic links, which Test-Path misses.
     $existing = Get-ExistingItem $LinkPath
     $managedKey = if ($ManagedType) { "$ManagedType=$ManagedName" } else { '' }
@@ -319,10 +326,10 @@ function Set-SkillLink {
             if ($managedKey) {
                 Preserve-PreviousEntry $managedKey
             }
-            if ($existing.LinkType -eq 'SymbolicLink' -and
+            if ((Test-IsLink $existing) -and
                 $null -ne $existingTarget -and
                 (Get-NormalizedTarget $LinkPath $existingTarget) -ieq
-                (Get-NormalizedTarget $LinkPath $Target)) {
+                $resolvedTarget) {
                 Write-Host "Already linked: $LinkPath"
                 return $true
             }
@@ -334,10 +341,18 @@ function Set-SkillLink {
     }
 
     if ($DryRun) {
-        Write-Host "Would link: $LinkPath -> $Target"
+        Write-Host "Would link: $LinkPath -> $resolvedTarget"
     } else {
-        New-Item -ItemType SymbolicLink -Path $LinkPath -Target $Target | Out-Null
-        Write-Host "Linked: $LinkPath -> $Target"
+        try {
+            New-Item -ItemType SymbolicLink -Path $LinkPath -Target $resolvedTarget | Out-Null
+        } catch {
+            if ($_.FullyQualifiedErrorId -notlike 'NewItemSymbolicLinkElevationRequired*' -or
+                -not (Test-Path -LiteralPath $resolvedTarget -PathType Container)) {
+                throw
+            }
+            New-Item -ItemType Junction -Path $LinkPath -Target $resolvedTarget | Out-Null
+        }
+        Write-Host "Linked: $LinkPath -> $resolvedTarget"
     }
     if ($managedKey) {
         Add-ManagedEntry $ManagedType $ManagedName 'link' '' $Target

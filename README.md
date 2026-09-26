@@ -406,14 +406,20 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-wind
 
 [The Windows installer](install-ia-skills-windows.ps1) defaults to `-Mode Local`:
 it links each skill from this checkout into `%USERPROFILE%\.claude\skills`,
-adds a relative link for Codex under `%USERPROFILE%\.agents\skills`, and links
+adds a directory link for Codex under `%USERPROFILE%\.agents\skills`, and links
 the shared global instructions for Claude, Codex, and Copilot. Keep the checkout
 at its current path; edits and `git pull` updates then flow through the links.
 Run the installer again after adding a new skill.
+To replace existing remote copies with links to this checkout, open PowerShell
+as administrator (or enable Windows Developer Mode) and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1 -Mode Local -Force
+```
 
 To install without relying on a local checkout, use `-Mode Remote`. This mode
 downloads the selected GitHub ref and copies the skill directories and global
-instructions into the Windows profile. It still creates relative links for Codex:
+instructions into the Windows profile. It still creates directory links for Codex:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-ia-skills-windows.ps1 -Mode Remote -DryRun
@@ -438,8 +444,9 @@ Windows keeps its control file at
 `%USERPROFILE%\.local\state\install-ia-skills\windows-manifest.json`; Bash uses
 `~/.local/state/install-ia-skills/manifest`. Keep using the same installer for
 updates to a given destination because these control files are independent. If
-Windows denies symbolic-link creation, enable Developer Mode or run PowerShell
-as administrator.
+Windows denies symbolic-link creation for directory skills, the installer uses
+junctions instead. File links in local mode still require Developer Mode or an
+administrator PowerShell session.
 
 ### Python scripts environment
 
