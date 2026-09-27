@@ -9,11 +9,12 @@ ISOLATED_BASE=''
 ISOLATED_TREE=''
 DRY_RUN=0
 CLEAN_TREE=0
-GIT_DIRECTORY_MOVED=0
 PULL_CHILD_PID=0
+PULL_PROCESS_GROUP=0
+PULL_INTERRUPTED=0
+PULL_STOP_FAILED=0
 ASSUME_UNCHANGED_BEFORE=''
 ISOLATED_GIT_ARGUMENTS=()
-PENDING_STATE_REMAINS=0
 
 function printhelp() {
     local exit_status="${1}"
@@ -24,8 +25,10 @@ cat >&1 <<EOF
 
     Update a repository whose work tree must never be written by Git: move its
     .git into a fresh isolated directory, materialize a clean tree there, run
-    git pull --rebase inside it, then return .git to the repository root on
-    every exit path, including failure, rebase conflict and interruption.
+    git pull --rebase inside it, then return .git to the repository root when
+    the supervised pull process group has stopped and any unfinished operation
+    was aborted.
+    Otherwise .git stays isolated for manual recovery.
 
     Nothing in the repository root is reverted, deleted or stashed. Reviewing
     the resulting difference and deciding what to keep stays a manual step.
@@ -86,6 +89,8 @@ function setisolatedgitarguments() {
         -c fetch.recurseSubmodules=no
         -c submodule.recurse=false
         -c core.hooksPath=/dev/null
+        -c maintenance.auto=false
+        -c gc.auto=0
     )
 }
 
@@ -151,9 +156,29 @@ function checkupstream() {
 
 # Runs after every other read, so the script's own inspection cannot create the
 # lock this refuses on.
+function findgitlock() {
+    local git_directory="${1}" lock_file
+    if ! lock_file="$(find "${git_directory}" -path "${git_directory}/objects" -prune -o -name '*.lock' -print -quit)"; then
+        return 1
+    fi
+    if [[ -z "${lock_file}" ]] && [[ -d "${git_directory}/objects/pack" ]]; then
+        if ! lock_file="$(find "${git_directory}/objects/pack" -name '*.lock' -print -quit)"; then
+            return 1
+        fi
+    fi
+    if [[ -z "${lock_file}" ]] && [[ -d "${git_directory}/objects/info" ]]; then
+        if ! lock_file="$(find "${git_directory}/objects/info" -name '*.lock' -print -quit)"; then
+            return 1
+        fi
+    fi
+    printf '%s' "${lock_file}"
+}
+
 function checknolocks() {
     local lock_file
-    lock_file="$(find "${REPOSITORY}/.git" -path "${REPOSITORY}/.git/objects" -prune -o -name '*.lock' -print -quit)"
+    if ! lock_file="$(findgitlock "${REPOSITORY}/.git")"; then
+        fail 'Could not inspect Git locks in the repository root.'
+    fi
     if [[ -n "${lock_file}" ]]; then
         fail "Another Git process is active in the repository root (\"${lock_file}\"). Wait for it to finish."
     fi
@@ -223,7 +248,6 @@ function movegitdirectory() {
         fail "The isolated tree \"${ISOLATED_TREE}\" already holds a .git directory."
     fi
     mv -T -- "${REPOSITORY}/.git" "${ISOLATED_TREE}/.git"
-    GIT_DIRECTORY_MOVED=1
     printf 'Isolated tree:   %s\n' "${ISOLATED_TREE}"
 }
 
@@ -235,8 +259,23 @@ function materializecleantree() {
 function runpull() {
     local pull_status=0
     assertisolated
+    # Job control gives the pull and its descendants a separate process group.
+    # The exit handler can then stop all of them without signalling this shell.
+    trap 'PULL_INTERRUPTED=130' INT
+    trap 'PULL_INTERRUPTED=143' TERM
+    trap 'PULL_INTERRUPTED=129' HUP
+    set -m
     git "${ISOLATED_GIT_ARGUMENTS[@]}" pull --rebase &
     PULL_CHILD_PID="${!}"
+    PULL_PROCESS_GROUP="${PULL_CHILD_PID}"
+    printf '%s\n' "${PULL_PROCESS_GROUP}" > "${ISOLATED_TREE}/pull-process-group"
+    set +m
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
+    if (( PULL_INTERRUPTED != 0 )); then
+        exit "${PULL_INTERRUPTED}"
+    fi
     set +e
     wait "${PULL_CHILD_PID}"
     pull_status="${?}"
@@ -248,57 +287,147 @@ function runpull() {
     fi
 }
 
+# Linux process state distinguishes live members from orphaned zombies, which
+# cannot access the database but can remain visible until init reaps them.
+function processgroupisactive() {
+    local stat_file stat_line stat_tail state parent_pid process_group rest
+    if [[ ! -d /proc ]]; then
+        return 2
+    fi
+    for stat_file in /proc/[0-9]*/stat; do
+        if [[ ! -r "${stat_file}" ]]; then
+            if [[ -e "${stat_file}" ]]; then
+                return 2
+            fi
+            continue
+        fi
+        if ! IFS= read -r stat_line < "${stat_file}"; then
+            if [[ -e "${stat_file}" ]]; then
+                return 2
+            fi
+            continue
+        fi
+        stat_tail="${stat_line##*) }"
+        read -r state parent_pid process_group rest <<< "${stat_tail}"
+        if [[ "${process_group}" == "${PULL_PROCESS_GROUP}" ]] && [[ "${state}" != Z ]] && [[ "${state}" != X ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 function stoppullchild() {
-    if (( PULL_CHILD_PID == 0 )); then
+    local attempt group_status
+    if (( PULL_PROCESS_GROUP == 0 )); then
         return 0
     fi
-    if [[ -d "/proc/${PULL_CHILD_PID}" ]]; then
-        kill -TERM "${PULL_CHILD_PID}" || true
+    if processgroupisactive; then
+        kill -TERM -- "-${PULL_PROCESS_GROUP}" || true
+    else
+        group_status="${?}"
+        if (( group_status != 1 )); then
+            printf 'Error: cannot inspect pull process group %s; the Git directory remains at "%s/.git".\n' \
+                "${PULL_PROCESS_GROUP}" "${ISOLATED_TREE}" >&2
+            printf 'See "Recover an interrupted isolated pull" in README.md before returning it.\n' >&2
+            PULL_STOP_FAILED=1
+            return 1
+        fi
     fi
-    wait "${PULL_CHILD_PID}" || true
-    PULL_CHILD_PID=0
+    for (( attempt = 0; attempt < 10; attempt++ )); do
+        if processgroupisactive; then
+            sleep 0.1
+            continue
+        else
+            group_status="${?}"
+        fi
+        if (( group_status == 1 )); then
+            if (( PULL_CHILD_PID != 0 )); then
+                wait "${PULL_CHILD_PID}" || true
+                PULL_CHILD_PID=0
+            fi
+            if ! rm -f -- "${ISOLATED_TREE}/pull-process-group"; then
+                printf 'Error: cannot clear the pull process marker in "%s"; the Git directory remains at "%s/.git".\n' \
+                    "${ISOLATED_TREE}" "${ISOLATED_TREE}" >&2
+                printf 'See "Recover an interrupted isolated pull" in README.md before returning it.\n' >&2
+                PULL_STOP_FAILED=1
+                return 1
+            fi
+            PULL_PROCESS_GROUP=0
+            return 0
+        fi
+        break
+    done
+    printf 'Error: pull process group %s may still use the Git directory; it remains isolated at "%s/.git".\n' \
+        "${PULL_PROCESS_GROUP}" "${ISOLATED_TREE}" >&2
+    printf 'See "Recover an interrupted isolated pull" in README.md before returning it.\n' >&2
+    PULL_STOP_FAILED=1
+    return 1
 }
 
 # A partially replayed rebase must never reach the repository root, so the
 # isolated rebase is aborted first. That returns the branch to its pre-rebase
 # tip and keeps every local commit.
 function abortpendingoperation() {
-    local marker
+    local marker abort_failed=0
     if [[ -d "${ISOLATED_TREE}/.git/rebase-merge" ]] || [[ -d "${ISOLATED_TREE}/.git/rebase-apply" ]]; then
-        isolatedgit rebase --abort || true
+        if ! isolatedgit rebase --abort; then
+            abort_failed=1
+        fi
     fi
     if [[ -e "${ISOLATED_TREE}/.git/MERGE_HEAD" ]]; then
-        isolatedgit merge --abort || true
+        if ! isolatedgit merge --abort; then
+            abort_failed=1
+        fi
     fi
     for marker in rebase-merge rebase-apply MERGE_HEAD; do
         if [[ -e "${ISOLATED_TREE}/.git/${marker}" ]]; then
-            PENDING_STATE_REMAINS=1
+            abort_failed=1
         fi
     done
+    (( abort_failed == 0 ))
 }
 
 function restoregitdirectory() {
-    if (( GIT_DIRECTORY_MOVED == 0 )); then
+    local lock_file
+    # A signal can arrive after either atomic rename and before the next shell
+    # assignment. The directory locations, rather than a flag, decide recovery.
+    if [[ -e "${REPOSITORY}/.git" ]] || [[ -L "${REPOSITORY}/.git" ]]; then
+        if [[ -e "${ISOLATED_TREE}/.git" ]] || [[ -L "${ISOLATED_TREE}/.git" ]]; then
+            printf 'Error: "%s/.git" reappeared while the database remains at "%s/.git".\n' \
+                "${REPOSITORY}" "${ISOLATED_TREE}" >&2
+            printf 'See "Recover an interrupted isolated pull" in README.md; resolve the collision before moving the database.\n' >&2
+            return 1
+        fi
         return 0
     fi
-    abortpendingoperation
-    if [[ -e "${REPOSITORY}/.git" ]]; then
-        printf 'Error: "%s/.git" reappeared, so the database stays in the isolated tree.\n' "${REPOSITORY}" >&2
-        printf 'Recover with: mv -T -- "%s/.git" "%s/.git"\n' "${ISOLATED_TREE}" "${REPOSITORY}" >&2
+    if [[ ! -d "${ISOLATED_TREE}/.git" ]]; then
+        printf 'Error: the Git directory is missing from both "%s" and "%s".\n' \
+            "${REPOSITORY}" "${ISOLATED_TREE}" >&2
+        return 1
+    fi
+    if ! abortpendingoperation; then
+        printf 'Error: the isolated rebase or merge could not be fully aborted; the Git directory remains at "%s/.git".\n' \
+            "${ISOLATED_TREE}" >&2
+        printf 'See "Recover an interrupted isolated pull" in README.md before returning it.\n' >&2
+        return 1
+    fi
+    if ! lock_file="$(findgitlock "${ISOLATED_TREE}/.git")"; then
+        printf 'Error: cannot inspect locks in "%s/.git"; the database remains isolated.\n' "${ISOLATED_TREE}" >&2
+        return 1
+    fi
+    if [[ -n "${lock_file}" ]]; then
+        printf 'Error: the isolated Git directory still has a lock at "%s"; it remains at "%s/.git".\n' \
+            "${lock_file}" "${ISOLATED_TREE}" >&2
+        printf 'See "Recover an interrupted isolated pull" in README.md before returning it.\n' >&2
         return 1
     fi
     if mv -T -- "${ISOLATED_TREE}/.git" "${REPOSITORY}/.git"; then
-        GIT_DIRECTORY_MOVED=0
-        if (( PENDING_STATE_REMAINS == 1 )); then
-            printf 'Warning: the isolated rebase or merge could not be aborted, so "%s/.git" carries unfinished state.\n' "${REPOSITORY}" >&2
-            printf 'The next run will refuse to start. See "Recover an interrupted isolated pull" in README.md.\n' >&2
-            return 1
-        fi
         printf 'Returned the Git directory to "%s/.git".\n' "${REPOSITORY}"
         return 0
     fi
     printf 'Error: could not return the Git directory to "%s".\n' "${REPOSITORY}" >&2
-    printf 'Recover with: mv -T -- "%s/.git" "%s/.git"\n' "${ISOLATED_TREE}" "${REPOSITORY}" >&2
+    printf 'The database remains at "%s/.git". See "Recover an interrupted isolated pull" in README.md.\n' \
+        "${ISOLATED_TREE}" >&2
     return 1
 }
 
@@ -353,8 +482,11 @@ function onexit() {
     # repository root, so signals are ignored for the rest of the handler.
     trap '' INT TERM HUP
     set +e
-    stoppullchild
-    if ! restoregitdirectory; then
+    if (( PULL_STOP_FAILED == 1 )); then
+        exit_status=1
+    elif ! stoppullchild; then
+        exit_status=1
+    elif ! restoregitdirectory; then
         exit_status=1
     fi
     exit "${exit_status}"
@@ -412,6 +544,7 @@ trap 'exit 129' HUP
 movegitdirectory
 materializecleantree
 runpull
+stoppullchild
 restoregitdirectory
 report
 cleanisolatedtree

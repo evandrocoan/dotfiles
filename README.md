@@ -625,8 +625,9 @@ This repository's work tree must never be written by Git: many tracked files are
 read by running applications, the tree carries long-lived uncommitted work, and some paths are
 hidden with `assume-unchanged`. [`scripts/isolated_pull.sh`](./scripts/isolated_pull.sh) therefore
 moves `.git` into a fresh directory under `~/.local/state/isolated-pull`, materializes a clean tree
-there, runs `git pull --rebase` inside it, and returns `.git` to the repository root on every exit
-path, including failure, rebase conflict and interruption.
+there, and runs `git pull --rebase` inside it. It returns `.git` after the supervised pull process
+group stops and any unfinished operation is aborted. If it cannot establish those conditions,
+it leaves `.git` isolated and prints its location for recovery.
 
 ```bash
 #!/usr/bin/env bash
@@ -650,53 +651,72 @@ diff ~/.config/terminator/config ~/.local/state/isolated-pull/run-XXXXXXXX/.conf
 The run also reports every path whose `assume-unchanged` flag the pull dropped, which happens for
 flagged paths the upstream changed. They are deliberately not re-applied, because that would hide
 the change still waiting for review; re-apply them with `git update-index --assume-unchanged <path>`
-once it is done. Pass `--clean` to remove the isolated tree after a successful run, or delete old
-`run-*` and `recover-*` directories under the base when their review is finished. Run the script with `--help` for
-every option and `--dry-run` for the refused preconditions, such as staged changes, an active Git
-lock, a second worktree or an operation already in progress. A client that fetches on a timer, such
-as SmartGit, can hold a lock exactly when a run starts; the run then refuses and names the lock
-file, nothing has moved, and running it again once the client is idle is enough.
+once it is done. Pass `--clean` to remove the isolated tree after a successful run. Manually
+delete an old `run-*` tree only after its `.git` has returned to `~/.git` and its contents are
+reviewed. Run the script with `--help` for every option and `--dry-run` for refused preconditions,
+such as staged changes, an active Git lock, a second worktree or an operation already in progress.
+A client that fetches on a timer, such as SmartGit, may hold a lock when a run starts. The script
+then names the lock without moving `.git`; retry when the client is idle.
+Keep Git clients idle for the whole run: a lock check cannot prevent a new operation from starting
+after the check.
 
 #### Recover an interrupted isolated pull
 
-If `~/.git` is missing, an isolated run did not finish. The database is intact inside its isolated
-tree. The script prints the exact recovery command whenever it is still able to run; after a
-`SIGKILL`, an out-of-memory kill or a power loss it cannot, so recover by hand. Abort any unfinished
-rebase **inside the isolated tree**, before returning the database:
+If `~/.git` is missing, an isolated run did not finish safely. The database remains inside its
+isolated tree. A failed abort, an active pull descendant, or a collision keeps it there; the script
+prints the location when it can. After `SIGKILL`, an out-of-memory kill, or power loss, first make
+sure no Git or transport process still uses that tree. Stop Git clients while recovering. If the
+script left a `pull-process-group` file, the commands below refuse recovery while that group has a
+live member. Without that file, inspect running Git and transport processes yourself before moving
+the database. Locate the tree that actually contains `.git`, abort any unfinished operation
+**inside that tree**, and refuse a remaining lock or occupied destination:
+
+If the script reports a collision, `~/.git` exists alongside the isolated database. Identify and
+resolve that unexpected directory before running the commands; never overwrite it blindly.
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-tree="$(ls -dt ~/.local/state/isolated-pull/run-* | head -1)"
-if [[ -e "${tree}/.git/rebase-merge" ]] || [[ -e "${tree}/.git/rebase-apply" ]]; then
-    git --git-dir="${tree}/.git" --work-tree="${tree}" rebase --abort
+TREE=''
+for GIT_DIRECTORY in "$HOME"/.local/state/isolated-pull/run-*/.git; do
+    [[ -d "${GIT_DIRECTORY}" ]] || continue
+    if [[ -n "${TREE}" ]]; then
+        printf 'More than one isolated Git directory exists; select the correct run manually.\n' >&2
+        exit 1
+    fi
+    TREE="${GIT_DIRECTORY%/.git}"
+done
+[[ -n "${TREE}" ]] || { printf 'No isolated Git directory found.\n' >&2; exit 1; }
+[[ ! -e "$HOME/.git" && ! -L "$HOME/.git" ]] || {
+    printf 'The home Git directory already exists; resolve the collision first.\n' >&2
+    exit 1
+}
+if [[ -f "${TREE}/pull-process-group" ]]; then
+    GROUP="$(< "${TREE}/pull-process-group")"
+    [[ "${GROUP}" =~ ^[1-9][0-9]*$ ]] || { printf 'Invalid process group marker.\n' >&2; exit 1; }
+    LIVE="$(ps -eo pgid=,stat=,pid=,args= | awk -v group="${GROUP}" '$1 == group && $2 !~ /^Z/ {print}')"
+    [[ -z "${LIVE}" ]] || { printf 'Pull processes still run:\n%s\n' "${LIVE}" >&2; exit 1; }
 fi
-mv -T -- "${tree}/.git" ~/.git
+if [[ -e "${TREE}/.git/rebase-merge" ]] || [[ -e "${TREE}/.git/rebase-apply" ]]; then
+    git --git-dir="${TREE}/.git" --work-tree="${TREE}" rebase --abort
+fi
+if [[ -e "${TREE}/.git/MERGE_HEAD" ]]; then
+    git --git-dir="${TREE}/.git" --work-tree="${TREE}" merge --abort
+fi
+for MARKER in rebase-merge rebase-apply MERGE_HEAD; do
+    [[ ! -e "${TREE}/.git/${MARKER}" ]] || {
+        printf 'Unfinished Git operation remains at %s.\n' "${TREE}/.git/${MARKER}" >&2
+        exit 1
+    }
+done
+LOCK="$(find "${TREE}/.git" -name '*.lock' -print -quit)"
+[[ -z "${LOCK}" ]] || { printf 'Git lock remains at %s; inspect it first.\n' "${LOCK}" >&2; exit 1; }
+mv -T -- "${TREE}/.git" "$HOME/.git"
 ```
 
-Never run `git rebase --abort`, `git reset --hard`, `git stash` or `git checkout -- .` in `~`: those
-are the commands that write the repository root work tree and revert live configuration under
-running applications. That is also why the order above matters. A database returned while it still
-carries an unfinished rebase puts `~` into exactly the state this method exists to avoid, visible to
-every Git client that reads the repository, and the script then refuses to start until it is
-aborted.
-
-If a run warned that it could not abort its own rebase, `~/.git` came back carrying that unfinished
-state. Do not clean it up in place. Move that database into a fresh isolated tree, abort it there,
-and return it:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-tree="$(mktemp -d ~/.local/state/isolated-pull/recover-XXXXXXXX)"
-mv -T -- ~/.git "${tree}/.git"
-git --git-dir="${tree}/.git" --work-tree="${tree}" rebase --abort
-mv -T -- "${tree}/.git" ~/.git
-```
-
-That returns the branch to the tip it had before the rebase and leaves the repository root work tree
-untouched, untracked files included.
-
+Never run `git rebase --abort`, `git reset --hard`, `git stash` or `git checkout -- .` in `~`:
+they can rewrite live configuration. Abort an unfinished operation inside the isolated tree
+before returning `.git`.
 
 ### Install XFCE from sources
 

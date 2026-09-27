@@ -173,14 +173,16 @@ changed upstream, which is the condition that makes the isolated helper
 necessary.
 
 Updating from `origin` goes through `scripts/isolated_pull.sh`, which moves
-`.git` out of the work tree, pulls inside an isolated tree, and returns it.
+`.git` out of the work tree and pulls inside an isolated tree. It returns the
+database only after the supervised pull process group stops and unfinished Git operations are
+aborted; otherwise it stays isolated for manual recovery.
 It mutates Git state, so run it only on explicit user request. Reviewing the
 resulting difference and deciding what to keep or revert is the user's manual
 step; never decide it for them, and never re-apply a dropped
 `assume-unchanged` flag automatically, because that hides the upstream change
 still under review.
 
-If `$HOME/.git` is missing, an isolated run was interrupted. The database is
+If `$HOME/.git` is missing, an isolated run did not return the database. It is
 under `~/.local/state/isolated-pull`; follow [recover an interrupted isolated
 pull](README.md#recover-an-interrupted-isolated-pull) instead of improvising
 a repair.
