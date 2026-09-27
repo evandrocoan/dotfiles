@@ -156,3 +156,31 @@ that is not tracked or is ignored, follow this procedure before staging:
 
 Never use `git add -f` to bypass `.gitignore`. The only exception requires an
 explicit user request confirming that `.gitignore` must remain unchanged.
+
+## Updating the tracked home repository
+
+The work tree is permanently dirty by design. It carries long-lived
+uncommitted work, and every path listed by `git ls-files -v | grep '^h '` is
+hidden with `assume-unchanged`, so a clean `git status` does not mean the
+work tree matches `HEAD`.
+
+Never run `git stash`, `git reset --hard`, `git checkout -- .`, `git clean`,
+or `git pull` with this repository root as the work tree. Tracked files here
+are live configuration read by running desktop applications, so reverting
+them changes application state, and untracked files are real work. An
+in-place fast-forward also aborts whenever a locally modified file was also
+changed upstream, which is the condition that makes the isolated helper
+necessary.
+
+Updating from `origin` goes through `scripts/isolated_pull.sh`, which moves
+`.git` out of the work tree, pulls inside an isolated tree, and returns it.
+It mutates Git state, so run it only on explicit user request. Reviewing the
+resulting difference and deciding what to keep or revert is the user's manual
+step; never decide it for them, and never re-apply a dropped
+`assume-unchanged` flag automatically, because that hides the upstream change
+still under review.
+
+If `$HOME/.git` is missing, an isolated run was interrupted. The database is
+under `~/.local/state/isolated-pull`; follow [recover an interrupted isolated
+pull](README.md#recover-an-interrupted-isolated-pull) instead of improvising
+a repair.

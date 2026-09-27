@@ -19,6 +19,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
     - [Repository tests](#repository-tests)
+    - [Update the repository with an isolated pull](#update-the-repository-with-an-isolated-pull)
+      - [Recover an interrupted isolated pull](#recover-an-interrupted-isolated-pull)
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
     - [Historical performance monitoring](#historical-performance-monitoring)
@@ -615,6 +617,85 @@ bash scripts/run_repository_tests.sh
 
 The privileged netatop/eBPF verification depends on the installed host kernel and is intentionally
 kept as a local check; see [check health, storage and recovery](#check-health-storage-and-recovery).
+
+
+### Update the repository with an isolated pull
+
+This repository's work tree must never be written by Git: many tracked files are live configuration
+read by running applications, the tree carries long-lived uncommitted work, and some paths are
+hidden with `assume-unchanged`. [`scripts/isolated_pull.sh`](./scripts/isolated_pull.sh) therefore
+moves `.git` into a fresh directory under `~/.local/state/isolated-pull`, materializes a clean tree
+there, runs `git pull --rebase` inside it, and returns `.git` to the repository root on every exit
+path, including failure, rebase conflict and interruption.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+bash ~/scripts/isolated_pull.sh --dry-run
+bash ~/scripts/isolated_pull.sh
+```
+
+Nothing in the repository root is reverted, deleted or stashed. Afterwards the history has advanced
+while the work tree still holds the previous content, so reviewing that difference and deciding what
+to keep is a manual step. The isolated tree holds the new content of every tracked file, so a single
+file can be compared without Git:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+ls -d ~/.local/state/isolated-pull/run-*
+diff ~/.config/terminator/config ~/.local/state/isolated-pull/run-XXXXXXXX/.config/terminator/config
+```
+
+The run also reports every path whose `assume-unchanged` flag the pull dropped, which happens for
+flagged paths the upstream changed. They are deliberately not re-applied, because that would hide
+the change still waiting for review; re-apply them with `git update-index --assume-unchanged <path>`
+once it is done. Pass `--clean` to remove the isolated tree after a successful run, or delete old
+`run-*` and `recover-*` directories under the base when their review is finished. Run the script with `--help` for
+every option and `--dry-run` for the refused preconditions, such as staged changes, an active Git
+lock, a second worktree or an operation already in progress. A client that fetches on a timer, such
+as SmartGit, can hold a lock exactly when a run starts; the run then refuses and names the lock
+file, nothing has moved, and running it again once the client is idle is enough.
+
+#### Recover an interrupted isolated pull
+
+If `~/.git` is missing, an isolated run did not finish. The database is intact inside its isolated
+tree. The script prints the exact recovery command whenever it is still able to run; after a
+`SIGKILL`, an out-of-memory kill or a power loss it cannot, so recover by hand. Abort any unfinished
+rebase **inside the isolated tree**, before returning the database:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+tree="$(ls -dt ~/.local/state/isolated-pull/run-* | head -1)"
+if [[ -e "${tree}/.git/rebase-merge" ]] || [[ -e "${tree}/.git/rebase-apply" ]]; then
+    git --git-dir="${tree}/.git" --work-tree="${tree}" rebase --abort
+fi
+mv -T -- "${tree}/.git" ~/.git
+```
+
+Never run `git rebase --abort`, `git reset --hard`, `git stash` or `git checkout -- .` in `~`: those
+are the commands that write the repository root work tree and revert live configuration under
+running applications. That is also why the order above matters. A database returned while it still
+carries an unfinished rebase puts `~` into exactly the state this method exists to avoid, visible to
+every Git client that reads the repository, and the script then refuses to start until it is
+aborted.
+
+If a run warned that it could not abort its own rebase, `~/.git` came back carrying that unfinished
+state. Do not clean it up in place. Move that database into a fresh isolated tree, abort it there,
+and return it:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+tree="$(mktemp -d ~/.local/state/isolated-pull/recover-XXXXXXXX)"
+mv -T -- ~/.git "${tree}/.git"
+git --git-dir="${tree}/.git" --work-tree="${tree}" rebase --abort
+mv -T -- "${tree}/.git" ~/.git
+```
+
+That returns the branch to the tip it had before the rebase and leaves the repository root work tree
+untouched, untracked files included.
 
 
 ### Install XFCE from sources
