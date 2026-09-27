@@ -27,10 +27,10 @@ project its current steps into the task plan.
 Classify the request before editing. The global model and reasoning-effort gate must identify the
 acting agent's effective settings and satisfy any required role before task work begins; an unknown
 setting cannot be replaced with a conservative plan. Read
-[model-aware routing](references/model-routing.md) when choosing whether discretionary local work
-needs a formal plan or when recommending a model, reasoning effort, or reviewer. The applicable
-user's explicit request and higher-priority question-only or read-only rules come first. A model
-never waives the risk and persistence gates below.
+[model-aware routing](references/model-routing.md) for every implementation edit to apply the
+acting group's plan and review thresholds, and when recommending a model, reasoning effort, or
+reviewer. The applicable user's explicit request and higher-priority question-only or read-only
+rules come first. A model never waives the risk and persistence gates below.
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
   says not to implement, inspect enough authoritative evidence to make the plan credible and stop
@@ -55,7 +55,8 @@ execute. When execution is authorized, use plan-and-execute mode. External mutat
 the persistence gate even
 though externality alone does not make that narrowly defined action high risk. A routine external
 editorial correction uses the direct path in that reference; its external location alone requires
-neither a formal plan nor independent review. Neither path overrides authorization or plan-only
+neither a formal plan nor independent review. Apply any review required by the acting model's
+group, another authority, or inherited risk. Neither path overrides authorization or plan-only
 mode.
 
 ## Materialize the plan visibly
@@ -77,7 +78,8 @@ The persistent plan is mandatory when any of these conditions applies:
 
 - work is high risk under **Review plans proportionally**;
 - work is likely to cross context compaction, an interruption, a handoff, or more than one session;
-- multiple agents or people may act on the plan;
+- multiple implementation agents or people may act on the plan; a bounded read-only review alone
+  does not count, but an actual implementation handoff or coordinated work still does;
 - several dependent phases or cross-component consumers must remain coordinated;
 - the task implements or materially audits an architecture record;
 - migration, recorded replay, end-to-end validation, paid validation, or external mutation outside
@@ -191,11 +193,13 @@ simplicity. Then distinguish the remaining levels:
   and narrowly scoped skill edits do not become high risk solely because of their location.
 - **Non-trivial local and reversible:** Follow the model route to choose a compact plan or direct
   execution when no persistence trigger applies. For a compact plan, call the advisor when
-  available; otherwise perform a focused author reread. An independent reviewer is optional.
-  Cross-file or cross-component scope belongs here when no high-risk trigger applies.
-- **Routine, local, and reversible:** Follow the model route; direct work needs no advisor or
-  independent reviewer. Routine means one obvious owner, no material uncertainty, and cheap local
-  validation. File count and obvious mechanical steps do not change that classification alone.
+  available; otherwise perform a focused author reread. Both model groups require an independent
+  review of the result before completion. Cross-file or cross-component scope belongs here when no
+  high-risk trigger applies.
+- **Routine, local, and reversible:** Follow the model route. The autonomous group needs no
+  independent reviewer solely for routine work; the supervised group does, even when execution is
+  direct. Routine means one obvious owner, no material uncertainty, and cheap local validation.
+  File count and obvious mechanical steps do not change that classification alone.
 - **Routine external editorial correction:** Uses the direct procedure in the external-action
   reference. Independent persistence triggers select a compact plan; other high-risk triggers and
   inherited risk prevail.
@@ -205,9 +209,10 @@ environment, with no external or production mutation. Reversible means the inten
 no credible data-loss or recovery hazard.
 
 Before reviewing a high-risk plan, read the reviewer selection and pre-edit rules in
-[reviews and completion](references/closure.md). Apply every domain-required review regardless of
-the planning route. A formal plan already in progress retains its highest risk classification and
-review and closure gates for material continuations.
+[reviews and completion](references/closure.md). Use that reference for every group-required
+independent review, including direct work without a plan. Apply every domain-required review
+regardless of the planning route. A formal plan already in progress retains its highest risk
+classification and review and closure gates for material continuations.
 
 ## Build an executable sequence
 
@@ -375,9 +380,9 @@ Keep paid or externally mutating scenarios sequential unless the applicable poli
 requires otherwise. Measure the complete scenario rather than hiding retries or nested commands.
 
 Before claiming completion, read [reviews and completion](references/closure.md). Its test-evidence
-check applies even when there is no formal plan. A high-risk plan requires the full closure audit
-and a fresh independent second pass; compact and direct work use their proportional gates. Do not
-mark any plan complete while a required check, authorization, or review is unresolved.
+and group-review checks apply even when there is no formal plan. A high-risk plan requires the full
+closure audit and a fresh independent second pass; compact and direct work use their proportional
+gates. Do not mark any plan complete while a required check, authorization, or review is unresolved.
 
 ## Compact plan format
 

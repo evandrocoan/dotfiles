@@ -12,7 +12,8 @@ All of these conditions must hold:
   no requirements, acceptance criteria, decisions, policy, permissions, commitments, workflow state,
   executable content, or automation behavior, and does not erase substantive historical evidence.
 - No other high-risk trigger applies, and the correction is not part of an existing high-risk plan.
-  Every substantive review required by the user or another applicable authority still applies.
+  Every substantive review required by the user, the model-group route, or another applicable
+  authority still applies.
 
 Missing authorization, unknown effects, or unavailable authoritative read-back block writing;
 high-risk review cannot substitute for those prerequisites. When they are established but another
@@ -21,7 +22,10 @@ eligibility condition fails, use the risk classification in the [skill entrypoin
 Perform only the verification needed for the correction; do not turn it into a new investigation:
 
 1. Read the current record, verify changed claims and references under the applicable domain
-   skill, and inspect the exact outgoing diff. Preserve unrelated content and metadata.
+   skill, and inspect the exact outgoing diff. Preserve unrelated content and metadata. When the
+   acting agent belongs to the supervised group, obtain an independent autonomous-group review of
+   the authorized correction before writing. The autonomous group needs that review when another
+   rule makes the work non-trivial or higher risk.
 2. Immediately before writing, revalidate the target and compare against the read baseline. Use a
    version precondition when available. If concurrent edits appear, preserve them and re-review
    the revised diff within the authorized scope before writing; request direction for scope drift.
@@ -31,9 +35,10 @@ Perform only the verification needed for the correction; do not turn it into a n
    correction landed, do not retry. Retry only after confirming non-application and repeating the
    pre-write check. Stop on unresolved or unexpected results; never blindly retry or roll back.
 
-These checks close the direct path without a closure matrix, extra review, or persistent evidence
-bundle. When another persistence trigger applies, record the same checks in the compact plan and
-close with its focused author pass. Existing higher-risk plans retain their closure requirements.
+These checks close the direct path without a closure matrix or persistent evidence bundle. They do
+not waive a group-required pre-write review. When another persistence trigger applies, record the
+same checks and review in the compact plan and close with its focused author pass. Existing
+higher-risk plans retain their closure requirements.
 
 ### Bounded additive external action
 
@@ -63,10 +68,14 @@ invalidates the binding until the user authorizes it; then classify again. Drift
 first write does not itself force high risk. Once these preconditions are established, a false or
 unknown remaining condition routes the authorized action through the normal high-risk workflow.
 
-Apply every substantive review required by the user, an applicable domain skill, or another
-governing authority before writing. This planning skill neither adds nor removes a review based on
-the payload's topic or vocabulary. If a required reviewer is unavailable, block execution and
-report the limitation. The post-action read-back verifies delivery, not substantive correctness.
+Apply every substantive review required by the user, the model-group route, an applicable domain
+skill, or another governing authority before writing. The supervised group always needs an
+independent autonomous-group reviewer. The autonomous group needs one when the action is
+non-trivial due to material uncertainty, coordination, or multiple affected consumers; a separate
+persistence trigger or inherited higher-risk plan also keeps its required review. This planning
+skill adds no review based on the payload's topic or vocabulary. If a required reviewer is
+unavailable, block execution and report the limitation. The post-action read-back verifies
+delivery, not substantive correctness.
 
 Perform multiple items sequentially. After a timeout, partial success, or inconclusive response,
 stop later writes and retries, then reconcile through authoritative read-only evidence:

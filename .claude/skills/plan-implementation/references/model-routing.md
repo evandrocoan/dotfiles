@@ -21,36 +21,50 @@ first apply high-risk, persistence, external-action, and inherited-plan gates fr
 Those gates override every row here. A user's explicit choice to proceed without a discretionary
 plan controls when no stronger gate applies.
 
-| Active model | Routine local reversible edit, no persistence trigger | Non-trivial local reversible edit, no persistence trigger |
+| Acting group | Routine local reversible edit, no persistence trigger | Non-trivial local reversible edit, no persistence trigger |
 | --- | --- | --- |
-| Terra, Sonnet, Opus | Execute directly with a stated outcome and cheap check, unless the user requests a plan. | Make a compact formal plan before editing and use its proportional review and closure. |
-| Sol, Astra, Fable | Ask once whether the user prefers direct execution or a brief plan before execution, even when the edit appears simple. Recommend direct execution for bounded, well-understood work, while inviting a plan for importance the agent may not see. | Ask once whether the user prefers direct execution or a compact plan before execution. Recommend a plan for material uncertainty, coordination, or likely follow-up; otherwise recommend direct execution. |
+| Supervised group: Terra, Sonnet, Opus | Execute directly with a stated outcome and cheap check, unless the user requests a plan. | Make a compact formal plan before editing and use its proportional review and closure. |
+| Autonomous group: Sol, Astra, Fable | Execute directly with a stated outcome and cheap check, unless the user requests a plan. | Ask once whether the user prefers direct execution or a compact plan before execution. Recommend a plan for material uncertainty, coordination, or likely follow-up; otherwise recommend direct execution. |
 | Identity or effort unknown | Stop and obtain the effective setting before task work. | Stop and obtain the effective setting before task work. |
 
-For Terra, Sonnet, and Opus, retain the pre-model route: routine local reversible work needs no
-formal plan; non-trivial local reversible work needs a compact formal plan. A user may still
-request a plan for routine work. An explicit direct preference can control any discretionary route,
-but cannot bypass a mandatory high-risk, persistence, or inherited-plan requirement.
+These are user-selected operational labels for this skill, not a universal ranking of model
+quality. The plan threshold and independent-review threshold are separate. The supervised group
+retains the pre-model plan route: routine local reversible work needs no formal plan; non-trivial
+local reversible work needs a compact formal plan. A user may still request a plan for routine
+work. An explicit direct preference can control any discretionary route, but cannot bypass a
+mandatory high-risk, persistence, or inherited-plan requirement.
 
-For Sol, Astra, and Fable, an ordinary request to implement or fix does not express a preference
-against a plan. When no mandatory route or explicit plan/direct preference applies, ask at the first
-planning boundary for any implementation edit, including a routine one. Give a recommendation and
-its reason in one concise question: offer direct execution or a brief plan **followed by execution**.
-Mention that the user may want a plan because the task matters to them more than its technical
-scope suggests. If the user asks for a plan only or for approval before execution, present the
-plan and stop. If the user chooses plan and execute, continue after planning without a second
-approval request. Ask again only after a material change in scope, uncertainty, handoff, or model;
-do not ask for each file, retry, or routine step. Do not pose this implementation preference for
-question-only or read-only requests, or when an explicit or mandatory route already decides it.
-If an optional preference is unanswered after a reasonable opportunity, proceed with the stated
-recommendation. Silence never resolves missing model/effort information or an unmet role
-requirement.
+For the autonomous group, ask at the first planning boundary only for discretionary non-trivial
+implementation work when no explicit plan/direct preference applies. Recommend direct execution
+for bounded, well-understood work, or a compact plan for material uncertainty or coordination.
+Mention that the user may prefer a plan because the task matters to them more than its technical
+scope suggests. Offer direct execution or a compact plan **followed by execution**. If the user
+asks for a plan only or for approval before execution, present the plan and stop. If the user
+chooses plan and execute, continue after planning without a second approval request. Ask again
+only after a material change in scope, uncertainty, handoff, or model; do not ask for each file,
+retry, or routine step. Do not pose this implementation preference for question-only or read-only
+requests, routine edits, or when an explicit or mandatory route already decides it. If an optional
+preference is unanswered after a reasonable opportunity, proceed with the stated recommendation.
+Silence never resolves missing model/effort information or an unmet role requirement.
+
+## Apply the independent-review threshold
+
+Review requirements do not depend on whether the user chooses a discretionary plan. The
+autonomous group needs an independent reviewer from that group for non-trivial local work, whether
+executed directly or from a compact plan. The supervised group needs an independent reviewer from
+the autonomous group for every implementation edit, including routine local work. An ordinary
+read-only reviewer alone does not create a multiple-implementer or handoff persistence trigger.
+Qualifying external actions use the timing in [external-action routes](external-actions.md), and
+high-risk work keeps its stronger pre-edit and final review gates. Read
+[reviews and completion](closure.md) for reviewer qualifications, blocking behavior, and closure.
+Do not replace a required independent review with an advisor or the author's reread.
 
 Examples of useful recommendations:
 
-- A well-scoped local fix in Sol, Astra, or Fable: ask whether the user wants direct execution or a
-  brief plan followed by execution. Recommend direct execution with focused validation when no
-  other stakes are known, but honor a plan preference based on the user's own sense of importance.
+- A well-scoped routine local fix in either group: execute directly with focused validation,
+  unless the user requests a plan. The supervised group still needs a reviewer before completion.
+- A non-trivial local fix in Sol, Astra, or Fable: ask whether the user wants direct execution or
+  a compact plan followed by execution. Either choice still requires an independent final review.
 - A novel multi-component design, uncertain state transition, or shared agent-skill policy edit:
   use the mandatory full plan; recommend higher reasoning effort for planning and a fresh
   independent reviewer. Sol planning with Astra xhigh review is one option when available.
