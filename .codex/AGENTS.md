@@ -328,11 +328,10 @@ of choosing one silently.
 - `plan-implementation`: Plan or implement any non-trivial multi-file, multi-stage,
   cross-component, protocol, migration, replay, paid-validation, externally mutating,
   or high-risk change, including authorization, safety, risk, or mandatory-review
-  policy. Also load it for any requested implementation edit when the active model
-  is Terra, Sonnet, or Opus, or its identity is unknown; this trigger excludes
-  read-only requests. Load it for a material continuation, replan, or follow-up
-  under an existing formal plan. Use its persistent Markdown plan whenever its
-  persistence gate applies, and complete its risk-appropriate closure before
+  policy. Also load it for any requested implementation edit, regardless of the
+  active model; this trigger excludes read-only requests. Load it for a material
+  continuation, replan, or follow-up under an existing formal plan. Use its persistent Markdown
+  plan whenever its persistence gate applies, and complete its risk-appropriate closure before
   declaring success.
 - `codex-claude-loop`: Coordinate Codex planning and review with Claude Code
   implementation in one checkout, through supervised local CLI turns or a

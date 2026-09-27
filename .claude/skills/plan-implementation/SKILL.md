@@ -5,13 +5,13 @@ description: >-
   execution plan and keep implementation aligned with it. Use when the user asks for an
   implementation plan, asks to implement a non-trivial multi-file or multi-stage change, requests
   a plan for approval, or when an architecture record is moving into implementation. Also use for
-  any requested implementation edit when the active model is Terra, Sonnet, or Opus, or when its
-  identity is unknown; read-only requests do not activate this edit-specific route. Also use for
-  every high-risk change, including authorization, safety, risk, or mandatory-review policy; for a
-  material continuation, replan, or follow-up under an existing formal plan; and before costly live
-  validation, migrations, protocol changes, or fixes whose correctness depends on coordinated code,
-  tests, replay, configuration, or documentation. Require a user-visible persistent Markdown plan
-  when work may span phases, agents, interruptions, or context compaction.
+  any requested implementation edit, regardless of the active model; read-only requests do not
+  activate this edit-specific route. Also use for every high-risk change, including authorization,
+  safety, risk, or mandatory-review policy; for a material continuation, replan, or follow-up under
+  an existing formal plan; and before costly live validation, migrations, protocol changes, or fixes
+  whose correctness depends on coordinated code, tests, replay, configuration, or documentation.
+  Require a user-visible persistent Markdown plan when work may span phases, agents, interruptions,
+  or context compaction.
 ---
 
 # Plan implementation
@@ -388,7 +388,7 @@ authorization binding, items, governing-review status, read-back authority,
 reconciliation state, and delivery evidence; omit that section for local work. Use the following
 concise form for a task-plan projection or for a non-trivial local and reversible formal plan that
 does not meet the persistence gate. High-risk work always meets that gate and uses the full
-persistent template. A routine edit that receives a formal plan only because of the model route
+persistent template. A routine edit that receives a formal plan because of the user's preference
 needs just a visible outcome, step, and check, not this six-step form.
 
 ```text
