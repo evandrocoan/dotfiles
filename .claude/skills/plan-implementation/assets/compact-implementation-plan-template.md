@@ -29,8 +29,8 @@ Delete the conditional external-action section for local work.
   and target identifiers or preconditions>.
 - Intended effects: <new records and targets, or existing record IDs, authorized fields, and
   editorial corrections>.
-- Governing review: Not required | <authority, reviewer, and verdict> | Required reviewer
-  unavailable — execution blocked.
+- Governing review: Not required under the model-group and domain rules | <authority, reviewer,
+  verified role fit, and pre-write verdict> | Required reviewer unavailable — execution blocked.
 - Read-back authority: <source that verifies IDs, targets, exact content, and state; for creation,
   also multiplicity; for correction, the baseline and preserved unrelated content/metadata>.
 - Reconciliation state: Not needed | Confirmed applied | Confirmed not applied | Unresolved.
@@ -41,10 +41,10 @@ Delete the conditional external-action section for local work.
 
 | Status | Step and owners | Validation or result |
 | --- | --- | --- |
-| pending | Obtain the risk-appropriate and governing reviews. | <advisor, domain-required reviewer, or focused author findings> |
+| pending | Obtain applicable plan and domain pre-edit reviews, including group-required external pre-write review. | <advisor, reviewer, or focused author findings; `Not applicable` when no pre-edit review applies> |
 | pending | Revalidate prerequisites and perform the scoped change or external action. | <specific check> |
 | pending | Update affected consumers or create remaining authorized records. | <specific check or `Not applicable`> |
-| pending | Validate, reconcile if needed, and close. | <proportional checks, diff or delivery evidence, and status> |
+| pending | Validate and obtain any local independent result review; reconcile external delivery if needed, then close. | <proportional checks, final diff, local review verdict or external read-back, and status> |
 
 Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `completed`. Record a
 material premise before its dependent step and keep evidence concise rather than chronological.
@@ -55,7 +55,9 @@ may refer to that binding; do not repeat an approval check for every file.
 
 ## Review and replan
 
-- Review mechanism: Advisor | Domain-required reviewer | Focused author reread.
+- Review mechanism: Advisor | Independent model-group reviewer | Domain-required reviewer |
+  Focused author reread. Record each applicable mechanism; a required independent reviewer cannot
+  be replaced by an advisor or author reread.
 - Applied findings: <concise list, or `None`>.
 - Rejected findings: <finding and reason, or `None`>.
 - Replan if: <discovery that changes risk, scope, or execution route>.
@@ -66,6 +68,9 @@ may refer to that binding; do not repeat an approval check for every file.
 - Delivery read-back: <target, exact request or content, state, and prohibited-effect verification;
   creation multiplicity or preservation of unrelated content/metadata, or `Not applicable`>.
 - Focused author pass: Pending | Passed | Failed.
+- Required independent review: Not required under the model-group and domain rules | Pending |
+  <reviewer, verified role fit, local final-result or external pre-write timing, evidence scope,
+  and verdict>.
 - Unresolved limitations: <limitations, or `None`>.
 - Brief check: No brief on this subject | No `registro pendente`; open items reported and noted:
   <items, or `None`>.
@@ -73,7 +78,8 @@ may refer to that binding; do not repeat an approval check for every file.
 
 Set the verdict to `Passed` only when the outcome and affected consumers are verified, proportional
 validation passed, the diff is scoped, statuses agree, the focused author pass completed, the brief
-check found no `registro pendente`, and no required evidence remains unresolved. For either external
-path, also require authoritative IDs, an exact delivery match, completed governing reviews, no
-prohibited effect, and no unresolved delivery result. Editorial corrections additionally verify
-that unrelated content and metadata were preserved.
+check found no `registro pendente`, every required independent review completed, and no required
+evidence remains unresolved. For either external path, also require authoritative IDs, an exact
+delivery match, completed governing reviews, no prohibited effect, and no unresolved delivery
+result. Editorial corrections additionally verify that unrelated content and metadata were
+preserved.
