@@ -23,28 +23,34 @@ plan controls when no stronger gate applies.
 
 | Active model | Routine local reversible edit, no persistence trigger | Non-trivial local reversible edit, no persistence trigger |
 | --- | --- | --- |
-| Terra, Sonnet, Opus | Make a visible formal plan before editing, even if brief. Markdown is required only when the entrypoint's persistence gate applies. | Make a compact formal plan before editing and use its proportional review and closure. |
-| Sol, Astra, Fable | Execute directly with a stated outcome and cheap check. | Offer one meaningful choice of direct execution or a compact plan. Recommend direct execution for bounded, well-understood work and a compact plan for material uncertainty, coordination, or a likely follow-up. If unanswered after a reasonable opportunity, proceed with the recommended route. |
+| Terra, Sonnet, Opus | Execute directly with a stated outcome and cheap check, unless the user requests a plan. | Make a compact formal plan before editing and use its proportional review and closure. |
+| Sol, Astra, Fable | Ask once whether the user prefers direct execution or a brief plan before execution, even when the edit appears simple. Recommend direct execution for bounded, well-understood work, while inviting a plan for importance the agent may not see. | Ask once whether the user prefers direct execution or a compact plan before execution. Recommend a plan for material uncertainty, coordination, or likely follow-up; otherwise recommend direct execution. |
 | Identity or effort unknown | Stop and obtain the effective setting before task work. | Stop and obtain the effective setting before task work. |
 
-For Terra, Sonnet, and Opus, the default formal plan can be a short visible task plan for trivial
-edits; do not create a Markdown file unless persistence applies. This preference covers edits and
-implementation, not read-only inspection. A user can explicitly request a direct route for
-low-risk, non-persistent work. Never use that choice to bypass mandatory high-risk or persistence
-requirements.
+For Terra, Sonnet, and Opus, retain the pre-model route: routine local reversible work needs no
+formal plan; non-trivial local reversible work needs a compact formal plan. A user may still
+request a plan for routine work. An explicit direct preference can control any discretionary route,
+but cannot bypass a mandatory high-risk, persistence, or inherited-plan requirement.
 
-When the planning route is discretionary and the answer would change work materially, ask at the
-first planning boundary rather than waiting until after implementation. Give a recommendation and
-the reason in one concise question. Ask again only after a material change in scope, uncertainty,
-handoff, or model; do not ask for each file, retry, or routine step. When the request already says
-to plan or to implement under an approved plan, follow it without a redundant preference prompt.
-Proceeding with a recommendation after no answer applies only to an optional plan preference,
-never to missing model/effort information or an unmet role requirement.
+For Sol, Astra, and Fable, an ordinary request to implement or fix does not express a preference
+against a plan. When no mandatory route or explicit plan/direct preference applies, ask at the first
+planning boundary for any implementation edit, including a routine one. Give a recommendation and
+its reason in one concise question: offer direct execution or a brief plan **followed by execution**.
+Mention that the user may want a plan because the task matters to them more than its technical
+scope suggests. If the user asks for a plan only or for approval before execution, present the
+plan and stop. If the user chooses plan and execute, continue after planning without a second
+approval request. Ask again only after a material change in scope, uncertainty, handoff, or model;
+do not ask for each file, retry, or routine step. Do not pose this implementation preference for
+question-only or read-only requests, or when an explicit or mandatory route already decides it.
+If an optional preference is unanswered after a reasonable opportunity, proceed with the stated
+recommendation. Silence never resolves missing model/effort information or an unmet role
+requirement.
 
 Examples of useful recommendations:
 
-- A well-scoped local fix in Sol, Astra, or Fable: direct execution with focused validation; offer a
-  compact plan when the change has a genuine discretionary coordination cost.
+- A well-scoped local fix in Sol, Astra, or Fable: ask whether the user wants direct execution or a
+  brief plan followed by execution. Recommend direct execution with focused validation when no
+  other stakes are known, but honor a plan preference based on the user's own sense of importance.
 - A novel multi-component design, uncertain state transition, or shared agent-skill policy edit:
   use the mandatory full plan; recommend higher reasoning effort for planning and a fresh
   independent reviewer. Sol planning with Astra xhigh review is one option when available.
