@@ -13,17 +13,21 @@ applicable review used and record findings that changed the plan plus findings r
 reason.
 
 For a review required by the model-group route, use a separate reviewer from the autonomous group
-(Sol, Astra, or Fable). Verify the reviewer's effective model and effort and assess whether that
-pair is adequate for the review's scope and consequences under the global task-entry gate. An
-advisor, author reread, or reviewer with an unknown or inadequate setting cannot fill this role.
+(Sol, Astra, or Fable). Use that group by default for an optional review selected by the user; an
+explicit user choice may name another adequate reviewer for that optional review. Verify the
+reviewer's effective model and effort and assess whether that pair is adequate for the review's
+scope and consequences under the global task-entry gate. An advisor, author reread, or reviewer
+with an unknown or inadequate setting cannot fill this role.
+
 For local low-risk work, review the final change, affected consumers, validation evidence, and
 scope before completion; a material change after that review requires another pass over the
-affected result. For a qualifying external action, perform the group-required substantive review
-before writing and use authoritative read-back to verify delivery afterward. High-risk work keeps
-its own pre-edit review and fresh independent final conformance pass; one review may satisfy both
-rules only if its reviewer, timing, evidence, and scope satisfy both. When a required reviewer is
-unavailable, hold the local completion or external write that needs the review and report the
-blocker. A bounded read-only reviewer alone does not trigger persistence as multiple implementers.
+affected result. For a qualifying external action, perform every group-required or user-selected
+substantive review before writing and use authoritative read-back to verify delivery afterward.
+High-risk work keeps its own pre-edit review and fresh independent final conformance pass; one
+review may satisfy both rules only if its reviewer, timing, evidence, and scope satisfy both. When
+a required reviewer is unavailable, hold the local completion or external write that needs the
+review and report the blocker. A bounded read-only reviewer alone does not trigger persistence as
+multiple implementers.
 
 ## Close work proportionally
 
@@ -48,40 +52,43 @@ Reuse an independent plan or closure review only if it examined the final tests 
 criteria. Leave required evidence or review unresolved until it is supplied.
 
 Routine work without a formal plan closes after verifying the requested outcome, running its cheap
-local validation, and checking the final diff and repository status. Supervised-group work also
-requires the independent result review above. It needs no closure matrix.
+local validation, and checking the final diff and repository status. Supervised-group work and
+autonomous work for which the user chose review also require the independent result review above.
+That review alone does not require a formal plan or closure matrix.
 
 Routine local work with a brief formal plan under the model route uses the same checks and marks
-that visible plan complete; the plan alone does not add a review or matrix beyond the group rule.
+that visible plan complete; the plan alone does not add a review or matrix beyond the group rule
+or the user's review choice.
 
 For non-trivial local reversible work executed directly under the model route, reconstruct the
 changed path and affected consumers, verify the requested outcome with proportional validation,
 inspect the final diff and repository status, and report limitations accurately. Perform a
-focused author pass against the governing instructions and original request. Obtain the
-group-required independent result review before completion. This direct route needs no closure
-matrix.
+focused author pass against the governing instructions and original request. Obtain every
+group-required or user-selected independent result review before completion. This direct route
+needs no closure matrix.
 
 A routine external editorial correction instead closes with its exact diff and authoritative
 read-back checks in [external-action routes](external-actions.md); local repository checks apply
-only if local files changed. Obtain any group-required pre-write review. When it independently
-requires a compact plan, also record its author verdict and complete the same-subject brief check;
-no additional independent second pass is added solely for the external edit.
+only if local files changed. Obtain any group-required or user-selected pre-write review. When it
+independently requires a compact plan, also record its author verdict and complete the same-subject
+brief check; no additional independent second pass is added solely for the external edit.
 
 For a non-trivial local and reversible formal plan, inspect the plan's outcome, scope, current
 steps, completion evidence, verdict, and relevant governing instructions. After compaction,
 handoff, or a material replan, reread the entire compact plan. Reconstruct the changed path from
 the implementation and validation evidence, then verify the requested outcome, affected consumers,
 required checks, final diff, and repository status. Record a concise completion verdict, unresolved
-limitations, a focused author pass, and the group-required independent result review. This level
-needs no closure matrix or bidirectional traces unless it is reclassified as high risk.
+limitations, a focused author pass, and every group-required or user-selected independent result
+review. This level needs no closure matrix or bidirectional traces unless it is reclassified as
+high risk.
 
 For a bounded additive external action, reread the compact plan after compaction, handoff, material
 replan, or an ambiguous tool result. Reconcile every intended item with one authoritative external
 ID and verify the authorized target, exact request or content, multiplicity, and resulting state.
-Confirm that every governing review, including any group-required pre-write review, completed and
-that no prohibited effect or unresolved delivery outcome remains. Record the implementer's delivery
-read-back and concise verdict. Do not require a second independent closure pass unless another
-governing rule requires it or the action inherits a higher-risk formal plan.
+Confirm that every governing review, including any group-required or user-selected pre-write
+review, completed and that no prohibited effect or unresolved delivery outcome remains. Record the
+implementer's delivery read-back and concise verdict. Do not require a second independent closure
+pass unless another governing rule requires it or the action inherits a higher-risk formal plan.
 
 For a high-risk formal plan, treat closure as a separate blocking phase, not as a summary written
 from memory. After the candidate implementation and required validation are complete:
@@ -138,22 +145,22 @@ unrelated validation.
 ## Completion gates
 
 For routine work without a formal plan, require the requested outcome, proportional local
-validation, a scoped final diff, any group-required result review, and an accurate report of
-limitations. For routine external editorial corrections, use their direct verification and closure
-procedure in
-[external-action routes](external-actions.md), including when an independent persistence trigger
-requires a compact plan.
+validation, a scoped final diff, any group-required or user-selected result review, and an accurate
+report of limitations. For routine external editorial corrections, use their direct verification
+and closure procedure in [external-action routes](external-actions.md), including when an
+independent persistence trigger requires a compact plan.
 
 For non-trivial local reversible work completed without a formal plan under the model route,
 require the requested outcome, every affected consumer, proportional validation, a scoped final
-diff and status, a focused author pass, a group-required independent result review, and an accurate
-limitation report. Apply any separate test-evidence or domain review requirement above.
+diff and status, a focused author pass, every group-required or user-selected independent result
+review, and an accurate limitation report. Apply any separate test-evidence or domain review
+requirement above.
 
 For a non-trivial local and reversible formal plan, require the requested outcome, every affected
 consumer, proportional validation, a scoped final diff and status, a focused author pass, an
-accurate limitation report, the group-required independent result review, the same-subject brief
-check above, and agreement between the persistent plan and task-plan statuses. Do not require a
-closure matrix or bidirectional traces at this level.
+accurate limitation report, every group-required or user-selected independent result review, the
+same-subject brief check above, and agreement between the persistent plan and task-plan statuses.
+Do not require a closure matrix or bidirectional traces at this level.
 
 For a bounded additive external action, require one authoritative external ID for every intended
 item; an exact match for its authorized target, request or content, multiplicity, and expected

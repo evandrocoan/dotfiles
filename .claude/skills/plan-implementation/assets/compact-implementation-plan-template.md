@@ -29,8 +29,9 @@ Delete the conditional external-action section for local work.
   and target identifiers or preconditions>.
 - Intended effects: <new records and targets, or existing record IDs, authorized fields, and
   editorial corrections>.
-- Governing review: Not required under the model-group and domain rules | <authority, reviewer,
-  verified role fit, and pre-write verdict> | Required reviewer unavailable — execution blocked.
+- Governing review: Not required by user choice, model-group route, or domain rule | <authority,
+  reviewer, verified role fit, and pre-write verdict> | Required reviewer unavailable — execution
+  blocked.
 - Read-back authority: <source that verifies IDs, targets, exact content, and state; for creation,
   also multiplicity; for correction, the baseline and preserved unrelated content/metadata>.
 - Reconciliation state: Not needed | Confirmed applied | Confirmed not applied | Unresolved.
@@ -41,7 +42,7 @@ Delete the conditional external-action section for local work.
 
 | Status | Step and owners | Validation or result |
 | --- | --- | --- |
-| pending | Obtain applicable plan and domain pre-edit reviews, including group-required external pre-write review. | <advisor, reviewer, or focused author findings; `Not applicable` when no pre-edit review applies> |
+| pending | Obtain applicable plan and domain pre-edit reviews, including group-required or user-selected external pre-write review. | <advisor, reviewer, or focused author findings; `Not applicable` when no pre-edit review applies> |
 | pending | Revalidate prerequisites and perform the scoped change or external action. | <specific check> |
 | pending | Update affected consumers or create remaining authorized records. | <specific check or `Not applicable`> |
 | pending | Validate and obtain any local independent result review; reconcile external delivery if needed, then close. | <proportional checks, final diff, local review verdict or external read-back, and status> |
@@ -55,9 +56,9 @@ may refer to that binding; do not repeat an approval check for every file.
 
 ## Review and replan
 
-- Review mechanism: Advisor | Independent model-group reviewer | Domain-required reviewer |
-  Focused author reread. Record each applicable mechanism; a required independent reviewer cannot
-  be replaced by an advisor or author reread.
+- Review mechanism: Advisor | Independent group-required or user-selected reviewer |
+  Domain-required reviewer | Focused author reread. Record each applicable mechanism; a required
+  independent reviewer cannot be replaced by an advisor or author reread.
 - Applied findings: <concise list, or `None`>.
 - Rejected findings: <finding and reason, or `None`>.
 - Replan if: <discovery that changes risk, scope, or execution route>.
@@ -68,7 +69,8 @@ may refer to that binding; do not repeat an approval check for every file.
 - Delivery read-back: <target, exact request or content, state, and prohibited-effect verification;
   creation multiplicity or preservation of unrelated content/metadata, or `Not applicable`>.
 - Focused author pass: Pending | Passed | Failed.
-- Required independent review: Not required under the model-group and domain rules | Pending |
+- Required independent review: Not required by user choice, model-group route, or domain rule |
+  Pending |
   <reviewer, verified role fit, local final-result or external pre-write timing, evidence scope,
   and verdict>.
 - Unresolved limitations: <limitations, or `None`>.
