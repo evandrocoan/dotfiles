@@ -10,3 +10,7 @@ rules of the shared agent skills are the exception: they live in the skills them
 
 `briefs/` contains Portuguese working documents written under the `discussion-briefs` skill. They
 explain open points to the user and hold no execution authority.
+
+`history/` holds exact snapshots needed when an active plan is condensed. A snapshot preserves
+past decisions and evidence but is not another active plan; the corresponding file under
+`active/` states which historical requirements still govern current work.

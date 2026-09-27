@@ -13,6 +13,126 @@ atual, conforme seu pedido de um briefing novo. A dependência E2 conserva seu i
 
 ## Resumo
 
+Em **25/09/2026**, o
+[diagnóstico de corte e auditoria final](../history/decision-to-architecture-flow-pre-condensation.md#completed-diagnostic-cutover-and-final-audit-check)
+terminou em **HOLD para Sonnet 5/xhigh e Opus 5/xhigh**. As respostas citaram mais
+obrigações, mas nenhuma extração autorizou a redação. O Sonnet chamou a troca de atômica e
+deixou os dois filtros ativos entre a ativação do roteador e a retirada da checagem antiga; também não
+propôs verificar a replayabilidade da DLQ. O Opus previu a migração dos leitores do contador
+antigo somente depois de ativar o roteador, embora o descarte nesse ponto já impeça o
+consumidor de continuar contando ou registrando esses eventos. Suas verificações de entrega
+dos pedidos próprios e DLQ também ocorreriam após ativar o caminho novo, sem condição
+explícita de contenção e recuperação para uma perda nesse intervalo. O autor e revisões
+independentes Sol xhigh conferiram as respostas contra a fonte. Os prompts chegaram uma vez
+por modelo, as amostras e skills ficaram intactas e nenhuma etapa de escrita ocorreu. Uma
+tentativa guiada por modelo não mede taxa de sucesso nem demonstra que o parágrafo novo
+causou qualquer melhora. Os principais achados e pareceres estão resumidos neste brief e no
+plano; o relatório local detalhado e as respostas normalizadas foram removidos a seu pedido.
+Os rastros nativos detalhados continuam em diretório temporário e precisarão de preservação
+durável ou nova comprovação para uma futura auditoria final. **A validação completa com Sonnet e
+Terra e E2 seguem pendentes; T2 continua adiado.**
+
+Em **24/09/2026**, o
+[teste seguinte com contrato de saída](../history/decision-to-architecture-flow-pre-condensation.md#completed-execution-bounded-output-contract-trial)
+também terminou em **HOLD para Sonnet 5/xhigh e Opus 5/xhigh**, após uma tentativa nova
+por modelo e revisão independente Sol xhigh. O Sonnet identificou a obrigação de avanço dos
+registros, mas sua sequência retirou a checagem antiga antes de comprovar a entrega dos
+pedidos próprios e o caminho da DLQ pelo roteador; ainda presumiu testes inexistentes no
+cenário. O Opus passou a exigir a validação dessas garantias antes da retirada, mas propôs
+operar os dois filtros de cliente ao mesmo tempo sem definir uma troca segura e deixou a
+reescrita final do registro depois da auditoria, sem repeti-la. Ele também reabriu como
+opção uma checagem defensiva no consumidor que D1 já retirou dali. Nenhum avançou para a
+redação dos documentos. As fontes e skills não mudaram; no braço Opus, o cliente Claude
+criou apenas uma autorização local de leitura no cenário isolado, registrada como diferença
+de inventário e não como edição da fonte. O contrato de saída melhorou parte da cobertura,
+mas não resolveu a passagem das regras para a ordem final. **E2 e a validação do fluxo
+completo seguem pendentes; T2 continua adiado.**
+
+Em **24/09/2026**, a nova
+[rodada com Opus e Sonnet](../history/decision-to-architecture-flow-pre-condensation.md#completed-diagnostic-sonnet-and-opus-failure-localization-trial)
+terminou sem liberar a redação. O Opus 5/xhigh identificou as garantias do texto original,
+mas contradisse sua própria condição de migrar os usuários do contador antigo antes de
+retirá-lo e colocou a validação do novo fluxo depois da retirada de proteções do consumidor.
+O Sonnet 5/xhigh, com uma instrução geral para inventariar ações observáveis, passou a
+preservar explicitamente o avanço dos registros descartados; ainda assim, criou uma
+exigência de **pelo menos** uma linha de log onde D1 só fixou **no máximo** uma, não
+validou todo o caminho pelo roteador e deixou o plano com escopo apenas no consumidor.
+As duas extrações foram barradas pelo Sol xhigh. Os cenários e as skills ficaram intactos;
+nenhum dos modelos chegou ao registro dos documentos.
+
+Um Opus separado analisou as quatro extrações e concluiu que as regras essenciais já estão
+nas skills, enquanto a síntese do modelo e a passagem da tabela para a ordem de execução
+falharam; a apresentação densa de algumas regras pode contribuir. Aceitei essa conclusão
+como diagnóstico limitado, não como prova de causa: houve uma tentativa por condição. O
+analista considerou excessiva parte da reprovação do próprio Opus por encontrar a expressão
+“corte atômico”. Uma conferência Sol xhigh adicional confirmou que essa expressão cobre
+filtro e evidência, mas não exige validar **todas** as garantias antes da retirada; o HOLD
+permanece, com a redação do achado mais precisa. O registro original do Terra contém as
+leituras por arquivo, embora o pacote entregue a esse analista não as incluísse.
+
+O teste seguinte, já concluído e descrito acima, congelou uma mudança mínima: exigir que cada
+garantia cujo dono ou caminho muda tenha responsável, verificação observável e condição
+de transição antes da retirada, e fazer a conferência citar também os trechos que possam
+contrariar seus achados. Os mesmos critérios D18/D22 continuam valendo. Isso ainda não
+aprovou alterações nas skills; **T2 segue adiado**, o fluxo completo continua sem aprovação
+e **E2 permanece pendente**.
+
+Você pediu testar **Terra e Sonnet antes de adotar a recomendação**. A
+[rodada guiada](../history/decision-to-architecture-flow-pre-condensation.md#completed-execution-guided-terra-and-sonnet-trial)
+fornece a lista de skills e separa extração, conferência independente e registro. Cada modelo
+terá uma tentativa; só uma extração aceita poderá avançar para a redação. A preparação e a
+revisão prévia terminaram. **O Sonnet falhou na extração, confirmado pelo Sol xhigh:** ele citou
+o offset antigo, mas não exigiu claramente a preservação e a validação do avanço da fila antes
+de retirar a proteção atual. Leu integralmente as sete skills e os templates; a ajuda explícita
+não resolveu essa falha nesta tentativa. A conferência bloqueou a redação e nenhum arquivo do
+ambiente de teste foi alterado. O Terra abriu corretamente, mas durante a abertura surgiu
+uma entrada do diretório do teste na lista global de locais confiáveis. A diferença foi
+registrada e a falha de preservação permaneceu. Após você esclarecer que essa mudança do
+cliente não deveria parar o teste, a extração prosseguiu na mesma sessão. **O Terra também foi
+barrado pela conferência independente:** preservou a confirmação/avanço como obrigação futura,
+mas não exigiu validar o novo caminho antes de retirar a proteção atual, nem reconciliou o
+escopo antigo do plano com o roteador. Nenhum dos dois modelos avançou para a redação nesta
+rodada. Os critérios permanecem os mesmos, mas esta ajuda explícita
+distingue a rodada do teste original. Nenhuma skill será instalada ou alterada por esse teste;
+T2 continua adiado e a auditoria final E2 continua pendente.
+
+Sua instrução de continuar foi executada como uma
+[conferência independente da extração](../history/decision-to-architecture-flow-pre-condensation.md#completed-diagnostic-independent-extraction-gate-on-preserved-artifacts).
+O Sol xhigh bloqueou a saída real do Sonnet, que identificava uma regra no texto antigo sem
+mantê-la obrigatória no desenho futuro. Também bloqueou os três exemplos defeituosos e aceitou
+o exemplo completo. Assim, a conferência detectou a perda antes de qualquer redação nesta rodada.
+Ela usou a saída preservada e controles; não houve nova chamada ao Sonnet nem alteração das
+skills. Uma justificativa adicional sobre logs foi considerada excessiva e não foi adotada;
+o bloqueio permanece sustentado pelas falhas de preservação, validação e validade do registro.
+Isso sustenta a utilidade de conferir a extração, mas não prova que a etapa seguinte escreverá
+os documentos corretamente. Depois do bloqueio pela cota do Sol, o **Opus 5/high confirmou essa
+avaliação**, sem achado impeditivo. Após eu apontar a omissão, ele completou a leitura das skills
+aplicáveis. Registrei as ressalvas: os controles cobrem uma única garantia, não demonstram confiabilidade e não validam
+o fluxo completo. O próprio teste também omitiu skills aplicáveis; essa falha continua registrada.
+**E4 está resolvido.** O parecer e a complementação estão no
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#independent-result-conformance-completed);
+não substituem a auditoria final E2. Nenhuma skill instalada foi alterada nesta rodada.
+
+Em **23/09/2026**, você autorizou testar a recomendação de concentrar o procedimento de registro
+e conferir explicitamente cada garantia do documento original até a nova arquitetura e o plano.
+As duas tentativas do
+[experimento](../history/decision-to-architecture-flow-pre-condensation.md#coverage-experiment-results-and-limits)
+terminaram, com Sonnet 5/xhigh e os mesmos critérios. **A recomendação não demonstrou resolver
+a falha.** Com as skills atuais, o modelo preservou a confirmação/avanço na arquitetura, mas
+omitiu sua validação como pré-requisito no plano. Com a proposta, fez a tabela pedida, porém
+agrupou todo o fluxo antigo como “alterado” e perdeu essa garantia na tabela, na arquitetura
+e no plano. **O Sol xhigh conferiu e confirmou essa avaliação.** Acrescentou dois erros menores
+de indicação de responsável e numeração dos passos na tabela; nenhum altera a reprovação.
+
+Os documentos certos foram atualizados e as ações ficaram no escopo em ambas as tentativas.
+As fontes e evidências protegidas foram preservadas. O cliente injetou duas ferramentas adicionais
+na sessão da proposta; essa diferença foi conferida antes da tarefa e limita a comparação.
+Nenhuma delas foi usada. Uma tentativa por versão não prova que a proposta causou a piora.
+**Não adotei a proposta nem alterei as skills instaladas.** A tabela, sozinha, não foi suficiente
+para conferir as garantias do texto original. A hipótese agora em avaliação é conferir a
+extração independentemente antes de redigir; ainda não há demonstração de solução completa.
+T2 continua adiado; experimentar a proposta não equivale a aprovar sua instalação.
+
 Situação conferida em **22/09/2026**: a revisão das quatro skills centrais e a comparação de modelos
 terminaram. Foram encontrados dois defeitos textuais e riscos de compreensão por repetição e
 excesso de exceções. A regra de preservar garantias existentes já é explícita.
@@ -20,16 +140,52 @@ excesso de exceções. A regra de preservar garantias existentes já é explíci
 Terra xhigh, Sol high e Opus high preservaram a obrigação de confirmação/avanço que o Sonnet havia
 perdido na tentativa anterior. Nenhum passou em todos os critérios. Esses exercícios pediam uma
 tabela de análise; não aprovaram o fluxo completo de escrever o registro, derivar o plano e
-atualizar o brief. Os [resultados e limites](../active/decision-to-architecture-flow.md#comparative-extraction-results)
+atualizar o brief. Os [resultados e limites](../history/decision-to-architecture-flow-pre-condensation.md#comparative-extraction-results)
 permanecem no plano, sem repetir seu histórico aqui.
 
-Há **um item aberto**: E2, sobre a auditoria independente final. **T1 foi decidido: fazer as duas
+Há **um item aberto neste brief: E2**, sobre a auditoria independente final. T3 foi resolvido
+pela continuação do teste do Terra e E4 foi resolvido
+com a conferência do Opus high. As validações do fluxo completo abaixo continuam pendentes.
+**T1 foi decidido: fazer as duas
 correções pontuais. T2 foi decidido: adiar a reorganização ampla.** As duas decisões foram
-[registradas no plano](../active/decision-to-architecture-flow.md#current-execution-t1-corrections-and-t2-deferral),
+[registradas no plano](../history/decision-to-architecture-flow-pre-condensation.md#completed-execution-t1-corrections-and-t2-deferral),
 sem registro pendente. **T1 foi executado**: as duas correções passaram pela revisão prévia, pelas
 verificações focadas e pela conferência independente do resultado com Sol xhigh. Isso conclui as
 correções textuais, sem aprovar o fluxo completo dos modelos. A reorganização ampla continua
 adiada; as decisões anteriores continuam registradas.
+
+A rodada do fluxo completo após T1 foi revisada pelo Sol xhigh. O **Sonnet 5/xhigh terminou
+reprovado**: omitiu a garantia de confirmação/avanço no registro e sua validação antes de retirar
+a proteção antiga no plano. Recebeu as quatro skills e o template corrigido integralmente;
+os documentos certos foram atualizados e não houve alteração de código ou efeito proibido.
+Os critérios e a tentativa original foram preservados.
+
+Na rodada anterior, o Terra ficou suspenso porque faltava o catálogo de ferramentas no registro
+da sessão e apareceu uma alteração de configuração cuja autoria não foi estabelecida. Essa
+tentativa e sua falha de preservação continuam registradas.
+
+As evidências anteriores, as 21 fontes comuns e os critérios foram preservados. A rodada terminou
+sem aprovação completa. Os resultados e suas limitações estão registrados no
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#post-t1-batch-results-and-limits);
+a falha do Sonnet e a suspensão do Terra não foram descartadas.
+
+**A captura foi corrigida e o Terra xhigh executou a tarefa original uma vez**, depois da revisão
+com Sol xhigh. Foram preservadas as requisições reais, as ferramentas e todas as ações. O resultado
+também foi **reprovado**: faltam a garantia de confirmação/avanço no novo registro e sua validação
+antes de retirar a proteção antiga no plano. Além disso, a lista dos arquivos ficou apenas nas
+notas da sessão, embora o critério exija que apareça na resposta destinada ao usuário.
+
+Os documentos certos foram atualizados e as ações registradas ficaram dentro do escopo. Contudo,
+a configuração global mudou entre a conferência anterior e a posterior ao teste: apenas o modelo
+padrão do cliente foi trocado. Todas as requisições continuaram usando Terra/xhigh; a autoria e o
+momento exato da mudança são desconhecidos. Essa falha de preservação permanece separada das
+falhas de conteúdo. Não houve nova tentativa nem alteração das skills ou dos critérios.
+
+O Sol xhigh conferiu e confirmou essa avaliação, sem aprovar o fluxo completo. O Terra recebeu
+as skills centrais integralmente, mas não leu o template de arquitetura corrigido
+em T1. Portanto, esta tentativa também não demonstra o efeito daquela correção. Os
+[resultados e limites](../history/decision-to-architecture-flow-pre-condensation.md#terra-task-result-after-capture-repair)
+estão no plano. T2 continua adiado.
 
 ## O que falta para encerrar o trabalho já autorizado
 
@@ -50,10 +206,11 @@ e validado antes de retirar a proteção antiga. Provar somente que o novo filtr
 não demonstra que a fila continuará avançando. As correções de T1 melhoram as instruções, mas
 ainda não demonstraram resolver essa falha dos modelos.
 
-Nos rastros do Codex, o corpo inicial da tarefa permanece criptografado. O texto enviado e a
-correspondência entre os rastros foram preservados, mas sua entrega em texto claro segue não
-verificada. Essa limitação de evidência também precisa ser resolvida para qualquer critério que
-a exija; não vira aprovação por causa de uma resposta correta.
+Os rastros antigos do Codex mantêm suas limitações originais; não foram reinterpretados como
+aprovados. Na tentativa atual, a nova captura resolveu a falta da entrada e do contexto completo,
+incluindo ferramentas e a sequência de requisições. O impedimento concreto agora é obter validação
+aceita do comportamento, preservando também o ambiente. Repetir o mesmo teste sem uma hipótese
+nova não resolve essa pendência e não está previsto como próximo passo automático.
 
 ## Glossário
 
@@ -73,6 +230,34 @@ a exija; não vira aprovação por causa de uma resposta correta.
 
 ## Trabalho que posso fazer com sua autorização
 
+### T3 — Continuar o teste do Terra com a mudança de configuração registrada
+
+**Estado:** resolvido — a extração ocorreu uma vez, com a diferença de configuração registrada.
+
+**O que é:** a abertura da sessão Terra acrescentou o diretório isolado do teste à lista de
+locais confiáveis do Codex. O modelo e o esforço estão corretos e ele não chamou ferramentas.
+A conferência inicial dos hashes isolou essa entrada; não estabeleceu, por si só, qual processo
+escreveu o arquivo. A extração terminou na mesma sessão depois da continuação.
+
+**Por que importa:** o protocolo exigia configuração intacta. Seu `AGENTS.md` manda consultar
+você antes de mudar a estratégia quando uma premissa necessária falha. A continuação concreta
+já passou pela revisão técnica e conserva essa falha no resultado.
+
+**Opções:** fazer a primeira extração na mesma sessão, com o mesmo pedido e essa diferença
+registrada; não fazer e encerrar o Terra sem resultado de conteúdo nesta rodada; ou adiar e
+manter a extração suspensa.
+
+**Recomendação:** fazer. A diferença está identificada e restrita ao próprio ambiente de teste;
+continuar permite observar o comportamento do Terra. Mesmo se o conteúdo estiver correto, a
+rodada não poderá receber aprovação geral sem ressalva. Não haverá repetição, restauração da
+configuração, redução dos critérios ou alteração das skills.
+
+**Resultado:** você esclareceu que a entrada automática de confiança não deveria interromper
+o teste. A extração prosseguiu uma vez; o Sol xhigh e o autor a barraram por falta de uma
+condição de transição segura. Nenhum documento do ambiente de teste foi redigido. A falha
+original de preservação da configuração continua registrada no
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#completed-execution-guided-terra-and-sonnet-trial).
+
 ### T1 — Corrigir os dois defeitos textuais encontrados
 
 **Estado:** decidido
@@ -80,7 +265,7 @@ a exija; não vira aprovação por causa de uma resposta correta.
 **Decisão:** fazer as duas correções pontuais descritas neste item: limitar o gatilho de criação
 dos arquivos de compatibilidade na `documentation` ao escopo autorizado e esclarecer no template
 da `architecture-records` onde ficam as garantias preservadas. Registrada no
-[plano de implementação](../active/decision-to-architecture-flow.md#current-execution-t1-corrections-and-t2-deferral),
+[plano de implementação](../history/decision-to-architecture-flow-pre-condensation.md#completed-execution-t1-corrections-and-t2-deferral),
 dono do escopo e da sequência de execução. As skills são os alvos da mudança. A execução foi
 autorizada; as duas correções estão concluídas, com revisão prévia, verificações focadas e
 conferência independente do resultado. As evidências e seus limites estão no plano.
@@ -88,7 +273,7 @@ conferência independente do resultado. As evidências e seus limites estão no 
 **A pergunta para você:** fazer as duas correções pontuais, não fazer ou adiar.
 
 **O que foi corrigido:** os textos identificados na
-[revisão das skills](../active/decision-to-architecture-flow.md#skill-source-review):
+[revisão das skills](../history/decision-to-architecture-flow-pre-condensation.md#skill-source-review):
 
 - Na `documentation`, a obrigação de criar arquivos de compatibilidade ficou limitada aos
   trabalhos autorizados que tratam dessas instruções. Antes, a simples presença de um arquivo
@@ -127,7 +312,7 @@ falha de transição dos testes.
 **Decisão:** adiar a reorganização ampla das skills. Reconsiderá-la depois de tratar T1 e obter
 informação útil sobre a falha de transição, conforme a opção de adiamento deste item.
 Registrada no
-[plano de implementação](../active/decision-to-architecture-flow.md#current-execution-t1-corrections-and-t2-deferral),
+[plano de implementação](../history/decision-to-architecture-flow-pre-condensation.md#completed-execution-t1-corrections-and-t2-deferral),
 dono do escopo e da sequência de execução. A reorganização ampla permanece adiada.
 
 **A pergunta para você:** fazer a reorganização ampla agora, não fazer ou adiar.
@@ -158,6 +343,31 @@ pontuais permite avaliar cada mudança e preserva todos os critérios atuais. T2
 exigência obrigatória para encerrar o plano existente.
 
 ## Depende de outra sessão
+
+### E4 — Concluir a conferência pontual bloqueada pela cota do Sol
+
+**Estado:** resolvido — parecer recebido e ressalvas tratadas no registro da avaliação.
+O identificador E3 já foi usado e resolvido no brief anterior, por isso não é reutilizado.
+
+**Rota escolhida:** após a recomendação explícita de usar Opus high, você instruiu continuar.
+A troca de revisor foi registrada no
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#independent-extraction-gate-results-and-limits).
+Não há registro pendente. O Opus 5/high concluiu a conferência e emitiu `SUPPORTED`, sem
+achado impeditivo. Após uma complementação para carregar três skills que havia omitido, manteve
+o parecer. Registrei essa falha de procedimento e as nove ressalvas sobre a avaliação no
+[resultado da revisão](../history/decision-to-architecture-flow-pre-condensation.md#independent-result-conformance-completed).
+
+**O que foi conferido:** minha avaliação do teste de extração. O teste já terminou:
+a revisão bloqueou a saída defeituosa do Sonnet e os três controles errados, e aceitou o controle
+completo. O pacote contém as fontes, respostas, critérios, evidências e minha discordância de
+uma justificativa adicional. A cota interrompeu a conferência desse pacote pelo Sol xhigh.
+
+**Resultado e limite:** os cinco resultados e a preservação das evidências foram confirmados.
+Os controles errados tratam todos da mesma garantia; não demonstram que a conferência detectará
+qualquer erro ou evitará rejeições excessivas. O teste e o revisor omitiram leituras obrigatórias,
+e a complementação não apaga essas falhas. Nenhum resultado anterior foi corrigido ou repetido.
+Isso conclui apenas a avaliação desta rodada; a validação do fluxo completo e E2 continuam
+pendentes. A revisão foi somente leitura e o custo monetário não foi medido.
 
 ### E2 — Receber a auditoria independente da versão final
 
