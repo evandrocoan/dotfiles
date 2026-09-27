@@ -209,9 +209,9 @@ environment, with no external or production mutation. Reversible means the inten
 no credible data-loss or recovery hazard.
 
 Before reviewing a high-risk plan, read the reviewer selection and pre-edit rules in
-[reviews and completion](references/closure.md). Use that reference for every group-required
-independent review, including direct work without a plan. Apply every domain-required review
-regardless of the planning route. A formal plan already in progress retains its highest risk
+[reviews and completion](references/closure.md). Use that reference for every group-required or
+user-selected independent review, including direct work without a plan. Apply every domain-required
+review regardless of the planning route. A formal plan already in progress retains its highest risk
 classification and review and closure gates for material continuations.
 
 ## Build an executable sequence
@@ -380,9 +380,10 @@ Keep paid or externally mutating scenarios sequential unless the applicable poli
 requires otherwise. Measure the complete scenario rather than hiding retries or nested commands.
 
 Before claiming completion, read [reviews and completion](references/closure.md). Its test-evidence
-and group-review checks apply even when there is no formal plan. A high-risk plan requires the full
-closure audit and a fresh independent second pass; compact and direct work use their proportional
-gates. Do not mark any plan complete while a required check, authorization, or review is unresolved.
+and group-required or user-selected review checks apply even when there is no formal plan. A
+high-risk plan requires the full closure audit and a fresh independent second pass; compact and
+direct work use their proportional gates. Do not mark any plan complete while a required check,
+authorization, or review is unresolved.
 
 ## Compact plan format
 
