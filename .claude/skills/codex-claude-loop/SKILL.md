@@ -35,6 +35,12 @@ honor each explicit user choice of model and effort. Check that the selected rol
 available before assigning work. If a required reviewer cannot run, hold the dependent high-risk
 work or closure and report the decision needed; do not silently substitute another reviewer.
 
+For each task, assess the lowest adequate model and effort separately for coordination,
+implementation, and any required review. Do not apply the complex-work profile mechanically to
+smaller tasks: Sol medium may suffice for coordination and Sol high for an independent review when
+the task's difficulty and risk support those choices. Keep an explicitly selected model or effort,
+and verify the acting setting for each role rather than inferring it from another agent's setting.
+
 The coordinator gives the independent reviewer the user request, applicable instructions, plan,
 repository baseline, and relevant diff without an intended verdict. The reviewer reports findings
 without editing or publishing a handoff. The coordinator evaluates and reports all findings,
@@ -56,6 +62,6 @@ within the ownership rules of the selected mode.
   mode.
 
 If the requested mode is unavailable, report the concrete prerequisite or decision needed. Do
-not switch modes to bypass a failed assumption, permission decision, or active owner. A
-user-directed mode change first reconciles the active process or handoff and all partial changes;
-then starts the chosen mode under its own rules.
+not switch collaboration modes to bypass a failed assumption, permission decision, or active
+owner. Before a user-directed mode change, reconcile the active process or handoff and all partial
+changes; then start the chosen mode under its own rules.
