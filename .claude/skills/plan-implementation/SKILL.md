@@ -24,11 +24,13 @@ project its current steps into the task plan.
 
 ## Determine the planning mode
 
-Classify the request before editing. Read [model-aware routing](references/model-routing.md)
-when choosing whether discretionary local work needs a formal plan or when recommending a model,
-reasoning effort, or reviewer. The applicable user's explicit request and higher-priority
-question-only or read-only rules come first. A model never waives the risk and persistence gates
-below.
+Classify the request before editing. The global model and reasoning-effort gate must identify the
+acting agent's effective settings and satisfy any required role before task work begins; an unknown
+setting cannot be replaced with a conservative plan. Read
+[model-aware routing](references/model-routing.md) when choosing whether discretionary local work
+needs a formal plan or when recommending a model, reasoning effort, or reviewer. The applicable
+user's explicit request and higher-priority question-only or read-only rules come first. A model
+never waives the risk and persistence gates below.
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
   says not to implement, inspect enough authoritative evidence to make the plan credible and stop

@@ -46,6 +46,45 @@ index and performs no client-state writes, so it can also be used for read-only 
 Treat this as local agent data rather than repository discovery. Never alter
 session, history, or runtime files while searching.
 
+## Model and reasoning effort at task entry
+
+After classifying the latest request under the question-only gate below, identify the acting
+agent's effective model and reasoning effort before a substantive answer, plan, project command,
+or edit. Use trustworthy runtime metadata when exposed. Otherwise ask the user to read the model
+and thinking level shown for this active session. For a delegated agent, use its own runtime
+metadata or an accepted launcher assignment communicated to that agent; if neither is available,
+ask the parent. The parent's settings do not identify the child.
+If the client has no configurable thinking level, establish that fact rather than inventing an
+effort value. Do not infer identity or effort from writing style, a model list, repository settings,
+or a default. If either remains unknown, wait for the missing information; silence is not a
+fallback route. Carry a known setting across turns in the same session, but recheck after a
+reported switch, handoff, new agent, or conflicting runtime evidence.
+
+After identifying the acting settings, assess the lowest adequate model and effort for each task
+role from its scope, uncertainty, consequences, and mandatory reviews. The agent owns this
+assessment; do not require the user to label a task as Sol medium or Sol xhigh. Distinguish an
+exact pair fixed by the user or applicable instructions, a minimum for a named model, and an
+optional cost-saving downgrade. Compare effort only within the same model and its supported
+levels; do not silently substitute another model or provider. A plan or reviewer cannot lower a
+user-set requirement.
+
+When the current setting is above a sufficient lower setting, ask once at the task boundary to
+switch down if that setting is supported and the user has not already chosen to keep the current
+one for this scope. State the role, proposed setting, and reason. If the user accepts, hold that
+role until the changed setting is confirmed on a subsequent turn. The user may decline and keep
+the sufficient higher setting. If no answer arrives after a reasonable opportunity, continue at
+the current setting; neither silence nor a chat reply changes the client setting. Do not repeat
+the downgrade request for each step or file. Reassess after a material change in task, risk, or
+role. A user-pinned sufficient setting also controls this scope without a downgrade prompt.
+
+If the effective setting is below the assessed minimum, does not match a fixed exact pair, or
+cannot be verified, ask for a supported switch or reassignment and hold that role. An insufficient
+user-pinned setting must be resolved, not silently accepted. In particular, Sol medium cannot
+perform a role requiring Sol xhigh by writing a longer plan or relying on a stronger reviewer.
+Only a confirmed client setting on a subsequent turn establishes that a requested switch took
+effect; an active turn may still use its earlier setting. This gate does not authorize any task
+action.
+
 ## Mandatory question-only gate
 
 Before sending commentary, creating a plan, calling a tool, or taking any action,
@@ -72,7 +111,10 @@ request to edit, implement, test, run, continue, or otherwise act.
 
 In a question-only turn:
 
-- Answer only the question or questions.
+- Answer only the question or questions. The model and effort gate may first ask for missing
+  session information or recommend a setting change. A declined or unanswered optional downgrade
+  cannot block an answer the current setting can provide; these prompts never release deferred
+  implementation.
 - Do not announce work, create or execute a plan, edit anything, run tests,
   implement changes, resume pending work, or perform any action that changes local
   or remote state.
@@ -86,7 +128,8 @@ Begin implementation only after a later, explicit user request to act that does
 not qualify as question-only under the checks above. Context supplied without
 such a request does not release deferred work. A question about missing or
 incomplete work, or about what something means, is never authorization to
-perform that work.
+perform that work. A reply supplying only model or effort information also does
+not release a deferred implementation order.
 
 ### Missing repositories and workspace scope
 
