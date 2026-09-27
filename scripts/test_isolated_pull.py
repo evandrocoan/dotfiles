@@ -10,6 +10,9 @@ tracked global configuration through HOME.
 """
 
 import os
+import shlex
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -19,6 +22,7 @@ from pathlib import Path
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/isolated_pull.sh'
+README = SCRIPT.parents[1] / 'README.md'
 BLOCKING_SLEEP_SECONDS = 20
 MOVE_DEADLINE_SECONDS = 15
 
@@ -88,19 +92,46 @@ class IsolatedPullTests(unittest.TestCase):
                          f'unexpected status\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}')
         return result
 
-    def start_blocked_script(self, *args, script=None):
+    def start_blocked_script(self, *args, script=None, descendant_lock=False,
+                             resistant_descendant=False):
         """Start a run whose fetch blocks, so signals arrive mid-pull."""
         fake_ssh = self.root / 'fake_ssh.sh'
         self.transport_marker = self.root / 'transport-started'
-        fake_ssh.write_text(f'#!/usr/bin/env bash\n: > "{self.transport_marker}"\n'
-                            f'sleep {BLOCKING_SLEEP_SECONDS}\n')
+        if descendant_lock:
+            self.descendant_marker = self.root / 'descendant-pid'
+            ignored_term = "trap '' TERM\n" if resistant_descendant else ''
+            child_wait = (f'exec sleep {BLOCKING_SLEEP_SECONDS}\n' if resistant_descendant else
+                          f'trap \'rm -f -- "${{git_directory}}/index.lock"; exit 0\' TERM\n'
+                          f'sleep {BLOCKING_SLEEP_SECONDS}\n')
+            fake_ssh.write_text(
+                '#!/usr/bin/env bash\nset -euo pipefail\n'
+                '(\n'
+                f'    {ignored_term}'
+                '    found_git_directory=0\n'
+                f'    for git_directory in {shlex.quote(str(self.base))}/run-*/.git; do\n'
+                '        if [[ -d "${git_directory}" ]]; then\n'
+                '            : > "${git_directory}/index.lock"\n'
+                '            found_git_directory=1\n'
+                '            break\n'
+                '        fi\n'
+                '    done\n'
+                '    [[ "${found_git_directory}" == 1 ]] || exit 1\n'
+                f'    printf "%s\\n" "${{BASHPID}}" > {shlex.quote(str(self.descendant_marker))}\n'
+                f'    {child_wait}'
+                f') > {shlex.quote(str(self.root / "descendant-stdout"))} '
+                f'2> {shlex.quote(str(self.root / "descendant-stderr"))} &\n'
+                f'while [[ ! -s {shlex.quote(str(self.descendant_marker))} ]]; do sleep 0.05; done\n'
+                f': > {shlex.quote(str(self.transport_marker))}\n'
+                f'sleep {BLOCKING_SLEEP_SECONDS}\n')
+        else:
+            fake_ssh.write_text(f'#!/usr/bin/env bash\n: > "{self.transport_marker}"\n'
+                                f'sleep {BLOCKING_SLEEP_SECONDS}\n')
         fake_ssh.chmod(0o755)
         self.git('remote', 'set-url', 'origin', 'ssh://fixture.invalid/repository',
                  cwd=self.repository)
         env = dict(self.env, GIT_SSH_COMMAND=str(fake_ssh))
-        # The blocked transport outlives the script and inherits its output, so
-        # files are used instead of pipes: waiting for pipe EOF would wait for
-        # the sleeping transport rather than for the script's own exit.
+        # Transport descendants can outlive the pull leader and inherit output;
+        # files let tests wait for the script rather than pipe EOF.
         self.blocked_stdout = self.root / 'blocked-stdout.txt'
         self.blocked_stderr = self.root / 'blocked-stderr.txt'
         stdout_stream = self.blocked_stdout.open('w')
@@ -123,16 +154,79 @@ class IsolatedPullTests(unittest.TestCase):
                   f'stdout:\n{self.blocked_stdout.read_text()}\n'
                   f'stderr:\n{self.blocked_stderr.read_text()}')
 
+    def process_is_running_now(self, pid):
+        stat_path = Path(f'/proc/{pid}/stat')
+        if not stat_path.exists():
+            return False
+        try:
+            state = stat_path.read_text().rsplit(') ', 1)[1].split(' ', 1)[0]
+        except FileNotFoundError:
+            return False
+        return state not in {'Z', 'X'}
+
     def process_is_alive(self, pid):
         deadline = time.monotonic() + MOVE_DEADLINE_SECONDS
         while time.monotonic() < deadline:
-            if not Path(f'/proc/{pid}').exists():
+            if not self.process_is_running_now(pid):
                 return False
             time.sleep(0.05)
         return True
 
-    def command_line(self, pid):
-        return Path(f'/proc/{pid}/cmdline').read_bytes().decode().split('\x00')
+    def process_start_time(self, pid):
+        try:
+            fields = Path(f'/proc/{pid}/stat').read_text().rsplit(') ', 1)[1].split()
+        except FileNotFoundError:
+            return None
+        return fields[19]
+
+    def kill_descendant(self, pid, start_time):
+        if self.process_start_time(pid) != start_time:
+            return
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    def signal_after_move(self, *, returning=False):
+        """Signal the real script after mv renamed .git but before its next statement."""
+        bin_directory = self.root / 'signal-bin'
+        bin_directory.mkdir()
+        marker = self.root / 'move-signalled'
+        condition = (f'[[ "${{4}}" == {shlex.quote(str(self.repository / ".git"))} ]]'
+                     if returning else
+                     f'[[ "${{3}}" == {shlex.quote(str(self.repository / ".git"))} ]]')
+        wrapper = bin_directory / 'mv'
+        wrapper.write_text('#!/usr/bin/env bash\nset -euo pipefail\n'
+                           f'{shlex.quote(shutil.which("mv"))} "$@"\n'
+                           f'if {condition}; then\n'
+                           f'    : > {shlex.quote(str(marker))}\n'
+                           '    kill -TERM "${PPID}"\n'
+                           'fi\n')
+        wrapper.chmod(0o755)
+        env = dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
+        result = self.run_script(expect=143, env=env)
+        self.assertTrue(marker.exists(), 'the signal never reached the move boundary')
+        return result
+
+    def fail_isolated_abort(self, *, after_real_abort=False):
+        bin_directory = self.root / 'abort-bin'
+        bin_directory.mkdir()
+        wrapper = bin_directory / 'git'
+        real_git = shlex.quote(shutil.which('git'))
+        real_abort = f'    {real_git} "$@"\n' if after_real_abort else ''
+        wrapper.write_text('#!/usr/bin/env bash\nset -euo pipefail\n'
+                           'if [[ " $* " == *" rebase --abort "* ]]; then\n'
+                           f'{real_abort}'
+                           '    printf "injected abort failure\\n" >&2\n'
+                           '    exit 73\n'
+                           'fi\n'
+                           f'exec {real_git} "$@"\n')
+        wrapper.chmod(0o755)
+        return dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
+
+    def readme_recovery_command(self):
+        section = README.read_text().split('#### Recover an interrupted isolated pull\n', 1)[1]
+        return section.split('```bash\n', 1)[1].split('\n```', 1)[0]
 
     def direct_children(self, parent_pid):
         """Return (pid, command name) for every direct child of parent_pid."""
@@ -224,6 +318,31 @@ class IsolatedPullTests(unittest.TestCase):
         self.assertIn('git pull --rebase" failed', result.stderr)
         self.assertEqual(self.snapshot('live.conf'), before)
 
+    def test_failed_pull_with_remaining_index_lock_stays_isolated(self):
+        fake_ssh = self.root / 'lock_then_fail_ssh.sh'
+        fake_ssh.write_text(
+            '#!/usr/bin/env bash\nset -euo pipefail\n'
+            f'for git_directory in {shlex.quote(str(self.base))}/run-*/.git; do\n'
+            '    if [[ -d "${git_directory}" ]]; then\n'
+            '        : > "${git_directory}/index.lock"\n'
+            '        exit 1\n'
+            '    fi\n'
+            'done\n'
+            'exit 2\n')
+        fake_ssh.chmod(0o755)
+        self.git('remote', 'set-url', 'origin', 'ssh://fixture.invalid/repository',
+                 cwd=self.repository)
+        env = dict(self.env, GIT_SSH_COMMAND=str(fake_ssh))
+
+        result = self.run_script(expect=1, env=env)
+
+        self.assertFalse((self.repository / '.git').exists())
+        tree = self.isolated_trees()[0]
+        lock = tree / '.git' / 'index.lock'
+        self.assertTrue(lock.is_file())
+        self.assertIn(str(lock), result.stderr)
+        self.assertIn(str(tree), result.stderr)
+
     def test_negative_control_without_trap_leaves_git_displaced(self):
         """Proves the restore assertion above detects a missing exit handler."""
         without_trap = self.root / 'isolated_pull_without_trap.sh'
@@ -258,34 +377,6 @@ class IsolatedPullTests(unittest.TestCase):
         self.assertEqual(self.snapshot('live.conf'), before)
         self.assertIn('failed', result.stderr)
 
-    def test_pull_runs_as_a_direct_git_child(self):
-        """The exit handler can only stop the process that holds the database if
-        the backgrounded pull is git itself. Backgrounding a shell function would
-        make it a subshell wrapper, so terminating that wrapper would leave git
-        running while .git moves."""
-        process = self.start_blocked_script()
-
-        children = self.direct_children(process.pid)
-
-        self.assertEqual([command for _, command in children], ['git'],
-                         f'the pull must be a direct git child, got {children}')
-        self.assertIn('pull', self.command_line(children[0][0]),
-                      'the direct git child must be the pull itself')
-
-    def test_negative_control_subshell_wrapped_pull_is_detected(self):
-        """Proves the assertion above detects the subshell form it forbids."""
-        wrapped = self.root / 'isolated_pull_wrapped.sh'
-        source = SCRIPT.read_text()
-        marker = 'git "${ISOLATED_GIT_ARGUMENTS[@]}" pull --rebase &'
-        self.assertIn(marker, source)
-        wrapped.write_text(source.replace(marker, 'isolatedgit pull --rebase &'))
-        process = self.start_blocked_script(script=wrapped)
-
-        children = self.direct_children(process.pid)
-
-        self.assertEqual([command for _, command in children], ['bash'],
-                         f'the subshell form should show a shell wrapper, got {children}')
-
     def test_termination_signal_returns_git_directory(self):
         """A TERM arriving while the pull blocks must not move a busy database."""
         process = self.start_blocked_script()
@@ -301,6 +392,269 @@ class IsolatedPullTests(unittest.TestCase):
         self.assert_git_returned()
         self.assert_no_pending_state()
 
+    def test_termination_stops_lock_holding_descendant_before_return(self):
+        process = self.start_blocked_script(descendant_lock=True)
+        descendant_pid = int(self.descendant_marker.read_text())
+        self.addCleanup(self.kill_descendant, descendant_pid,
+                        self.process_start_time(descendant_pid))
+        self.assertTrue((self.isolated_trees()[0] / '.git' / 'index.lock').is_file())
+
+        process.terminate()
+        status = process.wait(timeout=MOVE_DEADLINE_SECONDS)
+
+        self.assertNotEqual(status, 0)
+        self.assertFalse(self.process_is_alive(descendant_pid),
+                         'a descendant still held the Git directory after restoration')
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertFalse((self.isolated_trees()[0] / 'pull-process-group').exists())
+
+    def test_unstoppable_descendant_keeps_git_isolated(self):
+        self.write('live.conf', 'my live edit\n')
+        self.write('untracked.txt', 'my untracked work\n')
+        before = self.snapshot('live.conf', 'untracked.txt')
+        process = self.start_blocked_script(descendant_lock=True,
+                                            resistant_descendant=True)
+        descendant_pid = int(self.descendant_marker.read_text())
+        self.addCleanup(self.kill_descendant, descendant_pid,
+                        self.process_start_time(descendant_pid))
+        self.assertTrue((self.isolated_trees()[0] / '.git' / 'index.lock').is_file())
+
+        process.terminate()
+        status = process.wait(timeout=MOVE_DEADLINE_SECONDS)
+
+        self.assertNotEqual(status, 0)
+        self.assertTrue(self.process_is_running_now(descendant_pid),
+                        'the fixture descendant must resist TERM')
+        self.assertFalse((self.repository / '.git').exists(),
+                         'the database returned while its descendant could still use it')
+        tree = self.isolated_trees()[0]
+        self.assertTrue((tree / '.git' / 'HEAD').is_file())
+        self.assertTrue((tree / 'pull-process-group').is_file())
+        self.assertIn(str(tree), self.blocked_stderr.read_text())
+        self.assertEqual(self.snapshot('live.conf', 'untracked.txt'), before)
+
+    def test_pull_leader_exits_before_live_descendant_keeps_git_isolated(self):
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf')
+        bin_directory = self.root / 'early-pull-exit-bin'
+        bin_directory.mkdir()
+        marker = self.root / 'early-pull-descendant-pid'
+        wrapper = bin_directory / 'git'
+        wrapper.write_text(
+            '#!/usr/bin/env bash\nset -euo pipefail\n'
+            'if [[ " $* " == *" pull --rebase "* ]]; then\n'
+            '    git_directory=""\n'
+            '    for argument in "$@"; do\n'
+            '        if [[ "${argument}" == --git-dir=* ]]; then\n'
+            '            git_directory="${argument#--git-dir=}"\n'
+            '        fi\n'
+            '    done\n'
+            '    [[ -n "${git_directory}" ]] || exit 2\n'
+            '    (\n'
+            "        trap '' TERM\n"
+            '        : > "${git_directory}/descendant-active"\n'
+            f'        printf "%s\\n" "${{BASHPID}}" > {shlex.quote(str(marker))}\n'
+            f'        exec sleep {BLOCKING_SLEEP_SECONDS}\n'
+            f'    ) > {shlex.quote(str(self.root / "early-descendant-stdout"))} '
+            f'2> {shlex.quote(str(self.root / "early-descendant-stderr"))} &\n'
+            f'    while [[ ! -s {shlex.quote(str(marker))} ]]; do sleep 0.05; done\n'
+            '    exit 0\n'
+            'fi\n'
+            f'exec {shlex.quote(shutil.which("git"))} "$@"\n')
+        wrapper.chmod(0o755)
+        env = dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
+
+        result = self.run_script(expect=1, env=env)
+
+        self.assertTrue(marker.is_file(), result.stderr)
+        descendant_pid = int(marker.read_text())
+        self.addCleanup(self.kill_descendant, descendant_pid,
+                        self.process_start_time(descendant_pid))
+        self.assertTrue(self.process_is_running_now(descendant_pid),
+                        'the descendant must remain after its pull leader exits')
+        tree = self.isolated_trees()[0]
+        self.assertFalse((self.repository / '.git').exists())
+        self.assertTrue((tree / '.git' / 'descendant-active').is_file())
+        self.assertTrue((tree / 'pull-process-group').is_file())
+        self.assertIn('pull process group', result.stderr)
+        self.assertNotIn('still has a lock', result.stderr)
+        self.assertIn(str(tree), result.stderr)
+        self.assertEqual(self.snapshot('live.conf'), before)
+
+    def test_unstoppable_pull_leader_exits_script_without_returning_git(self):
+        bin_directory = self.root / 'resistant-pull-bin'
+        bin_directory.mkdir()
+        marker = self.root / 'resistant-pull-pid'
+        wrapper = bin_directory / 'git'
+        wrapper.write_text('#!/usr/bin/env bash\nset -euo pipefail\n'
+                           'if [[ " $* " == *" pull --rebase "* ]]; then\n'
+                           "    trap '' TERM\n"
+                           f'    printf "%s\\n" "${{BASHPID}}" > {shlex.quote(str(marker))}\n'
+                           f'    exec sleep {BLOCKING_SLEEP_SECONDS}\n'
+                           'fi\n'
+                           f'exec {shlex.quote(shutil.which("git"))} "$@"\n')
+        wrapper.chmod(0o755)
+        env = dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
+        stdout_path = self.root / 'resistant-pull-stdout'
+        stderr_path = self.root / 'resistant-pull-stderr'
+        with stdout_path.open('w') as stdout_stream, stderr_path.open('w') as stderr_stream:
+            process = subprocess.Popen(
+                ['bash', str(SCRIPT), '--repository', str(self.repository),
+                 '--base', str(self.base)], env=env, stdout=stdout_stream,
+                stderr=stderr_stream)
+            self.addCleanup(self.terminate_process, process)
+            deadline = time.monotonic() + MOVE_DEADLINE_SECONDS
+            while not marker.exists() and time.monotonic() < deadline:
+                self.assertIsNone(process.poll(), stderr_path.read_text())
+                time.sleep(0.05)
+            self.assertTrue(marker.exists(), stderr_path.read_text())
+            leader_pid = int(marker.read_text())
+            self.addCleanup(self.kill_descendant, leader_pid,
+                            self.process_start_time(leader_pid))
+
+            process.terminate()
+            status = process.wait(timeout=MOVE_DEADLINE_SECONDS)
+
+        self.assertNotEqual(status, 0)
+        self.assertTrue(self.process_is_running_now(leader_pid),
+                        'the fixture pull leader must resist TERM')
+        self.assertFalse((self.repository / '.git').exists())
+        tree = self.isolated_trees()[0]
+        self.assertTrue((tree / '.git' / 'HEAD').is_file())
+        self.assertTrue((tree / 'pull-process-group').is_file())
+        self.assertIn(str(tree), stderr_path.read_text())
+
+    def test_signal_after_first_rename_restores_git(self):
+        before = self.snapshot('live.conf', 'shared.txt')
+
+        self.signal_after_move()
+
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+
+    def test_signal_after_return_rename_recognizes_completed_restore(self):
+        before = self.snapshot('live.conf', 'shared.txt')
+        upstream_commit = self.push_upstream_change({'shared.txt': 'upstream rewrote this\n'})
+
+        result = self.signal_after_move(returning=True)
+
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+        self.assertEqual(self.git('rev-parse', 'master', cwd=self.repository).stdout.strip(),
+                         upstream_commit)
+        self.assertNotIn('reappeared', result.stderr)
+
+    def test_failed_abort_keeps_pending_database_isolated(self):
+        self.write('shared.txt', 'my local commit line\n')
+        self.git('commit', '-am', 'Local commit', cwd=self.repository)
+        local_tip = self.git('rev-parse', 'master', cwd=self.repository).stdout.strip()
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        self.push_upstream_change({'shared.txt': 'upstream rewrote the same line\n'})
+
+        result = self.run_script(expect=1, env=self.fail_isolated_abort())
+
+        self.assertFalse((self.repository / '.git').exists())
+        tree = self.isolated_trees()[0]
+        self.assertTrue((tree / '.git' / 'rebase-merge').is_dir())
+        self.assertEqual(self.git('--git-dir', str(tree / '.git'),
+                                  'rev-parse', 'refs/heads/master', cwd=self.root).stdout.strip(),
+                         local_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+        self.assertIn(str(tree), result.stderr)
+        self.assertIn('README.md', result.stderr)
+
+    def test_failed_abort_status_keeps_database_isolated_even_without_marker(self):
+        self.write('shared.txt', 'my local commit line\n')
+        self.git('commit', '-am', 'Local commit', cwd=self.repository)
+        local_tip = self.git('rev-parse', 'master', cwd=self.repository).stdout.strip()
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        self.push_upstream_change({'shared.txt': 'upstream rewrote the same line\n'})
+
+        result = self.run_script(expect=1,
+                                 env=self.fail_isolated_abort(after_real_abort=True))
+
+        self.assertFalse((self.repository / '.git').exists())
+        tree = self.isolated_trees()[0]
+        self.assertTrue((tree / '.git' / 'HEAD').is_file())
+        self.assertFalse((tree / '.git' / 'rebase-merge').exists())
+        self.assertEqual(self.git('--git-dir', str(tree / '.git'),
+                                  'rev-parse', 'refs/heads/master', cwd=self.root).stdout.strip(),
+                         local_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+        self.assertIn(str(tree), result.stderr)
+
+    def test_readme_recovery_aborts_isolated_rebase_before_return(self):
+        self.base = self.repository / '.local' / 'state' / 'isolated-pull'
+        self.base.mkdir(parents=True)
+        self.write('shared.txt', 'my local commit line\n')
+        self.git('commit', '-am', 'Local commit', cwd=self.repository)
+        local_tip = self.git('rev-parse', 'master', cwd=self.repository).stdout.strip()
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        self.push_upstream_change({'shared.txt': 'upstream rewrote the same line\n'})
+        self.run_script(expect=1, env=self.fail_isolated_abort())
+
+        result = subprocess.run(['bash', '-c', self.readme_recovery_command()],
+                                env=self.env, capture_output=True, text=True)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.git('rev-parse', 'master', cwd=self.repository).stdout.strip(),
+                         local_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+
+    def test_readme_recovery_refuses_live_pull_group(self):
+        self.base = self.repository / '.local' / 'state' / 'isolated-pull'
+        self.base.mkdir(parents=True)
+        process = self.start_blocked_script(descendant_lock=True,
+                                            resistant_descendant=True)
+        descendant_pid = int(self.descendant_marker.read_text())
+        self.addCleanup(self.kill_descendant, descendant_pid,
+                        self.process_start_time(descendant_pid))
+        self.assertTrue((self.isolated_trees()[0] / '.git' / 'index.lock').is_file())
+        process.terminate()
+        self.assertNotEqual(process.wait(timeout=MOVE_DEADLINE_SECONDS), 0)
+
+        result = subprocess.run(['bash', '-c', self.readme_recovery_command()],
+                                env=self.env, capture_output=True, text=True)
+
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn('Pull processes still run', result.stderr)
+        self.assertFalse((self.repository / '.git').exists())
+        self.assertTrue((self.isolated_trees()[0] / '.git' / 'HEAD').is_file())
+
+    def test_readme_recovery_refuses_remaining_rebase_marker(self):
+        self.base = self.repository / '.local' / 'state' / 'isolated-pull'
+        self.base.mkdir(parents=True)
+        self.write('shared.txt', 'my local commit line\n')
+        self.git('commit', '-am', 'Local commit', cwd=self.repository)
+        self.push_upstream_change({'shared.txt': 'upstream rewrote the same line\n'})
+        self.run_script(expect=1, env=self.fail_isolated_abort())
+        tree = self.isolated_trees()[0]
+
+        bin_directory = self.root / 'noop-abort-bin'
+        bin_directory.mkdir()
+        wrapper = bin_directory / 'git'
+        wrapper.write_text('#!/usr/bin/env bash\nset -euo pipefail\n'
+                           'if [[ " $* " == *" rebase --abort "* ]]; then exit 0; fi\n'
+                           f'exec {shlex.quote(shutil.which("git"))} "$@"\n')
+        wrapper.chmod(0o755)
+        env = dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
+
+        result = subprocess.run(['bash', '-c', self.readme_recovery_command()],
+                                env=env, capture_output=True, text=True)
+
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn('Unfinished Git operation remains', result.stderr)
+        self.assertFalse((self.repository / '.git').exists())
+        self.assertTrue((tree / '.git' / 'rebase-merge').is_dir())
+
     def test_return_collision_is_refused_instead_of_nested(self):
         process = self.start_blocked_script()
         (self.repository / '.git').mkdir()
@@ -311,7 +665,7 @@ class IsolatedPullTests(unittest.TestCase):
 
         self.assertNotEqual(status, 0)
         self.assertIn('reappeared', stderr)
-        self.assertIn('Recover with', stderr)
+        self.assertIn('resolve the collision', stderr)
         self.assertFalse((self.repository / '.git' / '.git').exists(),
                          'the database was nested inside the stray directory')
         self.assertTrue((self.isolated_trees()[0] / '.git' / 'HEAD').is_file(),
@@ -345,6 +699,16 @@ class IsolatedPullTests(unittest.TestCase):
         lock.unlink()
         self.run_script()
         self.assert_git_returned()
+
+    def test_refuses_pack_directory_lock(self):
+        lock = self.repository / '.git' / 'objects' / 'pack' / 'multi-pack-index.lock'
+        lock.write_text('')
+
+        result = self.run_script(expect=1)
+
+        self.assertIn(str(lock), result.stderr)
+        self.assertTrue((self.repository / '.git' / 'HEAD').is_file())
+        self.assertEqual(self.isolated_trees(), [])
 
     def test_refuses_secondary_worktree(self):
         """A linked worktree's gitdir pointer would break while .git is displaced."""
