@@ -67,9 +67,9 @@ rastros do Codex deixam o corpo inicial da tarefa criptografado; guardei o promp
 correspondência entre os rastros, mas a entrega em texto claro permanece `UNVERIFIED`. O Opus
 teve modelo/esforço, tarefa exata, diretório, resposta terminal e saída normal confirmados.
 Os resultados mecânicos `UNVERIFIED` ficam separados da conferência completa dos efeitos pelo
-autor. A [avaliação detalhada](../active/decision-to-architecture-flow.md#comparative-extraction-results)
+autor. A [avaliação detalhada](../history/decision-to-architecture-flow-pre-condensation.md#comparative-extraction-results)
 registra os critérios, métricas e limites; os
-[achados nas skills](../active/decision-to-architecture-flow.md#skill-source-review) apontam os
+[achados nas skills](../history/decision-to-architecture-flow-pre-condensation.md#skill-source-review) apontam os
 textos concretos. Evidências temporárias: S
 `post-audit-b1-b3-410811bdf229/live/skill-quality-comparison-01/`.
 
@@ -1342,7 +1342,7 @@ recomendação não registra uma decisão em seu nome.
 **Decisão:** preservar as instruções atuais e estabelecer uma nova base documentada para o
 próximo lote, sem reverter o trabalho concorrente nem fingir igualdade com a rodada Sonnet high.
 A instrução para executar os testes necessários autoriza também esse preparo. Registrada no
-[plano](../active/decision-to-architecture-flow.md#current-authorization-and-next-validation-batch).
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#current-authorization-and-next-validation-batch).
 
 **O que é:** o Terra deveria receber as mesmas instruções compartilhadas congeladas antes do
 Sonnet. Na conferência de 21/09/2026, `.codex/AGENTS.md` e a skill Docker mudaram enquanto eu
@@ -1372,7 +1372,7 @@ avaliar explicitamente seu efeito sobre o experimento. Isso não aceita a tentat
 aprovada e não altera os critérios para acomodar suas falhas.
 
 **O que bloqueia:** lançar o Terra com uma base diferente da previamente congelada. A condição
-vem do [contrato D22 no plano](../active/decision-to-architecture-flow.md#d22-one-complementary-terra-xhigh-run-in-codex).
+vem do [contrato D22 no plano](../history/decision-to-architecture-flow-pre-condensation.md#d22-one-complementary-terra-xhigh-run-in-codex).
 Essa escolha está registrada por meio da instrução de execução D24; a revisão do ajuste e a
 conferência das fontes precedem o novo lote.
 
@@ -1385,7 +1385,7 @@ quantidade suficiente para concluir a validação, e pediu o próximo passo, pro
 Isso substitui os limites anteriores de uma única tentativa. A autorização inclui preparar a
 base atual e executar os testes; não exige outra rodada de confirmação só para registrar essa
 mesma ordem. Registrada no
-[plano](../active/decision-to-architecture-flow.md#current-authorization-and-next-validation-batch).
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#current-authorization-and-next-validation-batch).
 
 **Como será executado:** primeiro Terra xhigh e depois Sonnet 5/xhigh, sequencialmente, com
 fixtures novas e a mesma base dentro do lote. Eu inicio o Terra aqui. Para o Sonnet, preparo a
@@ -1698,7 +1698,7 @@ usuário em 2026-09-21, após a elaboração do relatório; sua autorização es
 condicional.
 
 **Registro:** parecer recebido e promovido ao
-[plano](../active/decision-to-architecture-flow.md#plan-review), com os achados e o veredito.
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#plan-review), com os achados e o veredito.
 
 **Encaminhamento cumprido:** as propostas foram corrigidas e confirmadas em D21 pelo subagente
 Sol xhigh. A implementação depende da instrução posterior de retomada prevista no plano. A futura
@@ -1725,7 +1725,7 @@ Não há decisão nova sobre D1.
 detalhamento dos testes e a preparação e a rodada Terra autorizadas em D22, sem receber uma
 orientação para aprovar. Os achados foram corrigidos no plano e conferidos pelo mesmo revisor;
 os hashes das versões examinadas e o veredito estão registrados no
-[plano](../active/decision-to-architecture-flow.md#d21-confirmation-of-the-revised-plan).
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#d21-confirmation-of-the-revised-plan).
 D19 permanece resolvido como entrega do relatório anterior.
 
 **Achados de D21 e correções confirmadas no plano:**
@@ -1779,7 +1779,7 @@ proposta própria antes da execução. Nenhum custo novo foi medido nesta etapa.
 **Recomendação:** confirmar o plano corrigido com o Sol antes de preparar a rodada do Sonnet.
 Você escolheu seguir essa recomendação, ela está registrada e o delta foi confirmado.
 Não é necessária outra escolha sobre D17, D18 ou D20. O
-[plano](../active/decision-to-architecture-flow.md#test-responsibilities-and-acceptance-contract)
+[plano](../history/decision-to-architecture-flow-pre-condensation.md#test-responsibilities-and-acceptance-contract)
 contém os critérios e a divisão de trabalho confirmados pelo parecer.
 
 ### E1 — Receber a sessão Sonnet e sua transcrição completa
