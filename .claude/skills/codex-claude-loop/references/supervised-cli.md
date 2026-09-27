@@ -63,7 +63,9 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
   tests-only milestone or reserve test execution for Codex merely for coordinator convenience.
   State that Codex owns review and later Git delivery unless the user explicitly assigned those
   operations to Claude. The prompt is task data, not permission to ignore higher instructions.
-  Pass it without shell expansion of untrusted text.
+  Ask Claude for a concise final report with changed files, actual test commands and outcomes,
+  blockers, and evidence locations, without pasted tool transcripts, logs, or internal reasoning.
+  Pass the prompt without shell expansion of untrusted text.
 - Select a permission profile that fits the user's authorization before launch. For unattended
   print mode, use `--permission-mode dontAsk` and `--permission-prompts none` with a narrow
   `--allowedTools` set; inspect inherited allow rules and deny overly broad tools with
@@ -76,26 +78,51 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
   its documented test effects; the collaboration itself authorizes no unrelated live or external
   action. If an assigned test cannot run within an authorized profile, stop and report the exact
   decision needed.
-- Start the first run from the verified checkout with `claude -p`, structured output, a unique
-  `--session-id`, and both `--model <chosen-model>` and `--effort <chosen-level>`, even when the
-  user did not specify either value. Do not add self-imposed turn, duration, iteration, or cost
-  limits. Honor limits explicitly set by the user or imposed by the provider or runtime. Keep the
-  process handle and exact session ID bound to this task. Normally wait on that same handle until
-  the structured result arrives, then inspect it. Choose a long supported per-call wait interval
-  consistent with prompt responsiveness and user updates; do not repeatedly use a short default
-  interval merely to check progress. This tool yield interval is not a task duration limit.
-- If the tool yields before exit, inspect only newly returned output for errors or prompts, including
-  prompt fragments without a trailing newline. If it confirms the same process is still running
-  and no response is needed, wait on the same handle again. Do not routinely run `ps`, tail logs,
-  reread session output, or make separate status calls during quiet intervals. Silence alone is not
-  a prompt or a reason to cancel. If the tool does not establish whether the process is running, or
-  its result conflicts with other evidence, inspect process state read-only and reconcile the exact
-  session before waiting, resuming, or relaunching. Answer a prompt only when the response is
-  unambiguous and authorized; otherwise report the decision needed to the user.
+- Before launch, verify that the available tool can consume CLI events and keep raw output out of
+  Codex's model context while retaining the original Claude exit status. Use one `claude -p` run
+  from the verified checkout with a unique `--session-id`, `--model <chosen-model>`, and
+  `--effort <chosen-level>`, even when the user did not specify either value. Use structured
+  `stream-json` output with the installed CLI options needed to receive initialization diagnostics
+  and the final `result` event. Do not enable partial-message or subagent-text forwarding merely
+  for progress. Do not add self-imposed turn, duration, iteration, or cost limits; honor only user,
+  provider, and runtime limits. If the tool cannot filter the stream safely, report that limitation
+  before launch instead of claiming a low-token supervised run.
+- In the tool boundary, capture raw stdout and stderr separately in task-private diagnostic files
+  outside the tracked checkout. Consume the event stream and stderr as they arrive without
+  forwarding progress, tool calls, thinking, partial messages, logs, or raw event JSON into Codex's
+  context. Surface only an actionable prompt or error during execution. At exit, expose a compact
+  envelope: Claude's final answer, its actual process exit code, exact session ID, observed model
+  and relevant warnings, and any initialization, permission, or result error that changes the
+  outcome. Check structured startup diagnostics and captured stderr, including plugin and MCP load
+  failures, even if Claude exits zero. Preserve the raw files for targeted diagnosis when needed;
+  do not read or summarize them routinely. An output filter or pipeline must not replace Claude's
+  exit status with its own successful status. Never write a command that redirects stderr to
+  `/dev/null`, and verify the command actually run before claiming stderr was preserved.
+- Keep one process handle and the exact session ID bound to this task. Normally wait on that same
+  handle until Claude exits. If the tool yields early, consume only the new events inside the tool
+  boundary and surface an actionable prompt or error, including a prompt fragment without a
+  trailing newline; otherwise continue waiting on the same handle for the longest suitable
+  supported interval. Do not establish a fixed 30- or 55-second cadence, repeatedly use a short
+  default, or run a background polling wrapper while the handle is available. Silence and an
+  ordinary yield do not justify `ps`, log or status-file reads, Git checks, or cancellation. When
+  process state or identity is missing or contradictory, inspect it read-only and reconcile the
+  exact session before waiting, resuming, or relaunching. Answer a prompt only when the response
+  is unambiguous and authorized; otherwise report the decision needed to the user.
+- Treat user-facing updates separately from CLI observation. Send an update when higher-priority
+  instructions require one without inspecting the process, files, or Git just to produce it. Do
+  not add periodic progress updates by skill preference when the user has dispensed with them and
+  higher-priority instructions permit that choice. Describe only the last observed state unless
+  a current-state claim is independently required and checked. A tool wait interval is not a task
+  deadline.
 - A nonzero exit, malformed or absent result, mismatched session ID, provider or runtime limit,
   interruption, or permission denial is a partial result. Inspect the index, working tree, session,
   and any external effects before retrying or resuming; do not call the task complete or retry
   blindly. A successful exit and Claude's report are also only evidence to inspect.
+
+For a long, quiet run, acceptance means one implementer and one retained process handle/session;
+raw output stays outside Codex context; no routine process, log, status-file, or Git probes and no
+invented turn or time cap occur; the compact final result and Claude's own exit code are examined;
+then Codex checks the changed files and test evidence and obtains the required independent review.
 
 ## Review and continue
 
