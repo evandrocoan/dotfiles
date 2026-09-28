@@ -108,7 +108,8 @@ Assume the user opens an item without the plan, the code, or the earlier convers
 - Before delivery, read each item without the earlier conversation. Rewrite shorthand that permits
   a materially broader interpretation, and make the remaining user decision, authorization, or
   input explicit. For an external dependency, say when no user action is needed.
-- Order items so the one that unblocks the most comes first.
+- When creating the brief, order items within each section by what they unblock. Append later items
+  without moving existing ones; name the current top priority in the summary instead of reordering.
 
 Give each section its own prefix and its own sequence starting at 1, so that every section reads in
 order: `D` for decisions between options, `T` for work you could do, and `E` for what depends on
