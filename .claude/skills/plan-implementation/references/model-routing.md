@@ -60,14 +60,19 @@ authorization.
 Treat planning and review as separate choices. An explicit preference in the current request or
 an earlier choice still valid for this scope resolves only the dimension it addresses: “without a
 plan” does not decline review, and “with review” does not decide a discretionary plan. Ask only
-about unanswered dimensions. A plan-only request already chooses a plan; ask about optional review
-when applicable, present the plan, and stop without seeking implementation permission. Do not ask
-an implementation preference for question-only or unrelated read-only requests. If the user
-chooses plan and execute, continue after planning without a second approval request. Ask again
-only after a material change in scope, uncertainty, handoff, model, or the user's stated stakes;
-do not ask for each file, retry, or routine step. If an optional preference is unanswered after a
-reasonable opportunity, proceed with the stated recommendation. Silence never resolves missing
-model/effort information, authorization, or an unmet required review.
+about unanswered dimensions. When presenting selectable answers, make each label state the full
+resulting route, including the plan and review outcome, even if one dimension was already settled.
+For optional review on a direct route, use short labels such as “No plan; independent review” and
+“No plan; no review”, adapted to the user's language and the client's label limits. Never make the
+user infer the combination from the question alone. If review is mandatory, include it in every
+eligible plan option rather than offering its removal. A plan-only request already chooses a plan;
+ask about optional review when applicable, present the plan, and stop without seeking
+implementation permission. Do not ask an implementation preference for question-only or unrelated
+read-only requests. If the user chooses plan and execute, continue after planning without a second
+approval request. Ask again only after a material change in scope, uncertainty, handoff, model, or
+the user's stated stakes; do not ask for each file, retry, or routine step. If an optional
+preference is unanswered after a reasonable opportunity, proceed with the stated recommendation.
+Silence never resolves missing model/effort information, authorization, or an unmet required review.
 
 ## Apply the independent-review threshold
 
