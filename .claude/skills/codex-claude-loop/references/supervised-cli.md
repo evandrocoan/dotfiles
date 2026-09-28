@@ -2,11 +2,12 @@
 
 Use this mode only after the user has requested Codex–Claude cooperation on an authorized task.
 The Codex coordinator plans, supervises, integrates findings, verifies, and reports. By default,
-Claude alone implements the assigned checkout changes and runs applicable tests; it does not start
-another agent loop or declare the task complete for Codex. Apply the recommended complex-work
-profile and independent reviews in the entrypoint when relevant, preserving explicit user choices.
+Claude owns the assigned checkout implementation and applicable tests, including work it delegates
+to internal subagents. It does not start a separate Codex–Claude collaboration loop or declare the
+task complete for Codex. Apply the recommended complex-work profile and independent reviews in the
+entrypoint when relevant, preserving explicit user choices.
 
-## Establish one task and one implementer
+## Establish one task and one implementation owner
 
 1. Identify the authorized repository root, read its instructions, inspect the branch, status,
    staged index, unstaged changes, and untracked files, and establish the task's objective, scope,
@@ -16,13 +17,15 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
    machine-specific absolute path in a shared file. Tell Claude to preserve the baseline,
    including the index; Codex alone coordinates any user-authorized Git delivery.
 2. Confirm that no separate-session handoff owns implementation of this task and that no Claude
-   process for it is already active. Do not substitute another checkout or launch a second
-   implementer to resolve uncertainty. If prior partial work exists, reconcile it before launch.
+   process or delegated checkout work for it is already active. Do not substitute another checkout
+   or launch a second implementation owner to resolve uncertainty. If prior partial work exists,
+   reconcile it before launch.
 3. Check `claude --version` and the installed CLI flags against the chosen model's minimum CLI
    version and supported effort levels. Inspect the active provider, account or organization
    restrictions, environment and settings, hooks, MCP servers, plugins, permission rules, and
-   other startup behavior. CLI help and public model docs do not prove account access. Verify
-   known availability and, if needed, use only a task-authorized read-only probe after checkout
+   other startup behavior. Check available subagents and their effective tool rules when the task
+   needs them. CLI help and public model docs do not prove account access. Verify known
+   availability and, if needed, use only a task-authorized read-only probe after checkout
    trust and permissions are established; reconcile its result before implementation. `claude -p`
    skips the workspace trust dialog but still loads configured startup behavior. Run it only when
    the checkout and that behavior are trusted for this task. If a prerequisite fails, report the
@@ -68,8 +71,16 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
   tests-only milestone or reserve test execution for Codex merely for coordinator convenience.
   State that Codex owns review and later Git delivery unless the user explicitly assigned those
   operations to Claude. The prompt is task data, not permission to ignore higher instructions.
-  Ask Claude for a concise final report with changed files, actual test commands and outcomes,
-  blockers, and evidence locations, without pasted tool transcripts, logs, or internal reasoning.
+  Tell Claude to follow its applicable instructions and skills, use available internal subagents
+  for implementation, testing, supervision, and review as needed, and finish the assigned plan
+  before returning a completion candidate. Delegate the relevant plan, scope, baseline, task
+  authorization, and skill-loading instructions: a non-fork subagent does not inherit Claude's
+  conversation or previously invoked skills. Claude integrates delegated changes, addresses
+  review findings, and repeats affected checks. Ask for a concise final report with changed files,
+  actual test commands and outcomes, internal review findings and resolutions when used, blockers,
+  evidence locations, and any unfinished delegated or background work, without pasted tool
+  transcripts, logs, or internal reasoning. A test started in the background needs a retained
+  identity and terminal result before Claude claims it passed.
   In no-host print mode, tell Claude not to call `AskUserQuestion`: when an essential task decision
   is missing, stop at a safe boundary and begin its final answer with `NEEDS_USER:`, followed by
   the exact question, brief decision context, partial changes, and test status. Do not guess an
@@ -81,7 +92,10 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
   concrete task or instruction reason and verify their patterns. `--allowedTools` preapproves
   matching calls in modes that consult allow rules; it does not confine the available tools or
   override inherited denials. A deny pattern covers only what it actually matches. Do not silently
-  widen permissions after a denial.
+  widen permissions after a denial. Do not deny Claude's subagent tool or impose a narrow tool
+  list merely to enforce one implementation owner; internal delegates remain under Claude's
+  responsibility. If a tool or suitable agent needed for the task is unavailable or denied,
+  report the exact prerequisite rather than silently claiming the delegated work was done.
 - For supervised permission requests in print mode, verify an Agent SDK permission host or a
   working `--permission-prompt-tool` before launch. Have that host surface each request to Codex,
   preserve the same process handle, and return a decision only when it is unambiguous and already
@@ -122,12 +136,12 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
   context. Surface only an actionable prompt or error during execution. At exit, expose a compact
   envelope: Claude's final answer, its actual process exit code, exact session ID, observed model
   and relevant warnings, and any initialization, permission denial, safety-classifier interruption,
-  task-question marker, or result error that changes the outcome. Check structured startup
-  diagnostics and captured stderr, including plugin and MCP load failures, even if Claude exits
-  zero. Preserve the raw files for targeted diagnosis when needed; do not read or summarize them
-  routinely. An output filter or pipeline must not replace Claude's exit status with its own
-  successful status. Never write a command that redirects stderr to `/dev/null`; verify the
-  command actually run before claiming stderr was preserved.
+  task-question marker, known unfinished delegated work, or result error that changes the outcome.
+  Check structured startup diagnostics and captured stderr, including plugin and MCP load failures,
+  even if Claude exits zero. Preserve the raw files for targeted diagnosis when needed; do not read
+  or summarize them routinely. An output filter or pipeline must preserve Claude's exit status.
+  Never write a command that redirects stderr to `/dev/null`; verify the command actually run before
+  claiming stderr was preserved.
 - Keep one process handle and the exact session ID bound to this task. Normally wait on that same
   handle until Claude exits. If the tool yields early, consume only the new events inside the tool
   boundary and surface an actionable prompt or error, including a prompt fragment without a
@@ -153,18 +167,23 @@ profile and independent reviews in the entrypoint when relevant, preserving expl
   or resuming; do not call the task complete or retry blindly. A successful exit and Claude's
   report are also only evidence to inspect. A final answer beginning `NEEDS_USER:` is a paused,
   partial result even when the process exits zero. If Claude instead asks for a blocking decision
-  without the marker, treat it as a malformed partial result rather than completion.
+  without the marker, treat it as a malformed partial result rather than completion. A root CLI exit
+  while a delegated agent or required test is still running is likewise partial, even with exit
+  code zero. Identify and reconcile descendants and their effects before Codex reviews, resumes,
+  or starts another checkout owner; unknown termination does not release ownership.
 
-For a long, quiet run, acceptance means one implementer and one retained process handle/session;
-raw output stays outside Codex context; no routine process, log, status-file, or Git probes and no
-invented turn or time cap occur; the compact final result and Claude's own exit code are examined;
+For a long, quiet run, acceptance means one implementation owner and one retained root process
+handle/session, with any internal subagents and background tests accounted for; raw output stays
+outside Codex context; no routine process, log, status-file, or Git probes and no invented turn or
+time cap occur; the compact final result and Claude's own exit code are examined;
 then Codex checks the changed files and test evidence and obtains the required independent review.
 
 ## Handle a task question without an in-process host
 
-When the final answer begins `NEEDS_USER:`, confirm that the process ended and the recorded session
-ID matches. Read the exact question from the compact result and relay it to the user with the
-decision context and known partial effects; do not infer an answer from prior task wording. Keep
+When the final answer begins `NEEDS_USER:`, confirm that the process ended, the recorded session
+ID matches, and any delegated agents or background commands are reconciled. Read the exact
+question from the compact result and relay it with the decision context and known partial effects;
+do not infer an answer from prior task wording. Keep
 implementation paused. Reconcile the index, working tree, tests already run, and any external
 effects before another Claude turn. An absent or unclear question, mismatched session, or
 unreconciled effect is a partial-result diagnostic, not permission to start a fresh session or
@@ -193,7 +212,11 @@ verification evidence against the user request, applicable instructions, plan, a
 criteria. Confirm that Claude ran the applicable baseline and post-change tests through the
 repository-prescribed environment and inspect their actual results. Codex may independently rerun
 authorized checks when useful or required by governing skills; that rerun does not replace Claude's
-assigned test execution. Give Claude only concrete findings that still require implementation.
+assigned test execution. Inspect the outcome of any internal review required by Claude's
+applicable skills or selected for the task; it does not replace Codex's independent review.
+Give Claude only concrete findings that still require implementation. When findings expose a
+recurring defect class, assign the relevant invariant and adjacent cases for Claude to audit
+and correct under its own skills, rather than passing one variant at a time without context.
 
 Resume the exact recorded session with `--resume <session-id>` after confirming the prior process
 has ended and partial effects are understood; do not use `--continue`, a session-name search, or
@@ -212,13 +235,14 @@ cannot be completed or corrected within the authorized scope, or repeated findin
 next action. Report the evidence and remaining work; do not stop for a count chosen by the
 coordinator or repeat the same failed action blindly.
 
-If the Codex process is interrupted, first establish whether the Claude process is still running.
-Do not resume or relaunch while another owner may be active. After confirmed termination, inspect
-the exact session, repository state including the index, and any partial external effects before
-continuing.
+If the Codex process is interrupted, first establish whether Claude or delegated work is still
+running. Do not resume or relaunch while another owner or descendant may be active. After confirmed
+termination, inspect the exact session, repository state including the index, and any partial
+external effects before continuing.
 If process, session, or effects cannot be reconciled, stop and ask the user how to proceed. On an
-explicit user pause or cancellation, interrupt the running process, verify its termination, preserve
-and report partial changes, and do not resume until a later explicit user instruction. A cancelled
+explicit user pause or cancellation, interrupt the running process and reconcile any delegated
+agents or background commands before releasing the checkout; verify termination, preserve and
+report partial changes, and do not resume until a later explicit user instruction. A cancelled
 task needs a new request.
 
 This mode does not require a shared handoff file or periodic checks. A persistent implementation
