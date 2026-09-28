@@ -16,6 +16,11 @@ establishes it. Before planning, read a brief there on the same subject and abso
 user decided into the plan's authorities and evidence, in English. A brief supplies user decisions
 only; it holds no execution authority and is not evidence of current behavior.
 
+An optional `evidence/<task-slug>.md` beside the lifecycle directories holds concise local
+findings and source pointers when they would overfill a plan. Do not create the directory without
+such a need. It is ignored by default and never owns current obligations, complete plan snapshots,
+or raw logs. Keep the current contract in the active plan and executable evidence in its source.
+
 When establishing a new default root, including when `discussion-briefs` establishes it first,
 create `implementation-plans/.gitignore` with these rules:
 
@@ -23,6 +28,7 @@ create `implementation-plans/.gitignore` with these rules:
 /active/*.md
 /completed/*.md
 /briefs/*.md
+/evidence/*.md
 ```
 
 These rules keep default plans and briefs local while leaving the root `README.md`, `.gitignore`,
@@ -43,6 +49,9 @@ concise and require it to define:
 - moving the same file between lifecycle directories without retaining a duplicate;
 - the repository's plan naming and any additional lifecycle states; and
 - the boundary between temporary execution authority and durable architecture records.
+
+When the optional evidence convention is used, explain its local, non-authoritative role in that
+README. Do not present `history/` full-plan snapshots as a default lifecycle directory.
 
 For a new default root, also explain that the ignored plans and briefs remain in the local
 checkout across lifecycle moves but are not delivered to other clones. The README and ignore

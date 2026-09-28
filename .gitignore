@@ -29,8 +29,7 @@
 !/implementation-plans/completed/**
 !/implementation-plans/briefs/
 !/implementation-plans/briefs/**
-!/implementation-plans/history/
-!/implementation-plans/history/decision-to-architecture-flow-pre-condensation.md
+!/implementation-plans/evidence/
 
 /.local/
 /.local/share/

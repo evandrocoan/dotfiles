@@ -296,12 +296,24 @@ adding another account of the attempt. Replace obsolete "current" headings and s
 live outcome, next action, prerequisites, blockers, and closure state. Summarize a completed
 attempt by its verdict, material limitations, and pointers to preserved evidence. Use the
 authoritative CI, test, replay, issue, or review artifact for detailed protocols, transcripts, and
-per-run reviews when retention is needed. Do not create a generic
-`implementation-plans/evidence/` directory by default; name any task-specific retention owner,
-location, and Git treatment explicitly. Preserve governing decisions, unresolved obligations,
-and evidence needed for audit rather than deleting history
-whose only surviving copy is in the plan. A reader should be able to find the current execution
-contract without first reading completed attempts.
+per-run reviews when retention is needed.
+
+Before removing plan content, classify what still matters. Keep current decisions, prerequisites,
+validation gates, and unresolved obligations in the active plan. Place durable product-design
+decisions in their architecture owner, shared workflow rules in the governing skill, and executable
+protection in its tests, fixtures, or replay, subject to the existing authorization and review
+gates. If a required promotion is not authorized or complete, keep the obligation in the active
+plan and mark that destination unresolved. Discard obsolete narration. Do not make a complete
+plan snapshot or a supporting evidence file the sole owner of a current requirement.
+
+When useful findings or source pointers would make the active plan unwieldy, an optional local
+task evidence file may hold their concise conclusions. Follow an explicit repository convention;
+otherwise use the ignored `implementation-plans/evidence/<task-slug>.md` convention in
+[persistent plans](references/persistent-plans.md). Create it only when needed. It contains no
+current instructions, full plan copy, raw transcript, or logs, and the active plan links to any
+finding on which it still relies. Name the evidence owner and Git treatment when deviating from
+the default. A reader should find the current execution contract without reading completed
+attempts or local evidence first.
 
 Keep conversational updates as a projection of that artifact: state the outcome or current status
 and link the file. Do not reproduce the complete persistent plan or full external-action payloads in
