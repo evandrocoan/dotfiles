@@ -1,10 +1,10 @@
 # Sol–Opus handoff
 
 Use this skill only for a task where the user wants two separate sessions to cooperate in the same
-local checkout. Sol is the Codex coordinator and final reviewer; Opus is the sole checkout
-implementer. For complex work, use the recommended model, effort, and independent review profile
-in the entrypoint unless the user chooses otherwise. Loading this skill does not start a scheduler
-or authorize new work.
+local checkout. Sol is the Codex coordinator and final reviewer; the Opus session owns checkout
+implementation and may coordinate its internal subagents. For complex work, use the recommended
+model, effort, and independent review profile in the entrypoint unless the user chooses otherwise.
+Loading this skill does not start a scheduler or authorize new work.
 
 ## Establish the handoff
 
@@ -40,7 +40,9 @@ reread instruction files when their governing startup rules require it.
 The handoff does not replace a formal implementation plan or architecture record required by the
 task's own instructions.
 Neither role stages, unstages, resets, commits, or performs live or external actions without the
-user's authorization. The reviewer reads and reports; it never writes the checkout or handoff.
+user's authorization. Sol's independent reviewer reads and reports; it never writes the checkout
+or handoff. Opus's internal subagents remain within its owned turn, follow the same authorization
+boundary, and never become handoff owners.
 Before implementation, each session checks that its selected model and effort are available and
 that the checkout, active configuration, startup behavior, and permissions are trusted for its
 assigned work. A CLI-backed Claude session checks its CLI version and flags against the selected
@@ -55,9 +57,9 @@ discovered later, Opus stops implementation and publishes `review`, `needs-user`
 appropriate; Sol arranges the review before returning ownership to Opus. For a complex task, Sol
 obtains the independent closure review after its author audit and before publishing `done`.
 If the required reviewer is unavailable, keep the dependent work on hold and report the blocker.
-Reviewers have no protocol owner or state: during an owned review turn, Sol retains the lock,
-confirms that Opus is no longer implementing, gives the reviewer the current baseline, and alone
-publishes the next handoff after considering all findings.
+Sol's independent reviewers have no protocol owner or state: during an owned review turn, Sol
+retains the lock, confirms that Opus is no longer implementing, gives the reviewer the current
+baseline, and alone publishes the next handoff after considering all findings.
 
 ## File contract
 
@@ -122,9 +124,11 @@ plan under its governing instructions and assigns `implement` to Opus only after
 prerequisites pass. A generic instruction to continue does not count as Sol's replanning.
 
 On explicit user cancellation, the session receiving it may publish `cancelled` from any
-nonterminal state even when another owner is named. It preserves and reports any partial repository
-changes; it does not discard them. A cancelled task requires a new user instruction before any new
-work starts.
+nonterminal state even when another owner is named. The active Opus owner must first stop or
+reconcile delegated agents and background commands before releasing its owned turn. Uncertain
+descendants prevent terminal publication and require user-directed recovery. Preserve and report
+partial repository changes; do not discard them. A cancelled task requires a new user instruction
+before any new work starts.
 
 ## Own and publish a turn
 
@@ -183,17 +187,30 @@ user-directed transition unless the task is already terminal.
    instruction applicability, branch, index, status, objective, acceptance criteria, and current
    request. Reconcile any partial changes or external effects from an interrupted prior attempt
    before continuing; never blindly repeat a mutation or test with external effects.
-4. Opus implements the assigned work and runs applicable baseline and post-change tests in the
-   repository-prescribed environment before handing review to Sol. A required evidence gate may
-   sequence these steps without transferring execution to Sol. If a needed test permission is
-   unavailable, publish the concrete blocker or user decision; do not silently assign the test to
-   Sol. Report exact results. If an assumption fails or a choice changes the agreed plan, stop and
-   use the appropriate paused state instead of silently changing course.
+4. Opus follows its applicable instructions and skills through the assigned plan, implements the
+   work, and runs applicable baseline and post-change tests in the repository-prescribed
+   environment. It may use available internal subagents for implementation, testing, supervision,
+   and review as needed. Give each delegate the current plan, scope, baseline, authorization
+   boundary, and relevant instructions and skills or directions to load them; a non-fork subagent
+   does not inherit Opus's conversation or invoked skills. Opus integrates their work, resolves
+   internal findings, and repeats affected checks before handing review to Sol. A required evidence
+   gate may sequence the work without transferring ownership to Sol. Before publishing a new owner
+   or releasing the lock, reconcile all delegated agents and background commands, including their
+   test results and any checkout effects. Do not publish a review or terminal result while a
+   descendant may still be active; if its state cannot be reconciled, preserve the lock for
+   user-directed recovery and report the partial work. If a needed tool or test permission is
+   unavailable, publish the concrete blocker or user decision after reconciliation; do not
+   silently assign the work to Sol. Report exact results. If an assumption fails or a choice
+   changes the agreed plan, stop and use the appropriate paused state instead of silently
+   changing course.
 5. Sol compares actual changes and test evidence with the plan and acceptance criteria. Sol may
    independently rerun authorized checks, but those runs do not replace Opus's assigned tests.
+   Check that internal reviews required by Opus's applicable skills or chosen for the task were
+   completed and their findings addressed; they do not replace Sol's required independent review.
    Obtain the independent closure review when required; write actionable corrections for Opus or
-   mark `done` only when the whole task and applicable instructions are satisfied. Sol does not
-   edit the implementation in this workflow.
+   mark `done` only when the whole task and applicable instructions are satisfied. For recurring
+   variants of one defect, return the governing invariant and adjacent cases to Opus rather than
+   handing back only one example. Sol does not edit the implementation in this workflow.
 6. Publish the result while still holding the lock. A changed revision, state, or owner prevents
    this session from overwriting a newer handoff. Follow the manual reentry rule above after
    publication.

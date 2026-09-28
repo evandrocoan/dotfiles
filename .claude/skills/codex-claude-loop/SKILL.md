@@ -13,24 +13,35 @@ does not launch Claude, create a handoff, schedule checks, or authorize new work
 reasoning settings specified by the user take precedence over this skill's recommendations.
 
 Codex owns planning, assignment, supervision, integration assessment, verification, and the final
-verdict. Claude alone implements the assigned checkout changes; Codex may write authorized plans
-and handoff artifacts. Both use the same authorized local checkout and its applicable instructions.
+verdict. Claude's session owns the assigned checkout implementation and may coordinate internal
+subagents for investigation, implementation, tests, supervision, and review. Claude integrates
+their work, coordinates checkout edits to avoid conflicts, and remains accountable for the result;
+Codex may write authorized plans and handoff artifacts.
+Both use the same authorized local checkout and its applicable instructions.
 Before work, record staged, unstaged, and untracked changes. Preserve the Git index and existing
 work; do not stage, unstage, reset, commit, or perform external or live actions without the user's
-authorization. A task has one active implementer; do not run the CLI mode alongside an owned
-two-session handoff for the same task.
+authorization. A task has one active implementation owner; Claude's internal subagents do not
+become a separate CLI or handoff owner. Do not run the CLI mode alongside an owned two-session
+handoff for the same task.
 
 After required planning and review gates, assign Claude the authorized implementation, regression
-work, and applicable test execution in the repository-prescribed environment. An evidence gate may
-sequence that work, but does not transfer its owner. Codex supervises and reviews the diff and test
-evidence; an authorized independent rerun by Codex adds verification, not a substitute for tests
-assigned to Claude. Honor an explicit user choice of a different division of work.
+work, and applicable test execution in the repository-prescribed environment through completion of
+the plan and acceptance criteria. An evidence gate may sequence that work, but does not transfer
+its owner. Claude follows its applicable instructions and skills, gives internal subagents the
+scope and context they need, and resolves their findings before handing work to Codex. Reconcile
+delegated work and background tests before ownership changes; an uncertain active descendant is a
+partial result. Codex supervises and reviews the integrated diff and test evidence; internal Claude
+reviews do not replace required independent Codex reviews, and an authorized independent rerun by
+Codex does not substitute for tests assigned to Claude. Honor an explicit user choice of a
+different division of work. Do not impose coordinator-selected limits on Claude's tools,
+subagents, turns, duration, iterations, or cost; user limits and provider controls still apply.
 
 ## Recommended profile for complex work
 
 Use Codex Sol xhigh to plan, supervise, integrate findings, and verify; Claude Opus 5.5 xhigh as
-the sole checkout implementer; and Codex Astra xhigh for independent, read-only reviews with fresh
-context before high-risk edits and at closure. This is a recommendation, not a model override:
+the checkout implementation owner, including its internal subagents; and Codex Astra xhigh for
+independent, read-only reviews with fresh context before high-risk edits and at closure. This is a
+recommendation, not a model override:
 honor each explicit user choice of model and effort. Check that the selected roles and settings are
 available before assigning work. If a required reviewer cannot run, hold the dependent high-risk
 work or closure and report the decision needed; do not silently substitute another reviewer.
