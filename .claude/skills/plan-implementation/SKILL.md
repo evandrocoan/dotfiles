@@ -33,11 +33,12 @@ reviewer. The applicable user's explicit request and higher-priority question-on
 rules come first. A model never waives the risk and persistence gates below.
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
-  says not to implement, inspect enough authoritative evidence to make the plan credible and stop
-  after presenting it.
-- **Plan and execute:** When the user asks to change, fix, build, or implement, use the required or
-  chosen plan and continue through it without requesting separate approval for routine in-scope
-  steps. Use the direct route when eligible.
+  says not to implement, inspect enough authoritative evidence to make the plan credible, offer its
+  link in chat, and stop. Reviewing a plan-only deliverable does not authorize implementation.
+- **Plan and execute:** When the user asks to change, fix, build, or implement, use a required or
+  chosen formal plan when one applies. Offer its link for user review and wait for an explicit
+  go-ahead before executing it. After that response, continue through the authorized in-scope
+  steps without requesting approval for each step. Use the direct route when eligible.
 - **No formal plan:** Use direct work only when the model route permits it, no mandatory risk or
   persistence gate applies, and the user has not requested a plan. Still identify the expected
   outcome and verify it.
@@ -61,12 +62,17 @@ mode.
 
 ## Materialize the plan visibly
 
-Never keep a formal plan only in hidden reasoning or conversation memory. Materialize it in the
-task's visible plan mechanism, or present it directly when no such mechanism exists, before editing
-the target artifacts. User-visible means that the durable artifact is accessible through the
-environment or a clickable path; it does not require pasting the full plan or its payloads into
-progress messages. Give the user a concise summary and the artifact link unless they request the
-complete text in chat.
+Never keep a formal plan only in hidden reasoning or conversation memory. Give every formal plan a
+complete current artifact with a clickable link. Use a Markdown file under the task's plan
+lifecycle by default; a task-plan mechanism may substitute only when its link opens the complete
+current plan for the user. Chat prose alone does not supply the artifact. Before the first
+implementation step under a formal plan, offer its link and a concise summary in chat. Wait for
+an explicit user response to proceed. The initial implementation request, silence, and an agent
+or advisor review cannot stand in for the user's review. A plan-only request stops after the link
+is offered; it needs a later implementation instruction. An explicit request to execute an
+unchanged plan already linked in chat satisfies this boundary without another question. If the
+plan's execution contract changes materially, offer the updated link and wait again before affected
+steps. Read-only scoping and required plan reviews may make the plan reviewable before this gate.
 
 Use these two layers when the persistence gate applies:
 
@@ -87,6 +93,11 @@ The persistent plan is mandatory when any of these conditions applies:
 - losing a constraint, non-goal, authenticated fact, or validation obligation could produce an
   incorrect delivery. The ordinary pre-write snapshot, payload, and read-back checks of a routine
   editorial correction do not alone activate this condition.
+
+A formal plan still needs a linkable artifact when none of these persistence triggers applies.
+Creating a Markdown file solely to provide that link does not trigger non-trivial classification,
+high-risk review, or stronger closure. Keep its format and checks proportional to the underlying
+work, including a minimal outcome, step, and check for a user-requested routine plan.
 
 Persistence and risk are independent. Persistence determines where the execution contract
 survives; it does not promote non-trivial local work or a bounded additive external action to high
@@ -242,6 +253,13 @@ Order work by dependency and feedback speed:
 10. Close routine work with direct outcome, validation, diff, and status checks; close formal plans
     with the risk-appropriate [audit](references/closure.md).
 
+For a formal plan, complete its linked user-review gate after any required pre-edit plan review and
+before the first implementation step. Do not treat the planned sequence or initial request as
+evidence that the user has reviewed the plan. On resuming an active plan, offer its current link and
+wait if that review and go-ahead cannot be established for its current execution contract. If the
+plan already has completed steps from before this rule applied, preserve their actual chronology
+and require the review before the next implementation step.
+
 Step 1 has one exception. The record amendment that `architecture-records` allows for a deliberate
 user decision precedes the plan, and therefore its review, so that the decision lives in its owner
 at once and the reviewer reads the real wording. The exception covers only the labelled amendment
@@ -366,6 +384,8 @@ Replan immediately when:
 Update the persistent plan before taking a materially different implementation route. Preserve the
 current outcome and governing invariants, replace superseded steps instead of appending a narrative,
 and synchronize the task-plan projection.
+Offer the materially revised contract through its link and wait for renewed user review before
+executing affected steps. Evidence-only or spelling corrections do not reopen this gate.
 Updating the plan does not satisfy a missing user decision or bypass the global rule to stop when
 a required assumption proves false. Recheck the material-route binding before executing the new
 route and keep dependent steps pending until its prerequisites are resolved.
@@ -413,10 +433,10 @@ reversible plan, bounded additive external action, or routine external editorial
 an independent persistence trigger. Its conditional external-action section records the
 authorization binding, items, governing-review status, read-back authority,
 reconciliation state, and delivery evidence; omit that section for local work. Use the following
-concise form for a task-plan projection or for a non-trivial local and reversible formal plan that
-does not meet the persistence gate. High-risk work always meets that gate and uses the full
+concise form for a task-plan projection or a linked non-trivial local and reversible formal plan
+that does not meet the persistence gate. High-risk work always meets that gate and uses the full
 persistent template. A routine edit that receives a formal plan because of the user's preference
-needs just a visible outcome, step, and check, not this six-step form.
+needs just a linked outcome, step, and check, not this six-step form.
 
 ```text
 Outcome: <observable result>

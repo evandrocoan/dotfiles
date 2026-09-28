@@ -58,6 +58,10 @@ Use the compact path only when every condition below is verified before the firs
 - No other high-risk trigger or applicable skill requires the full workflow, and the action is not
   part of a formal plan that already inherited a higher risk classification.
 
+The recorded destination and payload authorization need not be requested again. It does not
+satisfy the separate user review of the newly linked compact plan: offer that plan in chat and
+wait for an explicit go-ahead before the first write.
+
 Fixed review comments, issue notes, messages, and unshared drafts are examples that may qualify;
 their product names and fields do not define the category.
 

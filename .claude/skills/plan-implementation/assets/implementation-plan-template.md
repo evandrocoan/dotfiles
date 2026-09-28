@@ -43,6 +43,7 @@ State the observable result and terminal condition.
 | Status | Step and owners | Material premise | Validation or result |
 | --- | --- | --- | --- |
 | pending | Obtain any risk-required review. <review owner> | <why this review level applies> | <concise findings under **Plan review**> |
+| pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. <owner> | <complete current plan is accessible through the link> | <link and user response, or `Pending`> |
 | pending | Reproduce or authenticate. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Change the authoritative owner and affected consumers. | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Integrate and remove competing behavior. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
@@ -71,6 +72,13 @@ this section if the plan is reviewed again after a material replan.
 - **Applied:** List each finding that changed the plan and what changed.
 - **Rejected:** List each finding that was not applied and the reason.
 
+## User review before implementation
+
+- **Linked plan offered in chat:** Pending | <link and the current execution contract>.
+- **User response:** Pending | <explicit go-ahead for this contract> | Plan only; implementation
+  requires a later instruction. The initial task request and silence are not review.
+- **Material revision:** None | <updated link and renewed user response before affected steps>.
+
 ## Replan conditions
 
 - List discoveries that invalidate the current execution route or require an architecture decision.
@@ -87,6 +95,7 @@ validation obligation is accounted for. A passing test supports only what it act
 
 | Status | Requirement | Owner and consumers | Evidence |
 | --- | --- | --- | --- |
+| pending | The current plan was linked in chat and the user explicitly released implementation. | User review and execution steps | <link, response, and material-revision check> |
 | pending | <one requirement or safely grouped family> | <implementation owner and consumers> | <concise implementation plus validation evidence> |
 
 Use only `verified`, `not applicable: <reason>`, and `unresolved: <reason>` for final row statuses.
@@ -118,6 +127,6 @@ something changes after the verdict.
   <items, or `None`>.
 
 Set `Verdict` to `Passed` only when both trace directions are complete, every required validation
-has run, the second pass is complete, the brief check found no `registro pendente`, and unresolved
-requirements are `None`. Only then may the
-plan status become `Completed`.
+has run, the current plan has the required user review before implementation, the second pass is
+complete, the brief check found no `registro pendente`, and unresolved requirements are `None`.
+Only then may the plan status become `Completed`.

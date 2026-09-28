@@ -11,6 +11,14 @@ implementation-plans/
 └── completed/
 ```
 
+Every formal plan needs a complete artifact that can be linked in chat for user review before
+execution. Use the current lifecycle's Markdown file when the task-plan UI cannot link to its
+complete current plan. This also applies to a user-requested routine plan or another formal plan
+without an independent persistence trigger. Creating a file solely for the link does not change
+the task's risk classification, plan detail, reviewer threshold, or closure requirements. Record
+the user's response to the linked plan in the plan or linkable task-plan artifact before executing
+it; do not infer review from the original request or from silence.
+
 A `briefs/` directory beside these holds `discussion-briefs` working documents when that skill
 establishes it. Before planning, read a brief there on the same subject and absorb the items the
 user decided into the plan's authorities and evidence, in English. A brief supplies user decisions

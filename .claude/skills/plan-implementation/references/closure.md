@@ -31,6 +31,16 @@ multiple implementers.
 
 ## Close work proportionally
 
+For every new formal plan, verify that its complete current version was linked in chat and the user
+explicitly released implementation before its first implementation step. For an active plan with
+steps completed before this rule applied, preserve their actual chronology; verify that the current
+plan was linked and the user released its remaining implementation before the next step. Hold
+further execution when that review cannot be established. A material change to the execution
+contract requires renewed user review before affected steps. A plan-only request has no execution
+release merely because the user reviewed its content. Agent reviews and external-action
+authorization do not replace this gate. Leave completion unresolved when required user review is
+missing; a direct route without a formal plan has no such gate.
+
 Before moving any formal plan to `completed/`, open the brief on the same subject under `briefs/`
 when one exists, because nothing else looks at a brief when the work ends. A decided item still
 marked `registro pendente` blocks the move until every owner named for the decision has it. An
