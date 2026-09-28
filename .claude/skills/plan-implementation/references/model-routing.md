@@ -46,8 +46,8 @@ plan unnecessary; ask only whether the user wants an optional independent review
 you recommend that review and why; for a well-understood low-stakes fix, ordinarily recommend no
 extra reviewer, while inviting the user to identify importance the agent cannot see. Honor an
 explicit user request for a plan, but do not offer one solely for this routine classification. For
-discretionary non-trivial work, offer direct execution or a compact plan **followed by execution**;
-explain why a plan helps when uncertainty, coordination, or later follow-up could otherwise lose a
+discretionary non-trivial work, offer direct execution or a compact plan for user review before
+execution; explain why a plan helps when uncertainty, coordination, or later follow-up could lose a
 constraint, and why direct execution suffices when those concerns are absent. State that the
 independent result review is required on either route. Apply mandatory status to each dimension
 separately: name its trigger and never offer to omit it, but still ask an unanswered discretionary
@@ -66,13 +66,17 @@ For optional review on a direct route, use short labels such as “No plan; inde
 “No plan; no review”, adapted to the user's language and the client's label limits. Never make the
 user infer the combination from the question alone. If review is mandatory, include it in every
 eligible plan option rather than offering its removal. A plan-only request already chooses a plan;
-ask about optional review when applicable, present the plan, and stop without seeking
+ask about optional review when applicable, offer the linked plan, and stop without seeking
 implementation permission. Do not ask an implementation preference for question-only or unrelated
-read-only requests. If the user chooses plan and execute, continue after planning without a second
-approval request. Ask again only after a material change in scope, uncertainty, handoff, model, or
-the user's stated stakes; do not ask for each file, retry, or routine step. If an optional
-preference is unanswered after a reasonable opportunity, proceed with the stated recommendation.
-Silence never resolves missing model/effort information, authorization, or an unmet required review.
+read-only requests. If the user chooses a formal plan, offer its link and wait for the user's review
+and explicit go-ahead before executing it; after that response, do not ask again for each file or
+step. Ask about planning or review preferences again only after a material change in scope,
+uncertainty, handoff, model, or the user's stated stakes; do not ask for each retry or routine step.
+If an optional preference is unanswered after a reasonable opportunity, proceed with the stated
+recommendation.
+If that recommendation creates a formal plan, offer its link and wait for user review before
+execution. Silence never resolves missing model/effort information, authorization, user plan
+review, or an unmet required review.
 
 ## Apply the independent-review threshold
 
@@ -93,8 +97,8 @@ Examples of useful recommendations:
   independent review due to stakes the agent may not see. The supervised group executes directly
   but still needs a reviewer before completion.
 - A non-trivial local fix in Sol, Astra, or Fable: ask whether the user wants direct execution or
-  a compact plan followed by execution, explain which route you recommend, and include the user's
-  sense of importance. Either choice still requires an independent final review.
+  a compact plan offered for user review before execution, explain which route you recommend, and
+  include the user's sense of importance. Either choice still requires an independent final review.
 - A novel multi-component design, uncertain state transition, or shared agent-skill policy edit:
   use the mandatory full plan; recommend higher reasoning effort for planning and a fresh
   independent reviewer. Sol planning with Astra xhigh review is one option when available.
