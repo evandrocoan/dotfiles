@@ -1,4 +1,14 @@
 {
+  "cleanupPeriodDays": 36500,
+  "skillListingMaxDescChars": 3072,
+  "skillListingBudgetFraction": 0.05,
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(kubectl get *)",
@@ -92,17 +102,13 @@
       "/home/someuser/.local/bin"
     ]
   },
-  "model": "sonnet",
   "effortLevel": "xhigh",
   "advisorModel": "fable",
-  "attribution": {
-    "commit": "",
-    "pr": ""
+  "theme": "dark",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "xhigh"
+    }
   },
-  "cleanupPeriodDays": 36500,
-  "skillListingMaxDescChars": 3072,
-  "skillListingBudgetFraction": 0.05,
-  "env": {
-    "DISABLE_AUTOUPDATER": "1"
-  }
+  "model": "opus[1m]"
 }
