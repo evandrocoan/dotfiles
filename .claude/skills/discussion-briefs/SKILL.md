@@ -95,14 +95,19 @@ sections and fields that would be empty.
 Assume the user opens an item without the plan, the code, or the earlier conversation in mind:
 
 - Title the item with the question to settle in plain language, not with a label alone.
-- Explain what the thing is before asking about it: the component, what happens today, and the
-  observable consequence. Prefer a concrete example over an abstract category.
+- Explain what the thing is before asking about it: the component, the concrete sequence, the
+  condition that makes the point relevant, and the observable result. Put the condition before any
+  stop, denial, or limit it causes; an example should show that condition and result.
 - State why it matters and what stays blocked until it is settled.
-- For a decision, give each option with its consequence, cost, and risk, then your recommendation
-  and its reason. Keep the recommendation visibly separate from the user's decision.
+- For a decision, give each option with its observable consequence under that condition, cost, and
+  risk, then your recommendation and its reason. Keep the recommendation visibly separate from the
+  user's decision.
 - For work you could do, give the item the same depth: the question for the user, a concrete
   example, what happens under each answer, which is do, do not, or defer, the cost and risk, and
   your recommendation. A title alone does not tell the user what they would be authorizing.
+- Before delivery, read each item without the earlier conversation. Rewrite shorthand that permits
+  a materially broader interpretation, and make the remaining user decision, authorization, or
+  input explicit. For an external dependency, say when no user action is needed.
 - Order items so the one that unblocks the most comes first.
 
 Give each section its own prefix and its own sequence starting at 1, so that every section reads in

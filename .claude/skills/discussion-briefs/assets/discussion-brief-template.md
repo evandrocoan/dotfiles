@@ -25,19 +25,19 @@ de um fato que muda, como em "a pipeline está verde (verificado em <data>)".>
 
 ## Decisões que dependem de você
 
-### D1 — <pergunta a decidir, em linguagem simples>
+### D1 — <pergunta exata que você ainda precisa responder, em linguagem simples>
 
 **Estado:** aberto | decidido | descartado
 
-**O que é:** <o componente e a situação concreta: o que acontece hoje e o que se observa, explicado
-para quem não acompanhou o trabalho>
+**O que é:** <o componente e a sequência concreta: o que acontece hoje, qual condição aciona
+o ponto e o que se observa, explicado para quem não acompanhou o trabalho>
 
 **Por que importa:** <consequência de não decidir e o que fica bloqueado>
 
 **Opções:**
 
-1. <opção> — <consequência, custo e risco>
-2. <opção> — <consequência, custo e risco>
+1. <opção> — <o que se observa nessa condição, custo e risco>
+2. <opção> — <o que se observa nessa condição, custo e risco>
 
 **Recomendação:** <opção recomendada e o motivo>
 
@@ -55,8 +55,8 @@ escreva o motivo em uma linha. O item continua neste lugar, com o texto inteiro>
 
 **A pergunta para você:** <o que você responde aqui: fazer, não fazer ou adiar>
 
-**O que é:** <o que seria feito e o resultado esperado, com um exemplo concreto, explicado para quem
-não acompanhou o trabalho>
+**O que é:** <o que seria feito, quando isso se torna necessário e o resultado observável, com um
+exemplo concreto para quem não acompanhou o trabalho>
 
 **Por que importa:** <o que melhora ou destrava>
 
@@ -79,13 +79,15 @@ regras da linha "Decisão" do item anterior>
 
 **Estado:** aberto | resolvido | descartado
 
-**O que é:** <o que falta e por que não posso resolver sozinho>
+**O que é:** <o que falta, quando passa a fazer falta, o efeito observável e por que não posso
+resolver sozinho>
 
 **De quem depende:** <pessoa, equipe ou acesso>
 
 **O que bloqueia:** <o que não avança enquanto isso não chega>
 
-**Próximo passo:** <quem precisa pedir o quê a quem>
+**Próximo passo recomendado:** <quem precisa pedir o quê a quem e por quê; diga se alguma ação
+sua é necessária ou se a pendência depende apenas de outras pessoas ou de acesso>
 
 ## Sem ação necessária
 
