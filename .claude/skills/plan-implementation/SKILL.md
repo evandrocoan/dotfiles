@@ -113,6 +113,15 @@ Inspect enough evidence to create a truthful initial plan, then materialize the 
 first production edit. Mark unresolved facts as assumptions or investigation steps instead of
 inventing implementation details.
 
+Treat an item identifier carried from a `discussion-briefs` brief as a cross-document reference.
+Within a plan and any brief that feeds it, the same identifier—`D1`, `T1`, `E2`, or any other item
+label—must denote the same item and meaning, though the plan may summarize it. Never reuse a
+brief identifier for an unrelated plan step, test, or decision; keep plan-only work descriptive
+or give it a distinct, noncolliding label. When different briefs use the same identifier for
+different items, qualify each reference by its brief or subject in the plan and in chat whenever
+both could be meant. Check shared identifiers against their source briefs at handoff and closure.
+Matching identifiers do not grant authority or bypass the brief's decision-recording gates.
+
 When a durable architecture record governs the change, use `architecture-records` together with
 this skill. Treat the approved record as the design authority and derive the implementation plan
 from it. Do not alter the record to legitimize incidental current code.
