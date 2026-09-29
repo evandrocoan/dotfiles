@@ -75,23 +75,37 @@ high-risk edit followed by explanation-only questions starts a new role. Follow-
 unchanged role and scope do not reset the user's setting choice or the one-time downgrade prompt.
 Keep the reassessment internal when no setting change is warranted.
 
+When requesting a switch, state the role, target model and thinking level (if configurable),
+and reason. Tell the user to change the client setting, verify that the target is displayed for
+the active session, then reply once. A reply reporting completion, including a simple “ok” to
+that instruction, confirms the displayed target in the assistant turn that receives it; do not
+ask for a second acknowledgment or for the user to repeat the named setting. A reply that only
+agrees to switch later does not confirm completion. A remembered pre-switch setting does not
+contradict the later report, but trustworthy current-turn runtime metadata showing a different
+setting does; resolve that conflict before the role proceeds. Without a pending request naming
+the target, a bare “ok” cannot establish an unknown model or effort: ask for the displayed
+setting instead.
+
 When the current setting is above a sufficient lower setting, ask once at the task boundary to
 switch down if that setting is supported and the user has not already chosen to keep the current
-one for this scope. State the role, proposed setting, and reason. If the user accepts, hold that
-role until the changed setting is confirmed on a subsequent turn. The user may decline and keep
-the sufficient higher setting. If no answer arrives after a reasonable opportunity, continue at
-the current setting; neither silence nor a chat reply changes the client setting. Do not repeat
-the downgrade request for each step, file, or turn in an unchanged scope. Reconsider it after a
-material change in task, risk, or role. A user-pinned sufficient setting also controls this scope
-without a downgrade prompt.
+one for this scope. If the user chooses to switch, apply the one-reply confirmation above. The
+user may decline and keep the sufficient higher setting. If no answer arrives after a reasonable
+opportunity, continue at the current setting; neither silence nor agreement to a future switch
+changes the client setting. Do not repeat the downgrade request for each step, file, or turn in
+an unchanged scope. Reconsider it after a material change in task, risk, or role. A user-pinned
+sufficient setting also controls this scope without a downgrade prompt.
 
-If the effective setting is below the assessed minimum, does not match a fixed exact pair, or
-cannot be verified, ask for a supported switch or reassignment and hold that role. An insufficient
-user-pinned setting must be resolved, not silently accepted. In particular, Sol medium cannot
-perform a role requiring Sol xhigh by writing a longer plan or relying on a stronger reviewer.
-Only a confirmed client setting on a subsequent turn establishes that a requested switch took
-effect; an active turn may still use its earlier setting. This gate does not authorize any task
-action.
+If the effective setting cannot be verified, ask for the model and thinking level displayed for
+the active session and hold that role. If a verified setting is below the assessed minimum or
+does not match a fixed exact pair, ask for a supported switch or reassignment and hold that role.
+An insufficient user-pinned setting must be resolved, not silently accepted. In particular, Sol
+medium cannot perform a role requiring Sol xhigh by writing a longer plan or relying on a stronger
+reviewer.
+
+An active assistant turn may still use its earlier setting; hold an insufficient role until the
+adequate setting is active, without requesting another user acknowledgment. Confirmation clears
+only the model gate: it does not release question-only deferred implementation or replace the
+user's review of a linked plan. This gate does not authorize any task action.
 
 ## Mandatory question-only gate
 
