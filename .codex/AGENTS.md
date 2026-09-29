@@ -345,9 +345,9 @@ of choosing one silently.
   continuation, replan, or follow-up under an existing formal plan. Use its persistent Markdown
   plan whenever its persistence gate applies, and complete its risk-appropriate closure before
   declaring success.
-- `codex-claude-loop`: Coordinate Codex planning and review with Claude Code
-  implementation in one checkout, through supervised local CLI turns or a
-  shared handoff between two sessions with optional periodic checks.
+- `codex-claude-loop`: Coordinator-only procedure for assigning a self-contained
+  Claude CLI implementation in one checkout. Its two-session handoff reference
+  is retained only for recovery of existing handoffs; do not start new ones.
 - `skill-creator`: Create or update a skill package with appropriately scoped
   instructions and supporting resources. Written for Codex skills: ignore its
   `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
