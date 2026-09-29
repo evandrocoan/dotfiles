@@ -1,10 +1,20 @@
-# Sol–Opus handoff
+# Legacy Sol–Opus handoff recovery
 
-Use this skill only for a task where the user wants two separate sessions to cooperate in the same
-local checkout. Sol is the Codex coordinator and final reviewer; the Opus session owns checkout
-implementation and may coordinate its internal subagents. For complex work, use the recommended
-model, effort, and independent review profile in the entrypoint unless the user chooses otherwise.
-Loading this skill does not start a scheduler or authorize new work.
+This reference preserves the historical two-session protocol for inspecting and recovering an
+existing handoff. The isolated CLI workflow does not create or continue implementation through
+two-session handoffs: their shared state reveals Sol's later role to Opus. Do not initialize a new
+handoff, publish an `implement` or `review` turn, restart a recurring check, or use the procedures
+below to continue implementation. Loading this reference does not authorize work or a state change.
+
+For an existing handoff, first establish its current owner, live sessions and descendants,
+recurring checks, lock, branch, index, working tree, and partial external effects. Do not break a
+lock, mark unfinished work `done` or `cancelled`, or start an isolated CLI session while the old
+owner may still act. Preserve the file and partial work; obtain the user's direction for any
+pause, cancellation, or migration. Apply the historical rules below only to understand the
+recorded state and perform a specifically authorized recovery. A previously exposed Claude session
+cannot be made unaware of Sol by changing this file.
+
+The historical contract follows for recovery context; it is not a route for new task assignment.
 
 ## Establish the handoff
 
