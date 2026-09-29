@@ -13,6 +13,11 @@ setting in use; an unmet minimum or fixed exact pair holds that role. For the pa
 verify selectable models and effort levels in the actual client, or label the example conditional.
 A plan or reviewer cannot make an insufficient acting setting adequate.
 
+Recheck role fit for each new implementation request under the global gate; a previous task's
+adequacy decision does not carry into a different role. The global gate also covers later
+explanation-only questions, when this implementation skill is not loaded. Its one-time downgrade
+prompt applies to an unchanged role and scope, not to the entire conversation.
+
 ## Choose the smallest permitted plan
 
 Apply an explicit plan-only request first. Follow the higher-priority question-only and read-only
