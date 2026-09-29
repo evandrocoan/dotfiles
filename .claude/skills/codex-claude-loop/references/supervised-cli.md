@@ -19,10 +19,11 @@ user choices.
    machine-specific absolute path in a shared file. Tell Claude to preserve the baseline,
    including the index. Include requested Git or external delivery in Claude's assignment only
    when those exact actions are user-authorized; do not assume another agent will perform them.
-2. Confirm that no legacy handoff owns implementation of this task and that no Claude
-   process or delegated checkout work for it is already active. Do not substitute another checkout
-   or launch a second implementation owner to resolve uncertainty. If prior partial work exists,
-   reconcile it before launch.
+2. Confirm that no previous owner, scheduled reactivation, lock, Claude process, or delegated
+   checkout work can still act on this task. A missing process alone does not clear a scheduled
+   action or an uncertain lock. Do not substitute another checkout or launch a second
+   implementation owner to resolve uncertainty. Reconcile prior partial work before launch;
+   recovery mutations require the user's direction.
 3. Check `claude --version` and the installed CLI flags against the chosen model's minimum CLI
    version and supported effort levels. Inspect the active provider, account or organization
    restrictions, environment and settings, hooks, MCP servers, plugins, permission rules, and
@@ -43,7 +44,7 @@ user choices.
 
 - Give Claude an ordinary implementation assignment: objective, authorized scope, acceptance
   criteria, relevant repository instructions, a task-facing plan or brief, and existing work to
-  preserve. Do not pass this coordinator skill, its legacy handoff, coordinator plans, reviewer
+  preserve. Do not pass this coordinator skill, coordinator plans, reviewer
   identities, future review stages, or statements that another agent will complete the task.
   Inspect every referenced artifact before launch or resume. If a formal plan mixes implementation
   steps with coordination stages, provide the complete implementation contract in a separate
@@ -289,9 +290,8 @@ agents or background commands before releasing the checkout; verify termination,
 report partial changes, and do not resume until a later explicit user instruction. A cancelled
 task needs a new request.
 
-This mode does not require a shared handoff file or periodic checks. A persistent implementation
-plan required by the task's own instructions still applies. The CLI option details and headless
-startup behavior are documented in the
+Any persistent implementation plan required by the task's own instructions still applies. CLI
+options and headless startup behavior are documented in the
 [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) and
 [programmatic-use guide](https://code.claude.com/docs/en/headless). Check the current
 [permission modes](https://code.claude.com/docs/en/permission-modes) and

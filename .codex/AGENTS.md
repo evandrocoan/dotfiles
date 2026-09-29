@@ -346,8 +346,8 @@ of choosing one silently.
   plan whenever its persistence gate applies, and complete its risk-appropriate closure before
   declaring success.
 - `codex-claude-loop`: Coordinator-only procedure for assigning a self-contained
-  Claude CLI implementation in one checkout. Its two-session handoff reference
-  is retained only for recovery of existing handoffs; do not start new ones.
+  Claude CLI implementation in one checkout while preserving one implementation owner
+  and reconciling prior processes, locks, scheduled actions, and partial effects.
 - `skill-creator`: Create or update a skill package with appropriately scoped
   instructions and supporting resources. Written for Codex skills: ignore its
   `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
