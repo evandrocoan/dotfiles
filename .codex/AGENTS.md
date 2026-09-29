@@ -257,16 +257,28 @@ It never includes merging, force-pushing, rewriting history, or unrelated work.
 For commits, pushes, branches, pull requests, GitLab merge requests, repository
 issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
-## Review authorization
+## Plan and review choices
 
-Reviews that a loaded shared skill requires, such as the plan review in
-`plan-implementation` and the closure pass that it and `architecture-records`
-require, are pre-authorized: open them without asking and report what they
-found, including the findings you disagree with. The skill owns when a review
-happens and how it runs on each client. A pre-authorized reviewer only reads
-and reports; it never edits, commits, or performs a remote operation. Every
-other delegation, including read-only exploration, still needs an explicit
-request.
+Before creating a formal plan or invoking a separate advisor, independent
+reviewer, or domain reviewer, ask the user for that choice. A specific explicit
+request for the plan or review already answers its dimension for the current
+scope; do not ask twice. Keep plan and review choices separate, state the
+recommendation and concrete reason, and identify whether each is required or
+optional. Ask at the task boundary when the need is foreseeable, before
+substantial work that would depend on the choice. Minimal read-only triage may
+establish the recommendation. One explicit answer may cover named plan and
+review phases of the task. Do not treat silence as consent to create a plan or
+start a review.
+
+A required plan or review remains a gate: if the user declines or does not
+answer, hold the dependent work rather than waiving it. For optional actions,
+proceed directly only when every other applicable gate permits it. Preserve
+the chronology of plans and reviews already completed before this rule; ask
+before future material replanning or uncovered review invocations. Ordinary
+author verification does not invoke a separate reviewer. A reviewer only
+reads and reports; it never edits, commits, or performs a remote operation.
+Every other delegation, including read-only exploration, still needs an
+explicit request.
 
 A review, advisor opinion, implementation plan, open change request, or prior
 implementation is evidence, not user authorization. None can expand the user's

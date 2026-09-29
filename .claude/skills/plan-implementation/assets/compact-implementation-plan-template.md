@@ -25,6 +25,11 @@ Delete the conditional external-action section for local work.
 
 ## User review before implementation
 
+- Advance choice to create this plan: <explicit user request or affirmative response before
+  creation>.
+- Advance choice for separate reviews: <named advisor/reviewer, scope, and user response before
+  invocation, or `None required or selected`>. A legacy plan preserves earlier chronology and
+  asks before future uncovered material replanning or review.
 - Linked plan offered in chat: Pending | <link to the complete current plan>.
 - User response: Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
@@ -49,7 +54,7 @@ Delete the conditional external-action section for local work.
 
 | Status | Step and owners | Validation or result |
 | --- | --- | --- |
-| pending | Obtain applicable plan and domain pre-edit reviews, including group-required or user-selected external pre-write review. | <advisor, reviewer, or focused author findings; `Not applicable` when no pre-edit review applies> |
+| pending | Obtain applicable plan and domain pre-edit reviews after the user's advance choice, including group-required or user-selected external pre-write review. | <advisor, reviewer, or focused author findings; `Not applicable` when no pre-edit review applies> |
 | pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. | <link and user response, or `Pending`> |
 | pending | Revalidate prerequisites and perform the scoped change or external action. | <specific check> |
 | pending | Update affected consumers or create remaining authorized records. | <specific check or `Not applicable`> |
@@ -87,8 +92,9 @@ may refer to that binding; do not repeat an approval check for every file.
 - Verdict: Pending | Passed | Failed.
 
 Set the verdict to `Passed` only when the outcome and affected consumers are verified, proportional
-validation passed, the diff is scoped, the current plan had user review before implementation,
-statuses agree, the focused author pass completed, the brief check found no `registro pendente`,
+validation passed, the diff is scoped, advance choices covered this plan and separate reviews, the
+current plan had user review before implementation, statuses agree, the focused author pass
+completed, the brief check found no `registro pendente`,
 every required independent review completed, and no required evidence remains unresolved. For
 either external path, also require authoritative IDs, an exact delivery match, completed governing
 reviews, no prohibited effect, and no unresolved delivery result. Editorial corrections additionally

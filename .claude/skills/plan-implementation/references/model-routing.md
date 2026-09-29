@@ -23,7 +23,7 @@ plan controls when no stronger gate applies.
 
 | Acting group | Routine local reversible edit, no persistence trigger | Non-trivial local reversible edit, no persistence trigger |
 | --- | --- | --- |
-| Supervised group: Terra, Sonnet, Opus | Execute directly with a stated outcome and cheap check, unless the user requests a plan. | Make a compact formal plan before editing and use its proportional review and closure. |
+| Supervised group: Terra, Sonnet, Opus | Execute directly with a stated outcome and cheap check, unless the user requests a plan; ask before invoking the required reviewer. | Ask before making the required compact formal plan and invoking its reviewer; use proportional review and closure. |
 | Autonomous group: Sol, Astra, Fable | Ask once about the user's sense of importance and whether they want an optional independent review. Recommend direct execution without a formal plan and state whether extra review is warranted; do not offer a plan solely for this classification. | Ask once about the user's sense of importance and whether they prefer direct execution or a compact plan. An independent result review is required either way. Recommend and explain the planning route. |
 | Identity or effort unknown | Stop and obtain the effective setting before task work. | Stop and obtain the effective setting before task work. |
 
@@ -33,6 +33,10 @@ retains the pre-model plan route: routine local reversible work needs no formal 
 local reversible work needs a compact formal plan. A user may still request a plan for routine
 work. An explicit direct preference can control any discretionary route, but cannot bypass a
 mandatory high-risk, persistence, or inherited-plan requirement.
+
+Ask about a foreseeable group-required plan or review at the task boundary, even when the review
+will run after implementation. A choice to decline a mandatory action holds the dependent work;
+do not spend implementation effort first and reveal the required reviewer only at closure.
 
 For the autonomous group, ask once at the first eligible boundary for the user's own sense of
 importance and any still-open planning or review preference. State the agent's classification,
@@ -50,12 +54,11 @@ discretionary non-trivial work, offer direct execution or a compact plan for use
 execution; explain why a plan helps when uncertainty, coordination, or later follow-up could lose a
 constraint, and why direct execution suffices when those concerns are absent. State that the
 independent result review is required on either route. Apply mandatory status to each dimension
-separately: name its trigger and never offer to omit it, but still ask an unanswered discretionary
-choice in the other dimension. In particular, mandatory review for non-trivial local work leaves
-the direct-versus-compact-plan question open. When both plan and review are mandatory, ask only
-about additional detail or review and any importance the user sees. Apply the same user-input
-principle to eligible external actions without turning the preference question into write
-authorization.
+separately: name its trigger and ask before creating the plan or invoking the reviewer even when
+both are mandatory. Explain that declining a mandatory action holds dependent work; never present
+its omission as an eligible execution route. Mandatory review for non-trivial local work leaves
+the direct-versus-compact-plan question open. Apply the same user-input principle to eligible
+external actions without turning the preference question into write authorization.
 
 Treat planning and review as separate choices. An explicit preference in the current request or
 an earlier choice still valid for this scope resolves only the dimension it addresses: “without a
@@ -64,19 +67,20 @@ about unanswered dimensions. When presenting selectable answers, make each label
 resulting route, including the plan and review outcome, even if one dimension was already settled.
 For optional review on a direct route, use short labels such as “No plan; independent review” and
 “No plan; no review”, adapted to the user's language and the client's label limits. Never make the
-user infer the combination from the question alone. If review is mandatory, include it in every
-eligible plan option rather than offering its removal. A plan-only request already chooses a plan;
-ask about optional review when applicable, offer the linked plan, and stop without seeking
-implementation permission. Do not ask an implementation preference for question-only or unrelated
-read-only requests. If the user chooses a formal plan, offer its link and wait for the user's review
-and explicit go-ahead before executing it; after that response, do not ask again for each file or
-step. Ask about planning or review preferences again only after a material change in scope,
-uncertainty, handoff, model, or the user's stated stakes; do not ask for each retry or routine step.
-If an optional preference is unanswered after a reasonable opportunity, proceed with the stated
-recommendation.
-If that recommendation creates a formal plan, offer its link and wait for user review before
-execution. Silence never resolves missing model/effort information, authorization, user plan
-review, or an unmet required review.
+user infer the combination from the question alone. If review is mandatory, state that every
+eligible execution route includes it and ask whether the user wants to proceed with that gate;
+declining holds the work. A plan-only request already chooses a plan; ask about any uncovered
+separate review, offer the linked plan, and stop without seeking implementation permission. Do not
+ask an implementation preference for question-only or unrelated read-only requests. If the user
+chooses a formal plan, offer its link and wait for the user's review and explicit go-ahead before
+executing it; after that response, do not ask again for each file or step. Ask about a new plan or
+review action after a material change in scope, uncertainty, handoff, model, or the user's stated
+stakes only when the earlier choice did not cover it; do not ask for each retry or routine step.
+An unanswered preference never permits creating a formal plan or invoking a separate reviewer,
+advisor, or domain reviewer, even when one was recommended. Hold work that requires the unanswered
+action; otherwise direct execution may proceed after a reasonable opportunity only when every
+other gate permits it. Silence also never resolves missing model/effort information, authorization,
+or the later user review of a linked plan.
 
 ## Apply the independent-review threshold
 
@@ -100,8 +104,9 @@ Examples of useful recommendations:
   a compact plan offered for user review before execution, explain which route you recommend, and
   include the user's sense of importance. Either choice still requires an independent final review.
 - A novel multi-component design, uncertain state transition, or shared agent-skill policy edit:
-  use the mandatory full plan; recommend higher reasoning effort for planning and a fresh
-  independent reviewer. Sol planning with Astra xhigh review is one option when available.
+  explain the mandatory full plan and reviews and ask before creating or invoking them. Recommend
+  higher reasoning effort for planning and a fresh independent reviewer. Sol planning with Astra
+  xhigh review is one option when available.
 - An approved high-risk plan executed by Opus: keep its full gates and, when available, use Sol
   xhigh for independent review. Terra or Sonnet execution can use the same pattern. Different
   model families or providers may reduce correlated blind spots when both are capable.

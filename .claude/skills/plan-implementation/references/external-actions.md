@@ -19,13 +19,15 @@ Missing authorization, unknown effects, or unavailable authoritative read-back b
 high-risk review cannot substitute for those prerequisites. When they are established but another
 eligibility condition fails, use the risk classification in the [skill entrypoint](../SKILL.md).
 
-Perform only the verification needed for the correction; do not turn it into a new investigation:
+Ask about a foreseeable required review at the task boundary before substantive work, then
+perform only the verification needed for the correction; do not turn it into a new investigation:
 
 1. Read the current record, verify changed claims and references under the applicable domain
    skill, and inspect the exact outgoing diff. Preserve unrelated content and metadata. When the
-   acting agent belongs to the supervised group, obtain an independent autonomous-group review of
-   the authorized correction before writing. The autonomous group needs that review when another
-   rule makes the work non-trivial or higher risk.
+   acting agent belongs to the supervised group, obtain the previously chosen independent
+   autonomous-group review of the authorized correction before writing. The autonomous group
+   needs that review when another rule makes the work non-trivial or higher risk; obtain the same
+   advance choice before invoking it.
 2. Immediately before writing, revalidate the target and compare against the read baseline. Use a
    version precondition when available. If concurrent edits appear, preserve them and re-review
    the revised diff within the authorized scope before writing; request direction for scope drift.
@@ -73,13 +75,14 @@ first write does not itself force high risk. Once these preconditions are establ
 unknown remaining condition routes the authorized action through the normal high-risk workflow.
 
 Apply every substantive review required by the user, the model-group route, an applicable domain
-skill, or another governing authority before writing. The supervised group always needs an
-independent autonomous-group reviewer. The autonomous group needs one when the action is
-non-trivial due to material uncertainty, coordination, or multiple affected consumers; a separate
-persistence trigger or inherited higher-risk plan also keeps its required review. This planning
-skill adds no review based on the payload's topic or vocabulary. If a required reviewer is
-unavailable, block execution and report the limitation. The post-action read-back verifies
-delivery, not substantive correctness.
+skill, or another governing authority before writing. Obtain the user's choice before invoking a
+separate reviewer, as the skill entrypoint requires; a declined required review blocks the write.
+The supervised group always needs an independent autonomous-group reviewer. The autonomous group
+needs one when the action is non-trivial due to material uncertainty, coordination, or multiple
+affected consumers. A separate persistence trigger or inherited higher-risk plan also keeps its
+required review. This planning skill adds no review based on the payload's topic or vocabulary.
+If a required reviewer is unavailable, block execution and report the limitation. The post-action
+read-back verifies delivery, not substantive correctness.
 
 Perform multiple items sequentially. After a timeout, partial success, or inconclusive response,
 stop later writes and retries, then reconcile through authoritative read-only evidence:
