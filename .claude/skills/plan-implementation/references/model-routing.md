@@ -1,127 +1,78 @@
 # Model-aware planning route
 
 Use this after the global model/effort gate and the entrypoint's request, risk, persistence, and
-inherited-plan checks. Model capability is a planning aid, never evidence that a safeguard can be
-skipped. These routes express the user's preferred level of planning for this shared skill; they
-are not universal rankings of model quality.
+inherited-plan classification. Group labels express planning and review recommendations, not a
+universal ranking of model quality or permission to skip safety checks.
 
 ## Apply the acting-role gate
 
-Use the global task-entry gate's established acting pair, role-fit decision, and switch request
-before choosing a plan route. A declined or unanswered downgrade leaves a sufficient higher
-setting in use; an unmet minimum or fixed exact pair holds that role. For the pairings below,
-verify selectable models and effort levels in the actual client, or label the example conditional.
-A plan or reviewer cannot make an insufficient acting setting adequate.
+Verify the acting model and effort, and assess fitness for this role under the global task-entry
+gate. An unknown or inadequate setting holds the role. A plan or reviewer cannot make an
+insufficient acting setting adequate. Reassess role fit for every new request; an earlier task's
+adequacy decision does not carry to a different role. Verify model and effort availability in the
+actual client before proposing a pair.
 
-Recheck role fit for each new implementation request under the global gate; a previous task's
-adequacy decision does not carry into a different role. The global gate also covers later
-explanation-only questions, when this implementation skill is not loaded. Its one-time downgrade
-prompt applies to an unchanged role and scope, not to the entire conversation.
+## Recommend a route and ask for the user's choices
 
-## Choose the smallest permitted plan
+An explicit plan-only request selects a plan and stops before implementation. Question-only and
+read-only requests do not open an implementation choice. For an authorized edit, classify risk and
+persistence first. They determine the strength of the recommendation and author closure, while
+the user decides independently whether to have a formal plan and a separate AI review.
 
-Apply an explicit plan-only request first. Follow the higher-priority question-only and read-only
-rules; this skill does not turn an answer or inspection into implementation. For authorized edits,
-first apply high-risk, persistence, external-action, and inherited-plan gates from the entrypoint.
-Those gates override every row here. A user's explicit choice to proceed without a discretionary
-plan controls when no stronger gate applies.
-
-| Acting group | Routine local reversible edit, no persistence trigger | Non-trivial local reversible edit, no persistence trigger |
+| Acting group | Routine local reversible edit | Non-trivial local reversible edit |
 | --- | --- | --- |
-| Supervised group: Terra, Sonnet, Opus | Execute directly with a stated outcome and cheap check, unless the user requests a plan; ask before invoking the required reviewer. | Ask before making the required compact formal plan and invoking its reviewer; use proportional review and closure. |
-| Autonomous group: Sol, Astra, Fable | Ask once about the user's sense of importance and whether they want an optional independent review. Recommend direct execution without a formal plan and state whether extra review is warranted; do not offer a plan solely for this classification. | Ask once about the user's sense of importance and whether they prefer direct execution or a compact plan. An independent result review is required either way. Recommend and explain the planning route. |
-| Identity or effort unknown | Stop and obtain the effective setting before task work. | Stop and obtain the effective setting before task work. |
+| Supervised: Terra, Sonnet, Opus | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Ask separately about each. |
+| Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and ask separately. |
+| Identity or effort unknown | Obtain the effective setting before task work. | Obtain the effective setting before task work. |
 
-These are user-selected operational labels for this skill, not a universal ranking of model
-quality. The plan threshold and independent-review threshold are separate. The supervised group
-retains the pre-model plan route: routine local reversible work needs no formal plan; non-trivial
-local reversible work needs a compact formal plan. A user may still request a plan for routine
-work. An explicit direct preference can control any discretionary route, but cannot bypass a
-mandatory high-risk, persistence, or inherited-plan requirement.
+For high-risk architecture, protocol, security, authorization, migration, or costly validation,
+strongly recommend a full persistent plan and qualified pre-edit and final independent reviews.
+For lower-risk work likely to cross phases or sessions, recommend a compact persistent plan;
+recommend review according to its actual risk and model route. Explain the concrete reason and
+adequate planner, implementer, and reviewer model/effort when recommending a pair. A supervised
+implementer often benefits from an autonomous reviewer even for routine work. These recommendations never turn
+plan or separate AI review into a compulsory gate. Other authorization, model-fit, validation,
+and author-conformance requirements still apply.
 
-Ask about a foreseeable group-required plan or review at the task boundary, even when the review
-will run after implementation. A choice to decline a mandatory action holds the dependent work;
-do not spend implementation effort first and reveal the required reviewer only at closure.
+Ask at the relevant task boundary, before spending substantial dependent work or reviewer tokens.
+Keep the plan and review questions separate. State the classification, recommendation, and why,
+then invite the user's sense of importance: the agent may not know the user's stakes. An explicit
+choice in the current request or an earlier choice still valid for this scope answers only its
+dimension. “Without a plan” does not decline review; “with review” does not choose a plan.
+When presenting options, make each answer's resulting route unambiguous, including whether a
+plan and review will occur. Do not present accepting both as the only way to continue.
 
-For the autonomous group, ask once at the first eligible boundary for the user's own sense of
-importance and any still-open planning or review preference. State the agent's classification,
-recommended route, and concrete reason in the same concise question. The agent still owns risk
-classification: use new facts from the user to reassess it, and honor the user's desire for more
-planning or review even when no risk gate demands it. A preference never waives a mandatory plan,
-review, authorization, or acting-role requirement.
+If the user declines either action, continue otherwise authorized work with the chosen route.
+If a choice is unanswered, do not create a plan or invoke a separate advisor or reviewer. After
+a reasonable opportunity, direct execution may proceed if all independent gates permit it.
+Silence never supplies missing model/effort information, authorization, or approval of a linked
+plan. A selected pre-edit, pre-write, or final review holds only its dependent phase until it
+completes or the user explicitly withdraws it. A declined or unselected review never blocks.
 
-For routine local reversible work, explain that a clear owner and cheap local check make a formal
-plan unnecessary; ask only whether the user wants an optional independent review. State whether
-you recommend that review and why; for a well-understood low-stakes fix, ordinarily recommend no
-extra reviewer, while inviting the user to identify importance the agent cannot see. Honor an
-explicit user request for a plan, but do not offer one solely for this routine classification. For
-discretionary non-trivial work, offer direct execution or a compact plan for user review before
-execution; explain why a plan helps when uncertainty, coordination, or later follow-up could lose a
-constraint, and why direct execution suffices when those concerns are absent. State that the
-independent result review is required on either route. Apply mandatory status to each dimension
-separately: name its trigger and ask before creating the plan or invoking the reviewer even when
-both are mandatory. Explain that declining a mandatory action holds dependent work; never present
-its omission as an eligible execution route. Mandatory review for non-trivial local work leaves
-the direct-versus-compact-plan question open. Apply the same user-input principle to eligible
-external actions without turning the preference question into write authorization.
+If the user chooses a formal plan, create its linkable artifact, offer the current plan in chat,
+and wait for the user's explicit go-ahead before implementation. A plan-only request stops after
+the link. Ask again about a new plan or review action after a material change in scope,
+uncertainty, handoff, or stakes only when the earlier choice did not cover it. Do not revive a
+declined choice automatically during replanning. The user may withdraw a choice for remaining
+work; preserve the chronology of actions already completed.
 
-Treat planning and review as separate choices. An explicit preference in the current request or
-an earlier choice still valid for this scope resolves only the dimension it addresses: “without a
-plan” does not decline review, and “with review” does not decide a discretionary plan. Ask only
-about unanswered dimensions. When presenting selectable answers, make each label state the full
-resulting route, including the plan and review outcome, even if one dimension was already settled.
-For optional review on a direct route, use short labels such as “No plan; independent review” and
-“No plan; no review”, adapted to the user's language and the client's label limits. Never make the
-user infer the combination from the question alone. If review is mandatory, state that every
-eligible execution route includes it and ask whether the user wants to proceed with that gate;
-declining holds the work. A plan-only request already chooses a plan; ask about any uncovered
-separate review, offer the linked plan, and stop without seeking implementation permission. Do not
-ask an implementation preference for question-only or unrelated read-only requests. If the user
-chooses a formal plan, offer its link and wait for the user's review and explicit go-ahead before
-executing it; after that response, do not ask again for each file or step. Ask about a new plan or
-review action after a material change in scope, uncertainty, handoff, model, or the user's stated
-stakes only when the earlier choice did not cover it; do not ask for each retry or routine step.
-An unanswered preference never permits creating a formal plan or invoking a separate reviewer,
-advisor, or domain reviewer, even when one was recommended. Hold work that requires the unanswered
-action; otherwise direct execution may proceed after a reasonable opportunity only when every
-other gate permits it. Silence also never resolves missing model/effort information, authorization,
-or the later user review of a linked plan.
+## Select a reviewer when chosen
 
-## Apply the independent-review threshold
+Recommend an adequate autonomous-group reviewer for supervised-group work and a fresh reviewer
+for complex autonomous-group work. Use [reviews and completion](closure.md) for qualifications,
+timing, and evidence. Independent review uses fresh context and the original authorities; a
+stronger model name alone does not make it independent. An advisor, author reread, and independent
+review are different mechanisms. The author's own validation remains required on every route.
 
-Review requirements do not depend on whether the user chooses a discretionary plan. The
-autonomous group needs an independent reviewer from that group for non-trivial local work, whether
-executed directly or from a compact plan. The supervised group needs an independent reviewer from
-the autonomous group for every implementation edit, including routine local work. An ordinary
-read-only reviewer alone does not create a multiple-implementer or handoff persistence trigger.
-Qualifying external actions use the timing in [external-action routes](external-actions.md), and
-high-risk work keeps its stronger pre-edit and final review gates. Read
-[reviews and completion](closure.md) for reviewer qualifications, blocking behavior, and closure.
-Do not replace a required independent review with an advisor or the author's reread.
+Examples of recommendations:
 
-Examples of useful recommendations:
-
-- A well-scoped routine local fix in the autonomous group: recommend direct execution without a
-  plan or extra review because the owner and check are clear; ask whether the user wants an
-  independent review due to stakes the agent may not see. The supervised group executes directly
-  but still needs a reviewer before completion.
-- A non-trivial local fix in Sol, Astra, or Fable: ask whether the user wants direct execution or
-  a compact plan offered for user review before execution, explain which route you recommend, and
-  include the user's sense of importance. Either choice still requires an independent final review.
-- A novel multi-component design, uncertain state transition, or shared agent-skill policy edit:
-  explain the mandatory full plan and reviews and ask before creating or invoking them. Recommend
-  higher reasoning effort for planning and a fresh independent reviewer. Sol planning with Astra
-  xhigh review is one option when available.
-- An approved high-risk plan executed by Opus: keep its full gates and, when available, use Sol
-  xhigh for independent review. Terra or Sonnet execution can use the same pattern. Different
-  model families or providers may reduce correlated blind spots when both are capable.
-- A routine bulk mechanical step: ask once to use a sufficient lower effort if the client offers
-  it and the user has not chosen to keep the current setting for this scope. Reassess before a
-  newly discovered critical decision.
-
-When proposing a pair, identify **planner or implementer**, **independent reviewer**, effort,
-availability condition, and which risk gate the reviewer serves. Request a supported downgrade
-once when a lower setting is adequate, or an upgrade when the current setting is insufficient.
-Honor a sufficient user-pinned choice; resolve an unmet fixed pair or minimum before that role
-proceeds. An independent review must use fresh context and the original authorities; a stronger
-model name alone does not make a review independent.
+- A routine autonomous-group fix with one owner and cheap check: direct execution, ordinarily no
+  extra reviewer; ask whether the user sees stakes that warrant review.
+- A routine supervised-group fix: direct execution and an autonomous-group result review.
+- A non-trivial local fix: a compact plan can preserve uncertainty and decisions; an independent
+  result review can catch a missed consumer. Ask about both, with direct execution available.
+- A shared skill policy or multi-component state transition: strongly recommend a full plan and
+  fresh pre-edit and final reviews. Sol xhigh planning with Astra xhigh review is one option when
+  available. Opus execution with Sol xhigh review is another when the roles fit.
+- A routine mechanical step: propose a supported lower effort once if adequate and the user has
+  not chosen to keep the current setting; reassess when the task becomes more critical.

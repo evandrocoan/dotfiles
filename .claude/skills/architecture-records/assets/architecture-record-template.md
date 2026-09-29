@@ -56,16 +56,16 @@ task-specific delivery tracking in the issue or merge request.
 
 Map every load-bearing invariant to its authoritative runtime owner, all affected
 consumers, and proportional executable protection. Keep execution status and detailed
-run evidence in the implementation plan or owning test, replay, CI, issue, or merge
+run evidence in a chosen implementation plan or owning test, replay, CI, issue, or merge
 request artifact.
 
 | Invariant | Authoritative owner | Affected consumers | Tests | Recorded replay |
 | --- | --- | --- | --- | --- |
 | <invariant identifier> | <code or configuration owner> | <all consumers> | <focused protection> | <full, partial with boundary, unavailable, or not applicable> |
 
-Before changing this record to `Implemented`, require the corresponding implementation
-plan's completed closure audit to verify the architecture-to-implementation and
-implementation-to-authority traces. A missing, pending, or unresolved applicable row
+Before changing this record to `Implemented`, use the chosen plan's completed closure audit or
+the direct author's closure evidence to verify the architecture-to-implementation and
+implementation-to-authority traces. A missing, pending, or unresolved applicable requirement
 blocks the lifecycle transition.
 
 ## Rejected alternatives

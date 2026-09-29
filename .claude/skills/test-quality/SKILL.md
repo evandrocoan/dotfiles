@@ -321,15 +321,14 @@ boundary, independent observation, and sensitivity evidence agree. A passing sui
 gap between a routing test and a database, authorization, or startup claim. Report the narrower
 coverage and add the missing test when that broader behavior is part of the requested contract.
 
-Obtain a fresh-context independent review for a project-wide false-positive audit or when changed
-tests are primary evidence for behavior classified as high risk by `plan-implementation`, including
-authorization, destructive state changes, and data integrity. A focused routine test change needs
-the author check above, not automatic delegation. Reuse an independent plan or closure review when
-it examines the final tests against this section; do not duplicate a qualifying review. Honor a
-user-requested reviewer and effort, such as Astra xhigh. Otherwise choose the strongest available
-independent reviewer suited to the risk. If the preferred model is unavailable, use another capable
-independent reviewer and disclose the substitution. If no independent reviewer is available for a
-required review, keep that requirement unresolved and do not claim completion.
+Strongly recommend a fresh-context independent review for a project-wide false-positive audit or
+when changed tests are primary evidence for high-risk behavior, including authorization,
+destructive state changes, and data integrity. Ask before invoking a separate reviewer. The
+user's choice is optional; declining it does not waive the author check above or block otherwise
+supported completion. Reuse a selected plan or closure review when it examines the final tests
+against this section. Honor a user-selected reviewer and effort, such as Astra xhigh. If the
+selected reviewer is unavailable, hold completion until that review runs or the user explicitly
+withdraws it. Do not silently substitute a reviewer.
 
 Give the reviewer the request, applicable instructions, tests, real implementation, relevant
 fixtures, CI route, and validation and negative-control results. Withhold the intended verdict and

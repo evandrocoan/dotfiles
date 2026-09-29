@@ -10,17 +10,17 @@ description: >-
   safety, risk, or mandatory-review policy; for a material continuation, replan, or follow-up under
   an existing formal plan; and before costly live validation, migrations, protocol changes, or fixes
   whose correctness depends on coordinated code, tests, replay, configuration, or documentation.
-  Require a user-visible persistent Markdown plan when work may span phases, agents, interruptions,
-  or context compaction.
+  Recommend a user-visible persistent Markdown plan when work may span phases, agents,
+  interruptions, or context compaction; create it only when the user chooses it.
 ---
 
 # Plan implementation
 
-Create the smallest plan that makes the requested delivery reliable. Keep durable design
+Recommend the smallest plan that would make the requested delivery reliable. Keep durable design
 authority in architecture records, as `architecture-records` classifies it; that skill excludes the
 workflow rules of shared agent skills, which live in the skills themselves. Keep every formal plan
-user-visible. When the persistence gate applies, keep detailed execution state in Markdown and
-project its current steps into the task plan.
+user-visible. When the user chooses a plan and a persistence trigger applies, keep detailed
+execution state in Markdown and project its current steps into the task plan.
 
 ## Determine the planning mode
 
@@ -30,47 +30,51 @@ setting cannot be replaced with a conservative plan. Read
 [model-aware routing](references/model-routing.md) for every implementation edit to apply the
 acting group's plan and review thresholds, and when recommending a model, reasoning effort, or
 reviewer. The applicable user's explicit request and higher-priority question-only or read-only
-rules come first. A model never waives the risk and persistence gates below.
+rules come first. A model never waives safety or authorization gates; risk and persistence shape
+the recommendation and author closure, not whether the user may decline a formal plan or review.
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
   says not to implement, inspect enough authoritative evidence to make the plan credible, offer its
   link in chat, and stop. Reviewing a plan-only deliverable does not authorize implementation.
-- **Plan and execute:** When the user asks to change, fix, build, or implement, use a required or
-  chosen formal plan when one applies. Offer its link for user review and wait for an explicit
-  go-ahead before executing it. After that response, continue through the authorized in-scope
+- **Plan and execute:** When the user asks to change, fix, build, or implement and chooses a formal
+  plan, offer its link for user review and wait for an explicit go-ahead before executing it.
+  After that response, continue through the authorized in-scope
   steps without requesting approval for each step. Use the direct route when eligible.
-- **No formal plan:** Use direct work only when the model route permits it, no mandatory risk or
-  persistence gate applies, and the user has not requested a plan. Still identify the expected
-  outcome and verify it.
+- **No formal plan:** Use direct work when the user declines a plan, or after an unanswered choice
+  and a reasonable opportunity to reply, if the task and all independent gates permit it. Still
+  identify the expected outcome and verify it. Do not create a hidden replacement plan.
 
-Use a formal plan for every high-risk request and every persistence trigger below. For remaining
-local reversible work, follow the model route and any explicit user preference. Touching several
-files or performing several obvious edits under one owner does not by itself make otherwise
+Strongly recommend a formal plan for every high-risk request and persistence trigger below. The
+recommendation does not make the plan compulsory. For other work, follow the model route and any
+explicit user preference. Touching several files or performing several obvious edits under one
+owner does not by itself make otherwise
 routine work non-trivial.
 
 Before drafting or creating a formal plan or invoking a separate advisor, independent reviewer,
 or domain reviewer, obtain the user's choice for each action. An explicit request for a plan or
 review already answers that dimension for the current scope. Otherwise use minimal read-only
-triage to state the recommendation, concrete reason, and whether the plan or review is mandatory
-or optional; ask at the task boundary when foreseeable, before substantial dependent work or
-reviewer effort. One clear answer may cover named pre-edit and final reviews. A declined or
-unanswered mandatory action holds dependent work; silence never starts an optional plan or review.
-Direct work may continue only when every other gate permits it. Ordinary author verification is
-not a separate review invocation. Preserve the chronology of existing plans and reviews. Ask
+triage to state the recommendation and concrete reason; both choices are optional. Ask at the
+relevant implementation task boundary when foreseeable, before substantial dependent work or
+reviewer effort. Question-only requests do not open an implementation choice. One clear answer
+may cover named pre-edit and final reviews. Silence never starts a plan or review. Direct work
+may continue after a decline or unanswered choice only when the task is authorized and every
+independent gate permits it. Ordinary author verification is not a separate review invocation.
+Preserve the chronology of existing plans and reviews. Ask
 before an uncovered material replan or reviewer invocation. This advance choice does not replace
 the linked user review of a completed plan before implementation.
 
 A bounded additive external action that meets every condition in
-[external-action routes](references/external-actions.md) uses the compact persistent path. Read
-that reference before classifying or performing an external write. Eligibility selects risk,
+[external-action routes](references/external-actions.md) uses the compact path when the user
+chooses a plan. Read that reference before classifying or performing an external write.
+Eligibility selects risk,
 template, and closure; it never overrides an explicit plan-only request or supplies permission to
-execute. When execution is authorized, use plan-and-execute mode. External mutation still activates
-the persistence gate even
-though externality alone does not make that narrowly defined action high risk. A routine external
-editorial correction uses the direct path in that reference; its external location alone requires
-neither a formal plan nor independent review. Apply any review required by the acting model's
-group, another authority, or inherited risk. Neither path overrides authorization or plan-only
-mode.
+execute. When execution is authorized without a selected plan, use the direct route with the same
+authorization, pre-write, reconciliation, and read-back checks. External mutation strongly favors
+persistence even though externality alone does not make that narrowly defined action high risk.
+A routine external editorial correction uses the direct path in that reference; its external
+location alone requires
+neither a formal plan nor independent review. Recommend review according to model, domain, and
+inherited risk. Neither path overrides authorization or plan-only mode.
 
 ## Materialize the plan visibly
 
@@ -87,13 +91,13 @@ plan's execution contract changes materially, offer the updated link and wait ag
 steps. Read-only scoping and reviews separately chosen by the user may make the plan reviewable
 before this linked-plan gate.
 
-Use these two layers when the persistence gate applies:
+Use these two layers when the user chooses a plan and a persistence trigger applies:
 
 - **Persistent execution plan:** Store the complete current execution contract in Markdown.
 - **Task plan:** Project the current steps and statuses into the environment's visible plan
   mechanism for concise progress tracking.
 
-The persistent plan is mandatory when any of these conditions applies:
+Strongly recommend a persistent plan when any of these conditions applies:
 
 - work is high risk under **Review plans proportionally**;
 - work is likely to cross context compaction, an interruption, a handoff, or more than one session;
@@ -112,16 +116,17 @@ Creating a Markdown file solely to provide that link does not trigger non-trivia
 high-risk review, or stronger closure. Keep its format and checks proportional to the underlying
 work, including a minimal outcome, step, and check for a user-requested routine plan.
 
-Persistence and risk are independent. Persistence determines where the execution contract
-survives; it does not promote non-trivial local work or a bounded additive external action to high
-risk. A persistent non-trivial local plan, a bounded additive external action, and a routine external
-editorial correction with an independent persistence trigger use the compact template and their
-proportional [closure](references/closure.md). A high-risk or architecture-governed plan uses the
-full template, closure matrix, bidirectional traces, full reread, and independent second pass.
+Persistence and risk are independent. When a plan is chosen, persistence determines where its
+execution contract survives; it does not promote non-trivial local work or an additive action to
+high risk. A chosen persistent non-trivial local plan, a bounded additive external action, and a
+routine external editorial correction with another persistence trigger use the compact template
+and their proportional [closure](references/closure.md). A high-risk or architecture-governed plan uses the
+full template, closure matrix, bidirectional traces, and full author reread. A separately selected
+reviewer performs the independent second pass.
 
-If otherwise routine work later meets the persistence gate because of handoff, interruption,
-multiple actors, or another listed condition, treat it as non-trivial for planning ceremony and use
-the compact persistent path. That promotion does not make it high risk by itself.
+If otherwise routine work later meets a persistence trigger because of handoff, interruption,
+multiple actors, or another listed condition, recommend the compact persistent path. That
+trigger does not make the work high risk by itself or override a declined plan.
 
 Before creating, resuming, moving, or closing a persistent plan, read
 [persistent plan locations and lifecycle](references/persistent-plans.md). The trigger list above
@@ -133,8 +138,8 @@ Read the applicable repository instructions and inspect the authoritative code, 
 tests, and existing records before choosing implementation steps. Do not create a plan from
 filenames, issue prose, or remembered architecture alone.
 
-Inspect enough evidence to create a truthful initial plan, then materialize the plan before the
-first production edit. Mark unresolved facts as assumptions or investigation steps instead of
+When the user chose a plan, inspect enough evidence to make it truthful and materialize it before
+the first production edit. Mark unresolved facts as assumptions or investigation steps instead of
 inventing implementation details.
 
 Treat an item identifier carried from a `discussion-briefs` brief as a cross-document reference.
@@ -147,19 +152,18 @@ both could be meant. Check shared identifiers against their source briefs at han
 Matching identifiers do not grant authority or bypass the brief's decision-recording gates.
 
 When a durable architecture record governs the change, use `architecture-records` together with
-this skill. Treat the approved record as the design authority and derive the implementation plan
-from it. Do not alter the record to legitimize incidental current code.
+this skill. Treat the approved record as design authority and derive the selected plan or direct
+execution checks from it. Do not alter the record to legitimize incidental current code.
 
-When the plan carries out a deliberate user decision that changes an approved record, follow
-the deliberate-decision procedure in `architecture-records` section 7a. When it permits bounded
-recording before review, the discussion/planning session amends the record first, then creates
-or updates the plan from that amended record and submits both to the required review. When
-mandatory maintenance puts the record edit outside those bounds, create or update the plan
-with the maintenance and amendment steps first, keep the decision pending for the record with
-the reason, and obtain the required plan review before performing that unit. Complete the
-authorized recording before the implementing-session handoff; describe which owners were
-actually updated without presenting pending recording or implementation as completed. The
-fallback must not be overridden by an unconditional amendment-before-plan instruction.
+When carrying out a deliberate user decision that changes an approved record, follow
+`architecture-records` section 7a. With a chosen plan, use its specified order for bounded
+recording or required maintenance and offer the linked plan before dependent implementation.
+Without a chosen plan, obtain any selected pre-edit review of the proposed record diff, record
+the authorized decision in the architecture owner with the skill's author checks, then proceed
+directly against the amended record. A chosen separate review follows its selected phase; a
+declined review creates no recording deadlock. Complete
+authorized recording before an implementing-session handoff, and describe which owners were
+actually updated without presenting pending work as completed.
 
 Load the task-specific skills required by the work before planning their stages. In particular,
 use `test-quality` for executable validation, `documentation` for durable documentation,
@@ -217,44 +221,44 @@ separate reviewer or advisor is invoked:
 Evaluate high-risk triggers first; any match overrides locality, reversibility, or apparent
 simplicity. Then distinguish the remaining levels:
 
-- **High risk:** Requires advisor review when available and a fresh-context independent review.
-  High risk includes architecture, protocol or state-transition changes, security or authorization
-  boundaries, migration or data-loss risk, destructive actions, authorized and verifiable external
+- **High risk:** Strongly recommend a full plan, advisor when useful, and a fresh-context
+  independent pre-edit and final review. High risk includes architecture, protocol or state
+  transitions, security or authorization boundaries, migration or data-loss risk, destructive
+  actions, authorized and verifiable external
   mutations that qualify for neither eligible external route, production-wide impact, and
   expensive or irreversible validation. Changes to shared agent instructions, skills, or
   permission allowlists are also high risk when they alter authorization,
   safety safeguards, risk classification, or mandatory review and closure gates; ordinary wording
   and narrowly scoped skill edits do not become high risk solely because of their location.
-- **Non-trivial local and reversible:** Follow the model route to choose a compact plan or direct
-  execution when no persistence trigger applies. For a compact plan, call the advisor when
-  available; otherwise perform a focused author reread. Both model groups require an independent
-  review of the result before completion. Cross-file or cross-component scope belongs here when no
-  high-risk trigger applies.
-- **Routine, local, and reversible:** Follow the model route. The autonomous group needs no
-  independent reviewer solely for routine work; the supervised group does, even when execution is
-  direct. Routine means one obvious owner, no material uncertainty, and cheap local validation.
+- **Non-trivial local and reversible:** Follow the model route to recommend a compact plan or direct
+  execution. For a compact plan, recommend an advisor when useful; always perform a focused
+  author reread. Recommend an independent result review, especially for the supervised group.
+  Cross-file or cross-component scope belongs here when no high-risk trigger applies.
+- **Routine, local, and reversible:** Follow the model route. Recommend a reviewer for the
+  supervised group, even when execution is direct; ordinarily recommend none for the autonomous
+  group. Routine means one obvious owner, no material uncertainty, and cheap local validation.
   File count and obvious mechanical steps do not change that classification alone.
 - **Routine external editorial correction:** Uses the direct procedure in the external-action
-  reference. Independent persistence triggers select a compact plan; other high-risk triggers and
-  inherited risk prevail.
+  reference. Other persistence triggers strengthen a compact-plan recommendation; high-risk
+  triggers and inherited risk prevail.
 
 Here, local means effects remain confined to the working tree or an isolated development
 environment, with no external or production mutation. Reversible means the intended operation has
 no credible data-loss or recovery hazard.
 
-Before reviewing a high-risk plan, read the reviewer selection and pre-edit rules in
-[reviews and completion](references/closure.md). Use that reference for every group-required or
-user-selected independent review, including direct work without a plan. Apply every domain-required
-review regardless of the planning route. A formal plan already in progress retains its highest risk
-classification and review and closure gates for material continuations.
+Before a selected high-risk plan review, read the reviewer selection and pre-edit rules in
+[reviews and completion](references/closure.md). Use that reference for every user-selected
+independent review, including direct work without a plan. Domain review suggestions remain
+optional separate AI reviews; other substantive validation and approval gates remain. A formal
+plan already in progress retains its highest risk classification and author closure rigor for
+material continuations, while the user's review choice remains separately revocable.
 
 ## Build an executable sequence
 
 Order work by dependency and feedback speed:
 
-1. Obtain any risk-required plan review described above after the advance user choice, and record
-   it in the plan's **Plan review** section before any implementation step starts. A routine formal
-   plan needs no review section when no review is required.
+1. Obtain a selected pre-edit review before dependent implementation and record its findings in
+   the plan when one exists. Without a selected review, perform the author evidence check.
 2. Reproduce or authenticate the current failure when one exists.
 3. Establish or update the smallest failing regression protection.
 4. Change the authoritative owner of the behavior.
@@ -267,23 +271,19 @@ Order work by dependency and feedback speed:
 10. Close routine work with direct outcome, validation, diff, and status checks; close formal plans
     with the risk-appropriate [audit](references/closure.md).
 
-For a formal plan, complete its linked user-review gate after any required pre-edit plan review and
+For a formal plan, complete its linked user-review gate after any selected pre-edit plan review and
 before the first implementation step. Do not treat the planned sequence or initial request as
 evidence that the user has reviewed the plan. On resuming an active plan, offer its current link and
 wait if that review and go-ahead cannot be established for its current execution contract. If the
 plan already has completed steps from before this rule applied, preserve their actual chronology
 and require the review before the next implementation step.
 
-Step 1 has one exception. The record amendment that `architecture-records` allows for a deliberate
-user decision precedes the plan, and therefore its review, so that the decision lives in its owner
-at once and the reviewer reads the real wording. The exception covers only the labelled amendment
-block, or the `Proposed` record with its notice line and index entry. No other record text, code,
-configuration, or repository instruction file changes before the plan review. The review examines
-the amended record together with the plan, and a finding against the amendment is corrected in that
-block or record. When editing the record would require anything else, such as translating it or
-removing a manual table of contents, the exception does not apply, because an edit of that size
-could change a rule unseen before any review: say so, keep the decision pending for the record, and
-turn those edits and the amendment into plan steps that run after the plan review.
+For a deliberate architecture decision with a selected pre-edit plan review, use the bounded
+recording order in `architecture-records` section 7a: its limited amendment may precede that
+review so the reviewer sees the actual wording. When required maintenance exceeds that boundary,
+put maintenance and amendment after the selected review. With no selected pre-edit review, the
+author checks the full record and maintenance before recording; no review-only staging exception
+is needed. A selected formal plan still needs its linked user go-ahead before implementation.
 
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
@@ -297,38 +297,32 @@ When a persistent plan exists, inspect its current step, prerequisites, and rele
 starting each new phase; do not reread the entire file solely because the phase changed. When a
 brief on the same subject exists under `briefs/`, also check it for decided items still marked
 `registro pendente`. Report them to the user and hold each affected phase until the user instructs
-recording and every owner named for the decision carries it, subject only to the recording paths
-below. An owner is a document that records decisions: the plan, an architecture record, or an
-issue. The code or skill text the plan will change is a work target, never such an owner.
+recording and every actual document owner named for the decision carries it. An owner may be a
+selected plan, an architecture record, or an issue. Do not invent a plan owner when the user
+declined a plan. Code or skill text is a work target, never a decision-recording owner.
 
 With the user's instruction to record, the marker for that decision must not block the work that
 resolves it. Distinguish these paths:
 
-- When `architecture-records` section 7a permits recording before plan review, allow only its
-  amendment block, or Proposed record with the notice and index entry, before deriving and
-  recording the plan and reviewing both. This also applies when a persistent plan already exists.
-  No other record text, code, configuration, or repository instruction changes before that review.
-- When section 7a requires recording after plan review, allow the read-only inspection to scope it,
-  the preparation and recording of the plan, and its required review while the architecture
-  record still lacks the decision. Keep the marker and its reason; change no architecture file
-  during this preparation or review. Do not move the maintenance or amendment ahead of review.
-- After the required review, allow the unit that records the decision in its missing document
-  owner, together with only the maintenance that owner's skill makes mandatory for that edit.
-  For that fallback this is the maintenance and amendment of the architecture record.
+- With a selected pre-edit review, follow the bounded-before-review or maintenance-after-review
+  order in `architecture-records` section 7a. Keep the marker until actual owners are updated.
+- Without a selected separate review, perform the author inspection and authorized recording in
+  the real owner. A declined plan or reviewer alone does not keep `registro pendente` alive.
 
 Each path waives only the pending marker for the decision it resolves, not recording authority,
-other pending decisions, or any other prerequisite. Keep the marker until every named owner
-carries the decision. Dependent implementation remains held until recording and all required
-reviews are complete. The discussion/planning session performs the architecture recording before
-handing the plan and record to an implementing session, as section 7a requires.
+other pending decisions, or any other prerequisite. Keep the marker until every actual named owner
+carries the decision. Dependent implementation remains held until recording and any selected
+pre-edit review are complete. The discussion or planning session performs authorized architecture
+recording before handing it to an implementing session, as section 7a requires.
 
-After context compaction, interruption, session restart, material replan, or agent handoff, reread
-the entire plan before acting. Give every delegated agent the plan path and the exact step it owns.
+When a formal plan exists, reread it entirely after context compaction, interruption, session
+restart, material replan, or agent handoff. Give an authorized delegated agent the plan path and
+exact step it owns. For direct work, reconstruct the request, decisions, and evidence instead.
 
 ## Keep planning state in the correct place
 
-When the persistence gate applies, treat the persistent plan as the current record of execution
-detail, bounded by the authorization and instructions above. Keep it compact and current; do not
+When a chosen plan has a persistence trigger, treat it as the current record of execution detail,
+bounded by the authorization and instructions above. Keep it compact and current; do not
 append a chronological diary. Update it only when status, scope, evidence, dependencies,
 validation obligations, blockers, or the chosen execution route materially changes.
 
@@ -375,7 +369,7 @@ identifiers, or raw logs in an architecture record. A proposed architecture reco
 the minimum implementation order needed to constrain the design and its architectural acceptance
 criteria.
 
-After implementation, close the execution plan. Preserve durable rationale and invariants in their
+After implementation, close any chosen execution plan. Preserve durable rationale and invariants in their
 authoritative record, executable expectations in tests and fixtures, and operational evidence in
 the issue, merge request, replay, or CI artifact that owns it.
 
@@ -395,18 +389,19 @@ Replan immediately when:
 - validation demonstrates that the chosen implementation violates an invariant;
 - cost, quota, or operational state makes the remaining validation predictably wasteful.
 
-Before a material replan, obtain the user's advance choice if the earlier plan choice did not cover
-it; preserve completed work and hold dependent execution when that choice is missing.
-Update the persistent plan before taking a materially different implementation route. Preserve the
-current outcome and governing invariants, replace superseded steps instead of appending a narrative,
-and synchronize the task-plan projection.
-Offer the materially revised contract through its link and wait for renewed user review before
-executing affected steps. Evidence-only or spelling corrections do not reopen this gate.
-Updating the plan does not satisfy a missing user decision or bypass the global rule to stop when
-a required assumption proves false. Recheck the material-route binding before executing the new
-route and keep dependent steps pending until its prerequisites are resolved.
+Before a material replan of a selected plan, ask about any new plan or review action the earlier
+choice did not cover. A declined new action does not revive it as a mandatory gate. Preserve
+completed work and hold affected execution only for an existing selected plan's revised linked
+user-review gate or another independent prerequisite. If a formal plan remains selected, update
+it before taking a materially different route. Preserve
+the outcome and invariants, replace superseded steps, synchronize the task-plan projection, offer
+the revised link, and wait for renewed user review before affected steps. If the user withdraws
+the plan, continue directly after resolving independent prerequisites without a substitute plan.
+Evidence-only or spelling corrections do not reopen the linked-plan gate. A replan does not
+satisfy a missing user decision or bypass the global rule to stop when a required assumption
+proves false. Recheck the material-route binding before the new route.
 
-Change only the execution plan when the approved design remains valid. Amend or supersede the
+Change only the execution route when the approved design remains valid. Amend or supersede the
 architecture record first when ownership, authority, stage order, terminal meaning, recovery policy,
 or another durable invariant must change. Stop and request direction when that design change
 exceeds the user's authorization.
@@ -437,29 +432,31 @@ Keep paid or externally mutating scenarios sequential unless the applicable poli
 requires otherwise. Measure the complete scenario rather than hiding retries or nested commands.
 
 Before claiming completion, read [reviews and completion](references/closure.md). Its test-evidence
-and group-required or user-selected review checks apply even when there is no formal plan. A
-high-risk plan requires the full closure audit and a fresh independent second pass; compact and
-direct work use their proportional gates. Do not mark any plan complete while a required check,
-authorization, or review is unresolved.
+and user-selected review checks apply even when there is no formal plan. High-risk work requires
+the full author conformance audit with both trace directions, even on a direct route. A selected
+fresh independent second pass is additional. Compact and routine work use proportional checks.
+Do not mark a selected plan complete while its linked user review, a required check, authorization,
+or a selected review is unresolved.
 
 ## Compact plan format
 
-Use `assets/compact-implementation-plan-template.md` for a persistent non-trivial local and
+Use `assets/compact-implementation-plan-template.md` for a chosen persistent non-trivial local and
 reversible plan, bounded additive external action, or routine external editorial correction with
 an independent persistence trigger. Its conditional external-action section records the
 authorization binding, items, governing-review status, read-back authority,
 reconciliation state, and delivery evidence; omit that section for local work. Use the following
 concise form for a task-plan projection or a linked non-trivial local and reversible formal plan
-that does not meet the persistence gate. High-risk work always meets that gate and uses the full
-persistent template. A routine edit that receives a formal plan because of the user's preference
-needs just a linked outcome, step, and check, not this six-step form.
+that has no persistence trigger. A chosen high-risk plan uses the full persistent template. A
+routine edit that receives a formal plan because of the user's preference needs just a linked
+outcome, step, and check, not this six-step form.
 
 ```text
 Outcome: <observable result>
 Constraints: <invariants, non-goals, and authorization boundaries>
 Evidence: <verified current behavior and open assumptions>
 
-1. <obtain any risk-required plan review> — mechanism: <advisor, independent plan or domain-required reviewer, or focused author reread> — findings: <concise applied or rejected findings>
+1. <author check and any selected pre-edit review> — mechanism: <author, advisor, or reviewer>
+   — findings: <concise applied or rejected findings>
 2. <reproduce or authenticate> — premise: <what must already be true, and its proof> — validation: <specific check>
 3. <change authoritative owner> — premise: <what must already be true, and its proof> — validation: <specific check>
 4. <update affected consumers> — premise: <what must already be true, and its proof> — validation: <specific check>

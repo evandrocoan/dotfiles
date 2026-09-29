@@ -1,214 +1,117 @@
 # Reviews and completion
 
-## Independent reviewer selection
+## Separate review when the user selects it
 
-When an independent reviewer is required, prefer a different model from the advisor, ideally from
-another family or provider. An explicit user decision that pins the same model for both roles is
-authoritative; record that choice and the residual risk of correlated model blind spots. In every
-case, preserve review independence with fresh context, an authoritative evidence baseline, and a
-prompt that withholds the intended verdict. Include the original user request and applicable
-instructions in that baseline so the reviewer can detect a plan that exceeds them. If the client
-cannot open a required reviewer, record that it was unavailable. State which mechanism each
-applicable review used and record findings that changed the plan plus findings rejected with a
-reason.
+Ask before invoking an advisor or independent or domain AI reviewer unless the user already
+selected that review for this scope. A choice may cover named pre-edit and final phases. Verify
+the reviewer's model and effort for its role under the global gate. Prefer a different capable
+model from the advisor, with fresh task context, the original user request and decisions,
+applicable instructions, governing records, current plan if chosen, final diff or proposed scope,
+and actual validation evidence. Withhold the intended verdict. Record applied and rejected
+findings with reasons. A reviewer reads and reports; it never edits or delivers.
 
-For a review required by the model-group route, use a separate reviewer from the autonomous group
-(Sol, Astra, or Fable). Use that group by default for an optional review selected by the user; an
-explicit user choice may name another adequate reviewer for that optional review. Verify the
-reviewer's effective model and effort and assess whether that pair is adequate for the review's
-scope and consequences under the global task-entry gate. An advisor, author reread, or reviewer
-with an unknown or inadequate setting cannot fill this role.
+Use the selected timing:
 
-For local low-risk work, review the final change, affected consumers, validation evidence, and
-scope before completion; a material change after that review requires another pass over the
-affected result. For a qualifying external action, perform every group-required or user-selected
-substantive review before writing and use authoritative read-back to verify delivery afterward.
-High-risk work keeps its own pre-edit review and fresh independent final conformance pass; one
-review may satisfy both rules only if its reviewer, timing, evidence, and scope satisfy both. When
-a required reviewer is unavailable, hold the local completion or external write that needs the
-review and report the blocker. A bounded read-only reviewer alone does not trigger persistence as
-multiple implementers.
+- Pre-edit review examines a proposed high-risk approach before affected implementation.
+- Pre-write review examines an external payload and its authority before the write.
+- Final review examines the completed result, consumers, checks, and scope. A material correction
+  after it requires another pass over the affected result.
 
-## Close work proportionally
+If a selected reviewer is unavailable, hold only the phase that depends on it: affected
+implementation, external write, or completion. The user may explicitly withdraw the review for
+remaining work. An unselected or declined review never blocks. An advisor or author reread does
+not count as an independent review, but author verification is always required. An ordinary
+read-only reviewer does not itself trigger a multiple-implementer plan recommendation.
 
-Check that an explicit request or affirmative user choice preceded every new formal plan and
-separate advisor or reviewer invocation in this task. A choice may cover named review phases but
-cannot replace reviewer model fit or the review verdict. Preserve the actual chronology of older
-plans and reviews: do not require retroactive consent for completed actions, but check the choice
-before any later material replan or uncovered review. An author's own verification is not a
-separate reviewer invocation. Missing consent for a required future action holds dependent work.
+## Checks shared by all routes
 
-For every new formal plan, verify that its complete current version was linked in chat and the user
-explicitly released implementation before its first implementation step. For an active plan with
-steps completed before this rule applied, preserve their actual chronology; verify that the current
-plan was linked and the user released its remaining implementation before the next step. Hold
-further execution when that review cannot be established. A material change to the execution
-contract requires renewed user review before affected steps. A plan-only request has no execution
-release merely because the user reviewed its content. Agent reviews and external-action
-authorization do not replace this gate. Leave completion unresolved when required user review is
-missing; a direct route without a formal plan has no such gate.
+Before completion, confirm that every newly created formal plan and separate review had an
+explicit advance choice, or that the user requested it directly. Preserve the true chronology of
+older actions; ask before any later uncovered action. A chosen plan must have been offered in
+chat as a link to its complete current version, followed by explicit user release before its
+first implementation step. A material contract revision needs a new link and release before its
+affected steps. A direct route has no linked-plan gate. A plan-only request never authorizes
+execution.
 
-Before moving any formal plan to `completed/`, open the brief on the same subject under `briefs/`
-when one exists, because nothing else looks at a brief when the work ends. A decided item still
-marked `registro pendente` blocks the move until every owner named for the decision has it. An
-item that is merely open does not block through this check: report it to the user in the closing
-message and note it in the plan. This check relaxes no other gate; an open item that stands for a
-required validation, authorization, or access still blocks under the rules below.
+Apply `test-quality`'s **Review test evidence before closure** to added or materially changed
+tests and existing tests cited as decisive evidence. Check what the production boundary actually
+observes, an observation independent of configured mocks, and sensitivity to a plausible defect.
+A selected independent test review can be reused when it examined those criteria. Skipped or
+quarantined tests provide no passing evidence. Do not claim full validation from a partial check.
 
-Before any completion verdict, apply `test-quality`'s **Review test evidence before closure** to
-every added or materially changed test and to existing tests cited as decisive evidence for the
-requested outcome. For each, check the claimed behavior against the production boundary exercised,
-an observation independent of configured mocks, and sensitivity evidence for a plausible defect.
-Record the supported claim and any coverage gap in the proportional completion evidence; skipped
-or quarantined tests provide no passing evidence.
+Check the requested outcome, affected consumers, governing instructions, actual validation,
+final diff, repository status when applicable, and limitations. Missing required evidence,
+authorization, model adequacy, or external approval remains a blocker independent of the user's
+plan/review choices. Do not create a substitute plan or closure-matrix artifact on a direct route.
 
-Use the focused author check for routine tests and obtain a fresh-context independent test review
-only when `test-quality` requires one, including for project-wide false-positive audits. The
-absence of a second plan conformance pass in a routine or compact path does not waive that review.
-Reuse an independent plan or closure review only if it examined the final tests against these
-criteria. Leave required evidence or review unresolved until it is supplied.
+When a formal plan exists, inspect a same-subject brief under `briefs/` before moving it to
+`completed/`. A decided item still marked `registro pendente` blocks the move only while an
+actual decision-recording owner named for it is missing. A declined plan does not become an
+invented owner. Report open items; an open item blocks only if it represents a separate required
+validation, authorization, or access condition.
 
-Routine work without a formal plan closes after verifying the requested outcome, running its cheap
-local validation, and checking the final diff and repository status. Supervised-group work and
-autonomous work for which the user chose review also require the independent result review above.
-That review alone does not require a formal plan or closure matrix.
+## Proportional author closure
 
-Routine local work with a brief formal plan under the model route uses the same checks and marks
-that visible plan complete; the plan alone does not add a review or matrix beyond the group rule
-or the user's review choice.
+For routine local work, verify the outcome, cheap local check, final diff and status. A selected
+result review adds its verdict but does not force a plan or matrix.
 
-For non-trivial local reversible work executed directly under the model route, reconstruct the
-changed path and affected consumers, verify the requested outcome with proportional validation,
-inspect the final diff and repository status, and report limitations accurately. Perform a
-focused author pass against the governing instructions and original request. Obtain every
-group-required or user-selected independent result review before completion. This direct route
-needs no closure matrix.
+For non-trivial local work, trace the changed path and affected consumers, perform proportional
+validation and a focused author pass against the original request and authorities, then inspect
+the diff and status. A chosen compact plan records its current steps, evidence, limitations,
+selected review status, and verdict. Direct work needs no matrix.
 
-A routine external editorial correction instead closes with its exact diff and authoritative
-read-back checks in [external-action routes](external-actions.md); local repository checks apply
-only if local files changed. Obtain any group-required or user-selected pre-write review. When it
-independently requires a compact plan, also record its author verdict and complete the same-subject
-brief check; no additional independent second pass is added solely for the external edit.
+For a routine external editorial correction, perform the exact-diff, precondition,
+reconciliation, and read-back checks in [external-action routes](external-actions.md). For a
+bounded additive external action, verify each intended item against one authoritative external
+ID, exact target, request or content, multiplicity, expected state, and prohibited effects.
+Selected pre-write reviews finish before writing. With a chosen compact plan, record the author
+verdict and delivery evidence there. Without one, report the same evidence directly. Neither
+route requires a second independent closure pass solely because the action is external.
 
-For a non-trivial local and reversible formal plan, inspect the plan's outcome, scope, current
-steps, completion evidence, verdict, and relevant governing instructions. After compaction,
-handoff, or a material replan, reread the entire compact plan. Reconstruct the changed path from
-the implementation and validation evidence, then verify the requested outcome, affected consumers,
-required checks, final diff, and repository status. Record a concise completion verdict, unresolved
-limitations, a focused author pass, and every group-required or user-selected independent result
-review. This level needs no closure matrix or bidirectional traces unless it is reclassified as
-high risk.
+For high-risk or architecture-governed work, perform a full blocking **author** conformance audit
+whether or not the user chose a plan. After candidate implementation and required validation:
 
-For a bounded additive external action, reread the compact plan after compaction, handoff, material
-replan, or an ambiguous tool result. Reconcile every intended item with one authoritative external
-ID and verify the authorized target, exact request or content, multiplicity, and resulting state.
-Confirm that every governing review, including any group-required or user-selected pre-write
-review, completed and that no prohibited effect or unresolved delivery outcome remains. Record the
-implementer's delivery read-back and concise verdict. Do not require a second independent closure
-pass unless another governing rule requires it or the action inherits a higher-risk formal plan.
-
-For a high-risk formal plan, treat closure as a separate blocking phase, not as a summary written
-from memory. After the candidate implementation and required validation are complete:
-
-1. Reread the entire persistent plan, the user's original request and later explicit decisions,
-   every governing architecture record, coupled global and repository instructions, and applicable
-   skills. Do not rely only on task-plan labels or remembered intent.
-2. Reconstruct the implemented runtime path from the full diff, including new files, code,
-   configuration, tests, fixtures, observed effects, and actual validation artifacts. A report
-   that a command passed is evidence only for what that command asserted.
-3. Complete the plan's closure-audit matrix with concise evidence pointers rather than execution
-   history. Account for every outcome, scope boundary, governing invariant, affected consumer,
-   replan condition, and required validation obligation. Group entries when they share the same
-   owner, failure mode, and evidence; keep distinct terminal or recovery paths separate.
-4. Trace both directions:
+1. Reread the original request and later explicit decisions, governing architecture records,
+   coupled global and repository instructions, and applicable skills. If a plan was chosen,
+   reread its complete current version as well.
+2. Reconstruct the implemented path from the full diff, including new files, code,
+   configuration, tests, fixtures, observed effects, and validation artifacts. A passed command
+   supports only what it actually asserted.
+3. Account for every outcome, scope boundary, governing invariant, affected consumer, failure
+   path, replan condition, and required validation obligation. With a full formal plan, put
+   concise evidence pointers and `verified`, `not applicable: <reason>`, or
+   `unresolved: <reason>` in its closure matrix. Without a plan, perform the same evidence
+   accounting in the author audit and report the verdict; do not create a hidden plan or matrix.
+4. Trace both directions, with the plan step included only if one exists:
 
    ```text
-   architecture invariant -> implementation-plan step -> code/config owner -> consumers -> test/replay
-   changed file/effect -> user authorization and applicable instructions -> authorized plan scope
+   architecture invariant -> [chosen plan step] -> code/config owner -> consumers -> test/replay
+   changed file/effect -> user authorization and instructions -> [chosen plan scope]
                        -> governing invariant or explicit local objective
    ```
 
-   The forward trace detects omitted implementation. The reverse trace detects unauthorized work,
-   accidental new architecture, and tests that validate behavior outside the approved objective.
-5. Mark each matrix row `verified`, `not applicable` with a concrete reason, or `unresolved`.
-   Use `not applicable` only when the approved scope and governing authority objectively exclude
-   the requirement. Missing evidence, unavailable or skipped required validation, an unexamined
-   consumer, cost, time, or an unexplained scope addition is `unresolved`; it is never implicitly
-   satisfied by another passing row.
-6. Perform a second conformance pass after the implementer's pass. Use a separate agent with fresh
-   task context and give it the original user request and decisions, applicable instructions and
-   skills, plan, governing records, final diff, observed effects, and validation artifacts without
-   the intended verdict. Apply the independent-review model rule above. When a required
-   independent pass is unavailable, report that limitation instead of calling it independent.
-7. If either pass finds a mismatch, reopen the affected execution steps, correct the lowest
-   incorrect authority, rerun invalidated validation, and repeat the complete closure audit. Do not
-   append an exception that permits completion.
+5. Resolve every unsupported, skipped, or unavailable required check as `unresolved`, not as
+   satisfied by another passing row. Correct mismatches at the lowest incorrect authority,
+   rerun invalidated validation, and repeat the affected audit.
+6. Obtain a selected final independent conformance pass with fresh context. If none was chosen,
+   complete the author's own second conformance reading and label it self-reviewed. A selected
+   unavailable final reviewer holds completion until it runs or the user withdraws it.
 
-For high-risk persistent plans, store the concise matrix and final conformance verdict in the plan.
-For compact persistent plans, store only the proportional completion evidence and verdict described
-above. Store detailed command output, costs, raw logs, and replay events in their executable or
-operational artifacts and link them; do not copy them into either plan type or an architecture
-record.
-
-A material change after the closure audit to an in-scope or coupled artifact—including code,
-configuration, tests, fixtures, plans, architecture, authorization rules, or behavior
-documentation—invalidates the closure verdict. A material follow-up or replan within the same
-formal plan inherits that plan's highest risk classification; it cannot be relabeled as a lower-risk
-slice to avoid required review. Repeat the inherited-risk reread and review, recheck every affected
-requirement, rerun checks invalidated by the change, and issue a new verdict. A formatting-only or
-evidence-wording correction requires rechecking the affected evidence and final diff, not replaying
-unrelated validation.
+A chosen full plan stores its matrix and final verdict in that plan. A direct high-risk route
+still needs complete author evidence and bidirectional traces, but no new artifact. Keep raw
+logs, costs, and replay events in their operational owners. A material change after the verdict
+to an in-scope or coupled artifact invalidates the affected verdict: repeat the reread, traces,
+invalidated checks, and any still-selected review. A formatting-only or evidence-wording fix
+needs only the affected evidence and diff rechecked.
 
 ## Completion gates
 
-For routine work without a formal plan, require the requested outcome, proportional local
-validation, a scoped final diff, any group-required or user-selected result review, and an accurate
-report of limitations. For routine external editorial corrections, use their direct verification
-and closure procedure in [external-action routes](external-actions.md), including when an
-independent persistence trigger requires a compact plan.
-
-For non-trivial local reversible work completed without a formal plan under the model route,
-require the requested outcome, every affected consumer, proportional validation, a scoped final
-diff and status, a focused author pass, every group-required or user-selected independent result
-review, and an accurate limitation report. Apply any separate test-evidence or domain review
-requirement above.
-
-For a non-trivial local and reversible formal plan, require the requested outcome, every affected
-consumer, proportional validation, a scoped final diff and status, a focused author pass, an
-accurate limitation report, every group-required or user-selected independent result review, the
-same-subject brief check above, and agreement between the persistent plan and task-plan statuses.
-Do not require a closure matrix or bidirectional traces at this level.
-
-For a bounded additive external action, require one authoritative external ID for every intended
-item; an exact match for its authorized target, request or content, multiplicity, and expected
-state; all governing reviews; no prohibited effect; no unresolved delivery result; the
-same-subject brief check above; and agreement between plan statuses. The implementer's
-authoritative read-back closes this path; do not require an independent second closure pass unless
-a stronger or inherited rule does.
-
-For a high-risk formal plan, do not mark the plan complete until all applicable gates pass:
-
-- The requested outcome exists in the authoritative runtime path.
-- Every affected consumer uses the updated contract.
-- No legacy or fallback path preserves the superseded meaning.
-- Focused protection fails for the intended reason without the fix and passes with it.
-- Required integration, replay, and broader checks have completed. An unavailable required check
-  remains unresolved and blocks completion unless the governing authority changes its requirement.
-- The final diff contains no unrelated user-owned changes.
-- Advance choices preceded new plan creation and separate review invocations; older completed
-  actions retain their real chronology, and any later uncovered action received its own choice.
-- Documentation and architecture records are synchronized only where their owned behavior changed.
-- Remaining limitations, skipped validation, live cost, and operational uncertainty are reported
-  accurately.
-- The persistent plan and task-plan projection agree on every material terminal status.
-- The same-subject brief check under **Close work proportionally** found no decided item still
-  marked `registro pendente`, and every item that is merely open was reported and noted in the plan.
-- The closure-audit matrix contains no `pending` or `unresolved` row and cites current evidence for
-  every applicable requirement.
-- The architecture-to-implementation and implementation-to-authority traces are both complete.
-- The required second conformance pass found no unresolved
-  omission, contradiction, unauthorized behavior, or unprotected failure path.
-
-If implementation is incomplete, leave the corresponding step pending or in progress and state the
-concrete blocker. Never convert an unfinished plan into a successful handoff by weakening its
-acceptance criteria.
+Complete only when the requested outcome and consumers are verified, required validation and
+author checks have passed, the final diff is scoped, and limitations are accurately reported.
+For high-risk or architecture-governed work, both trace directions and the full author audit
+must be complete with no unresolved applicable requirement. For a chosen plan, its linked user
+review, same-subject brief check, lifecycle status, and task-plan projection must agree. For a
+selected separate review, its applicable phase must have a passing verdict or an explicit user
+withdrawal for remaining work. For external actions, authoritative read-back, exact delivery,
+and absence of prohibited effects are additional gates. If any independent prerequisite is
+unresolved, leave the work pending and state the concrete blocker rather than weakening it.

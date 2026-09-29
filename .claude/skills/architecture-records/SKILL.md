@@ -84,21 +84,20 @@ never rationalize a defect by rewriting the plan after the fact.
 
 Use the `plan-implementation` skill before implementing a proposed or in-implementation
 record, or before making a non-trivial correction governed by an implemented record.
-The architecture record owns the durable design; the execution plan owns the temporary
-sequence, status, and validation work needed to deliver it.
+The architecture record owns the durable design. A user-selected execution plan owns temporary
+sequence and status; direct execution keeps its evidence in the task without a hidden plan.
 
-Do not edit production code until the execution plan identifies the governing
-invariants, authoritative runtime owner, affected consumers, ordered implementation
-slices, proportional test and replay coverage, completion criteria, and conditions
-that require replanning. When the `plan-implementation` persistence gate applies, keep
-the detailed state in its user-visible Markdown artifact and mirror status through the
-task plan. Otherwise keep it in the task, issue, or merge request. Never keep execution
-status in the architecture record.
+Before production edits, identify the governing invariants, authoritative runtime owner,
+affected consumers, ordered implementation slices, proportional test and replay coverage,
+completion criteria, and replan conditions. Put them in a selected user-visible plan when one
+exists, or establish them in direct task evidence. A persistence trigger strengthens the plan
+recommendation but does not override the user's choice. Never keep execution status in the
+architecture record.
 
 When execution exposes a code defect under an adequate invariant, revise only the
-execution plan. When it exposes a missing or incorrect durable decision, amend or
-supersede the architecture record first and then regenerate the affected execution
-steps. Never let the implementation plan silently change ownership, authority, stage
+execution route. When it exposes a missing or incorrect durable decision, amend or
+supersede the architecture record first and then revise the affected execution
+steps. Never let an implementation plan or direct route silently change ownership, authority, stage
 order, terminal meaning, or recovery policy.
 
 ### 3. Establish the record structure
@@ -246,9 +245,9 @@ the new record. Show that list in chat together with the form you chose, and ask
 writing when in doubt. Do not compare the list with a fixed count of rules. The
 criterion of section 7 still bounds the choice: create or supersede a record only when
 the design actually changes, and when much changes without changing the design, use
-blocks and ask first. The nature of the change sets the rigor of its plan, not the
-form of the text; `plan-implementation` already treats an architecture change as high
-risk. The form is text written before any code, so the plan review may change it.
+blocks and ask first. The nature of the change sets author audit rigor and the plan
+recommendation, not the form of the text; `plan-implementation` treats an architecture
+change as high risk. A selected plan reviewer may advise on the text before code.
 
 For example, a decision that removes one exception from one rule, leaving its owner and
 flow as they are, takes a block. A decision that routes every write through a new
@@ -257,20 +256,17 @@ check, takes a new record.
 
 #### 2. Check the recording boundary, then record
 
-This recording precedes the implementation plan and its review: the user decides, the
-record is amended, the plan is derived from the amended record, the plan review
-examines both, and only then does code change. It is a deliberate exception to the
-`plan-implementation` rule that the plan review precedes every implementation step.
-It exists so that the decision lives in its owner at once and the reviewer reads the
-real wording. The exception covers only the amendment block, or the `Proposed` record
-with its notice line and index entry. No other record text, code, configuration, or
-repository instruction file changes before the plan review, and the synchronization
-of section 8 waits for the implementation, because it would present proposed behavior
-as current. When editing the record would require anything else under this skill, such
-as translating a record that is not in English or removing a manual table of contents,
-do not use the exception, because an edit of that size could change a rule unseen
-before any review: say so, keep the decision pending for the record, and turn those
-edits and the amendment into plan steps that run after the plan review.
+Record the authorized decision in its architecture owner before dependent code changes. With a
+selected plan and pre-edit reviewer, the bounded amendment block or `Proposed` record, notice,
+and index entry may precede that review so it can examine the real wording. If translation,
+manual-table-of-contents removal, or other mandatory maintenance expands that edit, put the
+maintenance and amendment after the selected review; keep `registro pendente` for the record
+until then. With a selected pre-edit reviewer but no plan, have it inspect the current record and
+proposed diff before recording. Without a selected pre-edit reviewer, perform the full author
+record check and authorized maintenance before recording; the absence of a reviewer creates no
+staging deadlock.
+Without a selected plan, no plan owner is invented. Section 8 synchronization waits for implemented
+behavior, so proposed behavior is not presented as current.
 
 Within that boundary, use the selected form:
 
@@ -292,37 +288,35 @@ Within that boundary, use the selected form:
   and in force. Mark it `Superseded` only when the new record becomes `Implemented`;
   superseding it earlier would leave no record describing what holds in the meantime.
 
-#### 3. Derive the implementation plan
+#### 3. Derive the execution route
 
-For bounded recording before review, derive the plan from the amended record. For the
-maintenance fallback, first plan the maintenance and proposed amendment while the
-record remains unchanged; obtain the required review before that unit, then reconcile
-the plan with the amended record before handoff. In either path, for every guarantee
-affected by an ownership or flow change, connect the resulting rule to the responsible
-path, an execution step and its validation under `plan-implementation`. A guarantee
+With a selected plan, derive it from the amended record after bounded recording. For mandatory
+maintenance with a selected pre-edit reviewer, put the maintenance and amendment in the plan,
+obtain that review, then reconcile the plan with the amended record before handoff. Without a
+selected plan, use a direct route with the same invariant-to-owner and validation checks. In
+either path, for every guarantee affected by an ownership or flow change, connect the resulting
+rule to the responsible path, an execution step and its validation. A guarantee
 can need a new implementation path even when its behavior is unchanged; preserving its
 wording alone does not establish that path. Keep unverified ownership as an
 investigation prerequisite, not an assumed implementation fact.
 
-#### 4. Cross-check before the planning handoff
+#### 4. Cross-check before handoff
 
-Read the resulting record and plan together before reporting the recording complete.
+Read the resulting record and any selected plan together before reporting the recording complete.
 For a whole replacement, check that every unchanged guarantee is present and that no
 section leaves the old record governing after supersession. Excluding a behavior change
 from the decision's goals does not exclude that behavior's rules from a whole replacement.
-Check that the plan carries the affected guarantees through the prerequisites and
-validation of the changed path. This checks the written handoff, not completed code;
-the independent review and implementation closure still follow their own gates.
+Check that the execution route carries affected guarantees through prerequisites and validation
+of the changed path. This checks the handoff, not completed code; selected independent review
+and author implementation closure follow their own gates.
 
-The session that conducted the discussion and writes the plan makes this recording
-before the planning handoff, which is the moment it passes the record and the plan to
-an implementing session, because it holds the reasons behind the decision. Section 11
-says which checks apply at that handoff. Tell the implementing session that the records
-are already amended and that it implements against them.
+The session that conducted the discussion makes authorized recording before handing the record
+and any selected plan to an implementing session, because it holds the decision's reasons.
+Section 11 says which checks apply. Tell the implementer which records were amended.
 
 While both texts coexist, the current rule stays in force for every consumer, and the
-amendment or the `Proposed` record prescribes only the work that its implementation
-plan authorizes. Partial progress lives in that plan, never in the record. When the
+amendment or the `Proposed` record prescribes only the authorized future work. Partial progress
+lives in a selected plan or direct task evidence, never in the record. When the
 implementation closes, rewrite the rule and remove the block, or remove the notice line
 and supersede the old record, whether or not the lifecycle state of the amended record
 changes.
@@ -341,22 +335,22 @@ rules; in this environment, write AI-facing instruction files in English.
 ### 9. Perform the mandatory closure conformance audit
 
 Before declaring implementation complete or moving a record to `Implemented`, reread
-the entire governing architecture record, every coupled current record, the complete
+the entire governing architecture record, every coupled current record, any selected
 implementation plan, and the coupled repository instructions. Then reconstruct the
 actual runtime flow from code, configuration, tests, and recorded artifacts rather
 than from the intended plan or a prior summary.
 
-Require the implementation plan to contain a completed closure-audit matrix. Keep the
-execution evidence and row statuses there; keep only durable invariant traceability in
-the architecture record. The matrix must account individually for every architectural
-invariant, implementation-plan requirement, affected consumer, failure path, and
-required validation boundary.
+Account for every architectural invariant, affected consumer, failure path, and required
+validation boundary. With a selected full implementation plan, record a completed closure-audit
+matrix and row statuses there; keep only durable invariant traceability in the architecture
+record. Without a plan, perform the same author evidence accounting without creating a hidden
+matrix artifact.
 
 Audit both directions:
 
 ```text
-architecture invariant -> plan step -> code/config owner -> consumers -> test/replay
-changed implementation artifact -> authorized plan scope -> governing architecture or local objective
+architecture invariant -> [chosen plan step] -> code/config owner -> consumers -> test/replay
+changed artifact -> user authorization and instructions -> [chosen plan scope] -> governing rule
 ```
 
 Check that:
@@ -374,16 +368,17 @@ Check that:
   outcome after it.
 
 For a lifecycle transition to `Implemented`, and for a non-trivial correction governed
-by an implemented record, require a second conformance pass after the implementer's
-pass. Use a separate agent with fresh task context when one is available and provide
-the records, implementation plan, final diff, and validation artifacts without the
-intended conclusion. Otherwise perform a separate full reread and identify it as
-self-reviewed rather than independent.
+by an implemented record, perform a second conformance reading after the implementer's
+pass. If the user selected a final reviewer, use a qualified agent with fresh task context
+and provide the records, any chosen plan, final diff, and validation artifacts without the
+intended conclusion. Otherwise perform a separate author reread and identify it as
+self-reviewed rather than independent. A pre-edit review alone does not add a final reviewer;
+an unselected final reviewer does not block closure.
 
 Any change after the audit to an in-scope or coupled artifact—including code,
 configuration, tests, fixtures, implementation plans, architecture records, repository
 instructions, or user documentation—invalidates the closure verdict. Reopen the
-relevant implementation step, reread the complete final plan and governing records,
+relevant implementation step, reread any selected complete final plan and governing records,
 recheck every trace row, rerun invalidated checks, and repeat the closure conformance
 audit. Never preserve an audit exception merely to keep a completion status.
 
@@ -426,11 +421,11 @@ a reason to bypass this gate.
 
 Apply this list at two moments, because a record is handed over both before and after
 its implementation exists: at the closure of the implementation, apply every check; at
-the planning handoff, when the session that recorded a decision passes the record and
-the plan to an implementing session, apply every check except the ones that presuppose
+the implementation handoff, when the session that recorded a decision passes the record and
+any selected plan to an implementing session, apply every check except the ones that presuppose
 a finished implementation, which are runtime traceability with its executable
 protection, recorded replay, competing obsolete paths, terminal states, the description
-of the resulting architecture, the plan reread with its closure-audit matrix, the two
+of the resulting architecture, any selected plan reread with its closure-audit matrix, the two
 traces, the second conformance pass, and the removal of closed amendment blocks and
 replacement notices.
 
@@ -457,12 +452,13 @@ Before handoff:
   the execution evidence before handoff.
 - Confirm that an implemented record describes the approved resulting architecture,
   rather than reverse-engineering or legitimizing incidental current behavior.
-- Confirm that the complete implementation plan was reread and its closure-audit
-  matrix contains no pending or unresolved applicable requirement.
+- If a formal plan was selected, confirm it was reread and its closure-audit matrix
+  contains no pending or unresolved applicable requirement. Otherwise confirm the same
+  author evidence accounting without a substitute plan artifact.
 - Confirm that every architecture invariant is represented in the forward trace and
   every changed implementation artifact is represented in the reverse trace.
-- Confirm that the required second conformance pass was completed and that its
-  findings were corrected and revalidated rather than waived.
+- Confirm that the author's second conformance reading and any selected final independent pass
+  were completed, with findings corrected and revalidated rather than waived.
 - Verify relative links and moved-file paths.
 - Confirm that architecture records and their templates contain no manual table of
   contents. Keep the heading hierarchy clear and verify that the architecture index
