@@ -68,14 +68,22 @@ optional cost-saving downgrade. Compare effort only within the same model and it
 levels; do not silently substitute another model or provider. A plan or reviewer cannot lower a
 user-set requirement.
 
+Reassess role fit on every new user request, including question-only turns. Carry verified model
+and effort settings across turns, but not the prior role's adequacy judgment. A task boundary is
+a change in the requested outcome or role, not necessarily a new chat or project: a completed
+high-risk edit followed by explanation-only questions starts a new role. Follow-ups in an
+unchanged role and scope do not reset the user's setting choice or the one-time downgrade prompt.
+Keep the reassessment internal when no setting change is warranted.
+
 When the current setting is above a sufficient lower setting, ask once at the task boundary to
 switch down if that setting is supported and the user has not already chosen to keep the current
 one for this scope. State the role, proposed setting, and reason. If the user accepts, hold that
 role until the changed setting is confirmed on a subsequent turn. The user may decline and keep
 the sufficient higher setting. If no answer arrives after a reasonable opportunity, continue at
 the current setting; neither silence nor a chat reply changes the client setting. Do not repeat
-the downgrade request for each step or file. Reassess after a material change in task, risk, or
-role. A user-pinned sufficient setting also controls this scope without a downgrade prompt.
+the downgrade request for each step, file, or turn in an unchanged scope. Reconsider it after a
+material change in task, risk, or role. A user-pinned sufficient setting also controls this scope
+without a downgrade prompt.
 
 If the effective setting is below the assessed minimum, does not match a fixed exact pair, or
 cannot be verified, ask for a supported switch or reassignment and hold that role. An insufficient
