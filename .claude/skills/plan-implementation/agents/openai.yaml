@@ -1,4 +1,4 @@
 interface:
   display_name: "Plan Implementation"
   short_description: "Choose when and how to plan implementation"
-  default_prompt: "Use $plan-implementation to classify risk, persistence, and the model-aware route; create a visible testable plan when required and keep execution aligned with it."
+  default_prompt: "Use $plan-implementation to classify risk, persistence, and the model-aware route; recommend a visible testable plan and separate review, then honor the user's independent choices."

@@ -5,10 +5,10 @@
 **Risk:** Non-trivial local and reversible | Bounded additive external action |
 Routine external editorial correction
 
-Use this compact persistent template only when the work meets the skill's non-trivial local and
+Use this compact persistent template when the user chooses a plan for non-trivial local and
 reversible criteria, **Bounded additive external action**, or **Routine external editorial
-correction** with an independent persistence trigger in `SKILL.md`.
-Reclassify to high risk and use `implementation-plan-template.md` when a high-risk trigger applies.
+correction** with a persistence trigger in `SKILL.md`.
+If high risk applies and the user chose a plan, use `implementation-plan-template.md`.
 Delete the conditional external-action section for local work.
 
 ## Outcome and scope
@@ -28,7 +28,7 @@ Delete the conditional external-action section for local work.
 - Advance choice to create this plan: <explicit user request or affirmative response before
   creation>.
 - Advance choice for separate reviews: <named advisor/reviewer, scope, and user response before
-  invocation, or `None required or selected`>. A legacy plan preserves earlier chronology and
+  invocation, or `None selected`>. A legacy plan preserves earlier chronology and
   asks before future uncovered material replanning or review.
 - Linked plan offered in chat: Pending | <link to the complete current plan>.
 - User response: Pending | <explicit go-ahead for this contract> | Plan only; implementation
@@ -41,9 +41,8 @@ Delete the conditional external-action section for local work.
   and target identifiers or preconditions>.
 - Intended effects: <new records and targets, or existing record IDs, authorized fields, and
   editorial corrections>.
-- Governing review: Not required by user choice, model-group route, or domain rule | <authority,
-  reviewer, verified role fit, and pre-write verdict> | Required reviewer unavailable — execution
-  blocked.
+- Separate review: Not selected | <reviewer, verified role fit, and pre-write verdict> |
+  Selected reviewer unavailable — write held until completed or withdrawn.
 - Read-back authority: <source that verifies IDs, targets, exact content, and state; for creation,
   also multiplicity; for correction, the baseline and preserved unrelated content/metadata>.
 - Reconciliation state: Not needed | Confirmed applied | Confirmed not applied | Unresolved.
@@ -54,7 +53,7 @@ Delete the conditional external-action section for local work.
 
 | Status | Step and owners | Validation or result |
 | --- | --- | --- |
-| pending | Obtain applicable plan and domain pre-edit reviews after the user's advance choice, including group-required or user-selected external pre-write review. | <advisor, reviewer, or focused author findings; `Not applicable` when no pre-edit review applies> |
+| pending | Perform author evidence check and obtain any selected pre-edit or pre-write review. | <author or reviewer findings; `No separate review selected` when applicable> |
 | pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. | <link and user response, or `Pending`> |
 | pending | Revalidate prerequisites and perform the scoped change or external action. | <specific check> |
 | pending | Update affected consumers or create remaining authorized records. | <specific check or `Not applicable`> |
@@ -69,9 +68,9 @@ may refer to that binding; do not repeat an approval check for every file.
 
 ## Review and replan
 
-- Review mechanism: Advisor | Independent group-required or user-selected reviewer |
-  Domain-required reviewer | Focused author reread. Record each applicable mechanism; a required
-  independent reviewer cannot be replaced by an advisor or author reread.
+- Review mechanism: None selected | Selected advisor or independent reviewer | Focused author
+  reread. Record each applicable mechanism; a selected independent reviewer cannot be replaced
+  by an advisor or author reread without the user's withdrawal of that choice.
 - Applied findings: <concise list, or `None`>.
 - Rejected findings: <finding and reason, or `None`>.
 - Replan if: <discovery that changes risk, scope, or execution route>.
@@ -82,8 +81,7 @@ may refer to that binding; do not repeat an approval check for every file.
 - Delivery read-back: <target, exact request or content, state, and prohibited-effect verification;
   creation multiplicity or preservation of unrelated content/metadata, or `Not applicable`>.
 - Focused author pass: Pending | Passed | Failed.
-- Required independent review: Not required by user choice, model-group route, or domain rule |
-  Pending |
+- Selected independent review: Not selected | Pending |
   <reviewer, verified role fit, local final-result or external pre-write timing, evidence scope,
   and verdict>.
 - Unresolved limitations: <limitations, or `None`>.
@@ -95,7 +93,8 @@ Set the verdict to `Passed` only when the outcome and affected consumers are ver
 validation passed, the diff is scoped, advance choices covered this plan and separate reviews, the
 current plan had user review before implementation, statuses agree, the focused author pass
 completed, the brief check found no `registro pendente`,
-every required independent review completed, and no required evidence remains unresolved. For
+every selected independent review completed or was explicitly withdrawn, and no required evidence
+remains unresolved. For
 either external path, also require authoritative IDs, an exact delivery match, completed governing
 reviews, no prohibited effect, and no unresolved delivery result. Editorial corrections additionally
 verify that unrelated content and metadata were preserved.

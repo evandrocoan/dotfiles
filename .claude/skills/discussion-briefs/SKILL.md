@@ -52,9 +52,9 @@ Of the `documentation` skill, only the Markdown formatting rules apply: a brief 
 contents and no commit-pinned evidence links.
 
 The brief ranks below every layer of the authority order that `plan-implementation` defines, and it
-is never an authority. It never replaces a plan or record that the task's governing instructions
-require. A user decision noted in the brief draws its authority from the user's statement, not from
-the brief. The item keeps the marker `registro pendente` until every owner named for the decision
+is never an authority. It never replaces a user-selected plan or a governing architecture record.
+A user decision noted in the brief draws its authority from the user's statement, not from the
+brief. The item keeps the marker `registro pendente` until every owner named for the decision
 records it; never overwrite that decision with an owner's older text. In every other disagreement
 with a plan or record, correct the brief.
 
@@ -161,31 +161,31 @@ decision contradicts an approved plan or record, say so in the chat reply and wa
 Promote a decision only on the user's explicit instruction to record it, such as "registre as
 decisões". Promotion records the decision in every owner it has, and you name those owners in the
 chat reply. A durable design decision belongs to the architecture record that governs it, the
-execution sequence belongs to the implementation plan, and an issue owns what it tracks. An owner is
-a document that records decisions; the code or skill text that a plan will change is the target of
-the work, not an owner. Promotion follows each owner's skill and language rules, including any plan
-or review that skill requires, and it never includes implementing the decision.
+execution sequence belongs to a user-selected implementation plan, and an issue owns what it
+tracks. An owner is a document that records decisions; code or skill text to be changed is a
+work target, not an owner. A declined plan is not an owner and does not keep a marker pending.
+Promotion follows each actual owner's skill and language rules and any selected review timing;
+it never includes implementing the decision.
 
 While an owner has not received the decision, keep `registro pendente` in the item for that owner
 with the reason, do not conclude the brief, and say in the chat reply what was left out and why. A
 brief that reads as concluded while an owner still holds the old text hides the gap from the user.
 
 When the decision changes an approved architecture record, that record is one of its owners.
-Follow `architecture-records` section 7a. When it permits bounded recording before review, amend
-the record first, then derive and record the execution sequence in the plan, and submit both to
-the required review. When mandatory maintenance puts the record edit outside those bounds,
-record the maintenance and amendment steps in the plan first, keep the decision pending for the
-record with the reason, and obtain the required plan review before performing that unit. The
-discussion/planning session completes the unit before the planning handoff. In either path,
-report the owners actually updated and those still pending; do not imply that partial recording
-updated every owner. Say that the user approved the decision and that all required recording
-and reviews precede dependent implementation. These two orders keep the fallback from requiring
-an amendment before the plan that must authorize its maintenance. Give in that reply the list of
-places in the record that the decision changes, together with the form you chose, as that procedure
+Follow `architecture-records` section 7a. With a selected plan and pre-edit review, follow its
+bounded-recording or maintenance-after-review order and submit the actual record and plan to the
+reviewer. Without a selected plan, record the authorized decision in the architecture owner after
+the author check; without a selected pre-edit reviewer, no review-only staging holds that recording.
+If a pre-edit reviewer was selected without a plan, submit the proposed record diff before
+recording. The discussion session completes the authorized unit before implementation handoff.
+Report the owners actually updated and those still pending; do not imply that partial recording
+updated every owner. Recording authorization and any selected pre-edit review precede dependent
+implementation. Give in that reply the list of places in the record that the decision changes,
+together with the form you chose, as that procedure
 requires: the reply is composed under this skill, and without the list the user cannot check
 whether the other form would have served. Treat a plan already under `completed/` as no owner. When
-no owner exists yet, say so in the item; `plan-implementation` absorbs the decided items when the
-user asks for a plan on the subject.
+no owner exists yet, say so in the item; `plan-implementation` absorbs the decided items only if
+the user later chooses a plan on the subject.
 
 Items keep their place and their full text for the whole life of the brief, so that the user can
 review each recorded decision beside the options it was chosen from. Once an owner records a

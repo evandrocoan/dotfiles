@@ -13,11 +13,13 @@ the Claude assignment must be self-contained and must not disclose later Codex r
 delivery by another agent.
 Model and reasoning settings specified by the user take precedence over recommendations here.
 
-Codex owns planning, assignment, supervision, integration assessment, verification, and the final
-verdict. Claude's session owns the assigned checkout implementation and may coordinate internal
-subagents for investigation, implementation, tests, supervision, and review. Claude integrates
-their work, coordinates checkout edits to avoid conflicts, and remains accountable for the result;
-Codex may write authorized coordination plans outside Claude's task-facing context.
+Codex owns plan recommendations and any user-selected plan, assignment, supervision,
+integration assessment, verification, and the final verdict. Claude's session owns the assigned
+checkout implementation and may coordinate explicitly
+authorized internal subagents for investigation, implementation, tests, supervision, and review.
+Claude integrates their work, coordinates checkout edits to avoid conflicts, and remains
+accountable for the result;
+Codex may write a user-selected coordination plan outside Claude's task-facing context.
 Both use the same authorized local checkout and its applicable instructions.
 Before work, record staged, unstaged, and untracked changes. Preserve the Git index and existing
 work; do not stage, unstage, reset, commit, or perform external or live actions without the user's
@@ -25,11 +27,12 @@ authorization. A task has one active implementation owner; Claude's internal sub
 become a separate task owner. Do not start an isolated CLI run while another owner, process, or
 scheduled action may still act on the task, or an existing lock has not been reconciled.
 
-After required planning and review gates, assign Claude the authorized implementation, regression
-work, and applicable test execution in the repository-prescribed environment through completion of
-the plan and acceptance criteria. An evidence gate may sequence that work, but does not transfer
-its owner. Claude follows its applicable instructions and skills, gives internal subagents the
-scope and context they need, completes its own required reviews, and resolves their findings before
+After the user's separate plan and review choices and all independent gates, assign Claude the
+authorized implementation, regression work, and applicable test execution in the
+repository-prescribed environment through completion of the acceptance criteria and any selected
+plan. An evidence gate may sequence that work, but does not transfer its owner. Claude follows
+its applicable instructions and skills, gives authorized internal
+subagents the scope and context they need, completes selected reviews, and resolves findings before
 reporting completion. Reconcile delegated work and background tests before ownership changes; an
 uncertain active descendant is a partial result. Do not tell Claude that another agent will finish
 its assigned work, tests, review, or authorized delivery afterward. Assign user-authorized Git or
@@ -42,25 +45,27 @@ apply.
 
 ## Recommended profile for complex work
 
-Use Codex Sol xhigh to plan, supervise, integrate findings, and verify; Claude Opus 5.5 xhigh as
-the checkout implementation owner, including its internal subagents; and Codex Astra xhigh for
+Use Codex Sol xhigh to coordinate, supervise, integrate findings, and verify; Claude Opus 5.5
+xhigh as the checkout implementation owner, with any authorized internal subagents; and Codex
+Astra xhigh for
 independent, read-only reviews with fresh context before high-risk edits and at closure. This is a
 recommendation, not a model override:
 honor each explicit user choice of model and effort. Check that the selected roles and settings are
-available before assigning work. If a required reviewer cannot run, hold the dependent high-risk
-work or closure and report the decision needed; do not silently substitute another reviewer.
+available before assigning work. If a selected reviewer cannot run, hold its dependent phase
+until review or explicit withdrawal; do not silently substitute another reviewer.
 
 For each task, assess the lowest adequate model and effort separately for coordination,
-implementation, and any required review. Do not apply the complex-work profile mechanically to
+implementation, and any user-selected review. Do not apply the complex-work profile mechanically to
 smaller tasks: Sol medium may suffice for coordination and Sol high for an independent review when
 the task's difficulty and risk support those choices. Keep an explicitly selected model or effort,
 and verify the acting setting for each role rather than inferring it from another agent's setting.
 
-The coordinator gives the independent reviewer the user request, applicable instructions, plan,
-repository baseline, and relevant diff without an intended verdict. The reviewer reports findings
-without editing the checkout. The coordinator evaluates and reports all findings,
+When selected, the coordinator gives the independent reviewer the user request, applicable
+instructions, any plan, repository baseline, and relevant diff without an intended verdict. The
+reviewer reports findings without editing the checkout. The coordinator evaluates and reports all
+findings,
 including disagreements; Claude implements any accepted correction. After a material correction,
-repeat the affected validation and closure review before claiming completion. Keep these reviews
+repeat affected validation and any selected closure review before claiming completion. Keep these reviews
 within the ownership rules of this workflow.
 
 ## Execute the isolated CLI workflow

@@ -26,7 +26,7 @@ State the observable result and terminal condition.
 
 - Link the approved architecture, product decision, schema, or runtime authority.
 - State only the invariants needed to constrain this implementation.
-- Name the objective high-risk or architecture trigger that requires this full template.
+- Name the objective high-risk or architecture reason for recommending this full template.
 
 ## Current evidence and assumptions
 
@@ -42,7 +42,7 @@ State the observable result and terminal condition.
 
 | Status | Step and owners | Material premise | Validation or result |
 | --- | --- | --- | --- |
-| pending | Obtain any risk-required review after the user's advance choice. <review owner> | <why this review level applies> | <choice and concise findings under **Plan review**> |
+| pending | Obtain any selected pre-edit review. <review owner> | <user choice and review purpose> | <concise findings, or `Not selected`> |
 | pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. <owner> | <complete current plan is accessible through the link> | <link and user response, or `Pending`> |
 | pending | Reproduce or authenticate. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Change the authoritative owner and affected consumers. | <non-obvious premise and proof, or `None`> | <specific check> |
@@ -61,12 +61,13 @@ steps may refer to that binding; do not repeat an approval check for every file.
 
 ## Plan review
 
-Record the risk-appropriate pre-execution review before the first implementation step runs. Update
-this section if the plan is reviewed again after a material replan.
+Record a selected pre-execution review before its dependent implementation step. If none was
+selected, record `Not selected`; do the author evidence check. Update this section if the user
+selects a new review after a material replan.
 
 - **Risk classification:** High risk. Give the objective reason.
-- **Mechanism:** Advisor and independent reviewer | Independent reviewer with advisor unavailable.
-- **Independent reviewer:** Opened | Unavailable on this client. State the high-risk condition,
+- **Mechanism:** Not selected | Advisor | Independent reviewer | Both.
+- **Independent reviewer:** Not selected | Opened | Selected but unavailable. State the reason,
   whether its model differs from the advisor, or the explicit user decision that pins the same
   model. Same-model review must disclose correlated blind-spot risk.
 - **Applied:** List each finding that changed the plan and what changed.
@@ -75,9 +76,9 @@ this section if the plan is reviewed again after a material replan.
 ## User review before implementation
 
 - **Advance choice to create the plan:** <explicit user request or affirmative response before
-  creation>. A required plan declined or unanswered holds dependent work.
+  creation>. A declined plan leads to the direct route with the same independent safeguards.
 - **Advance choice for separate reviews:** <named advisor and reviewers, scope, and user response
-  before each invocation, or `None required or selected`>. One answer may cover named phases;
+  before each invocation, or `None selected`>. One answer may cover named phases;
   consent alone does not establish reviewer adequacy or a passing verdict.
 - **Linked plan offered in chat:** Pending | <link and the current execution contract>.
 - **User response:** Pending | <explicit go-ahead for this contract> | Plan only; implementation
@@ -117,13 +118,13 @@ Record both closure directions:
   through user authorization, applicable instructions and skills, this plan, and a governing
   invariant or explicit local objective.
 
-Record the required independent second pass and apply the skill's material-change rule when
-something changes after the verdict.
+Record the selected independent second pass, or the author's own second conformance reading,
+and apply the skill's material-change rule when something changes after the verdict.
 
 ### Final conformance verdict
 
 - **Verdict:** Pending | Passed | Failed
-- **Second pass:** Pending | Independent
+- **Second pass:** Pending | Independent | Self-reviewed after no separate review was selected
 - **Auditor and evidence:** Identify the reviewer and link the original user request and decisions,
   applicable instructions and skills, final diff and effects, validation artifacts, and completed
   matrix used for the verdict.
@@ -133,6 +134,7 @@ something changes after the verdict.
   <items, or `None`>.
 
 Set `Verdict` to `Passed` only when both trace directions are complete, every required validation
-has run, the current plan has the required user review before implementation, the second pass is
-complete, the brief check found no `registro pendente`, and unresolved requirements are `None`.
+has run, the current plan has user review before implementation, the author second pass and any
+selected independent review are complete, the brief check found no `registro pendente`, and
+unresolved requirements are `None`.
 Only then may the plan status become `Completed`.

@@ -11,16 +11,19 @@ implementation-plans/
 └── completed/
 ```
 
-Before creating a formal plan, obtain the user's advance choice or identify their explicit request
-for that plan; record this basis in the artifact after creation. Every formal plan needs a complete
+Create a formal plan only after the user's advance choice or explicit request; record this basis
+in the artifact. Risk, persistence, or handoff alone recommends a plan but never creates one.
+Every chosen formal plan needs a complete
 artifact that can be linked in chat for user review before execution. Use the current lifecycle's
 Markdown file when the task-plan UI cannot link to its complete current plan. This also applies to
 a user-requested routine plan or another formal plan without an independent persistence trigger.
 Creating a file solely for the link does not change the task's risk classification, plan detail,
-reviewer threshold, or closure requirements. Record the user's separate response to the linked
-plan before executing it; neither the original implementation request nor silence supplies it.
+review recommendation, or author closure requirements. Record the user's separate response to the
+linked plan before executing it; neither the original implementation request nor silence supplies
+it.
 For a plan created before the advance-choice rule, preserve its real chronology and ask before a
-future material replan or uncovered reviewer invocation. Status and lifecycle updates alone do not
+future material replan or uncovered reviewer invocation. A declined future review does not block
+the plan's otherwise authorized steps. Status and lifecycle updates alone do not
 retroactively create a plan or require inventing earlier consent.
 
 A `briefs/` directory beside these holds `discussion-briefs` working documents when that skill
@@ -78,8 +81,8 @@ implementation-plans/active/<task-slug>.md
 ```
 
 Use [`../assets/compact-implementation-plan-template.md`](../assets/compact-implementation-plan-template.md)
-for persistent non-trivial local work, bounded additive external actions, and editorial corrections
-that independently require persistence.
+for chosen persistent non-trivial local work, bounded additive external actions, and editorial
+corrections that independently warrant persistence.
 Use [`../assets/implementation-plan-template.md`](../assets/implementation-plan-template.md)
 for high-risk or architecture-governed work. Use a concise lowercase hyphenated task slug. Keep one
 active file for one delivery objective; do not create a new file for every retry or replanning

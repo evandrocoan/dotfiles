@@ -61,7 +61,7 @@ fallback route. Carry a known setting across turns in the same session, but rech
 reported switch, handoff, new agent, or conflicting runtime evidence.
 
 After identifying the acting settings, assess the lowest adequate model and effort for each task
-role from its scope, uncertainty, consequences, and mandatory reviews. The agent owns this
+role from its scope, uncertainty, consequences, and any selected reviews. The agent owns this
 assessment; do not require the user to label a task as Sol medium or Sol xhigh. Distinguish an
 exact pair fixed by the user or applicable instructions, a minimum for a named model, and an
 optional cost-saving downgrade. Compare effort only within the same model and its supported
@@ -285,17 +285,23 @@ Before creating a formal plan or invoking a separate advisor, independent
 reviewer, or domain reviewer, ask the user for that choice. A specific explicit
 request for the plan or review already answers its dimension for the current
 scope; do not ask twice. Keep plan and review choices separate, state the
-recommendation and concrete reason, and identify whether each is required or
-optional. Ask at the task boundary when the need is foreseeable, before
-substantial work that would depend on the choice. Minimal read-only triage may
+recommendation and concrete reason, and explain that both are optional. Risk
+and model routes shape the recommendation, not the user's right to decline
+either. Ask at the relevant implementation task boundary, before substantial
+work that would depend on the choice. Minimal read-only triage may
 establish the recommendation. One explicit answer may cover named plan and
 review phases of the task. Do not treat silence as consent to create a plan or
-start a review.
+start a review. Question-only requests do not open an implementation choice.
 
-A required plan or review remains a gate: if the user declines or does not
-answer, hold the dependent work rather than waiving it. For optional actions,
-proceed directly only when every other applicable gate permits it. Preserve
-the chronology of plans and reviews already completed before this rule; ask
+A declined plan or separate AI review does not itself cancel or block otherwise
+authorized work. If a choice remains unanswered, do not create a plan or invoke
+a reviewer; after a reasonable opportunity, proceed directly only when the task
+is authorized and every independent gate permits it. A selected review remains
+pending until completed or explicitly withdrawn: hold only its dependent phase
+(pre-edit implementation, pre-write mutation, or final completion). A selected
+plan keeps its linked user-review gate while it is the execution route. The user
+may withdraw either choice for remaining work. Preserve the chronology of plans
+and reviews already completed before this rule; ask
 before future material replanning or uncovered review invocations. Ordinary
 author verification does not invoke a separate reviewer. A reviewer only
 reads and reports; it never edits, commits, or performs a remote operation.
@@ -364,8 +370,9 @@ of choosing one silently.
   or high-risk change, including authorization, safety, risk, or mandatory-review
   policy. Also load it for any requested implementation edit, regardless of the
   active model; this trigger excludes read-only requests. Load it for a material
-  continuation, replan, or follow-up under an existing formal plan. Use its persistent Markdown
-  plan whenever its persistence gate applies, and complete its risk-appropriate closure before
+  continuation, replan, or follow-up under an existing formal plan. Recommend a
+  persistent Markdown plan when its persistence triggers apply, create it only
+  when the user chooses it, and complete risk-appropriate author closure before
   declaring success.
 - `codex-claude-loop`: Coordinator-only procedure for assigning a self-contained
   Claude CLI implementation in one checkout while preserving one implementation owner

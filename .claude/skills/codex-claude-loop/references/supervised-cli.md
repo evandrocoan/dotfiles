@@ -1,19 +1,19 @@
 # Isolated Claude CLI mode
 
 Use this mode only after the user has authorized a task for Claude implementation.
-The Codex coordinator plans, supervises, integrates findings, verifies, and reports. By default,
+The Codex coordinator recommends a plan, honors any user-selected plan, supervises, integrates
+findings, verifies, and reports. By default,
 Claude owns the assigned checkout implementation and applicable tests, including work it delegates
-to internal subagents. Claude also completes reviews required by its applicable instructions and
-skills before reporting completion; a later coordinator review cannot supply missing Claude-side
-evidence. It does not start a separate Codex–Claude collaboration loop. Apply the recommended
-complex-work profile and independent reviews in the entrypoint when relevant, preserving explicit
-user choices.
+to authorized internal subagents. Claude also completes user-selected reviews before reporting
+completion; a later coordinator review cannot supply missing Claude-side evidence. It does not
+start a separate Codex–Claude collaboration loop. Apply the recommended complex-work profile
+when relevant, preserving the user's separate plan and review choices.
 
 ## Establish one task and one implementation owner
 
 1. Identify the authorized repository root, read its instructions, inspect the branch, status,
    staged index, unstaged changes, and untracked files, and establish the task's objective, scope,
-   acceptance criteria, and plan when governing instructions require one. Record a task ID, the
+   acceptance criteria, and any user-selected plan. Record a task ID, the
    canonical checkout root, pre-run Git state, and chosen Claude model and effort in the task's
    execution context, or record that this model has no configurable effort level. Do not put a
    machine-specific absolute path in a shared file. Tell Claude to preserve the baseline,
@@ -28,17 +28,18 @@ user choices.
    version and supported effort levels. Inspect the active provider, account or organization
    restrictions, environment and settings, hooks, MCP servers, plugins, permission rules, and
    other startup behavior. Check available subagents and their effective tool rules when the task
-   needs them, including access to a reviewer qualified by Claude's applicable skills when one is
-   required. CLI help and public model docs do not prove account access. Verify known
+   needs them, including access to a qualified reviewer when the user selected internal review.
+   CLI help and public model docs do not prove account access. Verify known
    availability and, if needed, use only a task-authorized read-only probe after checkout
    trust and permissions are established; reconcile its result before implementation. `claude -p`
    skips the workspace trust dialog but still loads configured startup behavior. Run it only when
    the checkout and that behavior are trusted for this task. If a prerequisite fails, report the
    decision needed; do not update the CLI, switch models, enlarge permissions, or silently use
    `--bare`, which changes instruction discovery and authentication.
-4. Before any high-risk edit, complete the required independent, fresh-context, read-only review
-   of the plan and proposed scope. Resolve its findings before launching the implementing session.
-   If the reviewer cannot run, hold implementation and report the concrete prerequisite.
+4. Recommend a fresh independent pre-edit review for high-risk work. If the user selected it,
+   review the proposed scope and any chosen plan, resolve findings, then launch implementation.
+   If the selected reviewer cannot run, hold affected implementation until review or explicit
+   withdrawal. An unselected review does not hold launch.
 
 ## Isolate Claude's task context
 
@@ -99,22 +100,24 @@ user choices.
 
 - Prepare a task-specific prompt with the objective, authorized scope, acceptance criteria,
   task-facing plan or brief if any, repository instructions, existing changes to preserve, and the
-  precise work assigned to Claude. After required review, assign the authorized implementation,
+  precise work assigned to Claude. After any selected pre-edit review, assign the authorized
+  implementation,
   baseline tests, and post-change tests to the same implementer. A required regression-first gate
   may sequence the work; resume Claude for production changes and affected tests after that gate.
   Do not impose a tests-only milestone or reserve test execution for Codex merely for coordinator
   convenience. The prompt is task data, not permission to ignore higher instructions. Do not tell
   Claude that Codex or another agent will review, test, finish, or deliver the task afterward.
-  Tell Claude to follow its applicable instructions and skills, use available internal subagents
-  for implementation, testing, supervision, and review as needed, and finish the assigned plan,
-  tests, and required reviews before reporting completion. Assign requested Git or external
+  Tell Claude to follow its applicable instructions and skills, use internal subagents only when
+  authorized, and finish the assigned work, tests, and user-selected reviews before reporting
+  completion. Pass the user's review choice explicitly; assignment to Claude alone does not
+  authorize an internal review agent. Assign requested Git or external
   delivery only when the user authorized those exact actions; otherwise exclude them from Claude's
   scope without promising someone else will perform them. Delegate the relevant plan, scope,
   baseline, task authorization, and skill-loading instructions: a non-fork subagent does not
   inherit Claude's conversation or previously invoked skills. Claude integrates delegated work,
-  addresses review findings, and repeats affected checks. Where Claude's skills require an
-  independent reviewer, Claude obtains a qualified fresh-context review within its own execution.
-  Record the reviewer, effective model and effort, evidence examined, and findings. If the review
+  addresses review findings, and repeats affected checks. When the user selected Claude-side
+  review, Claude obtains a qualified fresh-context reviewer within its execution. Record the
+  reviewer, effective model and effort, evidence examined, and findings. If that selected review
   is unavailable, report the blocker rather than counting a later review as Claude's own.
   Ask for a concise final report with changed files, actual test commands and outcomes, required
   review evidence and resolutions, blockers, evidence locations, and any unfinished delegated or
@@ -234,13 +237,14 @@ to state the exact question before seeking a user decision.
 Treat the user's reply as a new turn under the applicable instructions. Confirm that it resolves
 the question unambiguously and permits continued implementation; a question-shaped reply or a
 reply that does not satisfy a required explicit-action gate does not release paused work. Update
-the plan and obtain any required review before resuming if the answer changes the agreed approach.
+any selected plan and ask about any uncovered review before resuming if the answer changes the
+agreed approach. A declined new review does not block otherwise authorized continuation.
 Then pass the actual user answer to the same recorded session only if its context is isolated. Use
 `--resume <session-id>`, the recorded model, supported effort, verified task-private `--settings`
 overlay, and permission boundary under **Review and continue**. Do not silently change the
 implementer, session, model, effort, or permissions. Claude remains responsible for
 finishing its assigned implementation and applicable tests; Codex verifies the result and obtains
-the independent closure review when required.
+any selected independent closure review.
 
 This final-result route handles a task clarification, not a tool permission request. A permission
 denial requires its own diagnostic and authorization decision; neither `NEEDS_USER:` nor the user's
@@ -248,14 +252,16 @@ task answer grants a denied tool, expands the scope, or overrides a safety-class
 
 ## Review and continue
 
-If high-risk work is discovered mid-task, hold further implementation until the independent review
-is complete. The Codex coordinator independently inspects changed files, index, diffs, status, and
-verification evidence against the user request, applicable instructions, plan, and acceptance
+If high-risk work is discovered mid-task, pause to reassess role fit, authorization, plan and
+review recommendations, and author audit rigor. Hold affected work for a newly selected pre-edit
+review until completion or withdrawal, not merely because risk increased. The Codex coordinator
+inspects changed files, index, diffs, status, and verification evidence against the user request,
+applicable instructions, any selected plan, and acceptance
 criteria. Confirm that Claude ran the applicable baseline and post-change tests through the
 repository-prescribed environment and inspect their actual results. Codex may independently rerun
 authorized checks when useful or required by governing skills; that rerun does not replace Claude's
-assigned test execution. Inspect the outcome of any internal review required by Claude's
-applicable skills or selected for the task; it does not replace Codex's independent review.
+assigned test execution. Inspect the outcome of any selected Claude-side review; it does not
+replace a separately selected Codex-side review or the coordinator's author checks.
 Give Claude only concrete task findings that still require implementation, without identifying a
 later reviewer or promising another review. When findings expose a recurring defect class, assign
 the relevant invariant and adjacent cases for Claude to audit and correct under its own skills,
@@ -271,11 +277,12 @@ the user explicitly changes a choice; record that decision before resuming. A re
 failure alone does not justify a new session. Prior exposure of task-specific coordination does:
 reconcile the old session and effects under **Isolate Claude's task context** before a clean launch.
 
-After the coordinator's author review, obtain the independent closure review before declaring a
-complex task done. Send actionable findings to the same Claude session, then repeat invalidated
-checks and closure review after material corrections. Continue supervising until Codex verifies
+After the coordinator's author review, obtain a separately selected independent closure review
+before declaring completion. Without one, complete the required author conformance reading.
+Send actionable findings to the same Claude session, then repeat invalidated checks and any
+selected closure review after material corrections. Continue supervising until Codex verifies
 completion or a concrete blocker appears: a missing user decision or prerequisite, denied
-permission, unavailable required reviewer, unreconciled process or effects, a required check that
+permission, unavailable selected reviewer, unreconciled process or effects, a required check that
 cannot be completed or corrected within the authorized scope, or repeated findings with no viable
 next action. Report the evidence and remaining work; do not stop for a count chosen by the
 coordinator or repeat the same failed action blindly.
@@ -290,7 +297,7 @@ agents or background commands before releasing the checkout; verify termination,
 report partial changes, and do not resume until a later explicit user instruction. A cancelled
 task needs a new request.
 
-Any persistent implementation plan required by the task's own instructions still applies. CLI
+Any user-selected persistent implementation plan still applies. CLI
 options and headless startup behavior are documented in the
 [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) and
 [programmatic-use guide](https://code.claude.com/docs/en/headless). Check the current
