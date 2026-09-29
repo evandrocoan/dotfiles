@@ -134,7 +134,7 @@ and apply the skill's material-change rule when something changes after the verd
   <items, or `None`>.
 
 Set `Verdict` to `Passed` only when both trace directions are complete, every required validation
-has run, the current plan has user review before implementation, the author second pass and any
-selected independent review are complete, the brief check found no `registro pendente`, and
-unresolved requirements are `None`.
+has run, the current plan has user review before implementation, the author's initial audit and
+second pass—independent when selected, otherwise the author's—are complete, the brief check found
+no `registro pendente`, and unresolved requirements are `None`.
 Only then may the plan status become `Completed`.

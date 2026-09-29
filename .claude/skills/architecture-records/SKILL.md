@@ -291,10 +291,11 @@ Within that boundary, use the selected form:
 #### 3. Derive the execution route
 
 With a selected plan, derive it from the amended record after bounded recording. For mandatory
-maintenance with a selected pre-edit reviewer, put the maintenance and amendment in the plan,
-obtain that review, then reconcile the plan with the amended record before handoff. Without a
-selected plan, use a direct route with the same invariant-to-owner and validation checks. In
-either path, for every guarantee affected by an ownership or flow change, connect the resulting
+maintenance with a selected plan and pre-edit reviewer, put the maintenance and amendment in the
+plan, obtain that review, then reconcile the plan with the amended record before handoff. Without
+a selected plan, use a direct route with the same invariant-to-owner and validation checks;
+if a pre-edit reviewer was selected, have it inspect the proposed record diff before recording.
+In either path, for every guarantee affected by an ownership or flow change, connect the resulting
 rule to the responsible path, an execution step and its validation. A guarantee
 can need a new implementation path even when its behavior is unchanged; preserving its
 wording alone does not establish that path. Keep unverified ownership as an
@@ -457,8 +458,9 @@ Before handoff:
   author evidence accounting without a substitute plan artifact.
 - Confirm that every architecture invariant is represented in the forward trace and
   every changed implementation artifact is represented in the reverse trace.
-- Confirm that the author's second conformance reading and any selected final independent pass
-  were completed, with findings corrected and revalidated rather than waived.
+- Confirm that the author's initial conformance audit and the second reading—independent when
+  selected, otherwise the author's—were completed, with findings corrected and revalidated
+  rather than waived.
 - Verify relative links and moved-file paths.
 - Confirm that architecture records and their templates contain no manual table of
   contents. Keep the heading hierarchy clear and verify that the architecture index
