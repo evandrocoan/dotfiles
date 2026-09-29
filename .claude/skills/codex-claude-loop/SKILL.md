@@ -22,8 +22,8 @@ Both use the same authorized local checkout and its applicable instructions.
 Before work, record staged, unstaged, and untracked changes. Preserve the Git index and existing
 work; do not stage, unstage, reset, commit, or perform external or live actions without the user's
 authorization. A task has one active implementation owner; Claude's internal subagents do not
-become a separate task owner. Do not start an isolated CLI run while a legacy two-session handoff
-or another process owns the same task.
+become a separate task owner. Do not start an isolated CLI run while another owner, process, or
+scheduled action may still act on the task, or an existing lock has not been reconciled.
 
 After required planning and review gates, assign Claude the authorized implementation, regression
 work, and applicable test execution in the repository-prescribed environment through completion of
@@ -58,21 +58,17 @@ and verify the acting setting for each role rather than inferring it from anothe
 
 The coordinator gives the independent reviewer the user request, applicable instructions, plan,
 repository baseline, and relevant diff without an intended verdict. The reviewer reports findings
-without editing or publishing a handoff. The coordinator evaluates and reports all findings,
+without editing the checkout. The coordinator evaluates and reports all findings,
 including disagreements; Claude implements any accepted correction. After a material correction,
 repeat the affected validation and closure review before claiming completion. Keep these reviews
-within the ownership rules of the selected mode.
+within the ownership rules of this workflow.
 
-## Execute the isolated mode
+## Execute the isolated CLI workflow
 
-Read [supervised CLI mode](references/supervised-cli.md). Codex launches and observes Claude's
+Read [supervised CLI workflow](references/supervised-cli.md). Codex launches and observes Claude's
 isolated task session, then independently assesses the completed result. Keep coordinator plans,
-reviews, and handoff metadata out of Claude's task-facing prompt, references, and session context.
-The task uses no recurring wakeup or two-session handoff file.
-
-Do not create a new two-session handoff: its shared state reveals the coordinator's later role.
-The [legacy handoff reference](references/two-session-handoff.md) remains for read-only diagnosis
-and user-directed recovery of existing handoffs. Before starting isolated CLI work on a task with
-an existing handoff, reconcile its owner, active agents and commands, wakeups, lock, index, working
-tree, and partial effects. Do not silently switch modes, break a lock, or claim an old session has
-forgotten its prior context. If isolation cannot be established, report the concrete prerequisite.
+reviews, and coordination metadata out of Claude's task-facing prompt, references, and session
+context. Before launch, reconcile prior owners, active agents and commands, scheduled reactivations,
+locks, the index, working tree, and partial effects. Do not break a lock, alter a prior task's
+recovery state, or claim an old session has forgotten its context without the user's direction.
+If isolation cannot be established, report the concrete prerequisite.
