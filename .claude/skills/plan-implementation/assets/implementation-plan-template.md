@@ -42,7 +42,7 @@ State the observable result and terminal condition.
 
 | Status | Step and owners | Material premise | Validation or result |
 | --- | --- | --- | --- |
-| pending | Obtain any risk-required review. <review owner> | <why this review level applies> | <concise findings under **Plan review**> |
+| pending | Obtain any risk-required review after the user's advance choice. <review owner> | <why this review level applies> | <choice and concise findings under **Plan review**> |
 | pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. <owner> | <complete current plan is accessible through the link> | <link and user response, or `Pending`> |
 | pending | Reproduce or authenticate. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Change the authoritative owner and affected consumers. | <non-obvious premise and proof, or `None`> | <specific check> |
@@ -74,6 +74,11 @@ this section if the plan is reviewed again after a material replan.
 
 ## User review before implementation
 
+- **Advance choice to create the plan:** <explicit user request or affirmative response before
+  creation>. A required plan declined or unanswered holds dependent work.
+- **Advance choice for separate reviews:** <named advisor and reviewers, scope, and user response
+  before each invocation, or `None required or selected`>. One answer may cover named phases;
+  consent alone does not establish reviewer adequacy or a passing verdict.
 - **Linked plan offered in chat:** Pending | <link and the current execution contract>.
 - **User response:** Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
@@ -95,6 +100,7 @@ validation obligation is accounted for. A passing test supports only what it act
 
 | Status | Requirement | Owner and consumers | Evidence |
 | --- | --- | --- | --- |
+| pending | Advance user choices preceded new plan creation and separate review invocations; legacy actions retain their true chronology. | Plan and review steps | <request or response, timing, and any later uncovered action> |
 | pending | The current plan was linked in chat and the user explicitly released implementation. | User review and execution steps | <link, response, and material-revision check> |
 | pending | <one requirement or safely grouped family> | <implementation owner and consumers> | <concise implementation plus validation evidence> |
 

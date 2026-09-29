@@ -11,13 +11,17 @@ implementation-plans/
 └── completed/
 ```
 
-Every formal plan needs a complete artifact that can be linked in chat for user review before
-execution. Use the current lifecycle's Markdown file when the task-plan UI cannot link to its
-complete current plan. This also applies to a user-requested routine plan or another formal plan
-without an independent persistence trigger. Creating a file solely for the link does not change
-the task's risk classification, plan detail, reviewer threshold, or closure requirements. Record
-the user's response to the linked plan in the plan or linkable task-plan artifact before executing
-it; do not infer review from the original request or from silence.
+Before creating a formal plan, obtain the user's advance choice or identify their explicit request
+for that plan; record this basis in the artifact after creation. Every formal plan needs a complete
+artifact that can be linked in chat for user review before execution. Use the current lifecycle's
+Markdown file when the task-plan UI cannot link to its complete current plan. This also applies to
+a user-requested routine plan or another formal plan without an independent persistence trigger.
+Creating a file solely for the link does not change the task's risk classification, plan detail,
+reviewer threshold, or closure requirements. Record the user's separate response to the linked
+plan before executing it; neither the original implementation request nor silence supplies it.
+For a plan created before the advance-choice rule, preserve its real chronology and ask before a
+future material replan or uncovered reviewer invocation. Status and lifecycle updates alone do not
+retroactively create a plan or require inventing earlier consent.
 
 A `briefs/` directory beside these holds `discussion-briefs` working documents when that skill
 establishes it. Before planning, read a brief there on the same subject and absorb the items the

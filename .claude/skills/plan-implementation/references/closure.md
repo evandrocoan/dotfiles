@@ -31,6 +31,13 @@ multiple implementers.
 
 ## Close work proportionally
 
+Check that an explicit request or affirmative user choice preceded every new formal plan and
+separate advisor or reviewer invocation in this task. A choice may cover named review phases but
+cannot replace reviewer model fit or the review verdict. Preserve the actual chronology of older
+plans and reviews: do not require retroactive consent for completed actions, but check the choice
+before any later material replan or uncovered review. An author's own verification is not a
+separate reviewer invocation. Missing consent for a required future action holds dependent work.
+
 For every new formal plan, verify that its complete current version was linked in chat and the user
 explicitly released implementation before its first implementation step. For an active plan with
 steps completed before this rule applied, preserve their actual chronology; verify that the current
@@ -188,6 +195,8 @@ For a high-risk formal plan, do not mark the plan complete until all applicable 
 - Required integration, replay, and broader checks have completed. An unavailable required check
   remains unresolved and blocks completion unless the governing authority changes its requirement.
 - The final diff contains no unrelated user-owned changes.
+- Advance choices preceded new plan creation and separate review invocations; older completed
+  actions retain their real chronology, and any later uncovered action received its own choice.
 - Documentation and architecture records are synchronized only where their owned behavior changed.
 - Remaining limitations, skipped validation, live cost, and operational uncertainty are reported
   accurately.

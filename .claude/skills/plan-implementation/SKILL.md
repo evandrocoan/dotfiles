@@ -48,6 +48,18 @@ local reversible work, follow the model route and any explicit user preference. 
 files or performing several obvious edits under one owner does not by itself make otherwise
 routine work non-trivial.
 
+Before drafting or creating a formal plan or invoking a separate advisor, independent reviewer,
+or domain reviewer, obtain the user's choice for each action. An explicit request for a plan or
+review already answers that dimension for the current scope. Otherwise use minimal read-only
+triage to state the recommendation, concrete reason, and whether the plan or review is mandatory
+or optional; ask at the task boundary when foreseeable, before substantial dependent work or
+reviewer effort. One clear answer may cover named pre-edit and final reviews. A declined or
+unanswered mandatory action holds dependent work; silence never starts an optional plan or review.
+Direct work may continue only when every other gate permits it. Ordinary author verification is
+not a separate review invocation. Preserve the chronology of existing plans and reviews. Ask
+before an uncovered material replan or reviewer invocation. This advance choice does not replace
+the linked user review of a completed plan before implementation.
+
 A bounded additive external action that meets every condition in
 [external-action routes](references/external-actions.md) uses the compact persistent path. Read
 that reference before classifying or performing an external write. Eligibility selects risk,
@@ -72,7 +84,8 @@ or advisor review cannot stand in for the user's review. A plan-only request sto
 is offered; it needs a later implementation instruction. An explicit request to execute an
 unchanged plan already linked in chat satisfies this boundary without another question. If the
 plan's execution contract changes materially, offer the updated link and wait again before affected
-steps. Read-only scoping and required plan reviews may make the plan reviewable before this gate.
+steps. Read-only scoping and reviews separately chosen by the user may make the plan reviewable
+before this linked-plan gate.
 
 Use these two layers when the persistence gate applies:
 
@@ -198,7 +211,8 @@ make its investigation a prerequisite. An architectural assignment is not eviden
 runtime path already exists. This applies the invariant-to-owner trace to the transition itself,
 so a correct final design does not hide a gap in the steps that reach it.
 
-Review plans proportionally before implementation:
+Review plans proportionally before implementation. Obtain the advance choice above before any
+separate reviewer or advisor is invoked:
 
 Evaluate high-risk triggers first; any match overrides locality, reversibility, or apparent
 simplicity. Then distinguish the remaining levels:
@@ -238,9 +252,9 @@ classification and review and closure gates for material continuations.
 
 Order work by dependency and feedback speed:
 
-1. Obtain any risk-required plan review described above and record it in the plan's
-   **Plan review** section before any implementation step starts. A routine formal plan needs no
-   review section when no review is required.
+1. Obtain any risk-required plan review described above after the advance user choice, and record
+   it in the plan's **Plan review** section before any implementation step starts. A routine formal
+   plan needs no review section when no review is required.
 2. Reproduce or authenticate the current failure when one exists.
 3. Establish or update the smallest failing regression protection.
 4. Change the authoritative owner of the behavior.
@@ -381,6 +395,8 @@ Replan immediately when:
 - validation demonstrates that the chosen implementation violates an invariant;
 - cost, quota, or operational state makes the remaining validation predictably wasteful.
 
+Before a material replan, obtain the user's advance choice if the earlier plan choice did not cover
+it; preserve completed work and hold dependent execution when that choice is missing.
 Update the persistent plan before taking a materially different implementation route. Preserve the
 current outcome and governing invariants, replace superseded steps instead of appending a narrative,
 and synchronize the task-plan projection.
