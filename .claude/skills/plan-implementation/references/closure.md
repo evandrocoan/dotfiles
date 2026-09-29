@@ -44,11 +44,11 @@ final diff, repository status when applicable, and limitations. Missing required
 authorization, model adequacy, or external approval remains a blocker independent of the user's
 plan/review choices. Do not create a substitute plan or closure-matrix artifact on a direct route.
 
-When a formal plan exists, inspect a same-subject brief under `briefs/` before moving it to
-`completed/`. A decided item still marked `registro pendente` blocks the move only while an
+Before closing either a formal-plan or direct route, inspect a same-subject brief under `briefs/`
+when one exists. A decided item still marked `registro pendente` holds affected closure while an
 actual decision-recording owner named for it is missing. A declined plan does not become an
-invented owner. Report open items; an open item blocks only if it represents a separate required
-validation, authorization, or access condition.
+invented owner. Report open items and note them in a chosen plan; an open item blocks only if it
+represents a separate required validation, authorization, or access condition.
 
 ## Proportional author closure
 
@@ -92,7 +92,7 @@ whether or not the user chose a plan. After candidate implementation and require
 
 5. Resolve every unsupported, skipped, or unavailable required check as `unresolved`, not as
    satisfied by another passing row. Correct mismatches at the lowest incorrect authority,
-   rerun invalidated validation, and repeat the affected audit.
+   rerun invalidated validation, and repeat the complete closure audit.
 6. Obtain a selected final independent conformance pass with fresh context. If none was chosen,
    complete the author's own second conformance reading and label it self-reviewed. A selected
    unavailable final reviewer holds completion until it runs or the user withdraws it.
@@ -100,18 +100,23 @@ whether or not the user chose a plan. After candidate implementation and require
 A chosen full plan stores its matrix and final verdict in that plan. A direct high-risk route
 still needs complete author evidence and bidirectional traces, but no new artifact. Keep raw
 logs, costs, and replay events in their operational owners. A material change after the verdict
-to an in-scope or coupled artifact invalidates the affected verdict: repeat the reread, traces,
-invalidated checks, and any still-selected review. A formatting-only or evidence-wording fix
-needs only the affected evidence and diff rechecked.
+to an in-scope or coupled artifact invalidates the verdict: repeat the complete closure audit,
+rerun checks invalidated by the change, and repeat any still-selected review. A formatting-only
+or evidence-wording fix needs only the affected evidence and diff rechecked.
 
 ## Completion gates
 
 Complete only when the requested outcome and consumers are verified, required validation and
 author checks have passed, the final diff is scoped, and limitations are accurately reported.
 For high-risk or architecture-governed work, both trace directions and the full author audit
-must be complete with no unresolved applicable requirement. For a chosen plan, its linked user
-review, same-subject brief check, lifecycle status, and task-plan projection must agree. For a
-selected separate review, its applicable phase must have a passing verdict or an explicit user
-withdrawal for remaining work. For external actions, authoritative read-back, exact delivery,
-and absence of prohibited effects are additional gates. If any independent prerequisite is
-unresolved, leave the work pending and state the concrete blocker rather than weakening it.
+must be complete with no unresolved applicable requirement. The same-subject brief check applies
+to direct work too. For a chosen plan, its linked user review, lifecycle status, and task-plan
+projection must agree. For a selected separate review, its applicable phase must have a passing
+verdict or an explicit user withdrawal for remaining work. For executable high-risk changes that
+require focused regression protection, demonstrate that the protection fails for the intended
+reason without the fix and passes with it. If the negative control cannot safely or practically
+run, report that limit and leave the high-risk gate unresolved unless governing authority
+explicitly accepts alternative evidence; do not call unmeasured sensitivity measured. For external
+actions, authoritative read-back, exact delivery, and absence of prohibited effects are additional
+gates. If any independent prerequisite is unresolved, leave the work pending and state the concrete
+blocker rather than weakening it.

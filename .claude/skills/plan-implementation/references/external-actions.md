@@ -46,8 +46,8 @@ Use this bounded route only when every condition below is verified before the fi
 - Each intended effect creates a new, independently identifiable record and does not modify or
   delete an existing one.
 - Downstream effects are known and limited to creation plus ordinary delivery or notification.
-  The action does not change approval state or access, create a financial or legal commitment,
-  deploy, or cause an operational or destructive effect.
+  The action does not change workflow state, approval state, or access, create a financial or legal
+  commitment, deploy, or cause an operational or destructive effect.
 - Mutable targets and preconditions are revalidated immediately before each write.
 - No other high-risk trigger applies, and the action is not part of an inherited higher-risk plan.
 
