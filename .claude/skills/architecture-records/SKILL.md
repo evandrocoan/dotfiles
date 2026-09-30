@@ -210,9 +210,10 @@ existing record or create a new one:
 
 Record mixed causes when more than one applies. Correct an implementation defect
 under the existing record when its invariant is unchanged. Amend that record when
-the durable contract was incomplete. Create or supersede a record only when the
-ownership model, authority boundary, stage order, failure meaning, or recovery policy
-actually changes.
+the durable contract changes locally and most of its design still governs, including
+when the revised rule also affects the flow, consequences, or traceability. Create or
+supersede a record only for a substantial design replacement in which much of the
+prior record will no longer govern the system.
 
 Do not append an incident section merely because another merge request exposed the
 same implementation defect. When an existing invariant already covers the failure,
@@ -228,9 +229,10 @@ appropriate semantic decision boundary.
 ### 7a. Record a deliberate decision that changes an approved record
 
 Apply this section when the user deliberately decides to change the design that an
-implemented record describes and instructs the recording of that decision. The code
-still follows the old rule at that moment, so the record must show the approved change
-without presenting it as current. Follow this sequence.
+implemented record describes and instructs the recording of that decision. When
+implementation is still pending, the record must show the approved change without
+presenting it as current. When implementation has already closed, record the resulting
+design without retaining a pending amendment. Follow this sequence.
 
 #### 1. Identify the contract and choose the form
 
@@ -239,36 +241,45 @@ not only its numbered invariants. Separate the changes the user approved from th
 behavior the resulting architecture must preserve; this keeps an unchanged guarantee
 from disappearing during a rewrite.
 
-Choose the form by its purpose, which is to avoid noise in the old record when writing
-a new one would be easier. List the places in the record that the decision forces to
-change: rules, flow sections, diagrams, and tables. A short list of rules only gives
-the block. A long list, or one that includes a flow section, diagram, or table, gives
-the new record. Show that list in chat together with the form you chose, and ask before
-writing when in doubt. Do not compare the list with a fixed count of rules. The
-criterion of section 7 still bounds the choice: create or supersede a record only when
-the design actually changes, and when much changes without changing the design, use
-blocks and ask first. The nature of the change sets recommended review depth and plan
-detail, not the form of the text; `plan-implementation` treats an architecture
-change as high risk. A selected plan reviewer may advise on the text before code.
+Choose the form by the extent of the architectural change and how much of the current
+record will continue to govern after implementation. Map every passage that needs
+synchronization, including rules, flow, consequences, diagrams, and traceability
+tables; this map is a consistency check, not a threshold for a new file. Amend the
+existing record when the change is localized to a rule or exception and the surrounding
+design remains valid. Reserve a new record for a substantial replacement of the design,
+when much of the prior record would cease to govern. Neither the number nor the type of
+sections needing edits determines the form. Show the affected contract and chosen form
+in chat, and ask before writing when the architectural reach is genuinely unclear.
+The nature of the change sets recommended review depth and plan detail, not the
+form of the text; `plan-implementation` treats an architecture change as high risk. A
+selected plan reviewer may advise on the text before code.
 
-For example, a decision that removes one exception from one rule, leaving its owner and
-flow as they are, takes a block. A decision that routes every write through a new
-reviewed stage, and so changes several rules, the flow section, and the owner of a
-check, takes a new record.
+For example, a scoped exception to one access rule takes an amendment even if its
+description also appears in the flow, consequences, and traceability table. Replacing
+a pipeline's decision owner and stage order so that much of its previous rules, flow,
+and failure semantics no longer apply takes a new record.
 
 #### 2. Check the recording boundary, then record
 
-Record the authorized decision in its architecture owner before dependent code changes. With a
-selected plan and pre-edit reviewer, the bounded amendment block or `Proposed` record, notice,
-and index entry may precede that review so it can examine the real wording. If translation,
+Record the authorized decision in its architecture owner before dependent code changes when
+implementation is pending. With a selected plan and pre-edit reviewer, the bounded amendment
+block or `Proposed` record, notice, and index entry may precede that review so it can examine
+the real wording. If synchronization of affected passages, translation,
 manual-table-of-contents removal, or other mandatory maintenance expands that edit, put the
-maintenance and amendment after the selected review; keep `registro pendente` for the record
-until then. With a selected pre-edit reviewer but no plan, have it inspect the current record and
-proposed diff before recording. Without a selected pre-edit reviewer, inspect the record
-and perform authorized maintenance before recording; the absence of a reviewer creates no
+expanded edit after the selected review; keep `registro pendente` for the record until then.
+With a selected pre-edit reviewer but no plan, have it inspect the current record and proposed
+diff before recording. Without a selected pre-edit reviewer, inspect the record and perform
+authorized maintenance before recording; the absence of a reviewer creates no
 staging deadlock.
 Without a selected plan, no plan owner is invented. Section 8 synchronization waits for implemented
 behavior, so proposed behavior is not presented as current.
+
+If the approved change is already implemented, verify actual behavior and follow section 9
+for result verification and any selected audit while reconciling the record. Use the same form
+criterion without a temporary pending state: rewrite a localized rule and its affected passages
+in the existing record, or make a substantial replacement `Implemented` and mark the
+old record `Superseded` in the same change. Apply sections 10 and 11 for closure rather
+than an implementation handoff. The paths below apply while implementation is pending.
 
 Within that boundary, use the selected form:
 
@@ -279,7 +290,12 @@ Within that boundary, use the selected form:
   what holds today and what is coming. Keep at most one pending block under a rule,
   and rewrite it when the user changes the decision. The block says which rule is in
   force, never the state of the code, and holds no date, plan link, or progress note,
-  because a record carries no execution diary.
+  because a record carries no execution diary. Synchronize affected flow,
+  consequences, diagrams, and traceability in the same record. While implementation
+  is pending, preserve their current descriptions and identify the approved future
+  effect as pending, with a concise reference to the block where useful. After
+  implementation, rewrite the rule and affected passages as current and remove the
+  block and pending qualifiers.
 - **New record.** Create a record in `Proposed` that says which record it will
   supersede, add its entry to the index, and add one notice line to the status of the
   old record: a proposed replacement exists, with its link, and this record describes
@@ -320,9 +336,10 @@ Section 11 says which checks apply. Tell the implementer which records were amen
 While both texts coexist, the current rule stays in force for every consumer, and the
 amendment or the `Proposed` record prescribes only the authorized future work. Partial progress
 lives in a selected plan or direct task evidence, never in the record. When the
-implementation closes, rewrite the rule and remove the block, or remove the notice line
-and supersede the old record, whether or not the lifecycle state of the amended record
-changes.
+implementation closes, rewrite the rule and its affected flow, consequences, and
+traceability and remove the block and pending qualifiers, or remove the notice line
+and supersede the old record, whether or not the lifecycle state of the amended
+record changes.
 
 ### 8. Synchronize current behavior
 
@@ -414,7 +431,8 @@ alternatives, and a compact decision-to-code-to-test/replay trace.
 
 Apply the same content cleanup when the implementation of an amendment recorded under section 7a
 closes, even though the amended record was already `Implemented`: rewrite the amended
-rule and remove the amendment block or the replacement notice.
+rule and affected flow, consequences, and traceability, then remove the amendment
+block and pending qualifiers. For a replacement, remove the notice from the old record.
 
 ### 11. Validate the result
 
@@ -442,6 +460,9 @@ Before handoff:
   says that the rule above stays in force, and holds no diary content; that no rule
   has more than one; and that no block or replacement notice remains for an
   implementation that closed.
+- Confirm that affected flow, consequences, diagrams, and traceability distinguish
+  current behavior from an approved pending amendment, and describe only the resulting
+  behavior after implementation closes.
 - Confirm that every runtime terminal state remains observable and semantically
   consistent through rendering, persistence, retries, and reuse.
 - Fail the validation when diary residue exists: merge-request sequences, timestamps,
