@@ -58,7 +58,7 @@ checks. A separate review is an independent user choice.
 
 Missing authorization, read-back authority, or knowledge of downstream effects blocks writing.
 When those preconditions hold but another eligibility condition fails, classify the action as
-high risk and strengthen the plan/review recommendation and author audit. A material change to
+high risk and strengthen the plan and review recommendations. A material change to
 authorized destination, operation, item set, payload, target, or precondition requires renewed
 user authorization before writing. Drift alone does not silently authorize a changed action.
 
@@ -81,5 +81,5 @@ stop later writes and retries, then reconcile through authoritative read-only ev
 
 Preserve confirmed results. Never blindly retry or perform an unapproved compensating mutation.
 Conclusive reconciliation alone does not promote a chosen compact plan. An action within an
-existing plan retains its highest risk classification and author closure rigor; separate review
+existing plan retains its highest risk classification for recommendations; review and audit
 choices remain revocable.

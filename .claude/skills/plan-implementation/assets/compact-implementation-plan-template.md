@@ -2,13 +2,13 @@
 
 **Status:** Planned
 **Mode:** Plan only | Plan and execute
-**Risk:** Non-trivial local and reversible | Bounded additive external action |
-Routine external editorial correction
+**Risk:** <classification from the skill; a compact format does not lower it>
 
 Use this compact persistent template when the user chooses a plan for non-trivial local and
 reversible criteria, **Bounded additive external action**, or **Routine external editorial
 correction** with a persistence trigger in `SKILL.md`.
-If high risk applies and the user chose a plan, use `implementation-plan-template.md`.
+For high risk, recommend `implementation-plan-template.md`; use this shorter format if the user
+prefers it. A chosen plan does not also select a full audit or second pass.
 Delete the conditional external-action section for local work.
 
 ## Outcome and scope
@@ -41,7 +41,7 @@ Delete the conditional external-action section for local work.
   and target identifiers or preconditions>.
 - Intended effects: <new records and targets, or existing record IDs, authorized fields, and
   editorial corrections>.
-- Separate review: Not selected | <reviewer, verified role fit, and pre-write verdict> |
+- Separate review: Not selected | <chosen reviewer, actual model/effort, and pre-write verdict> |
   Selected reviewer unavailable — write held until completed or withdrawn.
 - Read-back authority: <source that verifies IDs, targets, exact content, and state; for creation,
   also multiplicity; for correction, the baseline and preserved unrelated content/metadata>.
@@ -57,7 +57,7 @@ Delete the conditional external-action section for local work.
 | pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. | <link and user response, or `Pending`> |
 | pending | Revalidate prerequisites and perform the scoped change or external action. | <specific check> |
 | pending | Update affected consumers or create remaining authorized records. | <specific check or `Not applicable`> |
-| pending | Validate and obtain any local independent result review; reconcile external delivery if needed, then close. | <proportional checks, final diff, local review verdict or external read-back, and status> |
+| pending | Validate and obtain any selected local result review; reconcile external delivery if needed, then close. | <proportional checks, final diff, selected review verdict or external read-back, and status> |
 
 Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `completed`. Record a
 material premise before its dependent step and keep evidence concise rather than chronological.
@@ -82,8 +82,8 @@ may refer to that binding; do not repeat an approval check for every file.
   creation multiplicity or preservation of unrelated content/metadata, or `Not applicable`>.
 - Focused author pass: Pending | Passed | Failed.
 - Selected independent review: Not selected | Pending |
-  <reviewer, verified role fit, local final-result or external pre-write timing, evidence scope,
-  and verdict>.
+  <chosen reviewer, actual model/effort, local final-result or external pre-write timing,
+  evidence scope, and verdict>.
 - Unresolved limitations: <limitations, or `None`>.
 - Brief check: No brief on this subject | No `registro pendente`; open items reported and noted:
   <items, or `None`>.

@@ -3,8 +3,8 @@
 **Status:** Planned
 **Mode:** Plan only | Plan and execute
 
-Use this full template for high-risk or architecture-governed work. Use
-`compact-implementation-plan-template.md` for persistent non-trivial local and reversible work or
+Recommend this full template for high-risk or architecture-governed work; honor the user's chosen
+detail, including a shorter plan. Use `compact-implementation-plan-template.md` for local work or
 for a qualifying **Bounded additive external action**. A **Routine external editorial correction**
 uses the compact template only when another persistence trigger applies, as defined in `SKILL.md`.
 
@@ -47,7 +47,7 @@ State the observable result and terminal condition.
 | pending | Reproduce or authenticate. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Change the authoritative owner and affected consumers. | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Integrate and remove competing behavior. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
-| pending | Run proportional checks and audit. <complete flow> | <non-obvious premise and proof, or `None`> | <commands or concise final evidence> |
+| pending | Run proportional checks and any selected review or audit. <complete flow> | <non-obvious premise and proof, or `None`> | <commands or concise final evidence> |
 
 Keep at most one step `in_progress`. Use only `pending`, `in_progress`, and `completed`.
 
@@ -79,7 +79,7 @@ selects a new review after a material replan.
   creation>. A declined plan leads to the direct route with the same independent safeguards.
 - **Advance choice for separate reviews:** <named advisor and reviewers, scope, and user response
   before each invocation, or `None selected`>. One answer may cover named phases;
-  consent alone does not establish reviewer adequacy or a passing verdict.
+  consent alone does not establish the active reviewer setting or a passing verdict.
 - **Linked plan offered in chat:** Pending | <link and the current execution contract>.
 - **User response:** Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
@@ -95,7 +95,9 @@ selects a new review after a material replan.
 
 ## Closure audit
 
-Perform the skill's risk-appropriate reread before completing these rows. Add concise rows until
+Include this section only when the user selected a full audit; choosing a plan alone does not
+select it. Otherwise omit the matrix and report proportional completion evidence above.
+For a selected audit, use its agreed scope and reviewer before completing these rows. Add rows until
 every outcome, scope boundary, invariant, affected consumer, replan condition, and required
 validation obligation is accounted for. A passing test supports only what it actually asserts.
 
@@ -118,13 +120,13 @@ Record both closure directions:
   through user authorization, applicable instructions and skills, this plan, and a governing
   invariant or explicit local objective.
 
-Record the selected independent second pass, or the author's own second conformance reading,
+Record any selected second pass; do not add an author second reading as a fallback,
 and apply the skill's material-change rule when something changes after the verdict.
 
 ### Final conformance verdict
 
 - **Verdict:** Pending | Passed | Failed
-- **Second pass:** Pending | Independent | Self-reviewed after no separate review was selected
+- **Second pass:** Not selected | Pending | Independent | Author pass explicitly selected
 - **Auditor and evidence:** Identify the reviewer and link the original user request and decisions,
   applicable instructions and skills, final diff and effects, validation artifacts, and completed
   matrix used for the verdict.
@@ -133,8 +135,8 @@ and apply the skill's material-change rule when something changes after the verd
 - **Brief check:** No brief on this subject | No `registro pendente`; open items reported and noted:
   <items, or `None`>.
 
-Set `Verdict` to `Passed` only when both trace directions are complete, every required validation
-has run, the current plan has user review before implementation, the author's initial audit and
-second pass—independent when selected, otherwise the author's—are complete, the brief check found
-no `registro pendente`, and unresolved requirements are `None`.
-Only then may the plan status become `Completed`.
+For a selected full audit, set `Verdict` to `Passed` only when its chosen scope and both trace
+directions are complete, required validation has run, the user reviewed the plan before execution,
+any selected second pass is complete, and no applicable requirement is unresolved. A selected audit
+holds its dependent phase until completed or explicitly withdrawn. An unselected audit or second
+pass does not block plan completion; record only the verification and reviews actually performed.
