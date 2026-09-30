@@ -46,6 +46,27 @@ index and performs no client-state writes, so it can also be used for read-only 
 Treat this as local agent data rather than repository discovery. Never alter
 session, history, or runtime files while searching.
 
+## Present questions where the user will see them
+
+Do not assume the user monitors an ongoing turn. Gather foreseeable choices about scope,
+planning, review, model, effort, or other material preferences before dependent work begins.
+Use minimal read-only triage to formulate them and group related questions in one final response,
+keeping independent choices separate. State the recommendation, reason, and concrete options.
+Do not ask again for a choice already answered for the current scope.
+
+Every unanswered question that needs a user choice must appear in the final chat response.
+A selectable question tool may supplement that text, but a tool's acceptance or preselected
+option proves neither visibility nor a user answer. After posing the question, end the turn and
+wait for the reply. Do not keep executing, sleep or poll for a timeout, treat silence as a decline,
+or declare the task complete while its choice is pending. An optional process remains optional:
+the user may accept it, decline it, or choose an alternative; the answer cannot be inferred from
+elapsed time. Honor an explicit instruction delegating that choice without asking it again.
+
+If a material choice is first discovered during execution, preserve completed work, present the
+question in the final response, and wait before continuing the affected work. This does not create
+new consultation triggers or require confirmation of routine implementation details. A single
+answer resolves the question it addresses; request only information or choices it leaves open.
+
 ## Model and reasoning effort at task entry
 
 After classifying the latest request under the question-only gate below, identify the acting
@@ -90,8 +111,8 @@ setting instead.
 When the current setting is above a sufficient lower setting, ask once at the task boundary to
 switch down if that setting is supported and the user has not already chosen to keep the current
 one for this scope. If the user chooses to switch, apply the one-reply confirmation above. The
-user may decline and keep the sufficient higher setting. If no answer arrives after a reasonable
-opportunity, continue at the current setting; neither silence nor agreement to a future switch
+user may decline and keep the sufficient higher setting. An unanswered recommendation remains
+pending under the visible-question rule above; neither silence nor agreement to a future switch
 changes the client setting. Do not repeat the downgrade request for each step, file, or turn in
 an unchanged scope. Reconsider it after a material change in task, risk, or role. A user-pinned
 setting controls this scope without a repeated switch prompt.
@@ -99,8 +120,8 @@ setting controls this scope without a repeated switch prompt.
 If the effective setting cannot be verified, ask for the model and thinking level displayed for
 the active session and hold that role until its identity is established. When the known setting
 differs from the recommendation, explain the material limitation once and honor the user's choice;
-do not block authorized work solely on the agent's model-fit assessment. An unanswered switch
-recommendation leaves the known current setting active after a reasonable opportunity to reply.
+do not block authorized work solely on the agent's model-fit assessment. While a requested switch
+choice is unanswered, keep the known setting as the reported identity and await the user's choice.
 Actual tool availability, authorization, and inability to perform an operation still need honest
 handling; do not recast a preference for a stronger model as a technical impossibility.
 
@@ -137,9 +158,9 @@ request to edit, implement, test, run, continue, or otherwise act.
 In a question-only turn:
 
 - Answer only the question or questions. The model and effort gate may first ask for missing
-  session information or recommend a setting change. A declined or unanswered optional downgrade
-  cannot block an answer the current setting can provide; these prompts never release deferred
-  implementation.
+  session information or recommend a setting change. A declined downgrade cannot block an answer
+  the current setting can provide; an unanswered choice follows the visible-question rule above.
+  These prompts never release deferred implementation.
 - Do not announce work, create or execute a plan, edit anything, run tests,
   implement changes, resume pending work, or perform any action that changes local
   or remote state.
@@ -306,10 +327,9 @@ an audit; declining independent review does not authorize a replacement author a
 plan's detail to the user's selection, including a short plan for high-risk work.
 
 A declined plan, review, or formal audit does not itself cancel or block otherwise
-authorized work. If a choice remains unanswered, do not create a plan or invoke
-a reviewer; after a reasonable opportunity, proceed directly only when the task
-is authorized and every independent gate permits it. A selected review remains
-pending until completed or explicitly withdrawn: hold only its dependent phase
+authorized work. If a choice remains unanswered, present it in the final response and wait;
+do not create a plan, invoke a reviewer, or choose direct execution by timeout. A selected review
+remains pending until completed or explicitly withdrawn: hold only its dependent phase
 (pre-edit implementation, pre-write mutation, or final completion). A selected
 plan keeps its linked user-review gate while it is the execution route. The user
 may withdraw either choice for remaining work. Preserve the chronology of plans
