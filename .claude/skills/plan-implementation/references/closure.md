@@ -28,11 +28,12 @@ read-only reviewer does not itself trigger a multiple-implementer plan recommend
 
 Before completion, confirm that every new formal plan, review, or structured author audit had an
 explicit advance choice, or that the user requested it directly. Preserve the true chronology of
-older actions; ask before any later uncovered action. A chosen plan must have been offered in
-chat as a link to its complete current version, followed by explicit user release before its
-first implementation step. A material contract revision needs a new link and release before its
-affected steps. A direct route has no linked-plan gate. A plan-only request never authorizes
-execution.
+older actions; ask before any later uncovered action. An unanswered process choice remains pending;
+do not close the task by treating silence as a refusal. A chosen plan must have been offered in
+chat with a link to its complete current version, a concise summary, and its line and word counts,
+followed by explicit user release before its first implementation step. A material contract
+revision needs a new presentation and release before its affected steps. A direct route has no
+linked-plan gate. A plan-only request never authorizes execution.
 
 Apply `test-quality`'s **Review test evidence before closure** to added or materially changed
 tests and existing tests cited as decisive evidence. Check what the production boundary actually

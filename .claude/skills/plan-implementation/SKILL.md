@@ -40,9 +40,9 @@ decides whether to have a formal plan, review, or audit and which model and effo
   plan, offer its link for user review and wait for an explicit go-ahead before executing it.
   After that response, continue through the authorized in-scope
   steps without requesting approval for each step. Use the direct route when eligible.
-- **No formal plan:** Use direct work when the user declines a plan, or after an unanswered choice
-  and a reasonable opportunity to reply, if the task and all independent gates permit it. Still
-  identify the expected outcome and verify it. Do not create a hidden replacement plan.
+- **No formal plan:** Use direct work when the user declines a plan or the model route does not
+  call for offering one, if the task and all independent gates permit it. An unanswered choice
+  remains pending. Still identify the expected outcome and verify it; do not create a hidden plan.
 
 Strongly recommend a formal plan for every high-risk request and persistence trigger below. The
 recommendation does not make the plan compulsory. For other work, follow the model route and any
@@ -56,9 +56,10 @@ review already answers that dimension for the current scope. Otherwise use minim
 triage to state the recommendation and concrete reason; both choices are optional. Ask at the
 relevant implementation task boundary when foreseeable, before substantial dependent work or
 reviewer effort. Question-only requests do not open an implementation choice. One clear answer
-may cover named pre-edit and final reviews. Silence never starts a plan or review. Direct work
-may continue after a decline or unanswered choice only when the task is authorized and every
-independent gate permits it. Ordinary author verification is not a separate review invocation.
+may cover named pre-edit and final reviews. Follow the global visible-question rule: present
+pending choices in the final response and wait. Direct work may continue after an explicit decline
+when the task is authorized and every independent gate permits it. Ordinary author verification
+is not a separate review invocation.
 Preserve the chronology of existing plans and reviews. Ask
 before an uncovered material replan or reviewer invocation. This advance choice does not replace
 the linked user review of a completed plan before implementation.
@@ -81,12 +82,15 @@ inherited risk. Neither path overrides authorization or plan-only mode.
 Never keep a formal plan only in hidden reasoning or conversation memory. Give every formal plan a
 complete current artifact with a clickable link. Use a Markdown file under the task's plan
 lifecycle by default; a task-plan mechanism may substitute only when its link opens the complete
-current plan for the user. Chat prose alone does not supply the artifact. Before the first
-implementation step under a formal plan, offer its link and a concise summary in chat. Wait for
-an explicit user response to proceed. The initial implementation request, silence, and an agent
-or advisor review cannot stand in for the user's review. A plan-only request stops after the link
-is offered; it needs a later implementation instruction. An explicit request to execute an
-unchanged plan already linked in chat satisfies this boundary without another question. If the
+current plan for the user. Chat prose alone does not supply the artifact. When first presenting a
+formal plan or offering a materially revised version for user review, provide its link, a concise
+summary of the outcome, main steps, and checks, and its measured size as the line and word counts
+of the complete linked version. Keep ordinary progress updates concise without repeating this
+presentation. Before the first implementation step under a formal plan, wait for an explicit user
+response to proceed. The initial implementation request, silence, and
+an agent or advisor review cannot stand in for the user's review. A plan-only request stops after
+the plan is presented; it needs a later implementation instruction. An explicit request to execute
+an unchanged plan already linked in chat satisfies this boundary without another question. If the
 plan's execution contract changes materially, offer the updated link and wait again before affected
 steps. Read-only scoping and reviews separately chosen by the user may make the plan reviewable
 before this linked-plan gate.

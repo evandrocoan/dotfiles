@@ -46,8 +46,9 @@ direct work or no review. Specify review depth and timing and recommend the mode
 accept another user choice.
 
 If the user declines either action, continue otherwise authorized work with the chosen route.
-If a choice is unanswered, do not create a plan or invoke a separate advisor or reviewer. After
-a reasonable opportunity, direct execution may proceed if all independent gates permit it.
+If a choice is unanswered, follow the global visible-question rule: present it in the final
+response and end the turn awaiting the reply. Do not create a plan, invoke a separate advisor or
+reviewer, or choose direct execution by timeout.
 Silence never supplies missing model/effort information, authorization, or approval of a linked
 plan. A selected pre-edit, pre-write, or final review holds only its dependent phase until it
 completes or the user explicitly withdraws it. A declined or unselected review never blocks.
