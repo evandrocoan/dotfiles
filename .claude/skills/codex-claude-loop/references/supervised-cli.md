@@ -222,6 +222,72 @@ cap occur. Examine the compact result and Claude's own exit code, including comp
 review evidence, before Codex independently checks the changed files. Codex does not supply
 missing Claude work.
 
+## Host-owned supervisor for a Codex CLI session
+
+For a long Claude run coordinated through `codex exec`, use
+[`../scripts/follow_claude.py`](../scripts/follow_claude.py) when a host process can remain active
+outside Codex turns. This route requires an existing exact **Codex CLI session ID**. It does not
+resume this Codex app or API chat, and a session ID from another client is not interchangeable.
+The Python supervisor owns the worker that launches Claude; a Codex tool command must not detach
+Claude and assume it will survive the command's sandbox. The direct-handle route above remains
+appropriate when the current interface can wait on its process handle or an interactive permission
+host is needed.
+
+Complete the checkout, model, effort, trust, permission, settings-overlay, and authorization
+checks above before starting this route. It supports a verified **no-prompt** Claude profile;
+it does not implement an interactive permission host. If the task requires permission decisions
+while Claude runs, use a verified interactive host through the direct route or report the missing
+prerequisite. The selected permission mode still cannot expand the user's task authorization.
+Do not let a model-generated command or decision replace the coordinator's verified CLI options.
+
+Create a task-private JSON config outside the checkout with these fields: `checkout` is the
+absolute runtime checkout path; `codex.bin` and `claude.bin` are the verified executables;
+`codex.args` and `claude.args` are arrays of verified CLI arguments. In `claude.args`, specify
+the exact `--model`, the supported `--effort` when applicable, the verified task-private
+`--settings` overlay, and the chosen `--permission-mode`. The supervisor owns `-p`,
+`--output-format stream-json`, `--verbose`, and the exact Claude session or resume flag; do not
+repeat those in the config. `codex.args` must preserve the selected Codex model, effort, and
+approval configuration across resumes. Verify the installed CLI syntax; do not infer account
+model access from the flag alone. Keep the config and start prompt stable for recovery.
+
+Start a Codex CLI session with the authorized task context. From the canonical skill directory,
+give the supervisor its exact ID, a task-private start prompt for Codex's first decision, and a
+private state directory outside the checkout:
+
+```text
+python3 scripts/follow_claude.py follow \
+  --config <private-config.json> --state-dir <private-state-dir> \
+  --codex-session <exact-codex-cli-session-id> --start-prompt <private-start-prompt.txt>
+```
+
+Codex returns a structured decision to run Claude, finish, or request a user decision. For a
+Claude run, Codex supplies a self-contained task prompt without coordinator or future-review
+details; the host launches exactly one Claude worker with the configured options and waits for its
+terminal status without another Codex turn. The worker keeps raw stdout and stderr in private
+files, extracts the final result, result-error details, and diagnostic stderr lines, and preserves
+Claude's exit code and session ID. It runs Claude in a private process group and waits for live
+members of that group, including background tests, after the root CLI process exits. An escaped
+or detached process outside that group still requires explicit reconciliation when indicated by
+Claude's result or other evidence. Only the compact terminal result is sent to `codex exec resume`
+for checkout verification and the next decision. A `done` decision ends the CLI loop; it does not replace any
+separately selected final review or other delivery gate.
+
+A `needs_user` decision stops the script and prints the exact question. After the user supplies an
+answer that actually releases the paused task under applicable instructions, invoke the same
+command with `--answer-file <private-user-answer.txt>`. The answer is passed to the same Codex CLI
+session before another Claude run. Do not fabricate an answer, treat a question-shaped reply as
+implementation authorization, or modify the state file to skip the pause.
+
+The state directory binds the config, start prompt, Codex session, and one Claude session. Keep
+it intact. If the outer supervisor is interrupted while the worker runs, invoke it again with the
+same arguments: it waits for that identified worker and does not launch another implementer. If
+the worker exits without a terminal record, its identity is uncertain, or a Codex turn or worker
+launch was interrupted at an ambiguous point, the script stops instead of retrying. Reconcile
+the exact process, recorded process group, CLI session, index, checkout changes, background descendants, tests, and any
+external effects before continuing. Do not delete a state marker, switch session or model, or
+launch a fresh worker merely to make the loop advance. No coordinator-imposed turn, time,
+iteration, or cost limit is added; provider limits and user limits still apply.
+
 ## Handle a task question without an in-process host
 
 When the final answer begins `NEEDS_USER:`, confirm that the process ended, the recorded session

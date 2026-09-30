@@ -59,6 +59,7 @@ PY
 
 python3 -m unittest discover -s scripts/performance-monitoring -p 'test_*.py' -v
 python3 -m unittest discover -s scripts -p 'test_*.py' -v
+python3 -m unittest discover -s .claude/skills/codex-claude-loop/tests -p 'test_*.py' -v
 
 PYTHON_SOURCE_LIST="${TEST_CACHE_DIRECTORY}/python-sources"
 readonly PYTHON_SOURCE_LIST

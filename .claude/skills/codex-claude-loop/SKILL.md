@@ -2,7 +2,8 @@
 name: codex-claude-loop
 description: >-
   Coordinate an isolated Claude Code implementation in one local checkout through a
-  Codex-supervised CLI run. Use when the user asks Codex to assign implementation to Claude.
+  Codex-supervised CLI run or a host-owned CLI supervisor. Use when the user asks Codex to
+  assign implementation to Claude.
 ---
 
 # Isolated Claude implementation
@@ -70,8 +71,11 @@ within the ownership rules of this workflow.
 
 ## Execute the isolated CLI workflow
 
-Read [supervised CLI workflow](references/supervised-cli.md). Codex launches and observes Claude's
-isolated task session, then independently assesses the completed result. Keep coordinator plans,
+Read [supervised CLI workflow](references/supervised-cli.md). Use the direct process handle when
+the active Codex interface can retain it; for a long Codex CLI session, the host-owned Python
+supervisor can wait outside model turns and resume that exact CLI session with Claude's compact
+result. Neither route resumes an unrelated Codex app or API chat. Codex independently assesses the
+completed result. Keep coordinator plans,
 reviews, and coordination metadata out of Claude's task-facing prompt, references, and session
 context. Before launch, reconcile prior owners, active agents and commands, scheduled reactivations,
 locks, the index, working tree, and partial effects. Do not break a lock, alter a prior task's
