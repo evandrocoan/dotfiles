@@ -78,8 +78,9 @@ ask the parent. The parent's settings do not identify the child.
 If the client has no configurable thinking level, establish that fact rather than inventing an
 effort value. Do not infer identity or effort from writing style, a model list, repository settings,
 or a default. If either remains unknown, wait for the missing information; silence is not a
-fallback route. Carry a known setting across turns in the same session, but recheck after a
-reported switch, handoff, new agent, or conflicting runtime evidence.
+fallback route. Carry a known setting across turns in the same session. Apply the single-response
+switch procedure below when the user chooses another pair; recheck after a handoff, new agent,
+or conflicting runtime evidence.
 
 After identifying the acting settings, assess the lowest adequate model and effort for each task
 role from its scope, uncertainty, consequences, and any selected reviews. The agent owns this
@@ -96,21 +97,36 @@ high-risk edit followed by explanation-only questions starts a new role. Follow-
 unchanged role and scope do not reset the user's setting choice or the one-time downgrade prompt.
 Keep the reassessment internal when no setting change is warranted.
 
-When recommending a switch, state the role, target model and thinking level (if configurable),
-and reason, and offer keeping the current setting or choosing another supported pair. If the
-user chooses to switch, tell them to change the client setting, verify the displayed target for
-the active session, then reply once. A reply reporting completion, including a simple “ok” to
-that instruction, confirms the displayed target in the assistant turn that receives it; do not
-ask for a second acknowledgment or for the user to repeat the named setting. A reply that only
-agrees to switch later does not confirm completion. A remembered pre-switch setting does not
-contradict the later report, but trustworthy current-turn runtime metadata showing a different
-setting does; resolve that conflict before the role proceeds. Without a pending request naming
-the target, a bare “ok” cannot establish an unknown model or effort: ask for the displayed
-setting instead.
+For either an upgrade or a downgrade, make the recommendation in one question: state the role,
+target model and thinking level (if configurable), and a brief reason. Include any instruction
+to change the client setting before sending the answer in this initial question. Prefer a
+selectable question with these choices, in the user's language:
+
+1. Switch to the named model and thinking level (recommended).
+2. Keep the current named model and thinking level.
+3. Specify another model and thinking level in free text.
+
+Use the question tool's built-in free-text option for the third choice when available; do not
+add a redundant fixed "Other" option. If selectable questions are unavailable, ask the same
+question in plain text.
+
+The user's single selection or reply completes the choice. Accept the recommended option,
+"switch", or "I'll use Z with thinking Y" without asking them to confirm, repeat the pair,
+inspect the setting again, or send a separate "ok". For the next assistant turn, use the pair
+identified by that answer as the user-reported setting. Ask only for a missing model or thinking
+level when the answer and context do not identify the pair. Choosing to keep the current setting
+needs no acknowledgment step; continue the authorized task.
+
+A selection does not programmatically change the client or prove a change within an in-flight
+turn. Trustworthy current-turn runtime metadata takes precedence over the user-reported setting;
+report and resolve an actual contradiction without treating a remembered pre-switch setting as
+contradictory evidence. If the user explicitly postpones the switch until later, retain the known
+current setting without requesting another confirmation. A bare "ok" identifies a pair only when
+it answers a pending recommendation naming that pair.
 
 When the current setting is above a sufficient lower setting, ask once at the task boundary to
 switch down if that setting is supported and the user has not already chosen to keep the current
-one for this scope. If the user chooses to switch, apply the one-reply confirmation above. The
+one for this scope. Apply the same single-question procedure above. The
 user may decline and keep the sufficient higher setting. An unanswered recommendation remains
 pending under the visible-question rule above; neither silence nor agreement to a future switch
 changes the client setting. Do not repeat the downgrade request for each step, file, or turn in
@@ -125,11 +141,8 @@ choice is unanswered, keep the known setting as the reported identity and await 
 Actual tool availability, authorization, and inability to perform an operation still need honest
 handling; do not recast a preference for a stronger model as a technical impossibility.
 
-An active assistant turn may still use its earlier setting. When the user chooses a switch before
-this role, wait until that setting is active without requesting another acknowledgment. A user
-choice to keep the current setting needs no switch. Confirmation establishes only the active
-setting; it does not release question-only deferred implementation, replace the user's review of
-a linked plan, or authorize any task action.
+A model or thinking choice does not release question-only deferred implementation, replace the
+user's review of a linked plan, or authorize any task action.
 
 ## Mandatory question-only gate
 
