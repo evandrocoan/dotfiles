@@ -1,23 +1,23 @@
 # Model-aware planning route
 
-Use this after the global model/effort gate and the entrypoint's request, risk, persistence, and
-inherited-plan classification. Group labels express planning and review recommendations, not a
+Use this after identifying the acting model/effort and classifying the request, risk, persistence,
+and inherited plan. Group labels express planning and review recommendations, not a
 universal ranking of model quality or permission to skip safety checks.
 
-## Apply the acting-role gate
+## Recommend settings for the acting role
 
-Verify the acting model and effort, and assess fitness for this role under the global task-entry
-gate. An unknown or inadequate setting holds the role. A plan or reviewer cannot make an
-insufficient acting setting adequate. Reassess role fit for every new request; an earlier task's
-adequacy decision does not carry to a different role. Verify model and effort availability in the
-actual client before proposing a pair.
+Identify the acting model and effort under the global instructions, then recommend settings for
+the role. Explain the tradeoff and honor the user's choice, including keeping a setting below
+the recommendation. Reassess for every new request; an earlier role's recommendation does not
+carry to a different role. Verify model and effort availability before proposing a pair. Never
+present the agent's fitness assessment as a mandatory minimum or silently replace the user's pair.
 
 ## Recommend a route and ask for the user's choices
 
 An explicit plan-only request selects a plan and stops before implementation. Question-only and
 read-only requests do not open an implementation choice. For an authorized edit, classify risk and
-persistence first. They determine the strength of the recommendation and author closure, while
-the user decides independently whether to have a formal plan and a separate AI review.
+persistence first. They determine the recommendation and proportional verification, while the
+user decides independently whether to have a formal plan and a review, including a formal audit.
 
 | Acting group | Routine local reversible edit | Non-trivial local reversible edit |
 | --- | --- | --- |
@@ -31,8 +31,8 @@ For lower-risk work likely to cross phases or sessions, recommend a compact pers
 recommend review according to its actual risk and model route. Explain the concrete reason and
 adequate planner, implementer, and reviewer model/effort when recommending a pair. A supervised
 implementer often benefits from an autonomous reviewer even for routine work. These recommendations never turn
-plan or separate AI review into a compulsory gate. Other authorization, model-fit, validation,
-and author-conformance requirements still apply.
+plan, review, formal audit, or model recommendation into a compulsory gate. Authorization, actual
+tool availability, and honest validation claims still apply.
 
 Ask at the relevant task boundary, before spending substantial dependent work or reviewer tokens.
 Keep the plan and review questions separate. State the classification, recommendation, and why,
@@ -40,7 +40,10 @@ then invite the user's sense of importance: the agent may not know the user's st
 choice in the current request or an earlier choice still valid for this scope answers only its
 dimension. “Without a plan” does not decline review; “with review” does not choose a plan.
 When presenting options, make each answer's resulting route unambiguous, including whether a
-plan and review will occur. Do not present accepting both as the only way to continue.
+plan and review will occur. Do not present accepting both as the only way to continue. Consult at
+the situations in the table and the high-risk and persistence routes above even when recommending
+direct work or no review. Specify review depth and timing and recommend the model and effort;
+accept another user choice.
 
 If the user declines either action, continue otherwise authorized work with the chosen route.
 If a choice is unanswered, do not create a plan or invoke a separate advisor or reviewer. After

@@ -62,11 +62,11 @@ reported switch, handoff, new agent, or conflicting runtime evidence.
 
 After identifying the acting settings, assess the lowest adequate model and effort for each task
 role from its scope, uncertainty, consequences, and any selected reviews. The agent owns this
-assessment; do not require the user to label a task as Sol medium or Sol xhigh. Distinguish an
-exact pair fixed by the user or applicable instructions, a minimum for a named model, and an
-optional cost-saving downgrade. Compare effort only within the same model and its supported
-levels; do not silently substitute another model or provider. A plan or reviewer cannot lower a
-user-set requirement.
+recommendation; do not require the user to label a task as Sol medium or Sol xhigh. Recommend a
+specific supported pair and explain the tradeoff. The user chooses the model and effort and may
+keep a setting below or above the recommendation. A recommended minimum is not a prerequisite.
+Compare effort only within the same model and its supported levels; do not silently substitute
+another model or provider or override an exact pair selected by the user.
 
 Reassess role fit on every new user request, including question-only turns. Carry verified model
 and effort settings across turns, but not the prior role's adequacy judgment. A task boundary is
@@ -75,8 +75,9 @@ high-risk edit followed by explanation-only questions starts a new role. Follow-
 unchanged role and scope do not reset the user's setting choice or the one-time downgrade prompt.
 Keep the reassessment internal when no setting change is warranted.
 
-When requesting a switch, state the role, target model and thinking level (if configurable),
-and reason. Tell the user to change the client setting, verify that the target is displayed for
+When recommending a switch, state the role, target model and thinking level (if configurable),
+and reason, and offer keeping the current setting or choosing another supported pair. If the
+user chooses to switch, tell them to change the client setting, verify the displayed target for
 the active session, then reply once. A reply reporting completion, including a simple “ok” to
 that instruction, confirms the displayed target in the assistant turn that receives it; do not
 ask for a second acknowledgment or for the user to repeat the named setting. A reply that only
@@ -93,19 +94,21 @@ user may decline and keep the sufficient higher setting. If no answer arrives af
 opportunity, continue at the current setting; neither silence nor agreement to a future switch
 changes the client setting. Do not repeat the downgrade request for each step, file, or turn in
 an unchanged scope. Reconsider it after a material change in task, risk, or role. A user-pinned
-sufficient setting also controls this scope without a downgrade prompt.
+setting controls this scope without a repeated switch prompt.
 
 If the effective setting cannot be verified, ask for the model and thinking level displayed for
-the active session and hold that role. If a verified setting is below the assessed minimum or
-does not match a fixed exact pair, ask for a supported switch or reassignment and hold that role.
-An insufficient user-pinned setting must be resolved, not silently accepted. In particular, Sol
-medium cannot perform a role requiring Sol xhigh by writing a longer plan or relying on a stronger
-reviewer.
+the active session and hold that role until its identity is established. When the known setting
+differs from the recommendation, explain the material limitation once and honor the user's choice;
+do not block authorized work solely on the agent's model-fit assessment. An unanswered switch
+recommendation leaves the known current setting active after a reasonable opportunity to reply.
+Actual tool availability, authorization, and inability to perform an operation still need honest
+handling; do not recast a preference for a stronger model as a technical impossibility.
 
-An active assistant turn may still use its earlier setting; hold an insufficient role until the
-adequate setting is active, without requesting another user acknowledgment. Confirmation clears
-only the model gate: it does not release question-only deferred implementation or replace the
-user's review of a linked plan. This gate does not authorize any task action.
+An active assistant turn may still use its earlier setting. When the user chooses a switch before
+this role, wait until that setting is active without requesting another acknowledgment. A user
+choice to keep the current setting needs no switch. Confirmation establishes only the active
+setting; it does not release question-only deferred implementation, replace the user's review of
+a linked plan, or authorize any task action.
 
 ## Mandatory question-only gate
 
@@ -281,8 +284,8 @@ issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
 ## Plan and review choices
 
-Before creating a formal plan or invoking a separate advisor, independent
-reviewer, or domain reviewer, ask the user for that choice. A specific explicit
+Before creating a formal plan or invoking a separate advisor, independent reviewer,
+domain reviewer, or structured author audit, ask the user for that choice. An explicit
 request for the plan or review already answers its dimension for the current
 scope; do not ask twice. Keep plan and review choices separate, state the
 recommendation and concrete reason, and explain that both are optional. Risk
@@ -293,7 +296,16 @@ establish the recommendation. One explicit answer may cover named plan and
 review phases of the task. Do not treat silence as consent to create a plan or
 start a review. Question-only requests do not open an implementation choice.
 
-A declined plan or separate AI review does not itself cancel or block otherwise
+At every situation where the applicable route calls for consultation, ask even when recommending
+direct work or no extra review. Preserve the routine-local exception to offering a plan. Present
+plan and review independently so the user can choose either, both, or neither, and offer the
+recommended model and thinking level with the reason. The user may choose another supported pair.
+Review choices include full author audits, closure matrices, systematic rereads, and second
+passes. State their scope and timing when recommending them. Choosing a plan does not also choose
+an audit; declining independent review does not authorize a replacement author audit. Match the
+plan's detail to the user's selection, including a short plan for high-risk work.
+
+A declined plan, review, or formal audit does not itself cancel or block otherwise
 authorized work. If a choice remains unanswered, do not create a plan or invoke
 a reviewer; after a reasonable opportunity, proceed directly only when the task
 is authorized and every independent gate permits it. A selected review remains
@@ -303,8 +315,9 @@ plan keeps its linked user-review gate while it is the execution route. The user
 may withdraw either choice for remaining work. Preserve the chronology of plans
 and reviews already completed before this rule; ask
 before future material replanning or uncovered review invocations. Ordinary
-author verification does not invoke a separate reviewer. A reviewer only
-reads and reports; it never edits, commits, or performs a remote operation.
+verification of the edited result remains necessary to report it accurately; it does not require
+a formal audit, matrix, or extra reading pass. Report omitted validation and uncertainty honestly.
+A reviewer only reads and reports; it never edits, commits, or performs a remote operation.
 Every other delegation, including read-only exploration, still needs an
 explicit request.
 
@@ -372,8 +385,8 @@ of choosing one silently.
   active model; this trigger excludes read-only requests. Load it for a material
   continuation, replan, or follow-up under an existing formal plan. Recommend a
   persistent Markdown plan when its persistence triggers apply, create it only
-  when the user chooses it, and complete risk-appropriate author closure before
-  declaring success.
+  when the user chooses it, verify the result proportionally, and complete any selected
+  review or audit before declaring its dependent phase complete.
 - `codex-claude-loop`: Coordinator-only procedure for assigning a self-contained
   Claude CLI implementation in one checkout while preserving one implementation owner
   and reconciling prior processes, locks, scheduled actions, and partial effects.

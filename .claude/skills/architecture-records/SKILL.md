@@ -41,6 +41,8 @@ When this skill applies, do not mark a record implemented, approve the architect
 or hand off the documentation while any applicable gate is violated. Correct the
 artifact or move the misplaced information to its authoritative owner first. A
 repository convention may make these gates stricter; it may not weaken them.
+Plan, review, audit, model, and effort recommendations remain user choices under the global
+instructions. These artifact requirements do not make an unselected process mandatory.
 
 ## Workflow
 
@@ -245,8 +247,8 @@ the new record. Show that list in chat together with the form you chose, and ask
 writing when in doubt. Do not compare the list with a fixed count of rules. The
 criterion of section 7 still bounds the choice: create or supersede a record only when
 the design actually changes, and when much changes without changing the design, use
-blocks and ask first. The nature of the change sets author audit rigor and the plan
-recommendation, not the form of the text; `plan-implementation` treats an architecture
+blocks and ask first. The nature of the change sets recommended review depth and plan
+detail, not the form of the text; `plan-implementation` treats an architecture
 change as high risk. A selected plan reviewer may advise on the text before code.
 
 For example, a decision that removes one exception from one rule, leaving its owner and
@@ -262,8 +264,8 @@ and index entry may precede that review so it can examine the real wording. If t
 manual-table-of-contents removal, or other mandatory maintenance expands that edit, put the
 maintenance and amendment after the selected review; keep `registro pendente` for the record
 until then. With a selected pre-edit reviewer but no plan, have it inspect the current record and
-proposed diff before recording. Without a selected pre-edit reviewer, perform the full author
-record check and authorized maintenance before recording; the absence of a reviewer creates no
+proposed diff before recording. Without a selected pre-edit reviewer, inspect the record
+and perform authorized maintenance before recording; the absence of a reviewer creates no
 staging deadlock.
 Without a selected plan, no plan owner is invented. Section 8 synchronization waits for implemented
 behavior, so proposed behavior is not presented as current.
@@ -333,12 +335,16 @@ Update user documentation only when setup, operation, configuration, or user-vis
 behavior changes. Follow the repository's instruction-file language and synchronization
 rules; in this environment, write AI-facing instruction files in English.
 
-### 9. Perform the mandatory closure conformance audit
+### 9. Verify conformance and offer a full audit
 
-Before declaring implementation complete or moving a record to `Implemented`, reread
-the entire governing architecture record, every coupled current record, any selected
-implementation plan, and the coupled repository instructions. Then reconstruct the
-actual runtime flow from code, configuration, tests, and recorded artifacts rather
+Before declaring implementation complete or moving a record to `Implemented`, verify the record's
+claims against the actual implementation and validation evidence. Strongly recommend a full
+conformance audit and explain its scope through `plan-implementation`; perform it only if selected.
+Otherwise verify the affected claims proportionally and report limits, without a substitute audit.
+
+For a selected full audit, reread the entire governing architecture record, every coupled current
+record, any selected implementation plan, and the coupled repository instructions. Then reconstruct
+the actual runtime flow from code, configuration, tests, and recorded artifacts rather
 than from the intended plan or a prior summary.
 
 Account for every architectural invariant, affected consumer, failure path, and required
@@ -368,24 +374,21 @@ Check that:
 - incident-derived replays fail before the fix and protect the cross-component
   outcome after it.
 
-For a lifecycle transition to `Implemented`, and for a non-trivial correction governed
-by an implemented record, perform a second conformance reading after the implementer's
-pass. If the user selected a final reviewer, use a qualified agent with fresh task context
-and provide the records, any chosen plan, final diff, and validation artifacts without the
-intended conclusion. Otherwise perform a separate author reread and identify it as
-self-reviewed rather than independent. A pre-edit review alone does not add a final reviewer;
-an unselected final reviewer does not block closure.
+Recommend an independent second pass for a lifecycle transition or non-trivial correction; perform
+it only when selected. Give that reviewer fresh context, the records, any chosen plan, final diff,
+and validation artifacts without the intended conclusion. Do not substitute an author second
+reading for a declined review. A pre-edit review alone does not select a final review or full audit.
 
 Any change after the audit to an in-scope or coupled artifact—including code,
 configuration, tests, fixtures, implementation plans, architecture records, repository
-instructions, or user documentation—invalidates the closure verdict. Reopen the
-relevant implementation step, reread any selected complete final plan and governing records,
-recheck every trace row, rerun invalidated checks, and repeat the closure conformance
-audit. Never preserve an audit exception merely to keep a completion status.
+instructions, or user documentation—invalidates affected audit conclusions. Reopen the
+affected work and rerun invalidated checks. Recheck the review within the user's selected scope;
+ask before an additional full audit or second pass that the earlier choice did not cover.
 
-If any required trace or audit item is unresolved, keep the record proposed or in
-implementation using the repository's established lifecycle wording. Do not call the
-architecture implemented based only on code presence or passing unit tests.
+If the described behavior or required acceptance evidence is missing, keep the record proposed or
+in implementation. A selected audit holds its dependent phase until completed or withdrawn;
+declining an audit alone does not prevent the lifecycle transition. Do not call the architecture
+implemented based only on code presence or passing unit tests.
 
 ### 10. Keep records durable
 
@@ -403,25 +406,20 @@ behavior-oriented artifact identifiers required for traceability. Retain a speci
 incident in the record only when a concise statement of its cause is indispensable to
 the rationale; omit its chronological execution details and mutable metrics.
 
-Before marking a record implemented, perform an editorial closure pass. Remove future
+Before marking a record implemented, remove future
 delivery sequences, completed checklists, progress reports, repeated implementation
 summaries, and raw validation metrics. The resulting record must contain the
 decision, responsibilities, invariants, flow, failure semantics, risks, rejected
 alternatives, and a compact decision-to-code-to-test/replay trace.
 
-Apply the same pass when the implementation of an amendment recorded under section 7a
+Apply the same content cleanup when the implementation of an amendment recorded under section 7a
 closes, even though the amended record was already `Implemented`: rewrite the amended
 rule and remove the amendment block or the replacement notice.
-
-This closure pass is mandatory and blocking. If any diary residue remains, keep the
-record out of `Implemented`, do not hand it off as complete, and remove or relocate the
-residue before continuing. Never accept document growth or historical convenience as
-a reason to bypass this gate.
 
 ### 11. Validate the result
 
 Apply this list at two moments, because a record is handed over both before and after
-its implementation exists: at the closure of the implementation, apply every check; at
+its implementation exists: at closure, apply the artifact checks and any selected audit checks; at
 the implementation handoff, when the session that recorded a decision passes the record and
 any selected plan to an implementing session, apply every check except the ones that presuppose
 a finished implementation, which are runtime traceability with its executable
@@ -453,14 +451,10 @@ Before handoff:
   the execution evidence before handoff.
 - Confirm that an implemented record describes the approved resulting architecture,
   rather than reverse-engineering or legitimizing incidental current behavior.
-- If a formal plan was selected, confirm it was reread and its closure-audit matrix
-  contains no pending or unresolved applicable requirement. Otherwise confirm the same
-  author evidence accounting without a substitute plan artifact.
-- Confirm that every architecture invariant is represented in the forward trace and
-  every changed implementation artifact is represented in the reverse trace.
-- Confirm that the author's initial conformance audit and the second reading—independent when
-  selected, otherwise the author's—were completed, with findings corrected and revalidated
-  rather than waived.
+- If a full audit was selected, confirm its forward and reverse traces and any chosen matrix
+  support its verdict. Choosing a plan alone does not select this audit.
+- Confirm completion of selected reviews and second passes, or record their explicit withdrawal.
+  Do not require a substitute author audit or second reading when none was selected.
 - Verify relative links and moved-file paths.
 - Confirm that architecture records and their templates contain no manual table of
   contents. Keep the heading hierarchy clear and verify that the architecture index

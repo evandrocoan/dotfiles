@@ -83,8 +83,9 @@ implementation-plans/active/<task-slug>.md
 Use [`../assets/compact-implementation-plan-template.md`](../assets/compact-implementation-plan-template.md)
 for chosen persistent non-trivial local work, bounded additive external actions, and editorial
 corrections that independently warrant persistence.
-Use [`../assets/implementation-plan-template.md`](../assets/implementation-plan-template.md)
-for high-risk or architecture-governed work. Use a concise lowercase hyphenated task slug. Keep one
+Recommend [`../assets/implementation-plan-template.md`](../assets/implementation-plan-template.md)
+for high-risk or architecture-governed work; honor the user's choice of a shorter format. Use a
+concise lowercase hyphenated task slug. Keep one
 active file for one delivery objective; do not create a new file for every retry or replanning
 event.
 

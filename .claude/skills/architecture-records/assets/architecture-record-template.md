@@ -63,10 +63,10 @@ request artifact.
 | --- | --- | --- | --- | --- |
 | <invariant identifier> | <code or configuration owner> | <all consumers> | <focused protection> | <full, partial with boundary, unavailable, or not applicable> |
 
-Before changing this record to `Implemented`, use the chosen plan's completed closure audit or
-the direct author's closure evidence to verify the architecture-to-implementation and
-implementation-to-authority traces. A missing, pending, or unresolved applicable requirement
-blocks the lifecycle transition.
+Before changing this record to `Implemented`, verify its claims against implementation evidence
+and complete any selected review. A full conformance audit and its reverse trace run only when
+selected; choosing a plan does not select them. Missing implemented behavior or required acceptance
+evidence blocks the transition; a declined formal audit alone does not.
 
 ## Rejected alternatives
 

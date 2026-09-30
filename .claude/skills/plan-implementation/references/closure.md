@@ -1,10 +1,11 @@
 # Reviews and completion
 
-## Separate review when the user selects it
+## Review or formal audit when the user selects it
 
-Ask before invoking an advisor or independent or domain AI reviewer unless the user already
-selected that review for this scope. A choice may cover named pre-edit and final phases. Verify
-the reviewer's model and effort for its role under the global gate. Prefer a different capable
+Ask before invoking an advisor, independent or domain reviewer, or structured author audit unless
+the user already selected it for this scope. State the proposed depth, timing, model, and effort;
+the user may change or decline each recommendation. A choice may cover named pre-edit and final
+phases. Identify the reviewer's actual settings. Recommend a different capable
 model from the advisor, with fresh task context, the original user request and decisions,
 applicable instructions, governing records, current plan if chosen, final diff or proposed scope,
 and actual validation evidence. Withhold the intended verdict. Record applied and rejected
@@ -14,8 +15,8 @@ Use the selected timing:
 
 - Pre-edit review examines a proposed high-risk approach before affected implementation.
 - Pre-write review examines an external payload and its authority before the write.
-- Final review examines the completed result, consumers, checks, and scope. A material correction
-  after it requires another pass over the affected result.
+- Final review examines the completed result, consumers, checks, and scope. Recheck a material
+  correction within the selected scope; ask before an additional review outside that choice.
 
 If a selected reviewer is unavailable, hold only the phase that depends on it: affected
 implementation, external write, or completion. The user may explicitly withdraw the review for
@@ -25,7 +26,7 @@ read-only reviewer does not itself trigger a multiple-implementer plan recommend
 
 ## Checks shared by all routes
 
-Before completion, confirm that every newly created formal plan and separate review had an
+Before completion, confirm that every new formal plan, review, or structured author audit had an
 explicit advance choice, or that the user requested it directly. Preserve the true chronology of
 older actions; ask before any later uncovered action. A chosen plan must have been offered in
 chat as a link to its complete current version, followed by explicit user release before its
@@ -41,8 +42,9 @@ quarantined tests provide no passing evidence. Do not claim full validation from
 
 Check the requested outcome, affected consumers, governing instructions, actual validation,
 final diff, repository status when applicable, and limitations. Missing required evidence,
-authorization, model adequacy, or external approval remains a blocker independent of the user's
-plan/review choices. Do not create a substitute plan or closure-matrix artifact on a direct route.
+authorization or external approval remains unresolved; a preferred model or an unselected audit
+is not such a prerequisite. Do not create a substitute plan or closure-matrix artifact to bypass
+the user's choice. Report unverified results as unverified.
 
 Before closing either a formal-plan or direct route, inspect a same-subject brief under `briefs/`
 when one exists. A decided item still marked `registro pendente` holds affected closure while an
@@ -68,8 +70,12 @@ Selected pre-write reviews finish before writing. With a chosen compact plan, re
 verdict and delivery evidence there. Without one, report the same evidence directly. Neither
 route requires a second independent closure pass solely because the action is external.
 
-For high-risk or architecture-governed work, perform a full blocking **author** conformance audit
-whether or not the user chose a plan. After candidate implementation and required validation:
+## Selected full conformance audit
+
+Strongly recommend this audit for high-risk or architecture-governed work. Perform it only when
+the user selects it, with the selected auditor; an independent audit does not also require a full
+author audit. Without this choice, use proportional result verification above, with no mandatory
+matrix, systematic reread, or second pass. After candidate implementation and applicable validation:
 
 1. Reread the original request and later explicit decisions, governing architecture records,
    coupled global and repository instructions, and applicable skills. If a plan was chosen,
@@ -81,7 +87,7 @@ whether or not the user chose a plan. After candidate implementation and require
    path, replan condition, and required validation obligation. With a full formal plan, put
    concise evidence pointers and `verified`, `not applicable: <reason>`, or
    `unresolved: <reason>` in its closure matrix. Without a plan, perform the same evidence
-   accounting in the author audit and report the verdict; do not create a hidden plan or matrix.
+   accounting in the selected audit and report the verdict; do not create a hidden plan or matrix.
 4. Trace both directions, with the plan step included only if one exists:
 
    ```text
@@ -92,27 +98,27 @@ whether or not the user chose a plan. After candidate implementation and require
 
 5. Resolve every unsupported, skipped, or unavailable required check as `unresolved`, not as
    satisfied by another passing row. Correct mismatches at the lowest incorrect authority,
-   rerun invalidated validation, and repeat the complete closure audit.
-6. Obtain a selected final independent conformance pass with fresh context. If none was chosen,
-   complete the author's own second conformance reading and label it self-reviewed. A selected
-   unavailable final reviewer holds completion until it runs or the user withdraws it.
+   rerun invalidated validation, and recheck conclusions affected by the correction within the
+   selected audit scope. Ask before an additional audit not covered by that choice.
+6. Perform a second conformance pass only if selected. Use fresh context for an independent pass;
+   do not add an author second reading when no second pass was chosen. An unavailable selected
+   reviewer holds only its dependent phase until it runs or the user withdraws it.
 
-A chosen full plan stores its matrix and final verdict in that plan. A direct high-risk route
-still needs complete author evidence and bidirectional traces, but no new artifact. Keep raw
-logs, costs, and replay events in their operational owners. A material change after the verdict
-to an in-scope or coupled artifact invalidates the verdict: repeat the complete closure audit,
-rerun checks invalidated by the change, and repeat any still-selected review. A formatting-only
-or evidence-wording fix needs only the affected evidence and diff rechecked.
+When both are chosen, store the audit's matrix and verdict in the plan. Choosing a full plan alone
+does not choose this audit. Keep raw logs, costs, and replay events in their operational owners.
+A material change to an in-scope or coupled artifact invalidates the affected conclusions. Rerun
+invalidated result checks and recommend the needed review scope; repeat a review or full audit
+only within the user's selected scope or after a new choice. A formatting-only or evidence-wording
+fix needs only the affected evidence and diff rechecked.
 
 ## Completion gates
 
 Complete only when the requested outcome and consumers are verified, required validation and
 author checks have passed, the final diff is scoped, and limitations are accurately reported.
-For high-risk or architecture-governed work, both trace directions and the full author audit
-must be complete with no unresolved applicable requirement. The same-subject brief check applies
-to direct work too. For a chosen plan, its linked user review, lifecycle status, and task-plan
-projection must agree. For a selected separate review, its applicable phase must have a passing
-verdict or an explicit user withdrawal for remaining work. For executable high-risk changes that
+The same-subject brief check applies to direct work too. For a chosen plan, its linked user review,
+lifecycle status, and task-plan projection must agree. A selected review or audit holds its
+dependent phase until completed or explicitly withdrawn. A declined audit, matrix, or second pass
+does not block completion; do not claim it occurred. For executable high-risk changes that
 require focused regression protection, demonstrate that the protection fails for the intended
 reason without the fix and passes with it. If the negative control cannot safely or practically
 run, report that limit and leave the high-risk gate unresolved unless governing authority

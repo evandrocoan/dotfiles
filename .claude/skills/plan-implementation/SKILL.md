@@ -24,14 +24,14 @@ execution state in Markdown and project its current steps into the task plan.
 
 ## Determine the planning mode
 
-Classify the request before editing. The global model and reasoning-effort gate must identify the
-acting agent's effective settings and satisfy any required role before task work begins; an unknown
-setting cannot be replaced with a conservative plan. Read
+Classify the request before editing. Identify the acting agent's effective settings under the
+global instructions and recommend settings for its role without overriding the user's choice.
+An unknown setting cannot be replaced with a conservative plan. Read
 [model-aware routing](references/model-routing.md) for every implementation edit to apply the
 acting group's plan and review thresholds, and when recommending a model, reasoning effort, or
 reviewer. The applicable user's explicit request and higher-priority question-only or read-only
-rules come first. A model never waives safety or authorization gates; risk and persistence shape
-the recommendation and author closure, not whether the user may decline a formal plan or review.
+rules come first. Risk and persistence shape validation and process recommendations; the user
+decides whether to have a formal plan, review, or audit and which model and effort to use.
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
   says not to implement, inspect enough authoritative evidence to make the plan credible, offer its
@@ -50,8 +50,8 @@ explicit user preference. Touching several files or performing several obvious e
 owner does not by itself make otherwise
 routine work non-trivial.
 
-Before drafting or creating a formal plan or invoking a separate advisor, independent reviewer,
-or domain reviewer, obtain the user's choice for each action. An explicit request for a plan or
+Before drafting a formal plan or starting an advisor, independent review, domain review, or
+structured author audit, obtain the user's choice. An explicit request for a plan or
 review already answers that dimension for the current scope. Otherwise use minimal read-only
 triage to state the recommendation and concrete reason; both choices are optional. Ask at the
 relevant implementation task boundary when foreseeable, before substantial dependent work or
@@ -120,9 +120,9 @@ Persistence and risk are independent. When a plan is chosen, persistence determi
 execution contract survives; it does not promote non-trivial local work or an additive action to
 high risk. A chosen persistent non-trivial local plan, a bounded additive external action, and a
 routine external editorial correction with another persistence trigger use the compact template
-and their proportional [closure](references/closure.md). A high-risk or architecture-governed plan uses the
-full template, closure matrix, bidirectional traces, and full author reread. A separately selected
-reviewer performs the independent second pass.
+and their proportional [closure](references/closure.md). For high-risk or architecture-governed
+work, recommend the full template and a full conformance audit. Use the plan detail the user
+chooses; choosing a short plan does not choose an audit, closure matrix, or second pass.
 
 If otherwise routine work later meets a persistence trigger because of handoff, interruption,
 multiple actors, or another listed condition, recommend the compact persistent path. That
@@ -231,8 +231,8 @@ simplicity. Then distinguish the remaining levels:
   safety safeguards, risk classification, or mandatory review and closure gates; ordinary wording
   and narrowly scoped skill edits do not become high risk solely because of their location.
 - **Non-trivial local and reversible:** Follow the model route to recommend a compact plan or direct
-  execution. For a compact plan, recommend an advisor when useful; always perform a focused
-  author reread. Recommend an independent result review, especially for the supervised group.
+  execution. Recommend an advisor when useful and an independent result review, especially for
+  the supervised group. Verify the edited result proportionally on either route.
   Cross-file or cross-component scope belongs here when no high-risk trigger applies.
 - **Routine, local, and reversible:** Follow the model route. Recommend a reviewer for the
   supervised group, even when execution is direct; ordinarily recommend none for the autonomous
@@ -248,10 +248,10 @@ no credible data-loss or recovery hazard.
 
 Before a selected high-risk plan review, read the reviewer selection and pre-edit rules in
 [reviews and completion](references/closure.md). Use that reference for every user-selected
-independent review, including direct work without a plan. Domain review suggestions remain
-optional separate AI reviews; other substantive validation and approval gates remain. A formal
-plan already in progress retains its highest risk classification and author closure rigor for
-material continuations, while the user's review choice remains separately revocable.
+independent review, including direct work without a plan. Domain reviews and formal author audits
+remain user choices; substantive validation and authorization still apply. An existing plan retains
+its highest risk classification for recommendations on material continuations; that classification
+does not impose an audit or override the user's revocable review choice.
 
 ## Build an executable sequence
 
@@ -268,8 +268,8 @@ Order work by dependency and feedback speed:
 8. Run broader integration, replay, and suite-level checks after the flow is connected.
 9. Perform operational or paid live validation only when it is useful and authorized under the
    applicable rules.
-10. Close routine work with direct outcome, validation, diff, and status checks; close formal plans
-    with the risk-appropriate [audit](references/closure.md).
+10. Close work with outcome, validation, diff, and status checks and any selected
+    [review or audit](references/closure.md).
 
 For a formal plan, complete its linked user-review gate after any selected pre-edit plan review and
 before the first implementation step. Do not treat the planned sequence or initial request as
@@ -282,8 +282,9 @@ For a deliberate architecture decision with a selected pre-edit plan review, use
 recording order in `architecture-records` section 7a: its limited amendment may precede that
 review so the reviewer sees the actual wording. When required maintenance exceeds that boundary,
 put maintenance and amendment after the selected review. With no selected pre-edit review, the
-author checks the full record and maintenance before recording; no review-only staging exception
-is needed. A selected formal plan still needs its linked user go-ahead before implementation.
+author inspects the affected record and maintenance before recording; no review-only staging
+exception is needed. A selected formal plan still needs its linked user go-ahead before
+implementation.
 
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
@@ -432,9 +433,9 @@ Keep paid or externally mutating scenarios sequential unless the applicable poli
 requires otherwise. Measure the complete scenario rather than hiding retries or nested commands.
 
 Before claiming completion, read [reviews and completion](references/closure.md). Its test-evidence
-and user-selected review checks apply even when there is no formal plan. High-risk work requires
-the full author conformance audit with both trace directions, even on a direct route. A selected
-fresh independent second pass is additional. Compact and routine work use proportional checks.
+and user-selected review checks apply even when there is no formal plan. For high-risk work,
+strongly recommend a full conformance audit with both trace directions; run it only if selected.
+Do not replace a declined review with a mandatory author audit or second reread.
 Do not mark a selected plan complete while its linked user review, a required check, authorization,
 or a selected review is unresolved.
 
@@ -446,8 +447,8 @@ an independent persistence trigger. Its conditional external-action section reco
 authorization binding, items, governing-review status, read-back authority,
 reconciliation state, and delivery evidence; omit that section for local work. Use the following
 concise form for a task-plan projection or a linked non-trivial local and reversible formal plan
-that has no persistence trigger. A chosen high-risk plan uses the full persistent template. A
-routine edit that receives a formal plan because of the user's preference needs just a linked
+that has no persistence trigger. Recommend the full template for high-risk work, while honoring
+the user's choice of a shorter plan. A routine edit that receives a formal plan needs just a linked
 outcome, step, and check, not this six-step form.
 
 ```text
@@ -461,7 +462,8 @@ Evidence: <verified current behavior and open assumptions>
 3. <change authoritative owner> — premise: <what must already be true, and its proof> — validation: <specific check>
 4. <update affected consumers> — premise: <what must already be true, and its proof> — validation: <specific check>
 5. <integrate and replay> — premise: <what must already be true, and its proof> — validation: <specific check>
-6. <audit and deliver> — premise: <what must already be true, and its proof> — validation: <specific check>
+6. <verify result, finish any selected review or audit, and deliver>
+   — premise: <what must already be true, and its proof> — validation: <specific check>
 
 Replan if: <material invalidating conditions>
 ```

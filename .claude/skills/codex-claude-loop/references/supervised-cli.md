@@ -252,9 +252,10 @@ task answer grants a denied tool, expands the scope, or overrides a safety-class
 
 ## Review and continue
 
-If high-risk work is discovered mid-task, pause to reassess role fit, authorization, plan and
-review recommendations, and author audit rigor. Hold affected work for a newly selected pre-edit
-review until completion or withdrawal, not merely because risk increased. The Codex coordinator
+If high-risk work is discovered mid-task, reassess authorization and recommend suitable settings,
+plan detail, and review scope. Honor the user's process, model, and effort choices. Hold affected
+work for a newly selected pre-edit review until completion or withdrawal, not merely because risk
+increased. The Codex coordinator
 inspects changed files, index, diffs, status, and verification evidence against the user request,
 applicable instructions, any selected plan, and acceptance
 criteria. Confirm that Claude ran the applicable baseline and post-change tests through the
@@ -264,7 +265,7 @@ assigned test execution. Inspect the outcome of any selected Claude-side review;
 replace a separately selected Codex-side review or the coordinator's author checks.
 Give Claude only concrete task findings that still require implementation, without identifying a
 later reviewer or promising another review. When findings expose a recurring defect class, assign
-the relevant invariant and adjacent cases for Claude to audit and correct under its own skills,
+the relevant invariant and adjacent cases for Claude to inspect and correct under its own skills,
 rather than passing one variant at a time without context.
 
 Resume the exact recorded session with `--resume <session-id>` only after confirming the prior
@@ -277,8 +278,9 @@ the user explicitly changes a choice; record that decision before resuming. A re
 failure alone does not justify a new session. Prior exposure of task-specific coordination does:
 reconcile the old session and effects under **Isolate Claude's task context** before a clean launch.
 
-After the coordinator's author review, obtain a separately selected independent closure review
-before declaring completion. Without one, complete the required author conformance reading.
+After the coordinator verifies the result, obtain any selected independent closure review
+before declaring its dependent phase complete. Do not add a substitute author audit or second
+reading when no review was selected.
 Send actionable findings to the same Claude session, then repeat invalidated checks and any
 selected closure review after material corrections. Continue supervising until Codex verifies
 completion or a concrete blocker appears: a missing user decision or prerequisite, denied
