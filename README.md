@@ -29,6 +29,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Investigate a slow period](#investigate-a-slow-period)
       - [Automatic incident capture](#automatic-incident-capture)
       - [Check health, storage and recovery](#check-health-storage-and-recovery)
+      - [Check the NVMe SSD health](#check-the-nvme-ssd-health)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
       - [Manual XFCE recovery](#manual-xfce-recovery)
@@ -1148,6 +1149,43 @@ After changing the BPF binary, restart `netatop-bpf` followed by `atop`. Restart
 a boundary in the history; its first sample can contain totals since boot, so exclude it when
 estimating an interval's consumption. Netdata's cloud state can be checked with
 `sudo netdatacli aclk-state`; this local setup should report `Claimed: No` and `Online: No`.
+
+#### Check the NVMe SSD health
+
+This host's system disk is a DRAM-less NVMe SSD: it keeps its flash mapping table in a small host
+memory buffer, so sustained random 4 KiB writes, such as heavy swap traffic, are its weakest
+workload and can raise device latency by orders of magnitude while the kernel reports no error.
+`nvme-cli` and `smartmontools` give the health, error-log and firmware views:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo apt-get install --no-install-recommends nvme-cli smartmontools
+```
+
+Installing `smartmontools` enables `smartmontools.service` (alias `smartd.service`), which polls
+SMART periodically and logs to the journal under the `smartmontools` unit name. Inspect the device
+with:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo nvme smart-log /dev/nvme0
+sudo nvme error-log /dev/nvme0 -e 8
+sudo nvme fw-log /dev/nvme0
+sudo smartctl -x /dev/nvme0
+sudo journalctl -u smartmontools --since today --no-pager
+```
+
+A healthy device shows `critical_warning` 0, `media_errors` 0, no error-log entries and zero
+thermal transitions. When a slowdown coincides with high `await` and a full queue on `nvme0n1` in
+`sar -d -p` while those counters stay clean, suspect the write workload rather than the device:
+compare the `cryptdata` and `vgmint-swap` rows above it, which add only the encryption cost, and
+the swap-out rate from `sar -W`. Kernel-side faults, if any, appear in
+`sudo journalctl -k | grep -i nvme`. The current firmware is shown by
+`nvme id-ctrl /dev/nvme0 | grep '^fr '`; the vendor publishes updates only through its Windows
+tool. To remove the tools, run `sudo systemctl disable --now smartmontools` followed by
+`sudo apt-get remove nvme-cli smartmontools`.
 
 #### Remove the monitoring setup
 
