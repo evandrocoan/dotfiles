@@ -11,6 +11,9 @@ Documento de trabalho: explica os pontos em aberto e resume o que já foi decidi
 plano de implementação nem o registro de arquitetura, e nada escrito aqui autoriza trabalho; cada
 decisão vale onde foi registrada.
 
+Responda com o identificador do item e o número da opção, como `D1: 2` ou `T1: 1`, ou descreva
+sua escolha em texto livre.
+
 ## Resumo
 
 <Em poucas linhas: qual é o assunto, em que pé está, quais itens ainda estão abertos e qual decisão
@@ -62,9 +65,9 @@ exemplo concreto para quem não acompanhou o trabalho>
 
 **O que acontece em cada resposta:**
 
-- Fazer: <o que eu faço e o que muda>
-- Não fazer: <o que fica como está e a consequência>
-- Adiar: <o que fica esperando e até quando>
+1. Fazer: <o que eu faço e o que muda>
+2. Não fazer: <o que fica como está e a consequência>
+3. Adiar: <o que fica esperando e até quando>
 
 **Custo e risco:** <esforço, efeitos externos e o que pode dar errado>
 

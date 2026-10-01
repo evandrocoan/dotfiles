@@ -86,10 +86,10 @@ response. Explain the problem or objective, what will change, how those changes 
 expected result, and how it will be checked. A list of files or steps alone does not explain the
 solution. Keep the summary proportional to the task and understandable without opening an artifact.
 
-With a formal plan, accompany the summary with the complete current plan's link and measured size
-as specified below. Without a formal plan, present only the summary in chat; do not create a plan
-artifact to satisfy this requirement. End the turn and wait for explicit user approval before the
-first implementation step. The initial task request, declining a formal plan, silence, and an
+With a formal plan, accompany the summary with the complete current plan's link. Without a formal
+plan, present only the summary in chat; do not create a plan artifact to satisfy this requirement.
+End the turn and wait for explicit user approval before the first implementation step. The initial
+task request, declining a formal plan, silence, and an
 advisor or reviewer verdict do not substitute for approval of the presented proposal. Read-only
 scoping and separately selected reviews may make the proposal concrete before this gate.
 
@@ -106,10 +106,9 @@ Never keep a formal plan only in hidden reasoning or conversation memory. Give e
 complete current artifact with a clickable link. Use a Markdown file under the task's plan
 lifecycle by default; a task-plan mechanism may substitute only when its link opens the complete
 current plan for the user. Chat prose alone does not supply the artifact. When first presenting a
-formal plan or offering a materially revised version for user review, provide its link, a concise
-explanatory summary under **Present the proposal and wait for approval**, and its measured size as
-the line and word counts of the complete linked version. Keep ordinary progress updates concise
-without repeating this presentation. Apply that approval gate before implementation and after a
+formal plan or offering a materially revised version for user review, provide its link and a concise
+explanatory summary under **Present the proposal and wait for approval**. Keep progress updates
+concise without repeating this presentation. Apply that approval gate before implementation and after a
 material revision; the link alone does not satisfy the presentation requirement.
 
 Use these two layers when the user chooses a plan and a persistence trigger applies:

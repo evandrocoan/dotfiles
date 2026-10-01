@@ -82,7 +82,7 @@ selects a new review after a material replan.
   before each invocation, or `None selected`>. One answer may cover named phases;
   consent alone does not establish the active reviewer setting or a passing verdict.
 - **Plan and summary offered in chat:** Pending | <current plan link, summary explaining the problem,
-  intended changes, how they solve it, expected result and checks, plus plan line and word counts>.
+  intended changes, how they solve it, expected result and checks>.
 - **User response:** Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
 - **Material revision:** None | <updated link and summary, and renewed approval before affected steps>.
