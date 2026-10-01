@@ -309,7 +309,7 @@ static int __trace_req_done(struct start_key key)
             # A killed grandchild may still be a zombie until its new parent reaps it.
             try:
                 state = recorder.parse_stat(Path(f"/proc/{descendant_pid}/stat").read_text())["state"]
-            except FileNotFoundError:
+            except (FileNotFoundError, ProcessLookupError):
                 state = "Z"
             self.assertEqual(state, "Z")
         finally:
@@ -368,7 +368,7 @@ static int __trace_req_done(struct start_key key)
                     while True:
                         try:
                             state = recorder.parse_stat(Path(f"/proc/{descendant_pid}/stat").read_text())["state"]
-                        except FileNotFoundError:
+                        except (FileNotFoundError, ProcessLookupError):
                             state = "Z"
                         if state == "Z" or time.monotonic() >= deadline:
                             break
