@@ -30,10 +30,12 @@ Before completion, confirm that every new formal plan, review, or structured aut
 explicit advance choice, or that the user requested it directly. Preserve the true chronology of
 older actions; ask before any later uncovered action. An unanswered process choice remains pending;
 do not close the task by treating silence as a refusal. A chosen plan must have been offered in
-chat with a link to its complete current version, a concise summary, and its line and word counts,
-followed by explicit user release before its first implementation step. A material contract
-revision needs a new presentation and release before its affected steps. A direct route has no
-linked-plan gate. A plan-only request never authorizes execution.
+chat with a link to its complete current version, the explanatory summary required by
+[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval), and its line and word
+counts, followed by explicit user release before its first implementation step. A direct route
+requires the same summary and explicit approval in chat, without a plan artifact. A material
+proposal revision on either route needs a new presentation and release before its affected steps.
+A plan-only request never authorizes execution.
 
 Apply `test-quality`'s **Review test evidence before closure** to added or materially changed
 tests and existing tests cited as decisive evidence. Check what the production boundary actually
@@ -115,7 +117,8 @@ fix needs only the affected evidence and diff rechecked.
 ## Completion gates
 
 Complete only when the requested outcome and consumers are verified, required validation and
-author checks have passed, the final diff is scoped, and limitations are accurately reported.
+author checks have passed, proposal approval is established, the final diff is scoped, and
+limitations are accurately reported.
 The same-subject brief check applies to direct work too. For a chosen plan, its linked user review,
 lifecycle status, and task-plan projection must agree. A selected review or audit holds its
 dependent phase until completed or explicitly withdrawn. A declined audit, matrix, or second pass

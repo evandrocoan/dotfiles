@@ -25,6 +25,11 @@ user decides independently whether to have a formal plan and a review, including
 | Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and ask separately. |
 | Identity or effort unknown | Obtain the effective setting before task work. | Obtain the effective setting before task work. |
 
+Direct work means implementation without a formal plan artifact, after the chat summary has been
+presented and explicitly approved under
+[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval). Neither this table nor
+a decision to dispense with the plan waives that gate.
+
 For high-risk architecture, protocol, security, authorization, migration, or costly validation,
 strongly recommend a full persistent plan and qualified pre-edit and final independent reviews.
 For lower-risk work likely to cross phases or sessions, recommend a compact persistent plan;
@@ -45,17 +50,19 @@ the situations in the table and the high-risk and persistence routes above even 
 direct work or no review. Specify review depth and timing and recommend the model and effort;
 accept another user choice.
 
-If the user declines either action, continue otherwise authorized work with the chosen route.
+If the user declines either action, use the chosen route after proposal approval and all other
+applicable gates are satisfied.
 If a choice is unanswered, follow the global visible-question rule: present it in the final
 response and end the turn awaiting the reply. Do not create a plan, invoke a separate advisor or
 reviewer, or choose direct execution by timeout.
-Silence never supplies missing model/effort information, authorization, or approval of a linked
-plan. A selected pre-edit, pre-write, or final review holds only its dependent phase until it
+Silence never supplies missing model/effort information, authorization, or proposal approval on
+either route. A selected pre-edit, pre-write, or final review holds only its dependent phase until it
 completes or the user explicitly withdraws it. A declined or unselected review never blocks.
 
-If the user chooses a formal plan, create its linkable artifact, offer the current plan in chat,
-and wait for the user's explicit go-ahead before implementation. A plan-only request stops after
-the link. Ask again about a new plan or review action after a material change in scope,
+If the user chooses a formal plan, create its linkable artifact and present its link with the
+explanatory summary. Otherwise present only the summary in chat. Wait for the user's explicit
+go-ahead before implementation on either route. A plan-only request stops after that presentation.
+Ask again about a new plan or review action after a material change in scope,
 uncertainty, handoff, or stakes only when the earlier choice did not cover it. Do not revive a
 declined choice automatically during replanning. The user may withdraw a choice for remaining
 work; preserve the chronology of actions already completed.

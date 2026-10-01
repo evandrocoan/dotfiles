@@ -43,7 +43,7 @@ State the observable result and terminal condition.
 | Status | Step and owners | Material premise | Validation or result |
 | --- | --- | --- | --- |
 | pending | Obtain any selected pre-edit review. <review owner> | <user choice and review purpose> | <concise findings, or `Not selected`> |
-| pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. <owner> | <complete current plan is accessible through the link> | <link and user response, or `Pending`> |
+| pending | Present the current plan link and explanatory summary in chat; in plan-and-execute mode, wait for an explicit go-ahead before implementation. <owner> | <complete current plan is accessible through the link> | <presentation and user response, or `Pending`> |
 | pending | Reproduce or authenticate. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Change the authoritative owner and affected consumers. | <non-obvious premise and proof, or `None`> | <specific check> |
 | pending | Integrate and remove competing behavior. <boundary> | <non-obvious premise and proof, or `None`> | <specific check> |
@@ -76,14 +76,16 @@ selects a new review after a material replan.
 ## User review before implementation
 
 - **Advance choice to create the plan:** <explicit user request or affirmative response before
-  creation>. A declined plan leads to the direct route with the same independent safeguards.
+  creation>. A declined plan leads to the direct route after approval of the chat summary, with the
+  same independent safeguards.
 - **Advance choice for separate reviews:** <named advisor and reviewers, scope, and user response
   before each invocation, or `None selected`>. One answer may cover named phases;
   consent alone does not establish the active reviewer setting or a passing verdict.
-- **Linked plan offered in chat:** Pending | <link and the current execution contract>.
+- **Plan and summary offered in chat:** Pending | <current plan link, summary explaining the problem,
+  intended changes, how they solve it, expected result and checks, plus plan line and word counts>.
 - **User response:** Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
-- **Material revision:** None | <updated link and renewed user response before affected steps>.
+- **Material revision:** None | <updated link and summary, and renewed approval before affected steps>.
 
 ## Replan conditions
 
@@ -104,7 +106,7 @@ validation obligation is accounted for. A passing test supports only what it act
 | Status | Requirement | Owner and consumers | Evidence |
 | --- | --- | --- | --- |
 | pending | Advance user choices preceded new plan creation and separate review invocations; legacy actions retain their true chronology. | Plan and review steps | <request or response, timing, and any later uncovered action> |
-| pending | The current plan was linked in chat and the user explicitly released implementation. | User review and execution steps | <link, response, and material-revision check> |
+| pending | The current plan and explanatory summary were presented in chat and the user explicitly released implementation. | User review and execution steps | <presentation, response, and material-revision check> |
 | pending | <one requirement or safely grouped family> | <implementation owner and consumers> | <concise implementation plus validation evidence> |
 
 Use only `verified`, `not applicable: <reason>`, and `unresolved: <reason>` for final row statuses.
