@@ -64,9 +64,10 @@ check, an incomplete check, and a skipped check.
 
 - GitLab CI owns pipeline admission, job scheduling, dependencies, data transfer, credentials,
   environments, and remote pipeline state.
-- Load the `docker` skill for Dockerfiles, image construction, BuildKit, Docker Compose, container
-  runtime behavior, Docker socket access, or privileged containers. GitLab CI decides when and
-  where the job runs; Docker decides how the containerized workload is built and executed.
+- Load the `docker` skill for image selection and pinning, Dockerfiles, image construction,
+  BuildKit, Docker Compose, container runtime behavior, Docker socket access, or privileged
+  containers. GitLab CI decides when and where the job runs; Docker decides how the containerized
+  workload is built and executed.
 - Load the `bash-scripts` skill before creating, editing, reviewing, or debugging shell scripts or
   non-trivial shell blocks embedded in CI YAML.
 - Load the repository's dependency-decision workflow before adding an image, package, analyzer,
@@ -97,11 +98,11 @@ check, an incomplete check, and a skipped check.
 - Prefer narrowly scoped, short-lived job tokens where the required endpoint supports them.
   Constrain cross-project access with an explicit allowlist. Use a project or service token only
   when its additional permissions are required.
-- Pin reusable templates, components, job images, and service images with the
-  immutable mechanism required by the repository: a protected non-overwritable
-  release tag, a digest, or a tag plus digest. Reject moving branches, `latest`,
-  and floating version ranges. Do not reject or replace a digest-only reference
-  unless an explicit repository policy requires tag-based traceability.
+- Version reusable templates and components under
+  [templates-and-data.md](references/templates-and-data.md#treat-shared-configuration-as-versioned-executable-code).
+  For all image references, load and apply `docker`'s **Pin image identities** policy.
+  CI inputs require immutable identity even for disposable jobs; Docker's disposable-environment
+  exception does not relax this pipeline requirement.
 - Never interpret a missing, malformed, expired, or inaccessible security report as an empty
   report. Fail or expose an incomplete result according to the project's explicit policy.
 - Bind cross-job and cross-project results to the intended pipeline, commit, and merge request

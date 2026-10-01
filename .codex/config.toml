@@ -140,3 +140,8 @@ DISABLE_AUTOUPDATER = "1"
 [projects."/home/someuser"]
 trust_level = "trusted"
 
+
+# Use the locally maintained shared creator; retain the system copy as its update source.
+[[skills.config]]
+path = "skills/.system/skill-creator/SKILL.md"
+enabled = false

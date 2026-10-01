@@ -82,15 +82,10 @@ snapshot identity, lifecycle completeness, and artifact availability, then
 install recorded adapters only at mutable external boundaries. Invoke the same
 public dispatcher, command handler, or service endpoint used in production.
 
-Block live network, provider, repository, model, browser, clock, and publication
-fallbacks unless the replay explicitly supplies a controlled fake for that
-boundary. Match every request structurally. Preserve strict ordering for causal
-dependencies and sequences whose order is part of the contract. Match causally
-independent concurrent interactions by authenticated identity and multiplicity,
-regardless of completion order. Fail on every unexpected, duplicated, or
-unconsumed interaction, and return each recorded result exactly once. Compare
-terminal output, canonical state, durable effects, usage, and failure
-classification with explicit expectations.
+Apply [Replay recorded failures when possible](../SKILL.md#replay-recorded-failures-when-possible)
+for interaction consumption, causal ordering, concurrent identity matching, and blocked
+live fallbacks. Match every request structurally. Compare terminal output, canonical
+state, durable effects, usage, and failure classification with explicit expectations.
 
 For an external browser or research sidecar, record both its API transcript and
 the provider/browser boundaries it consumed. During replay, run the real sidecar

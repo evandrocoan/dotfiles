@@ -25,7 +25,8 @@ validate the exact global contract.
 The producer should create one immutable package or image candidate. Its consumers should test that exact output, and
 the release job should promote it without rebuilding.
 
-- Emit a small manifest containing the exact artifact filename, image tag, platform, and producer identity.
+- Emit a small manifest containing the exact artifact filename or immutable image reference,
+  platform, and producer identity.
 - Transfer artifacts through an explicit `needs` edge with artifact download enabled.
 - Do not combine `needs` and `dependencies` in one job.
 - Do not select a candidate with `latest`, a branch-only lookup, an unconstrained glob, or stale runner contents.

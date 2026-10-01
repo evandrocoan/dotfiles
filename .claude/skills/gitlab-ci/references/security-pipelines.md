@@ -39,7 +39,8 @@ privileged deputy. Require all of the following:
 - Separate fast merge request checks from scheduled full or deep scans. A schedule complements, but does not replace,
   a required change gate.
 - Preserve the scanner's exit status and machine-readable report; do not reconstruct verdicts from human-readable text.
-- Pin scanner images and central templates to protected release tags under the project's tag-based policy.
+- Check scanner images against `docker`'s **Pin image identities** policy and central templates
+  against [template versioning](templates-and-data.md#treat-shared-configuration-as-versioned-executable-code).
 
 Authoritative references: [GitLab SAST](https://docs.gitlab.com/user/application_security/sast/) and [security configuration](https://docs.gitlab.com/user/application_security/detect/security_configuration/).
 

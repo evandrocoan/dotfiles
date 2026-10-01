@@ -222,9 +222,24 @@ rules of shared agent skills, which keep their reasons in the skill itself.
 ## Validate coupled documentation
 
 Search for duplicate or contradictory descriptions in affected documentation,
-agent instructions, architecture records, and configuration examples. Update or
-replace stale copies with authoritative pointers rather than synchronizing prose
-manually.
+agent instructions, skills and their references, architecture records, and
+configuration examples. For each changed rule, identify its authoritative owner
+and compare the coupled descriptions' audience, scope, triggering conditions,
+exceptions, and normative force. Similar wording can describe distinct workflows;
+different wording can impose conflicting requirements on the same one.
+
+Keep the normative rule in its owner. Remove redundant copies only after verifying
+that each affected consumer loads that owner when the rule applies; otherwise use
+a supported reference or import before removing the copy. Update stale examples
+and retain distinct enforcement checks and operational recipes. Follow **Keep
+content durable** for owners already guaranteed to be in context. If two owners
+still prescribe incompatible behavior, resolve the policy choice before editing
+instead of choosing precedence silently.
+
+This is the consistency check for the affected text during ordinary authoring and
+review, not an additional full audit or independent-review requirement. Architecture
+reviews apply it to coupled records, instructions, and implementation descriptions;
+their runtime conformance checks remain in `architecture-records`.
 
 Before handoff, validate affected links, anchors, paths, and symlinks. Exercise
 changed commands or executable examples in the repository-approved environment

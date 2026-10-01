@@ -439,10 +439,9 @@ of choosing one silently.
 - `codex-claude-loop`: Coordinator-only procedure for assigning a self-contained
   Claude CLI implementation in one checkout while preserving one implementation owner
   and reconciling prior processes, locks, scheduled actions, and partial effects.
-- `skill-creator`: Create or update a skill package with appropriately scoped
-  instructions and supporting resources. Written for Codex skills: ignore its
-  `openai.yaml` artifacts and `$CODEX_HOME` scaffolding when the target package lives
-  in `~/.claude/skills/`.
+- `skill-creator`: Create or update a shared skill package with appropriately scoped
+  instructions and supporting resources. Its local entrypoint owns the shared-client
+  adaptations to the imported Codex authoring guide.
 - `test-quality`: Create, modify, review, debug, or run automated tests, including
   unit, integration, end-to-end, regression, smoke, property, concurrency, and
   recorded-replay tests and their recording lifecycle.
@@ -451,14 +450,6 @@ Runtime-owned Codex system skills and plugin-provided skills are discovered thro
 their runtime catalogs and may not be available to every AI client. Do not add them
 to this shared registry unless they are deliberately exposed under
 `~/.agents/skills/`.
-
-`skill-creator` above is the one Codex system skill exposed this way. It is a
-copy in `~/.claude/skills/`, not a symbolic link into
-`~/.codex/skills/.system`, because that directory is runtime-owned and follows
-Codex updates; the copy is locally maintained and the original stays untouched.
-Refresh it by copying it again from that directory. The other Codex system
-skills there were evaluated and deliberately left unexposed, because they
-depend on Codex-only tools, paths, or self-knowledge.
 
 ## Machine constraints and interactive commands
 

@@ -95,6 +95,21 @@ Resolve these questions from repository evidence before implementation:
   dropped capabilities, and graceful shutdown? Verify compatibility instead of
   silently weakening the controls.
 
+## Pin image identities
+
+Apply the explicit repository policy to base, service, job, scanner, and external
+`COPY --from` images. Accept a digest, a released version tag whose publisher or
+registry prevents overwrites, or a tag plus digest. Require a human-readable version
+tag alongside a digest only when the repository explicitly requires tag-based
+traceability. Local build-stage names are not external image references.
+
+A protected tag can restrict who may write without preventing replacement; verify
+actual immutability before relying on the tag as image identity. Reject `latest`,
+floating ranges, branches, and other mutable references as the sole identity unless
+the environment is explicitly disposable. In a tag-plus-digest reference, the digest
+pins the content; the tag does not independently prove immutability. Keep an intentional,
+reviewed process for refreshing pins and rebuilding their consumers.
+
 ## Enforce non-negotiable safety rules
 
 - Never place secrets in a Dockerfile, build argument, persistent `ENV`, image
@@ -106,11 +121,6 @@ Resolve these questions from repository evidence before implementation:
   inputs. A package manager may instead rely on its authenticated repository
   metadata, signature chain, and repository-approved lockfile; do not invent a
   separate manual checksum that its authoritative workflow does not support.
-- Reject mutable production image references such as `latest`, floating version
-  ranges, or branches unless the environment is explicitly disposable. Use
-  explicit version tags for base, service, and `COPY --from` images; require
-  released tags to be protected from overwrite and maintain an intentional
-  update policy.
 - Reject `privileged: true`, Docker socket mounts, host networking, broad host
   mounts, and extra capabilities by default. Require the concrete operation,
   trust boundary, and smallest viable permission before accepting one.

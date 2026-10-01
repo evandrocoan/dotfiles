@@ -6,8 +6,9 @@ Treat successful deployment orchestration, runtime identity, and behavioral heal
 applied configuration proves only that the deployment command returned successfully. A desired image tag, branch,
 Git history, or CI variable does not prove what every live replica is running.
 
-Bind each verification to the exact environment, deployment pipeline, producer job, protected image tag, platform,
-and release manifest. Reject an expected target selected only by a moving branch, mutable alias, or user-supplied ref.
+Bind each verification to the exact environment, deployment pipeline, producer job, immutable image
+reference, platform, and release manifest. Reject an expected target selected only by a moving
+branch, mutable alias, or user-supplied ref.
 Use `environment:action: verify` for a job that accesses an environment without creating a new deployment. Protect the
 environment and verifier credentials independently from ordinary branch or merge request jobs.
 
@@ -18,7 +19,8 @@ Use this order:
 1. resolve the environment and intended workload through an authenticated, unambiguous selector;
 2. confirm the deployment or rollout has reached its terminal stable state;
 3. enumerate every active replica and relevant container, including mixed old and new revisions during rollout;
-4. compare each observed protected image tag and CI-supplied OCI metadata with the release manifest;
+4. compare each observed image identity and CI-supplied OCI metadata with the release manifest,
+   resolving any tag to its registry content identity rather than trusting the desired tag string;
 5. run the smallest useful health or smoke check after identity succeeds;
 6. retain bounded diagnostics and return a failing or incomplete status for any unresolved observation.
 

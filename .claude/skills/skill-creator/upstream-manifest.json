@@ -1,0 +1,43 @@
+{
+  "format": 1,
+  "source": "Codex system skill-creator",
+  "source_release": null,
+  "files": {
+    "SKILL.md": {
+      "destination": "UPSTREAM.md",
+      "sha256": "6656e54755638e8efcf275a472b9672eaa8a9a1b9e59dc210e275b03b59e1e66"
+    },
+    "agents/openai.yaml": {
+      "destination": "agents/openai.yaml",
+      "sha256": "d07d21b93fcf3d4dc8d9a3399c05fc226a49a333a96d3e1c68b451b8dd9eade6"
+    },
+    "assets/skill-creator-small.svg": {
+      "destination": "assets/skill-creator-small.svg",
+      "sha256": "6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb"
+    },
+    "assets/skill-creator.png": {
+      "destination": "assets/skill-creator.png",
+      "sha256": "a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162"
+    },
+    "license.txt": {
+      "destination": "license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "references/openai_yaml.md": {
+      "destination": "references/openai_yaml.md",
+      "sha256": "ffac39318e408108141d40f820968e59f70434a891694f9bf1d25be8237b150c"
+    },
+    "scripts/generate_openai_yaml.py": {
+      "destination": "scripts/generate_openai_yaml.py",
+      "sha256": "816df12072d74faf924d802a6599a139997e1441e90bfe4869ec304f2e5e2851"
+    },
+    "scripts/init_skill.py": {
+      "destination": "scripts/init_skill.py",
+      "sha256": "bf0656a5f9d8d8cdecf0245eaf27e1df8e0e9b6d40ccdda814eb8e3d5f6992c8"
+    },
+    "scripts/quick_validate.py": {
+      "destination": "scripts/quick_validate.py",
+      "sha256": "ee6dba90f44d37171c5a6edb8095979c54919ff6822c1a907afca2e78c48738c"
+    }
+  }
+}

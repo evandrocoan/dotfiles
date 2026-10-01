@@ -3,17 +3,6 @@
 Use the smallest sequence that proves the changed contract. Prefer
 repository-documented services and flags over the generic commands below.
 
-## Contents
-
-- [Check capabilities first](#check-capabilities-first)
-- [Validate configuration before building](#validate-configuration-before-building)
-- [Build the narrowest target](#build-the-narrowest-target)
-- [Exercise the runtime contract](#exercise-the-runtime-contract)
-- [Inspect the built artifact](#inspect-the-built-artifact)
-- [Diagnose failures in order](#diagnose-failures-in-order)
-- [Avoid destructive diagnostics](#avoid-destructive-diagnostics)
-- [Consult current primary documentation](#consult-current-primary-documentation)
-
 ## Check capabilities first
 
 Inspect Docker and Compose availability without changing daemon state:

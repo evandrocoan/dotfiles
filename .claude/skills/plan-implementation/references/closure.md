@@ -2,10 +2,7 @@
 
 ## Review or formal audit when the user selects it
 
-Ask before invoking an advisor, independent or domain reviewer, or structured author audit unless
-the user already selected it for this scope. State the proposed depth, timing, model, and effort;
-the user may change or decline each recommendation. A choice may cover named pre-edit and final
-phases. Identify the reviewer's actual settings. Recommend a different capable
+Identify the reviewer's actual settings. Recommend a different capable
 model from the advisor, with fresh task context, the original user request and decisions,
 applicable instructions, governing records, current plan if chosen, final diff or proposed scope,
 and actual validation evidence. Withhold the intended verdict. Record applied and rejected
@@ -26,16 +23,10 @@ read-only reviewer does not itself trigger a multiple-implementer plan recommend
 
 ## Checks shared by all routes
 
-Before completion, confirm that every new formal plan, review, or structured author audit had an
-explicit advance choice, or that the user requested it directly. Preserve the true chronology of
-older actions; ask before any later uncovered action. An unanswered process choice remains pending;
-do not close the task by treating silence as a refusal. A chosen plan must have been offered in
-chat with a link to its complete current version, the explanatory summary required by
-[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval), followed by explicit
-user release before its first implementation step. A direct route requires the same summary and
-explicit approval in chat, without a plan artifact. A material
-proposal revision on either route needs a new presentation and release before its affected steps.
-A plan-only request never authorizes execution.
+Before completion, verify that the task's actual process choices and chronology comply with the
+global instructions loaded by the entrypoint. Check the presentation and user release against
+[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval), including any material
+revision. A plan-only deliverable has no implementation release.
 
 Apply `test-quality`'s **Review test evidence before closure** to added or materially changed
 tests and existing tests cited as decisive evidence. Check what the production boundary actually
