@@ -63,9 +63,9 @@ When alternatives exist, number the relevant options, explain each outcome, and 
 recommendation with its reason. Include role, model, thinking level, and review timing when they
 are part of the choice. Allow the user to answer with an option number or a customized reply in
 their own words. Keep an open question when the missing input is a fact such as a path; do not
-invent alternatives merely to create a menu. For simultaneous questions, give each a distinct
-identifier so replies such as `P1: 2; P2: 1` are unambiguous. Keep identifiers and option meanings
-stable while a choice is pending; make any necessary revision explicit.
+invent alternatives merely to create a menu. For simultaneous questions, identify them in order
+as `Q1`, `Q2`, `Q3`, and so on, so replies such as `Q1: 2; Q2: 1` are unambiguous. Keep identifiers
+and option meanings stable while a choice is pending; make any necessary revision explicit.
 
 Accept one unambiguous response for the choice it identifies, without a second acknowledgment.
 Ask only for missing or ambiguous information; a bare number that could answer multiple questions
