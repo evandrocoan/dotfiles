@@ -24,14 +24,13 @@ execution state in Markdown and project its current steps into the task plan.
 
 ## Determine the planning mode
 
-Classify the request before editing. Identify the acting agent's effective settings under the
-global instructions and recommend settings for its role without overriding the user's choice.
-An unknown setting cannot be replaced with a conservative plan. Read
+Read the [global agent instructions](../../../.codex/AGENTS.md) if they are not already in context.
+That installed canonical source owns model/effort identification and selection, the question-only
+gate, and choices about plans and reviews. Establish those prerequisites before classifying an
+implementation request. Read
 [model-aware routing](references/model-routing.md) for every implementation edit to apply the
 acting group's plan and review thresholds, and when recommending a model, reasoning effort, or
-reviewer. The applicable user's explicit request and higher-priority question-only or read-only
-rules come first. Risk and persistence shape validation and process recommendations; the user
-decides whether to have a formal plan, review, or audit and which model and effort to use.
+reviewer. Risk and persistence shape this skill's validation and process recommendations.
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
   says not to implement, inspect enough authoritative evidence to make the plan credible, offer its
@@ -52,19 +51,9 @@ explicit user preference. Touching several files or performing several obvious e
 owner does not by itself make otherwise
 routine work non-trivial.
 
-Before drafting a formal plan or starting an advisor, independent review, domain review, or
-structured author audit, obtain the user's choice. An explicit request for a plan or
-review already answers that dimension for the current scope. Otherwise use minimal read-only
-triage to state the recommendation and concrete reason; both choices are optional. Ask at the
-relevant implementation task boundary when foreseeable, before substantial dependent work or
-reviewer effort. Question-only requests do not open an implementation choice. One clear answer
-may cover named pre-edit and final reviews. Follow the global visible-question rule: present
-pending choices in the final response and wait. Direct work may continue after an explicit decline
-only after the proposal approval below and when every independent gate permits it. Ordinary author
-verification is not a separate review invocation.
-Preserve the chronology of existing plans and reviews. Ask
-before an uncovered material replan or reviewer invocation. This advance choice does not replace
-the user's review and approval of the concrete proposal before implementation on either route.
+Apply the global process-choice rules to the route recommended below. Process selection and
+approval of the concrete proposal are separate: after the choices are resolved, use **Present
+the proposal and wait for approval** on either execution route.
 
 A bounded additive external action that meets every condition in
 [external-action routes](references/external-actions.md) uses the compact path when the user
@@ -175,15 +164,10 @@ When a durable architecture record governs the change, use `architecture-records
 this skill. Treat the approved record as design authority and derive the selected plan or direct
 execution checks from it. Do not alter the record to legitimize incidental current code.
 
-When carrying out a deliberate user decision that changes an approved record, follow
-`architecture-records` section 7a. With a chosen plan, use its specified order for bounded
-recording or required maintenance and offer the linked plan before dependent implementation.
-Without a chosen plan, obtain any selected pre-edit review of the proposed record diff, record
-the authorized decision in the architecture owner with the skill's author checks, then proceed
-directly against the amended record. A chosen separate review follows its selected phase; a
-declined review creates no recording deadlock. Complete
-authorized recording before an implementing-session handoff, and describe which owners were
-actually updated without presenting pending work as completed.
+When carrying out a deliberate user decision that changes an approved record, load
+`architecture-records` section 7a for the recording, maintenance, review, and handoff sequence.
+Derive this skill's execution route from that procedure; do not define a second amendment order
+in the plan. Offer any chosen linked plan under the proposal-approval gate before implementation.
 
 Load the task-specific skills required by the work before planning their stages. In particular,
 use `test-quality` for executable validation, `documentation` for durable documentation,
@@ -297,13 +281,8 @@ When resuming, establish approval for the current proposal; if it is missing, pr
 and any chosen plan's current link, then wait. Preserve the actual chronology of steps completed
 before this rule applied and require approval before the next implementation step.
 
-For a deliberate architecture decision with a selected pre-edit plan review, use the bounded
-recording order in `architecture-records` section 7a: its limited amendment may precede that
-review so the reviewer sees the actual wording. When required maintenance exceeds that boundary,
-put maintenance and amendment after the selected review. With no selected pre-edit review, the
-author inspects the affected record and maintenance before recording; no review-only staging
-exception is needed. A selected formal plan still needs its linked user go-ahead before
-implementation.
+For deliberate architecture changes, place the recording steps according to the loaded
+`architecture-records` section 7a, including its bounded-recording and maintenance distinction.
 
 Combine steps when separating them would create meaningless bookkeeping. Split a step when it
 contains more than one independently falsifiable outcome. Keep at most one step in progress, and
@@ -321,19 +300,11 @@ recording and every actual document owner named for the decision carries it. An 
 selected plan, an architecture record, or an issue. Do not invent a plan owner when the user
 declined a plan. Code or skill text is a work target, never a decision-recording owner.
 
-With the user's instruction to record, the marker for that decision must not block the work that
-resolves it. Distinguish these paths:
-
-- With a selected pre-edit review, follow the bounded-before-review or maintenance-after-review
-  order in `architecture-records` section 7a. Keep the marker until actual owners are updated.
-- Without a selected separate review, perform the author inspection and authorized recording in
-  the real owner. A declined plan or reviewer alone does not keep `registro pendente` alive.
-
-Each path waives only the pending marker for the decision it resolves, not recording authority,
-other pending decisions, or any other prerequisite. Keep the marker until every actual named owner
-carries the decision. Dependent implementation remains held until recording and any selected
-pre-edit review are complete. The discussion or planning session performs authorized architecture
-recording before handing it to an implementing session, as section 7a requires.
+With the user's instruction to record, the marker for that decision does not block the work that
+resolves it. Follow each actual owner's recording procedure; for architecture, load section 7a.
+The exception covers only that decision's pending marker, not recording authority, another pending
+decision, or another prerequisite. Keep the marker until every named owner carries the decision,
+and hold dependent implementation until recording and its selected pre-edit review are complete.
 
 When a formal plan exists, reread it entirely after context compaction, interruption, session
 restart, material replan, or agent handoff. Give an authorized delegated agent the plan path and

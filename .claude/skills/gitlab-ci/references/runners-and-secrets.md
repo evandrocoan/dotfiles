@@ -50,7 +50,7 @@ host mounts, additional capabilities, or image-building changes.
 - Treat a Docker socket mount as control of the host daemon, not as ordinary file access.
 - Treat privileged mode as loss of the container isolation boundary.
 - If privileged execution is unavoidable, use a dedicated ephemeral runner with no unrelated secrets or workloads.
-- Use explicit released image tags; reject `latest`, floating ranges, and digest-only references under the tag policy.
+- Check runner and service image references against the loaded `docker` image-pinning policy.
 - Keep Docker and Compose commands in the repository's approved container workflow and use `docker compose` syntax.
 - Authenticate to registries with a password or token on standard input, never as a command-line argument.
 - Construct build and push commands from an explicit allowlist. Reject `eval`, dynamic variable-name expansion, and
@@ -72,5 +72,8 @@ Authoritative reference: [Docker-in-Docker with GitLab](https://docs.gitlab.com/
 ## Control third-party and downloaded code
 
 Review external includes, images, package hooks, analyzers, and downloaded scripts as executable supply-chain inputs.
-Use protected release tags and the project's dependency approval process. Do not use `curl | sh`, unchecked archives,
-or a mutable branch as a build tool. Ensure release tags cannot be overwritten and define an intentional update path.
+Use the project's dependency approval process. Apply the Docker image-pinning policy to images
+and the [template versioning contract](templates-and-data.md#treat-shared-configuration-as-versioned-executable-code)
+to included code. Do not use `curl | sh`, unchecked archives, or a mutable branch as a build tool.
+For other release-tagged tools, ensure the tags cannot be overwritten and define an intentional
+update path.

@@ -48,16 +48,15 @@ when the container itself is local.
 
 ## Protect the image supply chain
 
-- Use trusted base images and exact version tags. Require released tags to be protected from overwrite when the
-  artifact must be reproducible.
-- Maintain an explicit refresh process for base-image tags and dependencies. A permanently stale pin is not a
-  security strategy.
+- Use trusted base images under [Pin image identities](../SKILL.md#pin-image-identities).
+  Include dependency refresh in the image update process; a permanently stale pin is not a security
+  strategy.
 - Verify downloaded artifacts by pinned checksum or trusted signature before execution. Fail closed on a mismatch.
 - Never execute `curl | sh`, extract an unverified stream, use an unchecked URL in `ADD`, or build from a mutable
   branch as a production input.
 - Keep compilers, package managers, test suites, credentials, and caches out of the runtime stage.
 - Let the release pipeline produce provenance, an SBOM, vulnerability assessment, and signature when required. Bind
-  them to the same protected image tag that is promoted.
+  them to the exact image identity that is promoted.
 - Record a CI-supplied source revision with OCI labels instead of copying `.git` into the image.
 
 ## Review runtime resilience

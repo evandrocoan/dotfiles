@@ -451,6 +451,62 @@ Windows denies symbolic-link creation for directory skills, the installer uses
 junctions instead. File links in local mode still require Developer Mode or an
 administrator PowerShell session.
 
+### Update the shared skill creator
+
+The shared [creator entrypoint](.claude/skills/skill-creator/SKILL.md) contains local adaptations
+for Claude, Codex, and Copilot. [UPSTREAM.md](.claude/skills/skill-creator/UPSTREAM.md) preserves
+the imported Codex authoring guide. The
+[upstream manifest](.claude/skills/skill-creator/upstream-manifest.json) identifies every imported
+resource, its destination, and its SHA-256. Customize the entrypoint or the skill that already
+owns a policy; do not customize imported files or the runtime-owned system package.
+
+After a Codex update, refresh the imported snapshot through a reviewed comparison:
+
+1. Locate the system package at `skills/.system/skill-creator` inside the active Codex home
+   (normally `~/.codex`). Check the complete source inventory, including additions and removals.
+   Stop for unexpected symbolic links, special files, or a new source path that collides with a
+   locally owned destination. The source `SKILL.md` maps to `UPSTREAM.md`; other imported paths
+   retain their relative names. The local `SKILL.md` and `upstream-manifest.json` are reserved.
+2. Before replacement, check that every currently imported destination still matches its manifest
+   hash. Resolve local edits, missing files, or unexpected path changes first. Do not overwrite
+   them as part of a refresh. Compare the incoming source with the imported snapshot and review
+   changed instructions against the entrypoint's adaptations and the owning shared skills.
+3. Preserve a temporary copy of the current package. Copy only the reviewed imported files to
+   their mapped destinations. Remove an obsolete file only if the old manifest owns it and its
+   bytes still match that manifest. Preserve local files, the license, helper paths, and resources.
+   Do not copy the system package over the entire shared directory or synchronize it blindly.
+4. Update the manifest's file mappings and SHA-256 values from the reviewed source bytes. Verify
+   every mapped destination against those bytes and the complete imported inventory before
+   accepting the new manifest. Record a source release only when it can be reliably attributed
+   to this snapshot; otherwise keep `source_release` as `null`.
+5. Validate the shared package, changed references, and client exposure links. The existing
+   `scripts/quick_validate.py` helper inside the package checks basic skill shape; it does not
+   prove policy consistency. Recheck the entrypoint's adaptations, review the scoped diff, and
+   restart or reload clients to discover the new instructions. Git delivery is a separate action.
+
+For example, ask the agent in this checkout to perform the refresh with this request:
+
+```text
+Refresh the shared skill-creator from my installed Codex system package using the README procedure
+and upstream manifest. Review all upstream additions, changes, and removals, preserve the local
+entrypoint and existing policy owners, validate the result, and do not commit the changes.
+```
+
+Codex uses the shared creator through `.agents/skills/skill-creator`. Its system copy remains
+available as the update source. This repository's `.codex/config.toml` disables only that system
+entry with a path relative to the configuration directory:
+
+```toml
+[[skills.config]]
+path = "skills/.system/skill-creator/SKILL.md"
+enabled = false
+```
+
+Restart Codex after changing the override. Check that the shared entry is enabled and the system
+entry is disabled; do not disable by name, because both entries use `skill-creator`. A Claude-only
+machine can use the imported shared package without an installed Codex source; refresh it in a
+checkout that has that source, then distribute the reviewed package through the skill installer.
+
 ### Python scripts environment
 
 Dependencies for scripts in `~/scripts/` are managed with [Poetry](https://python-poetry.org).

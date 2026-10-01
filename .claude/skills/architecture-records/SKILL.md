@@ -116,16 +116,9 @@ lifecycle status only in the record itself so status has one authoritative owner
 
 ### 3a. Keep record navigation canonical
 
-Architecture records are AI-facing artifacts. Do not add a manual table of contents
-to a plan, ADR, decision record, or architecture-record template. Use a clear heading
-hierarchy inside each record and the concise `architecture/README.md` index for
-cross-record navigation. The index is an authoritative catalog, not an internal table
-of contents to duplicate inside each record.
-
-When reviewing, editing, or closing a record that contains a manually maintained
-table of contents, remove that section without removing the substantive headings it
-referenced. This prevents a redundant heading inventory from becoming stale and
-spending context tokens whenever an agent reads the record.
+Apply `documentation`'s **Maintain tables of contents** rules to records and templates.
+Use the concise `architecture/README.md` index for cross-record navigation; it remains
+the authoritative catalog rather than a heading inventory inside each record.
 
 ### 4. Apply the lifecycle
 
@@ -183,15 +176,10 @@ explicitly; never imply that documentation, a unit test, an artifact fixture, a
 provider-stage replay, and a full end-to-end replay provide equivalent coverage.
 
 Require a recorded replay when a real incident exposed a cross-component protocol or
-representation failure and sufficient raw inputs exist. The replay must consume the
-recorded interaction completely, reject unexpected calls and silent network access,
-and assert the architectural outcome rather than only a parser detail. When the
-available capture is partial, build the narrowest faithful replay and state its
-boundary; never fabricate the missing session.
-
-Use the `test-quality` skill whenever implementation work adds or changes executable
-regression protection. Follow its replay integrity, concurrency, property-testing,
-skip, and flakiness rules as applicable.
+representation failure and sufficient raw inputs exist. Assert the architectural
+outcome rather than only a parser detail. Load `test-quality` for executable regression
+protection and apply its **Replay recorded failures when possible** contract to replay
+fidelity, partial captures, interaction consumption, and external-access isolation.
 
 ### 7. Diagnose incidents before changing architecture
 
@@ -447,6 +435,10 @@ replacement notices.
 
 Before handoff:
 
+- Apply `documentation`'s **Validate coupled documentation** check to the changed rules
+  and their consumers. Resolve duplicate authority and inconsistent scope, conditions,
+  exceptions, or normative force before handoff; section 9 separately governs runtime
+  conformance and any selected full audit.
 - Confirm that the record has one explicit lifecycle status.
 - Confirm that the architecture index links to every current record.
 - Confirm that proposed behavior is not described as implemented elsewhere.
@@ -476,9 +468,7 @@ Before handoff:
 - Confirm completion of selected reviews and second passes, or record their explicit withdrawal.
   Do not require a substitute author audit or second reading when none was selected.
 - Verify relative links and moved-file paths.
-- Confirm that architecture records and their templates contain no manual table of
-  contents. Keep the heading hierarchy clear and verify that the architecture index
-  links to each current record instead.
+- Confirm record navigation follows section 3a and the loaded documentation conventions.
 - Run the repository's Markdown or whitespace checks when available and inspect
   untracked files as well as tracked diffs.
 - Report changed files, lifecycle transitions, and validation performed. Do not commit a

@@ -177,15 +177,10 @@ with the reason, do not conclude the brief, and say in the chat reply what was l
 brief that reads as concluded while an owner still holds the old text hides the gap from the user.
 
 When the decision changes an approved architecture record, that record is one of its owners.
-Follow `architecture-records` section 7a. With a selected plan and pre-edit review, follow its
-bounded-recording or maintenance-after-review order and submit the actual record and plan to the
-reviewer. Without a selected plan, record the authorized decision in the architecture owner after
-the author check; without a selected pre-edit reviewer, no review-only staging holds that recording.
-If a pre-edit reviewer was selected without a plan, submit the proposed record diff before
-recording. The discussion session completes the authorized unit before implementation handoff.
+Load `architecture-records` section 7a and use its recording, maintenance, review, and handoff
+sequence for the selected execution route. It owns that procedure for both planned and direct work.
 Report the owners actually updated and those still pending; do not imply that partial recording
-updated every owner. Recording authorization and any selected pre-edit review precede dependent
-implementation. Give in that reply the list of places in the record that the decision changes,
+updated every owner. Give in that reply the list of places in the record that the decision changes,
 together with the form you chose, as that procedure
 requires: the reply is composed under this skill, and without the list the user cannot check
 whether the other form would have served. Treat a plan already under `completed/` as no owner. When

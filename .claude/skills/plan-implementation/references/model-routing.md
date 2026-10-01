@@ -4,13 +4,9 @@ Use this after identifying the acting model/effort and classifying the request, 
 and inherited plan. Group labels express planning and review recommendations, not a
 universal ranking of model quality or permission to skip safety checks.
 
-## Recommend settings for the acting role
-
-Identify the acting model and effort under the global instructions, then recommend settings for
-the role. Explain the tradeoff and honor the user's choice, including keeping a setting below
-the recommendation. Reassess for every new request; an earlier role's recommendation does not
-carry to a different role. Verify model and effort availability before proposing a pair. Never
-present the agent's fitness assessment as a mandatory minimum or silently replace the user's pair.
+The entrypoint's **Determine the planning mode** loads the canonical global rules for settings
+and user choices. Apply them before this routing table; this reference owns the task-specific
+recommendations, not another model-selection or approval procedure.
 
 ## Recommend a route and ask for the user's choices
 
@@ -39,41 +35,11 @@ implementer often benefits from an autonomous reviewer even for routine work. Th
 plan, review, formal audit, or model recommendation into a compulsory gate. Authorization, actual
 tool availability, and honest validation claims still apply.
 
-Ask at the relevant task boundary, before spending substantial dependent work or reviewer tokens.
-Keep plan and review independently selectable. State the classification, recommendation, and why,
-then invite the user's sense of importance: the agent may not know the user's stakes. An explicit
-choice in the current request or an earlier choice still valid for this scope answers only its
-dimension. “Without a plan” does not decline review; “with review” does not choose a plan.
-When presenting options, make each answer's resulting route unambiguous, including whether a
-plan and review will occur. Do not present accepting both as the only way to continue. Consult at
-the situations in the table and the high-risk and persistence routes above even when recommending
-direct work or no review. Specify review depth and timing and recommend the model and effort;
-accept another user choice.
-
-When both dimensions need consultation, a combined menu can offer direct work without review,
-a plan without review, direct work with review, or a plan with review. Distinguish final review
-from pre-edit plus final review and state the model and thinking level for each selected role.
-Use the routes relevant to the task, allow a customized combination, and preserve the routine-local
-exception to offering a plan. A selected assessment before drafting examines the diagnosis or
-approach; a review of the plan itself follows its creation. One answer may choose all explicitly
-named phases, but process selection does not satisfy the later proposal-approval gate.
-
-If the user declines either action, use the chosen route after proposal approval and all other
-applicable gates are satisfied.
-If a choice is unanswered, follow the global visible-question rule: present it in the final
-response and end the turn awaiting the reply. Do not create a plan, invoke a separate advisor or
-reviewer, or choose direct execution by timeout.
-Silence never supplies missing model/effort information, authorization, or proposal approval on
-either route. A selected pre-edit, pre-write, or final review holds only its dependent phase until it
-completes or the user explicitly withdraws it. A declined or unselected review never blocks.
-
-If the user chooses a formal plan, create its linkable artifact and present its link with the
-explanatory summary. Otherwise present only the summary in chat. Wait for the user's explicit
-go-ahead before implementation on either route. A plan-only request stops after that presentation.
-Ask again about a new plan or review action after a material change in scope,
-uncertainty, handoff, or stakes only when the earlier choice did not cover it. Do not revive a
-declined choice automatically during replanning. The user may withdraw a choice for remaining
-work; preserve the chronology of actions already completed.
+Apply the global consultation procedure at every situation identified by the table and the
+high-risk route, including a recommendation for direct work without extra review. Keep the
+routine-local exception to offering a plan. Then use
+[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval) for the selected route.
+A review before drafting assesses the approach; a review of the plan itself follows its creation.
 
 ## Select a reviewer when chosen
 

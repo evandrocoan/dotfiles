@@ -6,7 +6,7 @@ Treat a repository of reusable images as a supply-chain product, not as a collec
 one authoritative catalog entry for every published image and derive jobs from it when practical. Bind each entry to:
 
 - its build context, Dockerfile, target, and `.dockerignore`;
-- the published image name and protected release-tag policy;
+- the published image name and repository image-pinning policy;
 - supported platforms and required CPU, GPU, or other runner capabilities;
 - owners, consumers, validation commands, and lifecycle status;
 - shared inputs whose change invalidates multiple entries.
@@ -36,20 +36,23 @@ Use this lifecycle for each selected catalog entry:
 
 1. **Validate:** lint the Dockerfile and catalog, inspect the build context, verify `.dockerignore`, and reject embedded
    credentials or unchecked executable downloads.
-2. **Build:** create one uniquely tagged candidate, record CI-supplied source metadata with OCI labels, and emit a
-   manifest that binds the candidate tag to its catalog entry, producer job, platform, and revision.
+2. **Build:** create one immutable candidate under `docker`'s **Pin image identities** policy,
+   record CI-supplied source metadata with OCI labels, and emit a manifest that binds its image
+   reference to its catalog entry, producer job, platform, and revision.
 3. **Test:** exercise that exact candidate on its intended platform. Verify its tool interface or service smoke test,
    runtime user, entrypoint, expected files, forbidden credentials and test suites, and graceful exit where applicable.
 4. **Scan:** scan the same candidate and retain the machine-readable report. Missing or malformed output is incomplete,
    never clean. Produce SBOM, provenance, or signature evidence when required by release policy.
 5. **Publish:** promote the tested candidate without rebuilding. Require every validation, test, and scan gate, a
-   protected source release tag, a non-overwritable image tag, and an authorized protected runner or environment.
-6. **Notify:** expose the published tag and compatibility metadata to known consumers without silently mutating their
-   repositories or deployments.
+   protected source release tag, the candidate's image identity, and an authorized protected runner
+   or environment.
+6. **Notify:** expose the published image reference and compatibility metadata to known consumers
+   without silently mutating their repositories or deployments.
 
-If a scanner requires registry access, publish first to a restricted staging namespace under a unique, non-overwritable
-candidate tag. Promote that same candidate only after the gates pass. Never use `latest`, a branch name, a mutable
-functional alias, stale runner contents, or a digest-only reference as the authority for the selected artifact.
+If a scanner requires registry access, publish first to a restricted staging namespace and bind
+the scanner to that exact candidate under the image-pinning policy. Promote it only after the
+gates pass. Never select a candidate through a mutable alias or stale runner contents; authenticate
+its producer and manifest as well as its immutable image identity.
 
 ## Secure registry and builder access
 
@@ -69,8 +72,8 @@ dependency inputs; never treat cache as the candidate artifact. Use an explicit 
 rebuild to refresh base images and detect undeclared network drift. Do not force `--no-cache` on every change merely to
 obtain freshness, and do not use a cache alias as the published image identity.
 
-Define deprecation, rebuild, and consumer-update policy for shared images. A protected tag without a controlled refresh
-process becomes stale; a moving tag makes prior validation meaningless.
+Define deprecation, rebuild, and consumer-update policy for shared images. An immutable pin without
+a controlled refresh process becomes stale; a moving identity makes prior validation meaningless.
 
 Authoritative references: [GitLab job rules](https://docs.gitlab.com/ci/jobs/job_rules/), [deprecated CI
 keywords](https://docs.gitlab.com/ci/yaml/deprecated_keywords/), [container registry authentication](https://docs.gitlab.com/user/packages/container_registry/authenticate_with_container_registry/),

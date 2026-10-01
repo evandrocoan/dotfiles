@@ -34,8 +34,8 @@ Use this reference for Dockerfiles, build contexts, image targets, and BuildKit 
 - Keep test source outside a reusable test-environment image when the repository mounts the checkout read-only at
   execution time. Verify that the built image does not accidentally contain the suite.
 - Place built development environments outside a path that a checkout bind mount will cover.
-- Copy from another image or dependency stage only through an explicit version tag protected from overwrite. Keep an
-  intentional update policy and authenticate offline artifact sources just as strictly as network downloads.
+- Apply [Pin image identities](../SKILL.md#pin-image-identities) to external image sources.
+  Authenticate offline artifact sources just as strictly as network downloads.
 - Apply a build-time patch to an installed dependency only as documented debt: pin the source, assert the exact
   pre-patch content, fail closed when it differs, and exercise the patched behavior.
 
@@ -51,9 +51,7 @@ Use this reference for Dockerfiles, build contexts, image targets, and BuildKit 
 ## Protect the supply chain
 
 - Start from a trusted, minimal base that satisfies the runtime contract.
-- Use exact version tags for production and for external `COPY --from` sources. Require the registry or publisher to
-  prevent released tags from being overwritten, and keep a visible, reviewed process for updating tags and rebuilding
-  images.
+- Check every base and external `COPY --from` source against the image-pinning policy above.
 - Verify every distributed download with a pinned checksum or trusted signature before execution or extraction. Use
   remote `ADD` only with its checksum support and an immutable URL.
 - Use `RUN --mount=type=secret` for build credentials and `RUN --mount=type=ssh` for SSH agent access. Never use

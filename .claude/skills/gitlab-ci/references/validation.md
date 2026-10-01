@@ -73,9 +73,10 @@ newer syntax such as components, inputs, or status strategies.
 
 ## Validate coupled Docker work
 
-When a job builds or runs containers, load the `docker` skill and validate the Dockerfile, Compose model, image tags,
-runtime permissions, and container behavior separately from the GitLab pipeline graph. A valid `.gitlab-ci.yml` does
-not prove that a container build is reproducible or that privileged access is safe.
+When a job builds or runs containers, load the `docker` skill and validate the Dockerfile, Compose
+model, image references, runtime permissions, and container behavior separately from the GitLab
+pipeline graph. A valid `.gitlab-ci.yml` does not prove that a container build is reproducible or
+that privileged access is safe.
 
 For Compose-backed jobs, also verify unique project names, exact file and profile selection, dependency health,
 terminal-service exit propagation, bounded cleanup, and isolation from concurrent jobs. For repository-owned CI
@@ -104,9 +105,9 @@ same artifact that passed testing.
 For shared image catalogs, exercise image-local, nested-context, catalog, shared-template, common-base, deletion,
 rename, scheduled-refresh, CPU/GPU, and protected-release scenarios. Verify that each selected entry follows the full
 validate, build, test, scan, and publish graph; that skipped entries are genuinely unaffected; and that publication
-uses the exact uniquely tagged candidate produced and tested by the pipeline without a rebuild.
+uses the exact immutable candidate produced and tested by the pipeline without a rebuild.
 
 For live deployment verification, exercise zero, one, and multiple matching workloads; partial and mixed rollouts;
 multiple replicas; stale deployment identity; missing metadata or files; inaccessible targets; health failure; and a
-new rollout during verification. Require every relevant replica to match the expected protected tag and release
-manifest before a clean result.
+new rollout during verification. Require every relevant replica to match the expected image identity
+and release manifest before a clean result.

@@ -5,8 +5,8 @@
 Prefer a CI/CD component with typed inputs for a reusable, product-like unit. Use project or local includes when the
 repository layout or GitLab instance does not support a component cleanly.
 
-- Pin external components and project includes to a protected release tag. Do not consume `main`, `master`, or another
-  moving ref in production pipelines.
+- Pin external components and project includes to a protected, non-overwritable release tag. Do
+  not consume `main`, `master`, or another moving ref in production pipelines.
 - Review the included source and its transitive includes before granting it secrets or a privileged runner.
 - Use semantic release tags and an intentional update process. Test the release tag before moving consumers to it.
 - Use `spec:inputs` for typed, validated, compile-time configuration. Give defaults to inputs used by automatically

@@ -28,15 +28,16 @@ changes require their own authorized scope.
 - Separate infrastructure-free checks from integration stacks so cheap jobs remain fast and independently schedulable.
 - Put test-only services behind Compose profiles so an ordinary runtime start does not launch CI workloads.
 
-Use a prebuilt CI environment image when dependency installation dominates runtime. Bind its protected release tag to
-the relevant lockfiles, runtime, and toolchain, and document the update trigger. Never use `latest` as compatibility
-authority.
+Use a prebuilt CI environment image when dependency installation dominates runtime. Bind its image
+identity under the loaded Docker policy to the relevant lockfiles, runtime, and toolchain, and
+document the update trigger. Never use `latest` as compatibility authority.
 
 Audit mount shadowing before trusting that image. A checkout, project-directory, or home-directory bind mount can hide
 an environment, package-manager configuration, or cache created during the build. Place reusable environments and
 non-authoritative caches outside mounted paths, or configure their locations through explicit environment variables.
-When the image intentionally prewarms downloads and recreates a project environment at runtime, bind its tag to every
-relevant lockfile and make a cache miss affect speed rather than correctness.
+When the image intentionally prewarms downloads and recreates a project environment at runtime,
+bind its image identity to every relevant lockfile and make a cache miss affect speed rather than
+correctness.
 
 Use one base Compose model plus a focused CI override when CI must remove production-only mounts or ports, change
 commands, or move nonessential default services behind profiles. Validate the exact merged file set. Do not copy the

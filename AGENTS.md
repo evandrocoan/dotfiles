@@ -138,6 +138,14 @@ XFCE_PANEL_PLUGIN_PATH=$HOME/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linu
 `~/.claude/CLAUDE.md` (global, not this file) — behavioral instructions for
 Claude: commit style, when to commit, etc.
 
+## Shared skill maintenance
+
+Follow [Update the shared skill creator](README.md#update-the-shared-skill-creator) when refreshing
+the imported creator package. Its local entrypoint owns shared-client adaptations; the manifest
+identifies the imported snapshot. Keep runtime system skills untouched and update imported files
+only through that procedure. Policy changes belong in their existing owning skill, with coupled
+consumers checked through `documentation` rather than synchronized copies.
+
 ## Gitignore allowlist
 
 This home repository uses an allowlist strategy: `*` ignores everything by
