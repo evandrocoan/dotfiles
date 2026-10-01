@@ -117,6 +117,12 @@ changes nature, such as work that becomes a choice between options, create a new
 section and mark the old one `descartado`, pointing to the new one. A brief that already numbers
 its items in one sequence keeps that numbering.
 
+Number alternatives within each decision or work item so the user can answer with its identifier
+and option, such as `D1: 2` or `T1: 1`, or customize the answer in their own words. Keep option
+meanings stable while the item is open; make revisions explicit. An unambiguous answer identifies
+the decision under **Record decisions and promote them**; it does not also authorize promotion or
+implementation. Keep existing item identifiers when presenting the choices in chat.
+
 When an item corresponds to a stage or requirement of the governing plan or record, cite that
 identifier inside the item's text together with what it means. Give every such identifier, acronym,
 component name, and merge-request or issue number used in the brief a one-line plain-language

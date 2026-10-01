@@ -31,7 +31,7 @@ Delete the conditional external-action section for local work.
   invocation, or `None selected`>. A legacy plan preserves earlier chronology and
   asks before future uncovered material replanning or review.
 - Plan and summary offered in chat: Pending | <current plan link, summary explaining the problem,
-  intended changes, how they solve it, expected result and checks, plus plan line and word counts>.
+  intended changes, how they solve it, expected result and checks>.
 - User response: Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
 - Material revision: None | <updated link and summary, and renewed approval before affected steps>.

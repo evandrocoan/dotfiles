@@ -31,9 +31,9 @@ explicit advance choice, or that the user requested it directly. Preserve the tr
 older actions; ask before any later uncovered action. An unanswered process choice remains pending;
 do not close the task by treating silence as a refusal. A chosen plan must have been offered in
 chat with a link to its complete current version, the explanatory summary required by
-[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval), and its line and word
-counts, followed by explicit user release before its first implementation step. A direct route
-requires the same summary and explicit approval in chat, without a plan artifact. A material
+[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval), followed by explicit
+user release before its first implementation step. A direct route requires the same summary and
+explicit approval in chat, without a plan artifact. A material
 proposal revision on either route needs a new presentation and release before its affected steps.
 A plan-only request never authorizes execution.
 

@@ -21,8 +21,8 @@ user decides independently whether to have a formal plan and a review, including
 
 | Acting group | Routine local reversible edit | Non-trivial local reversible edit |
 | --- | --- | --- |
-| Supervised: Terra, Sonnet, Opus | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Ask separately about each. |
-| Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and ask separately. |
+| Supervised: Terra, Sonnet, Opus | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Offer each independently. |
+| Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and offer each independently. |
 | Identity or effort unknown | Obtain the effective setting before task work. | Obtain the effective setting before task work. |
 
 Direct work means implementation without a formal plan artifact, after the chat summary has been
@@ -40,7 +40,7 @@ plan, review, formal audit, or model recommendation into a compulsory gate. Auth
 tool availability, and honest validation claims still apply.
 
 Ask at the relevant task boundary, before spending substantial dependent work or reviewer tokens.
-Keep the plan and review questions separate. State the classification, recommendation, and why,
+Keep plan and review independently selectable. State the classification, recommendation, and why,
 then invite the user's sense of importance: the agent may not know the user's stakes. An explicit
 choice in the current request or an earlier choice still valid for this scope answers only its
 dimension. “Without a plan” does not decline review; “with review” does not choose a plan.
@@ -49,6 +49,14 @@ plan and review will occur. Do not present accepting both as the only way to con
 the situations in the table and the high-risk and persistence routes above even when recommending
 direct work or no review. Specify review depth and timing and recommend the model and effort;
 accept another user choice.
+
+When both dimensions need consultation, a combined menu can offer direct work without review,
+a plan without review, direct work with review, or a plan with review. Distinguish final review
+from pre-edit plus final review and state the model and thinking level for each selected role.
+Use the routes relevant to the task, allow a customized combination, and preserve the routine-local
+exception to offering a plan. A selected assessment before drafting examines the diagnosis or
+approach; a review of the plan itself follows its creation. One answer may choose all explicitly
+named phases, but process selection does not satisfy the later proposal-approval gate.
 
 If the user declines either action, use the chosen route after proposal approval and all other
 applicable gates are satisfied.

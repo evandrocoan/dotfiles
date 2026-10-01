@@ -147,7 +147,11 @@ when relevant, preserving the user's separate plan and review choices.
   host is available, report the prerequisite before launch or use a different, user-authorized
   no-prompt profile; do not invent a prompt path or switch modes silently. A host that handles
   permission requests does not thereby prove it can deliver `AskUserQuestion`; verify task-question
-  support separately before promising an in-process question.
+  support separately before promising an in-process question. Route a hosted worker's task
+  question through the coordinator's final response, preserving the waiting process handle and
+  session. Map the user's identified choice back to the exact worker question only after the
+  answer permits continuation; do not restart a waiting worker or turn its task answer into an
+  unrelated tool-permission grant.
 - A no-prompt profile may use a supported permission mode suited to the task. `dontAsk` with
   preapproved tools remains an option for deliberately fixed, unattended work, not the default
   for complex implementation. `bypassPermissions` is a valid option when the user has chosen
@@ -292,7 +296,8 @@ iteration, or cost limit is added; provider limits and user limits still apply.
 
 When the final answer begins `NEEDS_USER:`, confirm that the process ended, the recorded session
 ID matches, and any delegated agents or background commands are reconciled. Read the exact
-question from the compact result and relay it with the decision context and known partial effects;
+question from the compact result and relay it in the coordinator's final response with the decision
+context and known partial effects. Number its alternatives when present, preserving their meaning;
 do not infer an answer from prior task wording. Keep
 implementation paused. Reconcile the index, working tree, tests already run, and any external
 effects before another Claude turn. An absent or unclear question, mismatched session, or
@@ -305,7 +310,8 @@ the question unambiguously and permits continued implementation; a question-shap
 reply that does not satisfy a required explicit-action gate does not release paused work. Update
 any selected plan and ask about any uncovered review before resuming if the answer changes the
 agreed approach. A declined new review does not block otherwise authorized continuation.
-Then pass the actual user answer to the same recorded session only if its context is isolated. Use
+Then pass the user's answer and its explicit option mapping, when numbered, to the same recorded
+session only if its context is isolated. Do not pass an unexplained option number. Use
 `--resume <session-id>`, the recorded model, supported effort, verified task-private `--settings`
 overlay, and permission boundary under **Review and continue**. Do not silently change the
 implementer, session, model, effort, or permissions. Claude remains responsible for

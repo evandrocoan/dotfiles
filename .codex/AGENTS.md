@@ -51,16 +51,32 @@ session, history, or runtime files while searching.
 Do not assume the user monitors an ongoing turn. Gather foreseeable choices about scope,
 planning, review, model, effort, or other material preferences before dependent work begins.
 Use minimal read-only triage to formulate them and group related questions in one final response,
-keeping independent choices separate. State the recommendation, reason, and concrete options.
+keeping independent choices identifiable. State the recommendation, reason, and concrete options.
 Do not ask again for a choice already answered for the current scope.
 
-Every unanswered question that needs a user choice must appear in the final chat response.
-A selectable question tool may supplement that text, but a tool's acceptance or preselected
-option proves neither visibility nor a user answer. After posing the question, end the turn and
-wait for the reply. Do not keep executing, sleep or poll for a timeout, treat silence as a decline,
-or declare the task complete while its choice is pending. An optional process remains optional:
-the user may accept it, decline it, or choose an alternative; the answer cannot be inferred from
-elapsed time. Honor an explicit instruction delegating that choice without asking it again.
+Present assistant-authored questions as ordinary text in the final chat response. Do not call
+asynchronous question tools, including `request_user_input_async`, or use selectable-question
+widgets for these questions. This presentation rule preserves actual tool and host permission
+protocols; a task answer is not a permission grant for an operation it did not authorize.
+
+When alternatives exist, number the relevant options, explain each outcome, and mark the
+recommendation with its reason. Include role, model, thinking level, and review timing when they
+are part of the choice. Allow the user to answer with an option number or a customized reply in
+their own words. Keep an open question when the missing input is a fact such as a path; do not
+invent alternatives merely to create a menu. For simultaneous questions, give each a distinct
+identifier so replies such as `P1: 2; P2: 1` are unambiguous. Keep identifiers and option meanings
+stable while a choice is pending; make any necessary revision explicit.
+
+Accept one unambiguous response for the choice it identifies, without a second acknowledgment.
+Ask only for missing or ambiguous information; a bare number that could answer multiple questions
+does not resolve them all. Apply the chosen option's stated scope, without inferring approval of
+other actions or an unreviewed proposal from the response format.
+
+After posing the question, end the turn and wait for the reply. Do not keep executing, sleep or
+poll for a timeout, treat silence as a decline, or declare the task complete while its choice is
+pending. An optional process remains optional: the user may accept it, decline it, or choose an
+alternative; the answer cannot be inferred from elapsed time. Honor an explicit instruction
+delegating that choice without asking it again.
 
 If a material choice is first discovered during execution, preserve completed work, present the
 question in the final response, and wait before continuing the affected work. This does not create
@@ -99,23 +115,21 @@ Keep the reassessment internal when no setting change is warranted.
 
 For either an upgrade or a downgrade, make the recommendation in one question: state the role,
 target model and thinking level (if configurable), and a brief reason. Include any instruction
-to change the client setting before sending the answer in this initial question. Prefer a
-selectable question with these choices, in the user's language:
+to change the client setting before sending the answer in this initial question. Present these
+numbered choices in ordinary text in the final response, in the user's language:
 
 1. Switch to the named model and thinking level (recommended).
 2. Keep the current named model and thinking level.
-3. Specify another model and thinking level in free text.
 
-Use the question tool's built-in free-text option for the third choice when available; do not
-add a redundant fixed "Other" option. If selectable questions are unavailable, ask the same
-question in plain text.
+Also invite a free-text answer naming another model and thinking level. A numeric answer selects
+the corresponding named pair; it does not programmatically change the client's setting.
 
 The user's single selection or reply completes the choice. Accept the recommended option,
-"switch", or "I'll use Z with thinking Y" without asking them to confirm, repeat the pair,
-inspect the setting again, or send a separate "ok". For the next assistant turn, use the pair
-identified by that answer as the user-reported setting. Ask only for a missing model or thinking
-level when the answer and context do not identify the pair. Choosing to keep the current setting
-needs no acknowledgment step; continue the authorized task.
+its option number, "switch", or "I'll use Z with thinking Y" without asking them to confirm,
+repeat the pair, inspect the setting again, or send a separate "ok". For the next assistant turn,
+use the pair identified by that answer as the user-reported setting. Ask only for a missing model or
+thinking level when the answer and context do not identify the pair. Choosing to keep the current
+setting needs no acknowledgment step; continue the authorized task.
 
 A selection does not programmatically change the client or prove a change within an in-flight
 turn. Trustworthy current-turn runtime metadata takes precedence over the user-reported setting;
@@ -321,7 +335,7 @@ issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 Before creating a formal plan or invoking a separate advisor, independent reviewer,
 domain reviewer, or structured author audit, ask the user for that choice. An explicit
 request for the plan or review already answers its dimension for the current
-scope; do not ask twice. Keep plan and review choices separate, state the
+scope; do not ask twice. Keep plan and review independently selectable, state the
 recommendation and concrete reason, and explain that both are optional. Risk
 and model routes shape the recommendation, not the user's right to decline
 either. Ask at the relevant implementation task boundary, before substantial
@@ -332,8 +346,10 @@ start a review. Question-only requests do not open an implementation choice.
 
 At every situation where the applicable route calls for consultation, ask even when recommending
 direct work or no extra review. Preserve the routine-local exception to offering a plan. Present
-plan and review independently so the user can choose either, both, or neither, and offer the
-recommended model and thinking level with the reason. The user may choose another supported pair.
+plan and review so the user can choose either, both, or neither. A single numbered menu may offer
+explicit combinations; name each combination's plan, review phases, and model/thinking choices,
+and explain the recommendation. Allow a customized combination or another supported pair. A
+process selection does not replace approval of the concrete proposal or linked plan.
 Review choices include full author audits, closure matrices, systematic rereads, and second
 passes. State their scope and timing when recommending them. Choosing a plan does not also choose
 an audit; declining independent review does not authorize a replacement author audit. Match the
