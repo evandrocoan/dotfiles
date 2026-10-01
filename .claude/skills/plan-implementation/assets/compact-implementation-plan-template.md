@@ -30,10 +30,11 @@ Delete the conditional external-action section for local work.
 - Advance choice for separate reviews: <named advisor/reviewer, scope, and user response before
   invocation, or `None selected`>. A legacy plan preserves earlier chronology and
   asks before future uncovered material replanning or review.
-- Linked plan offered in chat: Pending | <link to the complete current plan>.
+- Plan and summary offered in chat: Pending | <current plan link, summary explaining the problem,
+  intended changes, how they solve it, expected result and checks, plus plan line and word counts>.
 - User response: Pending | <explicit go-ahead for this contract> | Plan only; implementation
   requires a later instruction. The initial task request and silence are not review.
-- Material revision: None | <updated link and renewed user response before affected steps>.
+- Material revision: None | <updated link and summary, and renewed approval before affected steps>.
 
 ## External action
 
@@ -54,7 +55,7 @@ Delete the conditional external-action section for local work.
 | Status | Step and owners | Validation or result |
 | --- | --- | --- |
 | pending | Perform author evidence check and obtain any selected pre-edit or pre-write review. | <author or reviewer findings; `No separate review selected` when applicable> |
-| pending | Offer the current plan link in chat for user review; in plan-and-execute mode, wait for an explicit go-ahead before implementation. | <link and user response, or `Pending`> |
+| pending | Present the current plan link and explanatory summary in chat; in plan-and-execute mode, wait for an explicit go-ahead before implementation. | <presentation and user response, or `Pending`> |
 | pending | Revalidate prerequisites and perform the scoped change or external action. | <specific check> |
 | pending | Update affected consumers or create remaining authorized records. | <specific check or `Not applicable`> |
 | pending | Validate and obtain any selected local result review; reconcile external delivery if needed, then close. | <proportional checks, final diff, selected review verdict or external read-back, and status> |

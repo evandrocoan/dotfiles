@@ -35,14 +35,16 @@ decides whether to have a formal plan, review, or audit and which model and effo
 
 - **Plan only:** When the user asks for a plan, asks to review or approve a plan, or explicitly
   says not to implement, inspect enough authoritative evidence to make the plan credible, offer its
-  link in chat, and stop. Reviewing a plan-only deliverable does not authorize implementation.
+  link and explanatory summary in chat, and stop. Reviewing a plan-only deliverable does not
+  authorize implementation.
 - **Plan and execute:** When the user asks to change, fix, build, or implement and chooses a formal
-  plan, offer its link for user review and wait for an explicit go-ahead before executing it.
+  plan, offer its link and explanatory summary for user review and wait for an explicit go-ahead.
   After that response, continue through the authorized in-scope
   steps without requesting approval for each step. Use the direct route when eligible.
-- **No formal plan:** Use direct work when the user declines a plan or the model route does not
-  call for offering one, if the task and all independent gates permit it. An unanswered choice
-  remains pending. Still identify the expected outcome and verify it; do not create a hidden plan.
+- **No formal plan:** When the user declines a plan or the model route does not call for offering
+  one, present only the explanatory summary in chat and wait for explicit approval before direct
+  work. Declining the document does not approve implementation. All independent gates still apply;
+  an unanswered choice remains pending. Verify the expected outcome without creating a hidden plan.
 
 Strongly recommend a formal plan for every high-risk request and persistence trigger below. The
 recommendation does not make the plan compulsory. For other work, follow the model route and any
@@ -58,11 +60,11 @@ relevant implementation task boundary when foreseeable, before substantial depen
 reviewer effort. Question-only requests do not open an implementation choice. One clear answer
 may cover named pre-edit and final reviews. Follow the global visible-question rule: present
 pending choices in the final response and wait. Direct work may continue after an explicit decline
-when the task is authorized and every independent gate permits it. Ordinary author verification
-is not a separate review invocation.
+only after the proposal approval below and when every independent gate permits it. Ordinary author
+verification is not a separate review invocation.
 Preserve the chronology of existing plans and reviews. Ask
 before an uncovered material replan or reviewer invocation. This advance choice does not replace
-the linked user review of a completed plan before implementation.
+the user's review and approval of the concrete proposal before implementation on either route.
 
 A bounded additive external action that meets every condition in
 [external-action routes](references/external-actions.md) uses the compact path when the user
@@ -77,6 +79,27 @@ location alone requires
 neither a formal plan nor independent review. Recommend review according to model, domain, and
 inherited risk. Neither path overrides authorization or plan-only mode.
 
+## Present the proposal and wait for approval
+
+Before implementation on either route, present a concise, self-contained summary in the final chat
+response. Explain the problem or objective, what will change, how those changes address it, the
+expected result, and how it will be checked. A list of files or steps alone does not explain the
+solution. Keep the summary proportional to the task and understandable without opening an artifact.
+
+With a formal plan, accompany the summary with the complete current plan's link and measured size
+as specified below. Without a formal plan, present only the summary in chat; do not create a plan
+artifact to satisfy this requirement. End the turn and wait for explicit user approval before the
+first implementation step. The initial task request, declining a formal plan, silence, and an
+advisor or reviewer verdict do not substitute for approval of the presented proposal. Read-only
+scoping and separately selected reviews may make the proposal concrete before this gate.
+
+An explicit instruction to implement an unchanged proposal already presented in chat satisfies
+this gate. Continue the approved scope without requesting approval for each step. If the proposed
+scope, approach, or expected effects change materially, present a revised summary and, when a plan
+exists, its updated link; wait for renewed approval before affected steps. Evidence-only or
+spelling corrections do not reopen approval. Plan-only mode still requires a later implementation
+instruction; reviewing its deliverable does not itself authorize execution.
+
 ## Materialize the plan visibly
 
 Never keep a formal plan only in hidden reasoning or conversation memory. Give every formal plan a
@@ -84,16 +107,10 @@ complete current artifact with a clickable link. Use a Markdown file under the t
 lifecycle by default; a task-plan mechanism may substitute only when its link opens the complete
 current plan for the user. Chat prose alone does not supply the artifact. When first presenting a
 formal plan or offering a materially revised version for user review, provide its link, a concise
-summary of the outcome, main steps, and checks, and its measured size as the line and word counts
-of the complete linked version. Keep ordinary progress updates concise without repeating this
-presentation. Before the first implementation step under a formal plan, wait for an explicit user
-response to proceed. The initial implementation request, silence, and
-an agent or advisor review cannot stand in for the user's review. A plan-only request stops after
-the plan is presented; it needs a later implementation instruction. An explicit request to execute
-an unchanged plan already linked in chat satisfies this boundary without another question. If the
-plan's execution contract changes materially, offer the updated link and wait again before affected
-steps. Read-only scoping and reviews separately chosen by the user may make the plan reviewable
-before this linked-plan gate.
+explanatory summary under **Present the proposal and wait for approval**, and its measured size as
+the line and word counts of the complete linked version. Keep ordinary progress updates concise
+without repeating this presentation. Apply that approval gate before implementation and after a
+material revision; the link alone does not satisfy the presentation requirement.
 
 Use these two layers when the user chooses a plan and a persistence trigger applies:
 
@@ -178,7 +195,7 @@ when those concerns are in scope.
 
 For a formal plan, record these elements before implementation. For a direct route, establish the
 outcome, scope, authoritative evidence, intended change, and proportional check without creating
-a formal plan solely to fill this list:
+a formal plan solely to fill this list; present the resulting summary for approval:
 
 1. **Outcome:** State the externally observable result and the terminal condition for the task.
 2. **Scope and non-goals:** Bound the authorized change and name nearby behavior that must remain
@@ -275,12 +292,11 @@ Order work by dependency and feedback speed:
 10. Close work with outcome, validation, diff, and status checks and any selected
     [review or audit](references/closure.md).
 
-For a formal plan, complete its linked user-review gate after any selected pre-edit plan review and
-before the first implementation step. Do not treat the planned sequence or initial request as
-evidence that the user has reviewed the plan. On resuming an active plan, offer its current link and
-wait if that review and go-ahead cannot be established for its current execution contract. If the
-plan already has completed steps from before this rule applied, preserve their actual chronology
-and require the review before the next implementation step.
+On either route, complete proposal approval after any selected pre-edit review and before the first
+implementation step. Do not treat the planned sequence or initial request as evidence of approval.
+When resuming, establish approval for the current proposal; if it is missing, present the summary
+and any chosen plan's current link, then wait. Preserve the actual chronology of steps completed
+before this rule applied and require approval before the next implementation step.
 
 For a deliberate architecture decision with a selected pre-edit plan review, use the bounded
 recording order in `architecture-records` section 7a: its limited amendment may precede that
@@ -396,13 +412,15 @@ Replan immediately when:
 
 Before a material replan of a selected plan, ask about any new plan or review action the earlier
 choice did not cover. A declined new action does not revive it as a mandatory gate. Preserve
-completed work and hold affected execution only for an existing selected plan's revised linked
-user-review gate or another independent prerequisite. If a formal plan remains selected, update
+completed work and hold affected execution for revised proposal approval on either route or another
+independent prerequisite. If a formal plan remains selected, update
 it before taking a materially different route. Preserve
 the outcome and invariants, replace superseded steps, synchronize the task-plan projection, offer
-the revised link, and wait for renewed user review before affected steps. If the user withdraws
-the plan, continue directly after resolving independent prerequisites without a substitute plan.
-Evidence-only or spelling corrections do not reopen the linked-plan gate. A replan does not
+the revised link and summary, and wait for renewed user review before affected steps. Without a
+formal plan, present the revised summary and wait before materially changed steps. Withdrawing the
+plan does not approve a changed proposal; direct work may resume against the unchanged approved
+summary after independent prerequisites are resolved, without a substitute plan.
+Evidence-only or spelling corrections do not reopen proposal approval. A replan does not
 satisfy a missing user decision or bypass the global rule to stop when a required assumption
 proves false. Recheck the material-route binding before the new route.
 

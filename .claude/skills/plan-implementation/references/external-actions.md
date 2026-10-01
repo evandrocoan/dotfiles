@@ -20,7 +20,9 @@ the relevant task boundary, then:
 1. Read the current record, verify changed claims under the domain skill, and inspect the exact
    outgoing diff. Preserve unrelated content and metadata. If the user chose a pre-write review,
    obtain it before writing. Recommend an autonomous-group reviewer for supervised work when
-   available, and explain any higher stakes.
+   available, and explain any higher stakes. Complete
+   [proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval) before the first write,
+   with the explanatory summary and any chosen plan's link.
 2. Immediately before writing, revalidate the target and compare against the read baseline. Use
    a version precondition when available. Preserve concurrent edits and re-review a revised diff
    within authorized scope; request direction for scope drift.
@@ -51,10 +53,12 @@ Use this bounded route only when every condition below is verified before the fi
 - Mutable targets and preconditions are revalidated immediately before each write.
 - No other high-risk trigger applies, and the action is not part of an inherited higher-risk plan.
 
-The authorized destination and payload need no new approval. If the user chose a compact plan,
-offer its link and wait for explicit go-ahead before the first write. If the user declined the
-plan, execute directly with the same authorization, precondition, reconciliation, and read-back
-checks. A separate review is an independent user choice.
+Do not request the same destination or payload authorization again. Complete
+[proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval) before the first write:
+present the explanatory summary with the chosen compact plan's link, or only the summary without
+a plan, and wait for explicit go-ahead. Reuse approval of an unchanged proposal already presented.
+The direct route retains the same precondition, reconciliation, and read-back checks. A separate
+review is an independent user choice.
 
 Missing authorization, read-back authority, or knowledge of downstream effects blocks writing.
 When those preconditions hold but another eligibility condition fails, classify the action as

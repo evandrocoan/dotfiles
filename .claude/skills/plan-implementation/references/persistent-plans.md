@@ -18,9 +18,10 @@ artifact that can be linked in chat for user review before execution. Use the cu
 Markdown file when the task-plan UI cannot link to its complete current plan. This also applies to
 a user-requested routine plan or another formal plan without an independent persistence trigger.
 Creating a file solely for the link does not change the task's risk classification, plan detail,
-review recommendation, or author closure requirements. Record the user's separate response to the
-linked plan before executing it; neither the original implementation request nor silence supplies
-it.
+review recommendation, or author closure requirements. Present its link with the explanatory
+summary required by [proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval).
+Record the user's separate response to that presentation before execution; neither the original
+implementation request nor silence supplies it.
 For a plan created before the advance-choice rule, preserve its real chronology and ask before a
 future material replan or uncovered reviewer invocation. A declined future review does not block
 the plan's otherwise authorized steps. Status and lifecycle updates alone do not
