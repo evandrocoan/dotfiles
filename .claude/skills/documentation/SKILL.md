@@ -42,9 +42,13 @@ Write AI-facing instruction files in English. This includes `CLAUDE.md`,
 equivalent agent guidance. Keep literal strings that an agent must emit and
 instructions that prescribe an output language in their required language.
 
-For every other existing document, match its language. If it already mixes
-languages, ask whether to continue in the dominant language, select a language
-for new content only, or normalize the entire document before editing it.
+For every other existing document, match the language of the surrounding
+content during focused edits, including in mixed-language documents. For
+substantial additions, infer the intended language from the request, local
+convention, and audience; ask only when that evidence is insufficient. When
+normalization is requested, ask only if the target language remains unclear.
+An explicit translation or normalization instruction that identifies the
+language already resolves that choice.
 
 ## Format Markdown consistently
 
