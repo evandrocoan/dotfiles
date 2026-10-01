@@ -29,8 +29,7 @@ the entire file and its coupled architecture index to English in the same change
 Never append English prose to a non-English architecture record and leave a mixed-
 language artifact behind. Preserve literal strings that must remain exact, including
 commands, paths, identifiers, API values, required UI labels, and quoted external
-output. Continue to follow the `documentation` skill's language rules for coupled
-files that are not architecture artifacts, such as user-facing README files.
+output.
 
 ## Normative force
 

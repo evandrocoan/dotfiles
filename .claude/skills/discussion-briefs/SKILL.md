@@ -1,46 +1,46 @@
 ---
 name: discussion-briefs
 description: >-
-  Write and iteratively refine a Portuguese working document for pending user decisions,
-  authorizations, or external dependencies that need extended explanation. Use when concise chat
-  questions cannot adequately explain the choices and their consequences, when the user asks for
-  a brief, or when refining an existing brief. The same criterion applies to status questions
-  about pending points. Do not use merely because several simple choices are pending, for an
-  explanation-only request, for the implementation plan itself, or for a durable architecture
-  record.
+  Write and iteratively refine a Portuguese working document that explains open points waiting on
+  the user, instead of listing them in chat. Use when work, a status report, a plan, or a review
+  leaves several pending user decisions, authorizations, or external dependencies, when one such
+  point needs more than a short explanation, when the user asks for a brief, or when refining an
+  existing brief. Also use before answering a question, such as a status question about what is
+  still missing, whose answer would list several such points; that is not an explanation-only
+  request. Do not use for an explanation-only request, a single quick question, the implementation
+  plan itself, or a durable architecture record.
 ---
 
 # Discussion briefs
 
-A discussion brief keeps detailed context, alternatives, and consequences together in one file
-that is rewritten until every point is understood and settled. Concise questions in the final
-response make the pending choices visible. The brief holds the current state of the discussion,
-never its history.
+A long chat list of pending points forces the user to request clarification item by item, and the
+refined understanding ends up scattered across the conversation. A discussion brief replaces that
+list with one file that is rewritten until every point is understood and settled. The brief holds
+the current state of the discussion, never its history.
 
 ## When to write a brief
 
 A point belongs in a brief when it is waiting on the user: a decision, an authorization, or a
-dependency on other people or on access. Create a brief when the context, alternatives, or
-consequences need more explanation than concise chat questions can provide to someone who has
-not followed the work. The number of pending choices alone does not justify a brief; group
-several simple questions directly in the final response.
+dependency on other people or on access. Write or update a brief instead of a chat list when
+either condition applies:
 
-Write one whenever the user asks for a brief, whatever the subject. Otherwise answer an
-explanation-only request, simple choices, a routine progress update, or a yes-or-no confirmation
-directly in chat. Apply the same depth criterion to status questions such as "o que falta para
-fechar isso?"; the question-only rule below governs any brief creation or update. A subagent or
-reviewer that reports to a calling agent never creates or edits a brief; it reports its findings,
-and the caller decides.
+- several such points are pending; or
+- one such point cannot be explained in a sentence or two to someone who has not followed the work.
+
+Write one whenever the user asks for a brief, whatever the subject. Answer an explanation-only
+request, a single quick question, a routine progress update, or a yes-or-no confirmation directly
+in chat. A question whose answer would list several points waiting on the user, such as "o que
+falta para fechar isso?", is not an explanation-only request: this skill applies to it through the
+question-only rule below. A subagent or reviewer that reports to a calling agent never creates or
+edits a brief; it reports its findings, and the caller decides.
 
 Keep one brief per subject and keep updating it while the subject remains open. Add new pending
-points on that subject to the existing brief, and project their questions into the final response
-as described below, rather than creating a second file or leaving their details only in chat.
+points on that subject to the existing brief. Keep their detailed explanations there rather than
+in chat or in a second file.
 
-When a brief is warranted but the turn is question-only, do not create or edit it. Summarize the
-pending points in plain language and identify the one that unblocks the most. Present pending
-user questions as described under **Keep chat a projection**, linking the existing brief when
-available. Keep the response concise without withholding the context or options needed to answer;
-do not paste a full brief into chat. You may offer to write the brief in a later turn.
+When a brief is warranted in a question-only turn, summarize how many points are pending and the
+one that unblocks the most. Leave extended evidence and analysis for the brief, and offer to write
+it in a later turn.
 
 ## What a brief is not
 
@@ -138,9 +138,9 @@ instead of striking it through. A question that exposes a new pending point beco
 Treat a note or question that the user wrote inside the brief as a request to fix that item, and
 remove the note once the text answers it.
 
-In a question-only turn, do not edit the brief. Answer in chat, show the rewritten text you propose
-when the item must change, and end the reply with the list of every item that still has an
-unapplied rewrite. Apply pending rewrites only at the next non-question instruction about the brief
+In a question-only turn, show the rewritten text you propose when the item must change, and end
+the reply with the list of every item that still has an unapplied rewrite. Apply pending rewrites
+only at the next non-question instruction about the brief
 or its subject, never as a side effect of unrelated work. When you create a brief, tell the user
 once that an instruction such as "explique melhor o D2 no documento", or a doubt written inside the
 file followed by "refine o brief", updates the file in the same turn.
@@ -200,10 +200,9 @@ After creating or updating a brief, the final response gives the link to the fil
 remain open, how many decided items still carry `registro pendente` and the instruction that
 records them, what changed in this round, and the one decision that would unblock the most.
 
-Project pending user choices into concise questions with their item identifiers and links to the
-relevant details. Keep enough context and short options in the response for the user to answer;
-counts, item titles, or a document link alone do not replace those questions. Reserve detailed
-evidence and extended comparisons for the brief instead of copying full item bodies into chat.
+Identify pending choices by their brief item identifiers and link to the relevant details.
+Reserve detailed evidence and extended comparisons for the brief instead of copying full item
+bodies into chat.
 
 ## Close the brief
 

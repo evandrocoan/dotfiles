@@ -35,21 +35,6 @@ changing content.
 - Report unrelated stale or improvable content separately instead of editing
   it opportunistically.
 
-## Match document language
-
-Write AI-facing instruction files in English. This includes `CLAUDE.md`,
-`AGENTS.md`, skills, slash commands, `.github/copilot-instructions.md`, and
-equivalent agent guidance. Keep literal strings that an agent must emit and
-instructions that prescribe an output language in their required language.
-
-For every other existing document, match the language of the surrounding
-content during focused edits, including in mixed-language documents. For
-substantial additions, infer the intended language from the request, local
-convention, and audience; ask only when that evidence is insufficient. When
-normalization is requested, ask only if the target language remains unclear.
-An explicit translation or normalization instruction that identifies the
-language already resolves that choice.
-
 ## Format Markdown consistently
 
 - Use normal sentence case for headings; do not use CamelCase titles.
