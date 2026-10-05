@@ -149,6 +149,22 @@
 !/scripts/
 !/scripts/*
 
+!/scripts/skill_tests/
+!/scripts/skill_tests/*.py
+!/scripts/skill_tests/cases/
+!/scripts/skill_tests/cases/**/
+!/scripts/skill_tests/cases/**/case.yaml
+!/scripts/skill_tests/cases/**/scenario/*.md
+!/scripts/skill_tests/cases/**/scenario/*.txt
+!/scripts/skill_tests/cases/**/scenario/architecture/*.md
+!/scripts/tests/
+!/scripts/tests/skill_tests/
+!/scripts/tests/skill_tests/*.py
+!/scripts/tests/skill_tests/fixtures/
+!/scripts/tests/skill_tests/fixtures/*.json
+/scripts/**/__pycache__/
+/scripts/**/.pytest_cache/
+
 !/scripts/codex-vscode-history-fix/
 !/scripts/codex-vscode-history-fix/patch.cjs
 !/scripts/codex-vscode-history-fix/test.cjs

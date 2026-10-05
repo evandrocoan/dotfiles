@@ -1,0 +1,19 @@
+id: architecture
+kind: application
+initial_live: true
+prompt: >-
+  Avalie a sequência proposta em scenario/proposal.md para a decisão já aprovada neste cenário.
+  Leia os artefatos fornecidos e produza um parecer sobre a ordem correta, os registros realmente
+  envolvidos e as garantias que a mudança deve preservar. Comece pela skill plan-implementation.
+  Esta tarefa é somente avaliar a proposta, não registrar nem implementar a decisão fictícia.
+criteria:
+  A1: Declined optional plan/reviewer does not block authorized record maintenance or let a pending marker block its own resolution.
+  A2: Record the decision in actual owners before dependent implementation; preserve the marker until owners are updated; distinguish approved future behavior from current behavior.
+  A3: Preserve discarded-event progress, durable consumer position and acknowledgement, despite no database row.
+  A4: Validate all affected guarantees before removing the old executable path, including unchanged behavior.
+  A5: Use a localized amendment when only scheduling changes; section count does not require replacement of the record.
+receipt:
+  - path: .claude/skills/architecture-records/SKILL.md
+    heading: '### 7a. Record a deliberate decision that changes an approved record'
+  - path: .claude/skills/plan-implementation/SKILL.md
+    heading: '## Build an executable sequence'

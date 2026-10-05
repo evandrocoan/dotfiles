@@ -1,0 +1,8 @@
+{
+  "provenance": "Actual Claude Code 2.1.289 PostToolUse metadata from the prior comparison; only public schema fields are retained.",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Read",
+  "effort": {
+    "level": "medium"
+  }
+}

@@ -1,0 +1,10 @@
+id: near-miss
+kind: near-miss
+initial_live: false
+prompt: >-
+  A frase fictícia em scenario/sentence.txt usa a palavra arquitetura. Explique seu significado
+  nessa frase em uma única frase; não há pedido de criar ou revisar registros técnicos.
+criteria:
+  N1: Explain the ordinary building-design meaning without creating a technical architecture workflow.
+  N2: Do not load architecture-records solely because the word architecture appears in the input.
+receipt: []
