@@ -19,6 +19,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
     - [Repository tests](#repository-tests)
+      - [Shared skill tests](#shared-skill-tests)
     - [Update the repository with an isolated pull](#update-the-repository-with-an-isolated-pull)
       - [Recover an interrupted isolated pull](#recover-an-interrupted-isolated-pull)
     - [Install XFCE from sources](#install-xfce-from-sources)
@@ -669,11 +670,88 @@ and can also be started manually from the Actions tab. Run the same gate locally
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-bash scripts/run_repository_tests.sh
+cd scripts
+poetry install --only skill-tests --no-interaction
+poetry run bash run_repository_tests.sh
 ```
 
 The privileged netatop/eBPF verification depends on the installed host kernel and is intentionally
 kept as a local check; see [check health, storage and recovery](#check-health-storage-and-recovery).
+
+#### Shared skill tests
+
+The [shared skill procedure](.claude/skills/skill-creator/references/evaluation.md) explains how to
+choose cases and interpret evidence. The [Python suite](scripts/skill_tests/) runs structural checks
+and its own pytest regressions in the repository gate. It uses the optional `skill-tests` Poetry
+group; installing that group does not remove existing script dependencies. CI never calls models.
+
+From `scripts/`, run these offline checks after installing the group above:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+poetry run python -m skill_tests check --repo ..
+poetry run python -m skill_tests cases
+poetry run python -m pytest tests/skill_tests
+```
+
+The structural checker covers repository-owned skills, their required metadata, local Markdown
+targets, shared aliases, and possible repeated prose. External URLs are not fetched. Heading
+matching supports Unicode letters/numbers/marks, `_`, `-`, duplicate-heading suffixes, and explicit
+HTML anchor IDs. Assets/templates and imported creator files are excluded from prose analysis.
+Duplication alerts are advisory; semantic contradictions require the behavioral cases and review.
+
+Live execution requires existing authenticated Claude/Codex CLIs on Linux, explicit authorization
+for the model usage, and any selected reviews. `prepare` and `preflight` do not call a model. They
+create private inputs outside the home instruction-discovery tree and return digests to inspect:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+SKILL_TEST_PARENT="$(mktemp -d -t skill-tests.XXXXXXXX)"
+SKILL_TEST_ROUND="${SKILL_TEST_PARENT}/round"
+poetry run python -m skill_tests prepare --repo .. --output "${SKILL_TEST_ROUND}"
+poetry run python -m skill_tests preflight "${SKILL_TEST_ROUND}"
+```
+
+Keep that directory for diagnosis and resumption; do not delete or recreate it to retry failures.
+Review `manifest.json`, `preflight.json` and the prepared catalog/evidence before running. The
+default schedule is the three initial cases, two model profiles and two repetitions. The corpus
+also contains unexecuted trigger, near-miss and held-out examples. `--case`, `--repeat`, `--baseline`
+and `--ceiling` allow preparing a different experiment; they do not authorize its model usage.
+
+After authorization and review, substitute the two reviewed digests and run one scheduled cell:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+poetry run python -m skill_tests run "${SKILL_TEST_ROUND}" \
+    --reviewed-manifest '<manifest SHA-256>' --reviewed-preflight '<preflight SHA-256>' --count 1
+```
+
+Running again resumes unstarted cells only. Any reserved or possibly launched attempt consumes
+the ceiling; incomplete processes and technical failures hold further launches. Inspect private
+`runs/<id>/` evidence before diagnosing; never edit the ledger to recover budget. Read-only client
+restrictions are not a complete OS sandbox, and unknown event/command forms remain unassessed.
+
+Use `grade ROUND RUN_ID GRADES.json` to import a JSON mapping from every frozen criterion ID to
+`verdict` (`pass`, `fail`, or `unassessable`), an exact answer `quote`, its zero-based character
+`answer_offset`, `action_refs` (observed evidence pointers, or an empty list), and a substantive `reason`.
+Grades are manual, complete, evidence-bound and non-overwriting. `report ROUND` prints status and
+counts; `report ROUND --private-output PATH` also saves a private candidate for inspection.
+Exit codes are 0 for complete passing behavioral grades with valid technical evidence, 1 for
+behavioral failure, 2 for incomplete grading or execution, and 3 for technical/input failure.
+Receipt is reported separately; a behavioral pass does not establish complete instruction receipt.
+Incomplete receipt means the supported observations did not establish delivery; it does not prove
+nondelivery. Search snippets establish discovery only. The report discloses Claude built-in catalog
+extras; Codex startup rendering verifies configuration, not live delivery of its global instructions.
+
+After inspecting candidate answers/actions for sensitive content, use `export ROUND --output PATH
+--reviewed-content SHA256` with the candidate digest printed by `report`. Automated screening adds
+a check but does not replace inspection. Raw traces and reasoning are never export inputs beyond
+the explicitly parsed observable fields. Store a desired final report in an ignored private state
+directory; reusable cases and sanitized fixtures belong in the suite source. The temporary run
+directory remains private and may be removed manually only after evidence and recovery needs end.
 
 
 ### Update the repository with an isolated pull

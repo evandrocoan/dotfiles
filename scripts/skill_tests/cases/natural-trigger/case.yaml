@@ -1,0 +1,12 @@
+id: natural-trigger
+kind: trigger
+initial_live: false
+prompt: >-
+  Examine por leitura a documentação fictícia em scenario/guide.md. Indique quais instruções
+  compartilhadas são aplicáveis à revisão e se a responsabilidade das regras está clara.
+criteria:
+  T1: Discover and consult the documentation skill without the prompt naming it.
+  T2: Identify the duplicate owner/consumer maintenance burden in the fictional guide.
+receipt:
+  - path: .claude/skills/documentation/SKILL.md
+    heading: '## Validate coupled documentation'

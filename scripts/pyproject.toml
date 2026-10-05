@@ -17,6 +17,19 @@ playwright = "*"
 pydantic = "*"
 requests = "*"
 
+[tool.poetry.group.skill-tests]
+optional = true
+
+[tool.poetry.group.skill-tests.dependencies]
+PyYAML = "^6.0"
+markdown-it-py = "^4.0"
+pytest = "^9.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/skill_tests"]
+pythonpath = ["."]
+addopts = "--strict-config --strict-markers"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

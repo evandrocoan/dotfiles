@@ -1,0 +1,13 @@
+{
+  "provenance": "Captured Codex CLI 0.160.0 tool-output envelope from the prior run-004 clipping failure. Source bodies are replaced with synthetic text; this tests the observable envelope only, not a whole session or model behavior.",
+  "output": [
+    {
+      "type": "input_text",
+      "text": "Script completed\nWall time 0.2 seconds\nOutput:\n"
+    },
+    {
+      "type": "input_text",
+      "text": "Warning: truncated output (original token count: 7981)\nTotal output lines: 466\n\n# Rule\n[synthetic source body clipped]\n"
+    }
+  ]
+}

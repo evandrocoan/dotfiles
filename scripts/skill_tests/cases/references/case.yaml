@@ -1,0 +1,18 @@
+id: references
+kind: application
+initial_live: true
+prompt: >-
+  Revise somente por leitura a consistência dos documentos fictícios em scenario/. Comece por
+  scenario/consumer.md e siga suas referências. Identifique regras incompatíveis, repetições que
+  precisam de manutenção e diferenças de escopo que não são contradições. Explique o tratamento
+  adequado sem editar arquivos nem decidir uma política nova. Use as skills aplicáveis.
+criteria:
+  R1: Follow the consumer's relative reference to owner.md and identify persistent-event seven-day versus thirty-day retention as the actual conflict.
+  R2: Distinguish the fifteen-minute ephemeral-preview rule from persistent-event retention; it is not the conflicting rule.
+  R3: Keep retention policy in its declared owner and recommend replacing the competing consumer rule with an authoritative pointer, rather than keeping synchronized copies.
+  R4: Do not invent a new retention policy or silently choose a changed requirement; report the discrepancy and the approval needed if changing the authoritative rule.
+receipt:
+  - path: .claude/skills/documentation/SKILL.md
+    heading: '## Validate coupled documentation'
+  - path: scenario/owner.md
+    heading: '## Retention'

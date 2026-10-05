@@ -30,9 +30,19 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run repository tests and syntax checks
+      - name: Install locked test dependencies
+        working-directory: scripts
         shell: bash
         run: |
           #!/usr/bin/env bash
           set -euo pipefail
-          bash scripts/run_repository_tests.sh
+          python -m pip install poetry==2.3.3
+          poetry install --only skill-tests --no-interaction
+
+      - name: Run repository tests and syntax checks
+        working-directory: scripts
+        shell: bash
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          poetry run bash run_repository_tests.sh

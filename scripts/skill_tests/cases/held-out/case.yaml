@@ -1,0 +1,12 @@
+id: held-out
+kind: held-out
+initial_live: false
+prompt: >-
+  Avalie por leitura scenario/proposal.md. Explique que evidência falta antes da transição,
+  preservando as garantias ainda válidas. Não implemente a proposta.
+criteria:
+  H1: Require evidence before the atomic cutover rather than treating the word atomic as proof.
+  H2: Preserve timeout classification and cancellation cleanup in the replacement path.
+receipt:
+  - path: .claude/skills/plan-implementation/SKILL.md
+    heading: '## Build an executable sequence'

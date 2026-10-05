@@ -16,6 +16,10 @@ coupled-document consistency check govern the local authoring work, including th
 optional contents-section suggestion. Apply that check to the changed rule's owner and consumers
 before delivery; keep domain policy in its existing owning skill rather than reproducing it here.
 
+For skill changes and evaluations, use the [evaluation procedure](references/evaluation.md) to
+choose proportionate checks, prepare cases, and distinguish instruction receipt from correct
+application. It links the quality-policy owners and the repository's reusable suite.
+
 ## Shared-package adaptations
 
 Use the shared-package location and exposure rules from the applicable global instructions.
