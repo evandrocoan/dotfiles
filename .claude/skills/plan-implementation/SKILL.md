@@ -211,13 +211,11 @@ step complete. Mention exact paths or symbols only after inspecting them; do not
 to make a plan look concrete.
 
 When ownership or flow changes, carry each affected architectural guarantee into that sequence,
-including unchanged behavior whose implementation path moves. Before a step removes an existing
-responsibility or protection, require evidence that the replacement path preserves its
-guarantees. Establish that path first, or use an explicitly atomic transition whose
-prerequisites and validation rule out a protection or progress gap. If ownership is unknown,
-make its investigation a prerequisite. An architectural assignment is not evidence that the
-runtime path already exists. This applies the invariant-to-owner trace to the transition itself,
-so a correct final design does not hide a gap in the steps that reach it.
+including unchanged behavior whose implementation path moves. If ownership is unknown, make
+its investigation a prerequisite. An architectural assignment is not evidence that the runtime
+path already exists. Apply the transition gate in
+[Build an executable sequence](#build-an-executable-sequence) when retiring an existing
+responsibility or protection, so the plan covers the transition as well as the final design.
 
 Review plans proportionally before implementation. Obtain the advance choice above before any
 separate reviewer or advisor is invoked:
@@ -267,9 +265,14 @@ Order work by dependency and feedback speed:
 3. Establish or update the smallest failing regression protection.
 4. Change the authoritative owner of the behavior.
 5. Update every affected consumer of that contract.
-6. Remove competing or superseded behavior rather than leaving parallel authority.
-7. Run focused checks after the smallest meaningful slice.
-8. Run broader integration, replay, and suite-level checks after the flow is connected.
+6. Run focused checks after the smallest meaningful slice. Before removal or cutover, require
+   passing evidence that the replacement preserves all affected guarantees, including unchanged
+   behavior. For an atomic transition, validate its candidate and prerequisites before cutover
+   to rule out a protection or progress gap; calling it atomic does not supply this evidence.
+7. Remove competing or superseded behavior only after the preceding validation passes; do not
+   leave parallel authority at completion.
+8. Recheck affected behavior after removal, then run broader integration, replay, and suite-level
+   checks after the flow is connected.
 9. Perform operational or paid live validation only when it is useful and authorized under the
    applicable rules.
 10. Close work with outcome, validation, diff, and status checks and any selected
