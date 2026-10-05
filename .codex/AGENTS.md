@@ -445,6 +445,9 @@ of choosing one silently.
 - `test-quality`: Create, modify, review, debug, or run automated tests, including
   unit, integration, end-to-end, regression, smoke, property, concurrency, and
   recorded-replay tests and their recording lifecycle.
+- `windows`: Handle Windows-specific PowerShell execution, path and symlink
+  boundaries, and portable tool or managed-runtime setup. Ordinary cross-platform
+  edits on Windows alone do not activate it.
 
 Runtime-owned Codex system skills and plugin-provided skills are discovered through
 their runtime catalogs and may not be available to every AI client. Do not add them
