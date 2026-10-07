@@ -88,6 +88,19 @@ continues through its routine delivery steps.
    validation. Describe why the change matters instead of merely listing files.
 5. Present a drafted title and description as plain text. Create or update the
    remote request only when the user asks for that outcome.
+6. For every new GitLab merge request, including drafts, explicitly enable
+   **Delete source branch on merge**. Do not rely on project or tool defaults.
+   Set `remove_source_branch: true` in REST API requests or the equivalent
+   supported MCP input. With `glab mr create`, pass
+   `--remove-source-branch=true`; in the web UI, select the corresponding
+   checkbox. The push-option fallback below must enable it as well.
+7. After creation, read back the same merge request and confirm
+   `force_remove_source_branch: true` or the equivalent saved UI setting.
+   `should_remove_source_branch` alone does not prove this saved preference.
+   If the creation tool cannot set the option, or it was not saved, enable it
+   through an available update capability under the tool-selection rules
+   above, then verify again. If it cannot be saved or verified, report the MR
+   delivery as incomplete.
 
 ## Prepare an issue
 
@@ -113,7 +126,8 @@ before sending. Repeat this check when the outgoing text changes.
 
 When GitLab CLI and MCP capabilities are unavailable, create the requested merge
 request with GitLab push options. Set the target branch, title, and description
-with `merge_request.create`.
+with `merge_request.create`, and include `merge_request.remove_source_branch`
+to enable source-branch deletion on merge.
 
 Push-option values cannot contain literal newlines. Use the literal `\\n`
 escape sequence for a multiline description; GitLab converts it to line breaks.
