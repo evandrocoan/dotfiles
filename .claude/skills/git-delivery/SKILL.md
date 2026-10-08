@@ -67,11 +67,28 @@ pull request, or merge request authorizes only its routine, in-scope Git steps.
 6. Treat installed commit-message generators as non-authoritative references.
    Do not run one unless the user asks. Independently derive and verify the
    message from the actual diff even when a generated draft is available.
-7. After creating the commit and before any push, inspect the stored message.
-   Confirm that its title and body satisfy the rules above and that every claim
-   matches the committed diff and validation evidence. Correct the message
-   before delivery if it fails this check; never rewrite a pushed commit merely
-   to improve wording without explicit authorization.
+7. Before creating the commit, write the complete message to a temporary UTF-8
+   file outside the staged set, with real LF line breaks. Use a file-writing
+   tool or a quoted here-document that preserves the text without shell
+   expansion. Do not construct multiline messages in `-m` shell arguments or
+   write JSON-escaped text as the file contents: ordinary shell quotes do not
+   turn literal `\n` into line breaks.
+8. Read the file back before invoking Git. Check the title/body separator,
+   required body, actual line lengths, and content against the rules above and
+   the intended diff. Inspect literal `\n` or `\r` sequences for accidental
+   paragraph separators; preserve intentional code examples instead of blindly
+   replacing escapes. Check the file contents, not a serialized tool-call
+   representation or the terminal's visual line wrapping. Fix the file and
+   repeat this check whenever its text changes.
+9. Create the commit with `git commit -F` using that exact checked file. Keep
+   the file until the stored-message check succeeds.
+10. After creating the commit and before any push, inspect the stored message
+    with `git log -1 --format=%B` and compare it with the checked file, including
+    actual line breaks.
+    Confirm that its title and body satisfy the rules above and that every claim
+    matches the committed diff and validation evidence. Correct the message
+    before delivery if it fails this check; never rewrite a pushed commit merely
+    to improve wording without explicit authorization.
 
 When drafting a message for the user, present it as a plain-text code block. A
 commit-only request stays local; a pull-request or merge-request request
@@ -129,8 +146,10 @@ request with GitLab push options. Set the target branch, title, and description
 with `merge_request.create`, and include `merge_request.remove_source_branch`
 to enable source-branch deletion on merge.
 
-Push-option values cannot contain literal newlines. Use the literal `\\n`
-escape sequence for a multiline description; GitLab converts it to line breaks.
+Push-option values cannot contain literal newlines. Use `\n` (one backslash
+followed by `n`) in the value received by Git for a multiline description;
+GitLab converts it to line breaks. This encoding applies only to GitLab push
+options, not to commit-message files or `git commit -m` arguments.
 Never encode line breaks as `%0A`, because GitLab stores that text verbatim.
 
 Later pushes may update an existing merge request through
