@@ -895,6 +895,33 @@ before returning `.git`.
    ~/.local/bin/xfce4-panel &
    ```
 
+1. **`xfce4-notifyd` panel plugin** (fork that lists the notification log oldest first)
+
+   The checkout `~/scripts/xfce4/xfce4-notifyd` carries the patch on a `my-xfce4-notifyd-<version>`
+   branch based on the upstream tag of the release the distribution ships, because the plugin talks
+   to the distribution's daemon over D-Bus. `build_xfce4.sh --install` installs only its panel
+   plugin (library and desktop file) into `~/.local`, and the panel prefers that library over the
+   `panel-plugins/` symlink from the previous step; the daemon, settings dialog, and D-Bus
+   services stay from the distribution. The script implements this only for autotools builds and
+   stops with an error on a checkout that contains `meson.build`, such as the fork's default
+   branch, so switch to the patch branch after the first clone:
+   ```bash
+   cd ~/scripts
+   bash build_xfce4.sh xfce4-notifyd
+   git -C xfce4/xfce4-notifyd branch -r --list 'origin/my-xfce4-notifyd-*'
+   git -C xfce4/xfce4-notifyd switch my-xfce4-notifyd-<version>
+   bash build_xfce4.sh --install xfce4-notifyd
+   ```
+
+   Then restart the panel with the commands from the previous step. When the distribution
+   upgrades `xfce4-notifyd` (`dpkg -l xfce4-notifyd`), the patch needs a branch based on the
+   matching upstream tag. Upstream releases after the one the current branch uses also ship
+   `meson.build`, so extend the script's plugin-only install to meson before rebuilding from such
+   a branch. To return to the distribution plugin, remove the local build and restart the panel:
+   ```bash
+   rm ~/.local/lib/xfce4/panel/plugins/libnotification-plugin.{so,la}
+   ```
+
 1. **`xf86-input-libinput`** (Fix mouse scroll speed without using bugged has as imwheel!)
    ```bash
    git clone https://github.com/evandroforks/xf86-input-libinput
