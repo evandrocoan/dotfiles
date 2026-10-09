@@ -16,7 +16,7 @@ ALL_TEMPS=$(sensors | grep "°C" | sed 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g')
 # 3. Format the output for the XFCE panel
 if [ "$MAX_TEMP" -ge 80 ]; then
     # If it hits 80C or higher, make the text red to warn you!
-    echo "<txt><span fgcolor='red'>🔥 ${MAX_TEMP}°C</span></txt>"
+    echo "<txt><span fgcolor='red'>${MAX_TEMP}°C</span></txt>"
 else
     # Normal display
     echo "<txt>${MAX_TEMP}°C</txt>"
