@@ -15,6 +15,7 @@ declare -a PACKAGES=(
     "xfce4-thunar|https://gitlab.xfce.org/xfce/thunar.git"
     "xfce4-thunar-archive-plugin|https://gitlab.xfce.org/thunar-plugins/thunar-archive-plugin.git"
     "xfce4-panel|https://gitlab.xfce.org/xfce/xfce4-panel.git"
+    "xfce4-notifyd|https://gitlab.xfce.org/apps/xfce4-notifyd.git"
     "xfce4-xfwm4|https://gitlab.xfce.org/xfce/xfwm4.git"
     "xfce4-whiskermenu-plugin|https://gitlab.xfce.org/panel-plugins/xfce4-whiskermenu-plugin.git"
     "xf86-input-libinput|https://gitlab.freedesktop.org/xorg/driver/xf86-input-libinput.git"
@@ -79,6 +80,7 @@ Usage: bash ${0} [options] [PACKAGE...]
 
 Required apt packages:
 sudo apt install \
+  autopoint \
   gtk-doc-tools \
   libcairo2-dev \
   libexo-2-dev \
@@ -87,6 +89,8 @@ sudo apt install \
   libglib2.0-dev \
   libgtk-3-dev \
   libinput-dev \
+  libnotify-dev \
+  libsqlite3-dev \
   libwnck-3-dev \
   libx11-dev \
   libxfce4ui-2-dev \
@@ -183,6 +187,21 @@ function main {
 
         pushd "${libname}"
 
+        # Install only the panel plugin of xfce4-notifyd: the distribution's daemon,
+        # settings dialog, and D-Bus services stay authoritative, and the plugin talks
+        # to that daemon over D-Bus.
+        local install_subdir=""
+        if [[ "${libname}" == "xfce4-notifyd" ]]; then
+            install_subdir="panel-plugin"
+        fi;
+
+        if [[ "$DO_INSTALL" -eq 1 ]] && [[ -n "${install_subdir}" ]] && [[ -f meson.build ]]; then
+            printf 'Error: This %s checkout contains meson.build, but installing only "%s" is implemented for autotools builds.\n' \
+                "${libname}" "${install_subdir}" >&2
+            printf 'Switch to an autotools-based fork branch (see "git branch -r") or extend this script.\n' >&2
+            exit 1
+        fi;
+
         if [[ -f meson.build ]]; then
             # Meson-based build (XFCE >= 4.17)
             if [[ "$DO_CONFIGURE" -eq 1 ]]; then
@@ -209,7 +228,11 @@ function main {
             fi;
 
             if [[ "$DO_INSTALL" -eq 1 ]]; then
-                make install
+                if [[ -n "${install_subdir}" ]]; then
+                    make -C "${install_subdir}" install
+                else
+                    make install
+                fi;
             fi;
         fi;
 
