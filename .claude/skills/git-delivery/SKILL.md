@@ -6,21 +6,20 @@ description: Prepare or perform safe Git delivery while preserving local work an
 # Git delivery
 
 Keep file work in the authorized local working tree. A user-requested commit,
-pull request, or merge request authorizes only its routine, in-scope Git steps.
+push, pull request, or merge request authorizes only its routine, in-scope steps.
 
 ## Establish scope and authorization
 
 1. Read the repository instructions and inspect the current branch, status,
    staged changes, unstaged changes, untracked files, and configured remote.
-2. Treat an explicitly requested commit, pull request, or merge request as
+2. Treat an explicitly requested commit, push, pull request, or merge request as
    authorization for its routine prerequisites. A commit-only request stays local.
    Opening a pull request or merge request includes the source branch, scoped
    commit, and push. It never includes merging, force-pushing, rewriting
    history, or unrelated changes. A review authorizes no mutations.
-3. Creating, correcting, or amending a commit never authorizes a push by
-   itself, even when the remote contains an earlier version of that commit.
-   Leave the rewritten commit local unless the user requests a pull or merge
-   request as the current outcome.
+3. Creating, correcting, or amending a commit does not authorize a push,
+   even when its earlier version is remote. Push only when explicitly requested
+   or included in an authorized pull-request or merge-request delivery.
 4. Never create another worktree, rewrite history, force-push, rebase, merge, or
    cherry-pick unless the user asks for that operation.
 5. Preserve unrelated and pre-existing changes. Do not stage, unstage, discard,
@@ -36,6 +35,23 @@ pull request, or merge request authorizes only its routine, in-scope Git steps.
   commands, HTTP calls, or local credential discovery.
 - Use a shell or HTTP fallback only when the GitLab MCP capability is
   unavailable or returns an error, and state why the fallback was necessary.
+
+## Verify identity before remote writes
+
+1. Before a remote write, verify the intended account through read-only provider
+   evidence for the exact credential/key selected for the destination, including
+   HTTPS helper username/path matching. MCP, CLI, SSH, and HTTPS can use different
+   accounts; commit authorship, stored usernames, and connection success are not
+   identity evidence.
+2. Reuse verification only while that credential/key and context demonstrably
+   remain unchanged. Unchanged configuration is insufficient; reverify after
+   fallbacks or uncertainty, before writing. Block writes with unverified actors
+   or account substitutions that lack explicit authorization.
+3. Keep fallbacks scoped to the process. Delivery does not authorize persistent
+   changes to remotes, credential stores, or authentication settings. For an
+   authorized alternate account, isolate helper lookup and saving from other accounts.
+4. Compare secrets only in memory. Never report tokens, passwords,
+   credential-bearing URLs, full helper output, or secret configuration.
 
 ## Prepare a commit
 
@@ -93,6 +109,24 @@ pull request, or merge request authorizes only its routine, in-scope Git steps.
 When drafting a message for the user, present it as a plain-text code block. A
 commit-only request stays local; a pull-request or merge-request request
 continues through its routine delivery steps.
+
+## Establish branch publication and upstream
+
+1. Establish the base, MR target, publication destination, and intended upstream
+   separately. Inspect existing tracking and preserve deliberate differences
+   throughout these steps, including fork workflows.
+2. Avoid accidental base tracking when creating branches: use `--no-track`
+   unless that relationship is intended. Do not assume a branch from `FETCH_HEAD`
+   or a commit has an upstream.
+3. Prefer an existing named remote. When the publication branch is the intended
+   upstream, use `git push --set-upstream <remote> <local-branch>:<remote-branch>`.
+4. Before a URL fallback, confirm the publication repository matches the intended
+   named remote. Afterward, repair missing or unintended upstreams with the
+   correct named remote, refreshing the required remote-tracking ref if needed.
+5. Verify `branch.<name>.remote`, `branch.<name>.merge`, and the resolved upstream
+   against the intended relationship. Separately confirm the publication
+   destination and remote branch's commit. Report delivery incomplete if required
+   tracking is missing or wrong; push or MR success alone is insufficient.
 
 ## Prepare a pull or merge request
 
@@ -160,5 +194,6 @@ change merge-request metadata.
 ## Report delivery
 
 Report the local branch, commit when one was created, validation performed, and
-any remote action taken. State explicitly when changes remain local, uncommitted,
-or unpushed.
+any remote action taken. For remote delivery, include the verified acting account,
+publication destination, and local upstream. State explicitly when changes remain
+local, uncommitted, or unpushed.
