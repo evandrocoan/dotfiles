@@ -75,8 +75,8 @@ BROWSER_USE_TINYSKY_ENABLED = "1"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.908.70816"
-NODE_REPL_TRUSTED_SERVICES = '{"browser":"/home/someuser/.codex/plugins/cache/openai-bundled/browser/26.908.70816/scripts/browser-service.mjs"}'
+BROWSER_USE_CODEX_APP_VERSION = "26.917.71314"
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/home/someuser/.codex/plugins/cache/openai-bundled/browser/26.917.71314/scripts/browser-service.mjs"}'
 CODEX_CLI_PATH = "/usr/lib/chatgpt/resources/codex"
 
 [mcp_servers.excalidraw]
@@ -88,6 +88,7 @@ args = [
 
 [tui.model_availability_nux]
 gpt-6-astra = 4
+"gpt-6.1-sol" = 2
 
 [desktop]
 followUpQueueMode = "steer"
@@ -95,6 +96,8 @@ external-agent-import-sync-item-types = "all"
 external-agent-import-sync-enabled = true
 conversationDetailMode = "STEPS_COMMANDS"
 ambient-suggestions-enabled = true
+keepRemoteControlAwakeWhilePluggedIn = false
+open-link-in-target-preference = "external-browser"
 
 [marketplaces.openai-bundled]
 source_type = "local"
@@ -131,10 +134,14 @@ enabled = true
 [plugins."template-creator@openai-primary-runtime"]
 enabled = true
 
+[plugins."chrome@openai-bundled"]
+enabled = true
+
 [shell_environment_policy]
 inherit = "core"
 
 [shell_environment_policy.set]
+SSH_AUTH_SOCK = "/run/user/1000/keyring/ssh"
 DISABLE_AUTOUPDATER = "1"
 
 [projects."/home/someuser"]
