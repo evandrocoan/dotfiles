@@ -158,20 +158,13 @@
 !/scripts/skill_tests/cases/**/scenario/*.txt
 !/scripts/skill_tests/cases/**/scenario/architecture/*.md
 !/scripts/tests/
-!/scripts/tests/skill_tests/
-!/scripts/tests/skill_tests/*.py
-!/scripts/tests/skill_tests/fixtures/
-!/scripts/tests/skill_tests/fixtures/*.json
+!/scripts/tests/**
+/scripts/tests/**/.env*
 /scripts/**/__pycache__/
 /scripts/**/.pytest_cache/
 
 !/scripts/codex-vscode-history-fix/
-!/scripts/codex-vscode-history-fix/patch.cjs
-!/scripts/codex-vscode-history-fix/test.cjs
-!/scripts/codex-vscode-history-fix/patch-first-run.cjs
-!/scripts/codex-vscode-history-fix/test-first-run.cjs
-!/scripts/codex-vscode-history-fix/patch-empty-header.cjs
-!/scripts/codex-vscode-history-fix/test-empty-header.cjs
+!/scripts/codex-vscode-history-fix/*.cjs
 
 /scripts/.env*
 /scripts/check_*_playwright.py
@@ -192,14 +185,9 @@
 !/scripts/performance-monitoring/netdata-apps_groups.conf
 !/scripts/performance-monitoring/netatop-bpf.revision
 !/scripts/performance-monitoring/netatop-bpf.patch
-!/scripts/performance-monitoring/verify_netatop_bpf.py
-!/scripts/performance-monitoring/retain_atop_logs.py
-!/scripts/performance-monitoring/test_retention.py
-!/scripts/performance-monitoring/incident_capture.py
-!/scripts/performance-monitoring/bcc_ready.py
+!/scripts/performance-monitoring/*.py
 !/scripts/performance-monitoring/incident-capture.json
 !/scripts/performance-monitoring/99-performance-delayacct.cfg
-!/scripts/performance-monitoring/test_incident_capture.py
 !/scripts/performance-monitoring/delay-anomaly-fixture.json
 
 # temp clone
