@@ -31,3 +31,5 @@
 *.o binary
 *.obj binary
 
+# Preserve CRLF batch files in checkouts and archives.
+*.cmd -text -eol whitespace=cr-at-eol

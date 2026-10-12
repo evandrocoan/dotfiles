@@ -42,8 +42,9 @@ cat >&1 <<EOF
 
     Usage: bash ${0} [arguments]
 
-    Install the Claude, Codex, and GitHub Copilot skills and global instructions
-    from https://github.com/${REPOSITORY} or link a local checkout.
+    Install the Claude, Codex, and GitHub Copilot skills, global instructions,
+    and codex-session-stats from https://github.com/${REPOSITORY} or link a
+    local checkout. The CLI requires Python 3 with sqlite3 and zoneinfo.
 
     Skills are installed canonically in ~/.claude/skills and shared with Codex
     and Copilot through relative links in ~/.agents/skills. Existing files are
@@ -668,6 +669,54 @@ function installglobalinstructions() {
     done
 }
 
+function checkcodexcli() {
+    local source_path="${1}/.local/bin/codex-session-stats"
+
+    if [[ ! -f "${source_path}" ]] || [[ ! -x "${source_path}" ]]; then
+        printf 'Error: Executable Codex session CLI was not found: %s\n' "${source_path}" >&2
+        exit 1
+    fi
+    if ! commandexists python3; then
+        printf 'Error: Python 3 is required for codex-session-stats.\n' >&2
+        exit 1
+    fi
+    if ! python3 -c 'import sqlite3, zoneinfo'; then
+        printf 'Error: Python 3 with sqlite3 and zoneinfo is required for codex-session-stats.\n' >&2
+        exit 1
+    fi
+}
+
+function installcodexcli() {
+    local source_path="${1}/.local/bin/codex-session-stats"
+    local target_path="${DESTINATION}/.local/bin/codex-session-stats"
+
+    if [[ "${MODE}" == "local" ]]; then
+        if [[ "${source_path}" == "${target_path}" ]]; then
+            printf 'Error: Local source and destination CLI are the same path: %s\n' "${source_path}" >&2
+            exit 1
+        fi
+        if ! preparetarget "${target_path}" "Codex session CLI link"; then
+            return
+        fi
+        if [[ "${DRY_RUN}" -eq 0 ]]; then
+            mkdir -p -- "${target_path%/*}"
+            ln -s -- "${source_path}" "${target_path}"
+        fi
+        INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+    else
+        installarchiveentry "${source_path}" "${target_path}" "Codex session CLI" "" ""
+    fi
+}
+
+function reportclipath() {
+    local cli_directory="${DESTINATION}/.local/bin"
+
+    case ":${PATH}:" in
+        *":${cli_directory}:"*) ;;
+        *) printf 'Notice: Add %s to PATH and restart Codex to use codex-session-stats.\n' "${cli_directory}" ;;
+    esac
+}
+
 while [[ $# -gt 0 ]]; do
     case "${1}" in
         -h|--help)
@@ -742,6 +791,8 @@ if [[ "${MODE}" == "remote" ]]; then
     tar -xzf "${ARCHIVE_PATH}" -C "${SOURCE_DIRECTORY}" --strip-components=1
 fi
 
+checkcodexcli "${SOURCE_DIRECTORY}"
+
 installskills "${SOURCE_DIRECTORY}"
 
 if [[ "${FOUND_SKILL_COUNT}" -eq 0 ]]; then
@@ -750,8 +801,10 @@ if [[ "${FOUND_SKILL_COUNT}" -eq 0 ]]; then
 fi
 
 installglobalinstructions "${SOURCE_DIRECTORY}"
+installcodexcli "${SOURCE_DIRECTORY}"
 prunediscontinuedentries
 writestate
+reportclipath
 
 if [[ "${UNMANAGED_SKIPPED_COUNT}" -gt 0 ]]; then
     printf 'Notice: %d existing skill item(s) were not added to the control file; use --force to replace and manage them.\n' "${UNMANAGED_SKIPPED_COUNT}"

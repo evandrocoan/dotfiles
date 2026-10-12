@@ -1,11 +1,13 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-Installs shared Claude, Codex, and Copilot skills on Windows.
+Installs shared Claude, Codex, and Copilot skills and codex-session-stats on Windows.
 .DESCRIPTION
 Local mode links this checkout into the selected Windows profile. Remote mode
 downloads a GitHub revision and copies its skills. Existing paths are preserved
 unless Force is specified. Managed skills are recorded for later cleanup.
+The CLI requires Python 3 with sqlite3 and zoneinfo. For the current user,
+the installer adds its command directory to the user PATH when needed.
 .PARAMETER Destination
 Windows user home directory. Defaults to USERPROFILE.
 .PARAMETER Mode
@@ -46,6 +48,31 @@ $disownedCount = 0
 
 if (-not (Test-Path -LiteralPath $destinationRoot -PathType Container)) {
     throw "Destination home directory does not exist: $destinationRoot"
+}
+
+function Test-PythonRuntime {
+    param([string] $Command, [string[]] $Prefix = @())
+
+    $executable = Get-Command -Name $Command -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($null -eq $executable) {
+        return $false
+    }
+    try {
+        & $executable.Source @Prefix -c 'import sqlite3, zoneinfo'
+        return $LASTEXITCODE -eq 0
+    } catch {
+        Write-Warning "Python runtime probe failed for $($executable.Source): $_"
+        return $false
+    }
+}
+
+function Assert-PythonRuntime {
+    if ((Test-PythonRuntime -Command 'py.exe' -Prefix @('-3')) -or
+        (Test-PythonRuntime -Command 'python.exe')) {
+        return
+    }
+    throw 'codex-session-stats requires Python 3 with sqlite3 and zoneinfo (py -3 or python).'
 }
 
 function Get-ExistingItem {
@@ -410,6 +437,13 @@ function Install-LocalSkills {
     if ($sourceRoot -ieq $destinationRoot) {
         throw 'Local source and destination must differ to protect the checkout.'
     }
+    foreach ($relativePath in @('.local\bin\codex-session-stats',
+                                '.local\bin\codex-session-stats.cmd')) {
+        $cliSource = Join-Path $sourceRoot $relativePath
+        if (-not (Test-Path -LiteralPath $cliSource -PathType Leaf)) {
+            throw "Codex session CLI source does not exist: $cliSource"
+        }
+    }
     $sourceSkills = Join-Path $sourceRoot '.claude\skills'
     if (-not (Test-Path -LiteralPath $sourceSkills -PathType Container)) {
         throw "Skill source directory does not exist: $sourceSkills"
@@ -439,6 +473,12 @@ function Install-LocalSkills {
     Set-SkillLink $claudeInstructionsLink '..\.codex\AGENTS.md' | Out-Null
     $copilotInstructionsLink = Join-Path $destinationRoot '.copilot\copilot-instructions.md'
     Set-SkillLink $copilotInstructionsLink '..\.claude\CLAUDE.md' | Out-Null
+    foreach ($relativePath in @('.local\bin\codex-session-stats',
+                                '.local\bin\codex-session-stats.cmd')) {
+        $cliTarget = Join-Path $destinationRoot $relativePath
+        $cliSource = Join-Path $sourceRoot $relativePath
+        Set-SkillLink $cliTarget $cliSource | Out-Null
+    }
 }
 
 function Install-RemoteSkills {
@@ -464,6 +504,20 @@ function Install-RemoteSkills {
             $instructions = $instructionEntries[0]
             $rootPrefix = $instructions.FullName.Substring(
                 0, $instructions.FullName.Length - '.codex/AGENTS.md'.Length)
+            $cliEntries = @{}
+            foreach ($relativePath in @('.local/bin/codex-session-stats',
+                                        '.local/bin/codex-session-stats.cmd')) {
+                $cliMatches = @($archive.Entries | Where-Object {
+                    $_.FullName -ceq ($rootPrefix + $relativePath)
+                })
+                if ($cliMatches.Count -ne 1) {
+                    throw "The GitHub archive must contain one $relativePath file."
+                }
+                if (((($cliMatches[0].ExternalAttributes -shr 16) -band 0xF000) -eq 0xA000)) {
+                    throw "Symbolic CLI archive entry is not supported: $relativePath"
+                }
+                $cliEntries[$relativePath] = $cliMatches[0]
+            }
             $skillPrefix = "${rootPrefix}.claude/skills/"
             $skillFiles = @{}
             $skillManifests = @{}
@@ -543,6 +597,11 @@ function Install-RemoteSkills {
                 '.codex\AGENTS.md', '.claude\CLAUDE.md',
                 '.copilot\copilot-instructions.md')) {
                 Copy-ArchiveEntry $instructions (Join-Path $destinationRoot $relativePath) | Out-Null
+            }
+            foreach ($relativePath in @('.local/bin/codex-session-stats',
+                                        '.local/bin/codex-session-stats.cmd')) {
+                $targetPath = Join-Path $destinationRoot ($relativePath.Replace('/', '\'))
+                Copy-ArchiveEntry $cliEntries[$relativePath] $targetPath | Out-Null
             }
         } finally {
             $archive.Dispose()
@@ -625,6 +684,38 @@ function Prune-DiscontinuedSkills {
     }
 }
 
+function Add-CliDirectoryToPath {
+    $cliDirectory = Join-Path $destinationRoot '.local\bin'
+    $currentProfile = [System.IO.Path]::GetFullPath($env:USERPROFILE)
+    if ($destinationRoot -ine $currentProfile) {
+        Write-Warning "Add $cliDirectory to the selected user's PATH before using codex-session-stats."
+        return
+    }
+
+    $userPath = [string] [Environment]::GetEnvironmentVariable('Path', 'User')
+    $normalizedDirectory = $cliDirectory -replace '[\\/]+$', ''
+    foreach ($entry in ($userPath -split ';')) {
+        $expanded = [Environment]::ExpandEnvironmentVariables($entry.Trim().Trim('"'))
+        if (($expanded -replace '[\\/]+$', '') -ieq $normalizedDirectory) {
+            return
+        }
+    }
+
+    if ($DryRun) {
+        Write-Host "Would add CLI directory to user PATH: $cliDirectory"
+        return
+    }
+    $newPath = if ([string]::IsNullOrWhiteSpace($userPath)) {
+        $cliDirectory
+    } else {
+        $userPath.TrimEnd(';') + ';' + $cliDirectory
+    }
+    [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+    $env:Path = $env:Path.TrimEnd(';') + ';' + $cliDirectory
+    Write-Host "Added CLI directory to user PATH: $cliDirectory (restart Codex to use it)."
+}
+
+Assert-PythonRuntime
 Read-InstallState
 if ($Mode -eq 'Remote') {
     Install-RemoteSkills
@@ -633,6 +724,7 @@ if ($Mode -eq 'Remote') {
 }
 Prune-DiscontinuedSkills
 Write-InstallState
+Add-CliDirectoryToPath
 
 if ($DryRun) {
     Write-Host "Dry run complete: $installedCount change(s), $prunedCount managed item(s) would be pruned, $disownedCount modified skill(s) would be preserved and disowned, $skippedCount existing item(s) skipped."
