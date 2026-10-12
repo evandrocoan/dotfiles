@@ -2,7 +2,8 @@
 name: windows
 description: >-
   Handle Windows-specific development workflows when PowerShell argument passing,
-  paths or reparse points, or portable tools and managed runtimes affect the work.
+  Windows privileges or UAC elevation, paths or reparse points, or portable tools
+  and managed runtimes affect the work.
   Use for Windows setup and validation, not for ordinary cross-platform edits
   that merely happen on Windows.
 ---
@@ -24,6 +25,20 @@ separate from a Python interpreter used to run maintenance tools.
   directories even when their skill entries link to the same source.
 - Keep repository-owned links relative. A cross-volume Windows exposure link may
   need an absolute, machine-local target; keep that link out of shared artifacts.
+
+## Distinguish tool approvals from Windows elevation
+
+- Codex's `approval_policy = "never"` disables Codex approval prompts; it does
+  not by itself prohibit Windows UAC elevation. Sandbox restrictions, explicit
+  runtime prohibitions, and rejected actions still apply; do not use `RunAs`
+  or another launcher to bypass them.
+- Check whether the current process is elevated before claiming administrative
+  access. Running a `.ps1` normally does not request elevation. For an authorized
+  administrative operation, when the environment permits it, request elevation
+  for the scoped helper with `Start-Process -Verb RunAs`; the user handles any
+  UAC consent or credentials.
+- An elevated child does not elevate its parent. Verify the child's result before
+  claiming success, and report cancellation or denial as returned.
 
 ## Run native commands from PowerShell
 
