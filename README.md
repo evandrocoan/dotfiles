@@ -389,6 +389,10 @@ absent from `PATH`. On Windows, the installer adds it to the current user's
 `PATH` when needed; restart Codex afterward. For another user's destination,
 add that directory to the selected user's `PATH` separately. After installation,
 run `codex-session-stats --help` in a new shell to check command discovery.
+They also install [the Copilot session hook](.copilot/hooks/current-session.json),
+which supplies the root session ID to Copilot CLI without editing its other hooks
+or settings. Restart Copilot CLI after installation to load it. If `COPILOT_HOME`
+uses another directory, expose the hook in that directory's `hooks/` folder.
 
 With the Bash script, install from GitHub in remote mode:
 
@@ -564,9 +568,34 @@ wall-clock duration. Its report includes the model used, the longest interval
 without events, start and end times, overlapping activity, project, and user
 request.
 
-Inside an active Codex task, `codex-session-stats current --format json` reports
-that task's model and reasoning effort. It requires the task's `CODEX_THREAD_ID`;
-outside Codex, use `codex-session-stats --help` to check the installation.
+Inside a client's active task, `current` reports its effective model and reasoning
+effort. Choose the client explicitly when one client launches another:
+
+```bash
+codex-session-stats current --client codex --format json
+codex-session-stats current --client claude --format json
+codex-session-stats current --client copilot --session-id SESSION_ID --format json
+```
+
+Codex uses the acting `CODEX_THREAD_ID`. Claude uses `CLAUDE_CODE_SESSION_ID` and
+its latest pending tool call; native `perTurnEffort` must identify the effective
+effort. An environment effort alone may be inherited and is not enough. Copilot
+uses the ID supplied by the installed
+session hook and its active turn in the event log. Native Claude/Copilot subagents
+need their own `--agent-id`; missing child evidence never falls back to a parent.
+
+The default `auto` selector checks visible Codex/Claude IDs and rejects multiple
+identities. It does not discover a Copilot session or establish which client
+owns inherited variables; use an explicit selector for acting-agent checks.
+Missing current model/effort, incomplete records, and completed turns are errors.
+Saved configuration values are not substitutes for current runtime evidence.
+
+`--claude-statusline` accepts the documented native status-line JSON on stdin,
+with a matching caller session ID,
+including its explicit convention that an absent effort field means the current
+model does not support it. This returns `reasoning_effort: null` and
+`reasoning_effort_status: unsupported`; unavailable transcript data is an error.
+Outside a client, use `codex-session-stats current --help` to inspect the options.
 
 Run the report with:
 

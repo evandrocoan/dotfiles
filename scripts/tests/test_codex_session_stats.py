@@ -72,7 +72,7 @@ def run_current(home, *, thread_id=None, session_id=None):
     if session_id is not None:
         environment["CODEX_SESSION_ID"] = session_id
     return subprocess.run(
-        [sys.executable, str(CLI), "current", "--format", "json", "--codex-home", str(home)],
+        [sys.executable, str(CLI), "current", "--client", "codex", "--format", "json", "--codex-home", str(home)],
         capture_output=True,
         text=True,
         check=False,
@@ -93,10 +93,14 @@ def test_current_uses_acting_child_thread_and_does_not_modify_state(codex_home):
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {
+        "client": "codex",
+        "session_id": "child",
+        "agent_id": None,
         "thread_id": "child",
         "turn_id": "child-turn",
         "model": "gpt-6-astra",
         "reasoning_effort": "high",
+        "reasoning_effort_status": "known",
         "source": "turn_context",
     }
     assert result.stderr == ""
@@ -130,10 +134,14 @@ def test_current_uses_latest_started_turn_after_model_change(codex_home):
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {
+        "client": "codex",
+        "session_id": "acting",
+        "agent_id": None,
         "thread_id": "acting",
         "turn_id": "new",
         "model": "gpt-6-astra",
         "reasoning_effort": "xhigh",
+        "reasoning_effort_status": "known",
         "source": "turn_context",
     }
 
