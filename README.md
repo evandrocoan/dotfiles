@@ -382,6 +382,14 @@ skill paths are replaced and discontinued managed skills are removed only when
 their installed content or link is unchanged. Modified discontinued skills are
 preserved and removed from the control file.
 
+The installers also install `codex-session-stats` under the destination's
+`.local/bin/`. It requires Python 3 with `sqlite3` and `zoneinfo`, but does not
+need the Poetry environment. The Bash installer reports when that directory is
+absent from `PATH`. On Windows, the installer adds it to the current user's
+`PATH` when needed; restart Codex afterward. For another user's destination,
+add that directory to the selected user's `PATH` separately. After installation,
+run `codex-session-stats --help` in a new shell to check command discovery.
+
 With the Bash script, install from GitHub in remote mode:
 
 ```bash
@@ -531,6 +539,8 @@ poetry install
 This creates `~/scripts/.venv/` and installs all dependencies from `poetry.lock`.
 
 Scripts in `~/.local/bin/` that use this environment have their shebang pointing directly to `~/scripts/.venv/bin/python`, so they work without any manual activation.
+The skill installers distribute `codex-session-stats` separately; it uses an available Python 3
+interpreter and the standard library.
 
 #### Add a new dependency
 
@@ -553,6 +563,10 @@ local Codex session history and ranks completed, user-initiated executions by
 wall-clock duration. Its report includes the model used, the longest interval
 without events, start and end times, overlapping activity, project, and user
 request.
+
+Inside an active Codex task, `codex-session-stats current --format json` reports
+that task's model and reasoning effort. It requires the task's `CODEX_THREAD_ID`;
+outside Codex, use `codex-session-stats --help` to check the installation.
 
 Run the report with:
 
