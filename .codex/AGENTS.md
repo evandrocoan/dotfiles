@@ -87,10 +87,15 @@ answer resolves the question it addresses; request only information or choices i
 
 After classifying the latest request under the question-only gate below, identify the acting
 agent's effective model and reasoning effort before a substantive answer, plan, project command,
-or edit. Use trustworthy runtime metadata when exposed. Otherwise ask the user to read the model
-and thinking level shown for this active session. For a delegated agent, use its own runtime
-metadata or an accepted launcher assignment communicated to that agent; if neither is available,
-ask the parent. The parent's settings do not identify the child.
+or edit. Use trustworthy runtime metadata when exposed. Otherwise run
+`codex-session-stats current --format json` in the acting agent's own environment. Accept its
+result only when the command succeeds, reports `turn_context` as its source, matches its
+`thread_id` to `CODEX_THREAD_ID`, and supplies nonempty `model` and `reasoning_effort` values.
+For a delegated agent, use its own runtime metadata, its own command result, or an accepted
+launcher assignment communicated to that agent; if none is available, ask the parent. Never
+substitute the parent's command result or `CODEX_SESSION_ID` for the child's identity. If the
+acting settings remain unknown, ask the user to read the model and thinking level shown for this
+active session. The parent's settings do not identify the child.
 If the client has no configurable thinking level, establish that fact rather than inventing an
 effort value. Do not infer identity or effort from writing style, a model list, repository settings,
 or a default. If either remains unknown, wait for the missing information; silence is not a

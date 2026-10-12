@@ -24,6 +24,7 @@ FINISHED_EVENTS = {
     "task_interrupted",
     "task_cancelled",
 }
+CURRENT_FINISHED_EVENTS = FINISHED_EVENTS | {"turn_aborted"}
 
 
 def positive_integer(value: str) -> int:
@@ -37,7 +38,8 @@ def parse_arguments() -> argparse.Namespace:
     default_codex_home = Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
     parser = argparse.ArgumentParser(
         description="List the longest Codex executions recorded in local session history.",
-        epilog="Use 'codex-session-stats find --help' to search Codex and Claude conversations.",
+        epilog="Use 'codex-session-stats current --help' for current settings or "
+        "'codex-session-stats find --help' to search conversations.",
     )
     parser.add_argument(
         "--limit",
@@ -182,6 +184,107 @@ def load_threads(codex_home: Path) -> list[dict[str, object]]:
         )
         query = f"select {', '.join(expressions)} from threads"
         return [dict(row) for row in connection.execute(query)]
+
+
+def load_current_rollout(codex_home: Path, thread_id: str) -> Path:
+    state_database = find_state_database(codex_home)
+    with open_read_only_database(state_database) as connection:
+        row = connection.execute(
+            "select rollout_path from threads where id = ?", (thread_id,)
+        ).fetchone()
+    if row is None:
+        raise RuntimeError(f"no state record for acting thread {thread_id}")
+    rollout_path = Path(str(row["rollout_path"])).expanduser()
+    if not rollout_path.is_absolute():
+        raise RuntimeError(f"acting thread {thread_id} has no absolute rollout path")
+    return rollout_path
+
+
+def current_turn_settings(rollout_path: Path, thread_id: str) -> dict[str, str]:
+    metadata_id = None
+    metadata_count = 0
+    latest_turn_id = None
+    latest_turn_finished = False
+    started_turns: set[str] = set()
+    finished_turns: set[str] = set()
+    contexts: dict[str, dict[str, object]] = {}
+
+    with rollout_path.open("rb") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            try:
+                item = json.loads(line)
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                raise RuntimeError(
+                    f"malformed rollout record at line {line_number}"
+                ) from error
+            if not isinstance(item, dict):
+                raise RuntimeError(f"malformed rollout record at line {line_number}")
+            item_type = item.get("type")
+            payload = item.get("payload")
+            if item_type not in {"session_meta", "event_msg", "turn_context"}:
+                continue
+            if not isinstance(payload, dict):
+                raise RuntimeError(f"malformed {item_type} at line {line_number}")
+
+            if item_type == "session_meta":
+                metadata_count += 1
+                metadata_id = payload.get("id")
+            elif item_type == "turn_context":
+                turn_id = payload.get("turn_id")
+                if not isinstance(turn_id, str) or not turn_id:
+                    raise RuntimeError(f"turn context lacks identity at line {line_number}")
+                contexts[turn_id] = payload
+            elif item_type == "event_msg":
+                event_type = payload.get("type")
+                if event_type == "task_started":
+                    turn_id = payload.get("turn_id")
+                    if not isinstance(turn_id, str) or not turn_id:
+                        raise RuntimeError(f"task start lacks identity at line {line_number}")
+                    started_turns.add(turn_id)
+                    latest_turn_id = turn_id
+                    latest_turn_finished = False
+                elif event_type in CURRENT_FINISHED_EVENTS:
+                    turn_id = payload.get("turn_id")
+                    if not isinstance(turn_id, str) or not turn_id:
+                        raise RuntimeError(f"task finish lacks identity at line {line_number}")
+                    finished_turns.add(turn_id)
+                    if turn_id == latest_turn_id:
+                        latest_turn_finished = True
+
+    if metadata_count != 1 or metadata_id != thread_id:
+        raise RuntimeError(f"rollout identity does not match acting thread {thread_id}")
+    unstarted_contexts = set(contexts) - started_turns
+    if unstarted_contexts:
+        turn_id = sorted(unstarted_contexts)[0]
+        raise RuntimeError(f"turn context {turn_id} has no matching task start")
+    unstarted_finishes = finished_turns - started_turns
+    if unstarted_finishes:
+        turn_id = sorted(unstarted_finishes)[0]
+        raise RuntimeError(f"task finish {turn_id} has no matching task start")
+    if latest_turn_id is None:
+        raise RuntimeError(f"acting thread {thread_id} has no started turn")
+    if latest_turn_finished:
+        raise RuntimeError(f"latest turn {latest_turn_id} is no longer active")
+    context = contexts.get(latest_turn_id)
+    if context is None:
+        raise RuntimeError(f"latest turn {latest_turn_id} has no context")
+    model = context.get("model")
+    if not isinstance(model, str) or not model.strip():
+        raise RuntimeError(f"latest turn {latest_turn_id} has no model")
+    primary_effort = context.get("effort")
+    alternate_effort = context.get("reasoning_effort")
+    if primary_effort and alternate_effort and primary_effort != alternate_effort:
+        raise RuntimeError(f"latest turn {latest_turn_id} has conflicting effort values")
+    effort = primary_effort or alternate_effort
+    if not isinstance(effort, str) or not effort.strip():
+        raise RuntimeError(f"latest turn {latest_turn_id} has no reasoning effort")
+    return {
+        "thread_id": thread_id,
+        "turn_id": latest_turn_id,
+        "model": model,
+        "reasoning_effort": effort,
+        "source": "turn_context",
+    }
 
 
 def new_execution(
@@ -669,6 +772,46 @@ def print_csv(records: list[dict[str, object]]) -> None:
     writer.writerows(records)
 
 
+def parse_current_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="codex-session-stats current",
+        description="Show the acting Codex thread's effective model and reasoning effort.",
+    )
+    parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument(
+        "--codex-home",
+        type=Path,
+        default=Path(os.environ.get("CODEX_HOME", "~/.codex")),
+    )
+    return parser.parse_args(sys.argv[2:])
+
+
+def current_main() -> int:
+    arguments = parse_current_arguments()
+    thread_id = os.environ.get("CODEX_THREAD_ID", "").strip()
+    if not thread_id:
+        print("codex-session-stats current: CODEX_THREAD_ID is unavailable", file=sys.stderr)
+        return 1
+    try:
+        codex_home = arguments.codex_home.expanduser().resolve()
+        rollout_path = load_current_rollout(codex_home, thread_id)
+        settings = current_turn_settings(rollout_path, thread_id)
+    except (OSError, RuntimeError, sqlite3.Error) as error:
+        print(f"codex-session-stats current: {error}", file=sys.stderr)
+        return 1
+
+    if arguments.format == "json":
+        json.dump(settings, sys.stdout, ensure_ascii=False)
+        print()
+    else:
+        print(f"Model: {settings['model']}")
+        print(f"Reasoning effort: {settings['reasoning_effort']}")
+        print(f"Thread: {settings['thread_id']}")
+        print(f"Turn: {settings['turn_id']}")
+        print(f"Source: {settings['source']}")
+    return 0
+
+
 def parse_search_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="codex-session-stats find",
@@ -1043,6 +1186,8 @@ def search_main() -> int:
 
 
 def main() -> int:
+    if sys.argv[1:2] == ["current"]:
+        return current_main()
     if sys.argv[1:2] == ["find"]:
         return search_main()
     arguments = parse_arguments()

@@ -26,7 +26,7 @@ markdown-it-py = "^4.0"
 pytest = "^9.0"
 
 [tool.pytest.ini_options]
-testpaths = ["tests/skill_tests"]
+testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--strict-config --strict-markers"
 
