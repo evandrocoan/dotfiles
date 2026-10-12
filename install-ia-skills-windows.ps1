@@ -8,6 +8,7 @@ downloads a GitHub revision and copies its skills. Existing paths are preserved
 unless Force is specified. Managed skills are recorded for later cleanup.
 The CLI requires Python 3 with sqlite3 and zoneinfo. For the current user,
 the installer adds its command directory to the user PATH when needed.
+A Copilot SessionStart hook supplies the current session identity.
 .PARAMETER Destination
 Windows user home directory. Defaults to USERPROFILE.
 .PARAMETER Mode
@@ -438,7 +439,8 @@ function Install-LocalSkills {
         throw 'Local source and destination must differ to protect the checkout.'
     }
     foreach ($relativePath in @('.local\bin\codex-session-stats',
-                                '.local\bin\codex-session-stats.cmd')) {
+                                '.local\bin\codex-session-stats.cmd',
+                                '.copilot\hooks\current-session.json')) {
         $cliSource = Join-Path $sourceRoot $relativePath
         if (-not (Test-Path -LiteralPath $cliSource -PathType Leaf)) {
             throw "Codex session CLI source does not exist: $cliSource"
@@ -474,7 +476,8 @@ function Install-LocalSkills {
     $copilotInstructionsLink = Join-Path $destinationRoot '.copilot\copilot-instructions.md'
     Set-SkillLink $copilotInstructionsLink '..\.claude\CLAUDE.md' | Out-Null
     foreach ($relativePath in @('.local\bin\codex-session-stats',
-                                '.local\bin\codex-session-stats.cmd')) {
+                                '.local\bin\codex-session-stats.cmd',
+                                '.copilot\hooks\current-session.json')) {
         $cliTarget = Join-Path $destinationRoot $relativePath
         $cliSource = Join-Path $sourceRoot $relativePath
         Set-SkillLink $cliTarget $cliSource | Out-Null
@@ -506,7 +509,8 @@ function Install-RemoteSkills {
                 0, $instructions.FullName.Length - '.codex/AGENTS.md'.Length)
             $cliEntries = @{}
             foreach ($relativePath in @('.local/bin/codex-session-stats',
-                                        '.local/bin/codex-session-stats.cmd')) {
+                                        '.local/bin/codex-session-stats.cmd',
+                                        '.copilot/hooks/current-session.json')) {
                 $cliMatches = @($archive.Entries | Where-Object {
                     $_.FullName -ceq ($rootPrefix + $relativePath)
                 })
@@ -599,7 +603,8 @@ function Install-RemoteSkills {
                 Copy-ArchiveEntry $instructions (Join-Path $destinationRoot $relativePath) | Out-Null
             }
             foreach ($relativePath in @('.local/bin/codex-session-stats',
-                                        '.local/bin/codex-session-stats.cmd')) {
+                                        '.local/bin/codex-session-stats.cmd',
+                                        '.copilot/hooks/current-session.json')) {
                 $targetPath = Join-Path $destinationRoot ($relativePath.Replace('/', '\'))
                 Copy-ArchiveEntry $cliEntries[$relativePath] $targetPath | Out-Null
             }

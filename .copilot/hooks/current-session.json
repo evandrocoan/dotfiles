@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "codex-session-stats session-context --client copilot",
+        "powershell": "codex-session-stats session-context --client copilot",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

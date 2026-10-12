@@ -38,7 +38,7 @@ def parse_arguments() -> argparse.Namespace:
     default_codex_home = Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
     parser = argparse.ArgumentParser(
         description="List the longest Codex executions recorded in local session history.",
-        epilog="Use 'codex-session-stats current --help' for current settings or "
+        epilog="Use 'codex-session-stats current --help' for current client settings or "
         "'codex-session-stats find --help' to search conversations.",
     )
     parser.add_argument(
@@ -772,12 +772,243 @@ def print_csv(records: list[dict[str, object]]) -> None:
     writer.writerows(records)
 
 
+def require_runtime_string(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise RuntimeError(f"runtime has no {label}")
+    return value.strip()
+
+
+def validate_session_id(value: object) -> str:
+    identity = require_runtime_string(value, "session identity")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", identity):
+        raise RuntimeError("invalid session identity")
+    return identity
+
+
+def runtime_records(path: Path):
+    with path.open("rb") as handle:
+        for line_number, line in enumerate(handle, 1):
+            try:
+                item = json.loads(line)
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                raise RuntimeError(f"malformed runtime record at line {line_number}") from error
+            if not isinstance(item, dict):
+                raise RuntimeError(f"malformed runtime record at line {line_number}")
+            require_runtime_string(item.get("type"), "record type")
+            yield item
+
+
+def client_settings(client: str, session_id: str, agent_id: str | None, turn_id: str,
+                    model: object, effort: object, source: str, *, unsupported=False) -> dict:
+    model = require_runtime_string(model, "effective model")
+    if model.lower() in {"auto", "default", "<synthetic>"}:
+        raise RuntimeError("runtime has no resolved effective model")
+    return {
+        "client": client,
+        "session_id": session_id,
+        "agent_id": agent_id,
+        "turn_id": require_runtime_string(turn_id, "active turn identity"),
+        "model": model,
+        "reasoning_effort": None if unsupported else require_runtime_string(effort, "reasoning effort"),
+        "reasoning_effort_status": "unsupported" if unsupported else "known",
+        "source": source,
+    }
+
+
+def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -> dict:
+    session_id = validate_session_id(session_id)
+    if agent_id:
+        agent_id = validate_session_id(agent_id)
+        paths = list((home / "projects").glob(
+            f"*/{session_id}/subagents/agent-{agent_id}.jsonl"))
+    else:
+        paths = list((home / "projects").glob(f"*/{session_id}.jsonl"))
+        session_path = home / "sessions" / f"{session_id}.jsonl"
+        if session_path.is_file():
+            paths.append(session_path)
+    paths = sorted({path.resolve() for path in paths if path.is_file()})
+    if len(paths) != 1:
+        raise RuntimeError(f"expected one Claude transcript for {agent_id or session_id}; found {len(paths)}")
+
+    latest = None
+    pending_tools = set()
+    completed_tools = set()
+    for item in runtime_records(paths[0]):
+        kind = item.get("type")
+        if kind not in {"user", "assistant"}:
+            continue
+        if item.get("sessionId") != session_id:
+            raise RuntimeError("Claude transcript session identity mismatch")
+        if item.get("agentId") != agent_id or bool(item.get("isSidechain")) != bool(agent_id):
+            raise RuntimeError("Claude transcript agent identity mismatch; select its own --agent-id")
+        message = item.get("message")
+        if not isinstance(message, dict):
+            raise RuntimeError("malformed Claude message")
+        content = message.get("content")
+        if kind == "user":
+            if isinstance(content, str) or (isinstance(content, list) and any(
+                not isinstance(block, dict) or block.get("type") != "tool_result" for block in content
+            )):
+                latest = None
+                pending_tools.clear()
+            elif isinstance(content, list):
+                for block in content:
+                    tool_id = require_runtime_string(block.get("tool_use_id"), "Claude result tool identity")
+                    completed_tools.add(tool_id)
+                    pending_tools.discard(tool_id)
+            else:
+                raise RuntimeError("malformed Claude user content")
+            continue
+
+        message_id = require_runtime_string(message.get("id"), "Claude message identity")
+        if latest is None or latest["message_id"] != message_id:
+            latest = {"message_id": message_id, "turn_id": item.get("requestId") or message_id,
+                      "model": message.get("model"), "effort": item.get("perTurnEffort")}
+            pending_tools.clear()
+        else:
+            if message.get("model") != latest["model"]:
+                raise RuntimeError("conflicting Claude model values in one message")
+            if item.get("perTurnEffort") is not None:
+                if latest["effort"] is not None and item["perTurnEffort"] != latest["effort"]:
+                    raise RuntimeError("conflicting Claude effort values in one message")
+                latest["effort"] = item["perTurnEffort"]
+        if not isinstance(content, list):
+            raise RuntimeError("malformed Claude assistant content")
+        for block in content:
+            if not isinstance(block, dict):
+                raise RuntimeError("malformed Claude content block")
+            if block.get("type") == "tool_use":
+                tool_id = require_runtime_string(block.get("id"), "Claude tool identity")
+                if tool_id not in completed_tools:
+                    pending_tools.add(tool_id)
+        if message.get("stop_reason") == "end_turn":
+            pending_tools.clear()
+
+    if latest is None or not pending_tools:
+        raise RuntimeError("Claude transcript has no active tool call in its latest message")
+    environment_effort = os.environ.get("CLAUDE_EFFORT", "").strip()
+    if latest["effort"] and environment_effort and latest["effort"] != environment_effort:
+        raise RuntimeError("Claude transcript and tool environment have conflicting effort values")
+    return client_settings("claude", session_id, agent_id, latest["turn_id"], latest["model"],
+                           latest["effort"], "claude_transcript")
+
+
+def claude_statusline_settings(arguments: argparse.Namespace) -> dict:
+    snapshot = json.load(sys.stdin)
+    if not isinstance(snapshot, dict):
+        raise RuntimeError("malformed Claude status-line input")
+    session_id = validate_session_id(snapshot.get("session_id"))
+    environment_id = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    if arguments.session_id and environment_id and arguments.session_id != environment_id:
+        raise RuntimeError("--session-id does not match acting CLAUDE_CODE_SESSION_ID")
+    expected_id = require_runtime_string(environment_id or arguments.session_id, "Claude status-line caller identity")
+    if expected_id != session_id:
+        raise RuntimeError("Claude status-line session identity mismatch")
+    if arguments.agent_id:
+        raise RuntimeError("root Claude status-line input cannot identify a subagent")
+    turn_id = require_runtime_string(snapshot.get("prompt_id"), "Claude prompt identity")
+    model = snapshot.get("model")
+    if not isinstance(model, dict):
+        raise RuntimeError("malformed Claude status-line model")
+    # In the documented status-line schema, effort is absent for unsupported models.
+    effort = snapshot.get("effort")
+    if "effort" in snapshot and not isinstance(effort, dict):
+        raise RuntimeError("malformed Claude status-line effort")
+    return client_settings("claude", session_id, None, turn_id, model.get("id"),
+                           effort.get("level") if effort is not None else None,
+                           "claude_statusline", unsupported="effort" not in snapshot)
+
+
+def copilot_effort_settings(data: dict) -> dict:
+    owner = data.get("reasoningEffortModel")
+    if "reasoningEffortModel" in data:
+        owner = require_runtime_string(owner, "Copilot reasoning effort model identity")
+    managed = data.get("reasoningEffortManaged", False)
+    if not isinstance(managed, bool):
+        raise RuntimeError("malformed Copilot reasoning effort ownership")
+    if managed and owner is None:
+        raise RuntimeError("Copilot managed reasoning effort has no model identity")
+    return {"level": data.get("reasoningEffort"), "model": owner}
+
+
+def copilot_current_settings(home: Path, session_id: str, agent_id: str | None) -> dict:
+    session_id = validate_session_id(session_id)
+    if agent_id:
+        agent_id = validate_session_id(agent_id)
+    path = home / "session-state" / session_id / "events.jsonl"
+    identities = 0
+    seen_ids = set()
+    effort = {"level": None, "model": None}
+    latest = None
+    active = False
+    for event in runtime_records(path):
+        event_id = require_runtime_string(event.get("id"), "Copilot event identity")
+        if event_id in seen_ids:
+            raise RuntimeError("duplicate Copilot event identity")
+        seen_ids.add(event_id)
+        kind = event.get("type")
+        data = event.get("data")
+        if not isinstance(data, dict):
+            raise RuntimeError("malformed Copilot event data")
+        if kind == "session.start":
+            identities += 1
+            if data.get("sessionId") != session_id:
+                raise RuntimeError("Copilot event session identity mismatch")
+        if kind in {"session.shutdown", "abort"} and (
+            event.get("agentId") is None or event.get("agentId") == agent_id
+        ):
+            active = False
+        if kind == "session.resume" and (
+            event.get("agentId") is None or event.get("agentId") == agent_id
+        ) and data.get("continuePendingWork") is not True and data.get("sessionWasActive") is not True:
+            active = False
+        if event.get("agentId") != agent_id:
+            continue
+        if kind in {"session.start", "session.resume", "session.model_change"}:
+            # An omitted/cleared effort does not prove a default or lack of support.
+            effort = copilot_effort_settings(data)
+        # Model deselection preserves effort and its ownership in the native contract.
+        elif kind == "user.message":
+            active = False
+        elif kind in {"assistant.turn_start", "assistant.turn_retry"}:
+            if kind == "assistant.turn_retry" and (
+                latest is None or not active or data.get("turnId") != latest["turn_id"]
+            ):
+                raise RuntimeError("Copilot turn retry has no matching active start")
+            latest = {"turn_id": require_runtime_string(data.get("turnId"), "Copilot turn identity"),
+                      "model": data.get("model"), "effort": effort}
+            active = True
+        elif kind == "assistant.turn_end":
+            if latest is None or data.get("turnId") != latest["turn_id"]:
+                raise RuntimeError("Copilot turn end has no matching start")
+            active = False
+    if identities != 1:
+        raise RuntimeError("Copilot event log must contain one session identity")
+    if latest is None or not active:
+        raise RuntimeError("Copilot event log has no active latest turn")
+    if latest["effort"]["model"] is not None and latest["effort"]["model"] != latest["model"]:
+        raise RuntimeError("Copilot reasoning effort belongs to another model")
+    return client_settings("copilot", session_id, agent_id, latest["turn_id"],
+                           latest["model"], latest["effort"]["level"], "copilot_events")
+
+
 def parse_current_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="codex-session-stats current",
-        description="Show the acting Codex thread's effective model and reasoning effort.",
+        description="Show the acting client's effective model and reasoning effort.",
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--client", choices=("auto", "codex", "claude", "copilot"), default="auto",
+                        help="use an explicit client when another client launched this session")
+    parser.add_argument("--session-id", help="Copilot ID supplied by its session-context hook; "
+                        "for Codex/Claude it must match the client's environment")
+    parser.add_argument("--agent-id", help="native Claude/Copilot subagent identity; never use its parent")
+    parser.add_argument("--claude-statusline", action="store_true",
+                        help="read documented Claude status-line JSON from stdin instead of its transcript")
+    parser.add_argument("--claude-home", type=Path,
+                        default=Path(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude")))
+    parser.add_argument("--copilot-home", type=Path,
+                        default=Path(os.environ.get("COPILOT_HOME", "~/.copilot")))
     parser.add_argument(
         "--codex-home",
         type=Path,
@@ -788,15 +1019,44 @@ def parse_current_arguments() -> argparse.Namespace:
 
 def current_main() -> int:
     arguments = parse_current_arguments()
-    thread_id = os.environ.get("CODEX_THREAD_ID", "").strip()
-    if not thread_id:
-        print("codex-session-stats current: CODEX_THREAD_ID is unavailable", file=sys.stderr)
-        return 1
     try:
-        codex_home = arguments.codex_home.expanduser().resolve()
-        rollout_path = load_current_rollout(codex_home, thread_id)
-        settings = current_turn_settings(rollout_path, thread_id)
-    except (OSError, RuntimeError, sqlite3.Error) as error:
+        client = arguments.client
+        if arguments.claude_statusline and client != "claude":
+            raise RuntimeError("--claude-statusline requires explicit --client claude")
+        if client == "auto":
+            if arguments.session_id:
+                raise RuntimeError("--session-id requires an explicit --client")
+            candidates = [name for name, key in (("codex", "CODEX_THREAD_ID"),
+                          ("claude", "CLAUDE_CODE_SESSION_ID")) if os.environ.get(key, "").strip()]
+            if len(candidates) > 1:
+                raise RuntimeError("ambiguous inherited client identities; select --client explicitly")
+            if not candidates:
+                raise RuntimeError("CODEX_THREAD_ID and CLAUDE_CODE_SESSION_ID are unavailable; "
+                                   "Copilot requires --client copilot --session-id from its runtime")
+            client = candidates[0]
+        if arguments.claude_statusline:
+            settings = claude_statusline_settings(arguments)
+        elif client in {"codex", "claude"}:
+            key = "CODEX_THREAD_ID" if client == "codex" else "CLAUDE_CODE_SESSION_ID"
+            session_id = require_runtime_string(os.environ.get(key), key)
+            if arguments.session_id and arguments.session_id != session_id:
+                raise RuntimeError(f"--session-id does not match acting {key}")
+            if client == "codex":
+                if arguments.agent_id:
+                    raise RuntimeError("Codex subagents use their own CODEX_THREAD_ID, not --agent-id")
+                rollout_path = load_current_rollout(arguments.codex_home.expanduser().resolve(), session_id)
+                native = current_turn_settings(rollout_path, session_id)
+                settings = client_settings("codex", session_id, None, native["turn_id"],
+                                           native["model"], native["reasoning_effort"], native["source"])
+                settings["thread_id"] = session_id
+            else:
+                settings = claude_current_settings(arguments.claude_home.expanduser().resolve(),
+                                                   session_id, arguments.agent_id)
+        else:
+            session_id = require_runtime_string(arguments.session_id, "Copilot --session-id")
+            settings = copilot_current_settings(arguments.copilot_home.expanduser().resolve(),
+                                                session_id, arguments.agent_id)
+    except (OSError, RuntimeError, sqlite3.Error, json.JSONDecodeError, UnicodeDecodeError) as error:
         print(f"codex-session-stats current: {error}", file=sys.stderr)
         return 1
 
@@ -805,10 +1065,43 @@ def current_main() -> int:
         print()
     else:
         print(f"Model: {settings['model']}")
-        print(f"Reasoning effort: {settings['reasoning_effort']}")
-        print(f"Thread: {settings['thread_id']}")
+        effort = settings['reasoning_effort'] if settings['reasoning_effort_status'] == 'known' else 'unsupported'
+        print(f"Reasoning effort: {effort}")
+        print(f"Client: {settings['client']}")
+        print(f"Session: {settings['session_id']}")
+        if settings['agent_id']:
+            print(f"Agent: {settings['agent_id']}")
         print(f"Turn: {settings['turn_id']}")
         print(f"Source: {settings['source']}")
+    return 0
+
+
+def session_context_main() -> int:
+    parser = argparse.ArgumentParser(prog="codex-session-stats session-context",
+                                     description="Emit current-session identity from a Copilot SessionStart hook.")
+    parser.add_argument("--client", choices=("copilot",), required=True)
+    parser.parse_args(sys.argv[2:])
+    try:
+        payload = json.load(sys.stdin)
+        if not isinstance(payload, dict):
+            raise RuntimeError("malformed session-start input")
+        camel_id = payload.get("sessionId")
+        snake_id = payload.get("session_id")
+        if camel_id and snake_id and camel_id != snake_id:
+            raise RuntimeError("conflicting session identities")
+        session_id = validate_session_id(camel_id or snake_id)
+        if payload.get("hook_event_name", "SessionStart") != "SessionStart":
+            raise RuntimeError("session-context requires SessionStart input")
+    except (ValueError, RuntimeError, UnicodeDecodeError) as error:
+        print(f"codex-session-stats session-context: {error}", file=sys.stderr)
+        return 1
+    context = (
+        f"Copilot CLI root session ID: {session_id}. For this root agent, read effective settings with "
+        f"codex-session-stats current --client copilot --session-id {session_id} --format json. "
+        "A subagent must add its own runtime --agent-id or use its accepted launcher assignment; "
+        "this root session context does not establish a subagent's model or effort."
+    )
+    print(json.dumps({"additionalContext": context}))
     return 0
 
 
@@ -1188,6 +1481,8 @@ def search_main() -> int:
 def main() -> int:
     if sys.argv[1:2] == ["current"]:
         return current_main()
+    if sys.argv[1:2] == ["session-context"]:
+        return session_context_main()
     if sys.argv[1:2] == ["find"]:
         return search_main()
     arguments = parse_arguments()

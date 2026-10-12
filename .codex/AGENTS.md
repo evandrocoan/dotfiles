@@ -88,10 +88,14 @@ answer resolves the question it addresses; request only information or choices i
 After classifying the latest request under the question-only gate below, identify the acting
 agent's effective model and reasoning effort before a substantive answer, plan, project command,
 or edit. Use trustworthy runtime metadata when exposed. Otherwise run
-`codex-session-stats current --format json` in the acting agent's own environment. Accept its
-result only when the command succeeds, reports `turn_context` as its source, and supplies nonempty
-`model` and `reasoning_effort` values. The CLI reads `CODEX_THREAD_ID` and validates the rollout
-identity before returning.
+`codex-session-stats current --client <acting-client> --format json` in the acting agent's own
+environment, selecting `codex`, `claude`, or `copilot` from the actual runtime. Always select the
+client explicitly here: a client launched by another client can inherit its parent's identity
+variables. For Copilot CLI, add `--session-id` from its session-context hook or trusted runtime
+metadata. Native Claude/Copilot subagents also need their own `--agent-id`; a root hook's ID does
+not identify the child. Accept only a successful result with a nonempty model and a known effort,
+or an explicit `unsupported` effort status. The CLI validates the selected identity and current
+runtime evidence; do not repeat its identity comparison or infer settings from saved defaults.
 For a delegated agent, use its own runtime metadata, its own command result, or an accepted
 launcher assignment communicated to that agent; if none is available, ask the parent. Never
 substitute the parent's command result or `CODEX_SESSION_ID` for the child's identity. If the

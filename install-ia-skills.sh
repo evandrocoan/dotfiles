@@ -34,6 +34,7 @@ declare -a GLOBAL_INSTRUCTION_PATHS=(
     ".claude/CLAUDE.md"
     ".codex/AGENTS.md"
     ".copilot/copilot-instructions.md"
+    ".copilot/hooks/current-session.json"
 )
 
 function printhelp() {
@@ -45,6 +46,7 @@ cat >&1 <<EOF
     Install the Claude, Codex, and GitHub Copilot skills, global instructions,
     and codex-session-stats from https://github.com/${REPOSITORY} or link a
     local checkout. The CLI requires Python 3 with sqlite3 and zoneinfo.
+    A Copilot SessionStart hook supplies the current session identity.
 
     Skills are installed canonically in ~/.claude/skills and shared with Codex
     and Copilot through relative links in ~/.agents/skills. Existing files are
@@ -671,9 +673,14 @@ function installglobalinstructions() {
 
 function checkcodexcli() {
     local source_path="${1}/.local/bin/codex-session-stats"
+    local context_path="${1}/.copilot/hooks/current-session.json"
 
     if [[ ! -f "${source_path}" ]] || [[ ! -x "${source_path}" ]]; then
         printf 'Error: Executable Codex session CLI was not found: %s\n' "${source_path}" >&2
+        exit 1
+    fi
+    if [[ ! -f "${context_path}" ]]; then
+        printf 'Error: Copilot session context source was not found: %s\n' "${context_path}" >&2
         exit 1
     fi
     if ! commandexists python3; then
@@ -800,8 +807,8 @@ if [[ "${FOUND_SKILL_COUNT}" -eq 0 ]]; then
     exit 1
 fi
 
-installglobalinstructions "${SOURCE_DIRECTORY}"
 installcodexcli "${SOURCE_DIRECTORY}"
+installglobalinstructions "${SOURCE_DIRECTORY}"
 prunediscontinuedentries
 writestate
 reportclipath

@@ -197,6 +197,8 @@
 
 !/.copilot/
 !/.copilot/copilot-instructions.md
+!/.copilot/hooks/
+!/.copilot/hooks/current-session.json
 
 !/.agents/
 !/.agents/skills/
