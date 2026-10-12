@@ -86,16 +86,17 @@ may refer to that binding; do not repeat an approval check for every file.
   <chosen reviewer, actual model/effort, local final-result or external pre-write timing,
   evidence scope, and verdict>.
 - Unresolved limitations: <limitations, or `None`>.
-- Brief check: No brief on this subject | No `registro pendente`; open items reported and noted:
+- Brief check: No brief on this subject | No `registro pendente` affects this closure because an
+  actual document owner still lacks the decision; other pending or open items reported and noted:
   <items, or `None`>.
 - Verdict: Pending | Passed | Failed.
 
 Set the verdict to `Passed` only when the outcome and affected consumers are verified, proportional
 validation passed, the diff is scoped, advance choices covered this plan and separate reviews, the
 current plan had user review before implementation, statuses agree, the focused author pass
-completed, the brief check found no `registro pendente`,
-every selected independent review completed or was explicitly withdrawn, and no required evidence
-remains unresolved. For
+completed, the brief check found no pending decision recording in an actual document owner
+that affects this closure, every selected independent review completed or was explicitly withdrawn,
+and no required evidence remains unresolved. For
 either external path, also require authoritative IDs, an exact delivery match, completed governing
 reviews, no prohibited effect, and no unresolved delivery result. Editorial corrections additionally
 verify that unrelated content and metadata were preserved.

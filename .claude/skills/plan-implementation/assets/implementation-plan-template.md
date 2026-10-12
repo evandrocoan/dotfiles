@@ -134,7 +134,8 @@ and apply the skill's material-change rule when something changes after the verd
   matrix used for the verdict.
 - **Unresolved requirements:** List each unresolved row, or write `None` only after confirming the
   matrix contains no `pending` or `unresolved` status.
-- **Brief check:** No brief on this subject | No `registro pendente`; open items reported and noted:
+- **Brief check:** No brief on this subject | No `registro pendente` affects this closure because an
+  actual document owner still lacks the decision; other pending or open items reported and noted:
   <items, or `None`>.
 
 For a selected full audit, set `Verdict` to `Passed` only when its chosen scope and both trace
