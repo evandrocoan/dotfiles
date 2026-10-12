@@ -89,8 +89,9 @@ After classifying the latest request under the question-only gate below, identif
 agent's effective model and reasoning effort before a substantive answer, plan, project command,
 or edit. Use trustworthy runtime metadata when exposed. Otherwise run
 `codex-session-stats current --format json` in the acting agent's own environment. Accept its
-result only when the command succeeds, reports `turn_context` as its source, matches its
-`thread_id` to `CODEX_THREAD_ID`, and supplies nonempty `model` and `reasoning_effort` values.
+result only when the command succeeds, reports `turn_context` as its source, and supplies nonempty
+`model` and `reasoning_effort` values. The CLI reads `CODEX_THREAD_ID` and validates the rollout
+identity before returning.
 For a delegated agent, use its own runtime metadata, its own command result, or an accepted
 launcher assignment communicated to that agent; if none is available, ask the parent. Never
 substitute the parent's command result or `CODEX_SESSION_ID` for the child's identity. If the
