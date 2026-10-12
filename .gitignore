@@ -107,8 +107,7 @@
 !/.local/share/applications/menulibre-ahgora.desktop
 !/.local/share/xfce4
 !/.local/share/xfce4/helpers
-!/.local/share/xfce4/helpers/custom-FileManager.desktop
-!/.local/share/xfce4/helpers/custom-MailReader.desktop
+!/.local/share/xfce4/helpers/custom-*.desktop
 !/.local/share/nemo/
 !/.local/share/nemo/actions
 !/.local/share/nemo/actions/**
@@ -122,8 +121,7 @@
 
 !/.config/xfce4/
 !/.config/xfce4/panel/
-!/.config/xfce4/panel/whiskermenu-1.rc
-!/.config/xfce4/panel/whiskermenu-4.rc
+!/.config/xfce4/panel/whiskermenu-*.rc
 
 !/.config/gtk-3.0/
 !/.config/gtk-3.0/**
@@ -150,45 +148,32 @@
 !/scripts/*
 
 !/scripts/skill_tests/
-!/scripts/skill_tests/*.py
-!/scripts/skill_tests/cases/
-!/scripts/skill_tests/cases/**/
-!/scripts/skill_tests/cases/**/case.yaml
-!/scripts/skill_tests/cases/**/scenario/*.md
-!/scripts/skill_tests/cases/**/scenario/*.txt
-!/scripts/skill_tests/cases/**/scenario/architecture/*.md
+!/scripts/skill_tests/**
 !/scripts/tests/
 !/scripts/tests/**
-/scripts/tests/**/.env*
-/scripts/**/__pycache__/
-/scripts/**/.pytest_cache/
 
 !/scripts/codex-vscode-history-fix/
 !/scripts/codex-vscode-history-fix/*.cjs
 
-/scripts/.env*
 /scripts/check_*_playwright.py
-!/scripts/.env.example
 !/scripts/install/
 !/scripts/install/**
 !/scripts/systemd/
 !/scripts/systemd/**
 
 !/scripts/performance-monitoring/
-!/scripts/performance-monitoring/atop.default
-!/scripts/performance-monitoring/sysstat.default
-!/scripts/performance-monitoring/sysstat.conf
-!/scripts/performance-monitoring/99-performance-monitoring.conf
-!/scripts/performance-monitoring/netdata.conf
-!/scripts/performance-monitoring/netdata.sources
-!/scripts/performance-monitoring/netdata-cloud.conf
-!/scripts/performance-monitoring/netdata-apps_groups.conf
-!/scripts/performance-monitoring/netatop-bpf.revision
-!/scripts/performance-monitoring/netatop-bpf.patch
-!/scripts/performance-monitoring/*.py
-!/scripts/performance-monitoring/incident-capture.json
-!/scripts/performance-monitoring/99-performance-delayacct.cfg
-!/scripts/performance-monitoring/delay-anomaly-fixture.json
+!/scripts/performance-monitoring/**
+
+/scripts/**/.env*
+!/scripts/**/.env.example
+/scripts/**/.venv/
+/scripts/**/__pycache__/
+/scripts/**/.pytest_cache/
+/scripts/**/.mypy_cache/
+/scripts/**/.ruff_cache/
+/scripts/**/.coverage*
+/scripts/**/htmlcov/
+/scripts/**/*.py[cod]
 
 # temp clone
 /scripts/xfce4
