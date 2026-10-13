@@ -62,6 +62,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Hide user account from login screen](#hide-user-account-from-login-screen)
     - [Fix teamviewer not opening anymore](#fix-teamviewer-not-opening-anymore)
       - [Restart TeamViewer when its graphical session becomes stale](#restart-teamviewer-when-its-graphical-session-becomes-stale)
+      - [Restart TeamViewer daily](#restart-teamviewer-daily)
     - [Fix networking not connecting (after coming out from system sleep)](#fix-networking-not-connecting-after-coming-out-from-system-sleep)
     - [Install remmina from snap](#install-remmina-from-snap)
     - [Install wine \& others](#install-wine--others)
@@ -2465,6 +2466,26 @@ sudo rm /etc/systemd/system/teamviewer-session-watchdog.service
 sudo rm /usr/local/sbin/teamviewer-session-watchdog
 sudo systemctl daemon-reload
 ```
+
+
+#### Restart TeamViewer daily
+
+Independently of the watchdog, root's crontab restarts `teamviewerd.service` every day at 05:00.
+Add this entry with `sudo crontab -e -u root`:
+
+```sh
+# Reinicia o TeamViewer diariamente às 05:00
+0 5 * * * /usr/bin/systemctl restart teamviewerd.service
+```
+
+Check the installed entry and its past runs:
+
+```bash
+sudo crontab -l -u root
+journalctl -u cron.service --since "-3 days" | grep teamviewerd
+```
+
+To change the time or remove the restart, edit or delete that line with `sudo crontab -e -u root`.
 
 
 ### Fix networking not connecting (after coming out from system sleep)
