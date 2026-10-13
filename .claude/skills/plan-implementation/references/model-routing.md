@@ -17,7 +17,7 @@ user decides independently whether to have a formal plan and a review, including
 
 | Acting group | Routine local reversible edit | Non-trivial local reversible edit |
 | --- | --- | --- |
-| Supervised: Terra, Sonnet, Opus | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Offer each independently. |
+| Supervised: Terra, Sonnet, Opus, Luna, Haiku | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Offer each independently. |
 | Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and offer each independently. |
 | Identity or effort unknown | Obtain the effective setting before task work. | Obtain the effective setting before task work. |
 
