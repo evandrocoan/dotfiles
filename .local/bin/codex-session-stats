@@ -18,6 +18,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 TIMESTAMP_PATTERN = re.compile(br'^\{"timestamp":"([^"]+)"')
 STATE_DATABASE_PATTERN = re.compile(r"state_(\d+)\.sqlite$")
+LOG_DATABASE_PATTERN = re.compile(r"logs_(\d+)\.sqlite$")
+NATIVE_LOG_FIELD_PATTERN = re.compile(
+    r'([A-Za-z_][A-Za-z0-9_.]*)=("(?:[^"\\]|\\.)*"|[^\s{}"]+)'
+)
 FINISHED_EVENTS = {
     "task_complete",
     "task_aborted",
@@ -25,6 +29,10 @@ FINISHED_EVENTS = {
     "task_cancelled",
 }
 CURRENT_FINISHED_EVENTS = FINISHED_EVENTS | {"turn_aborted"}
+
+
+class CurrentStateUnavailable(RuntimeError):
+    """The state index cannot locate this thread; not a rollout validation failure."""
 
 
 def positive_integer(value: str) -> int:
@@ -187,17 +195,135 @@ def load_threads(codex_home: Path) -> list[dict[str, object]]:
 
 
 def load_current_rollout(codex_home: Path, thread_id: str) -> Path:
-    state_database = find_state_database(codex_home)
-    with open_read_only_database(state_database) as connection:
-        row = connection.execute(
-            "select rollout_path from threads where id = ?", (thread_id,)
-        ).fetchone()
+    try:
+        state_database = find_state_database(codex_home)
+    except RuntimeError as error:
+        raise CurrentStateUnavailable(str(error)) from error
+    try:
+        with open_read_only_database(state_database) as connection:
+            row = connection.execute(
+                "select rollout_path from threads where id = ?", (thread_id,)
+            ).fetchone()
+    except (OSError, sqlite3.Error) as error:
+        raise CurrentStateUnavailable(f"session state index is unavailable: {error}") from error
     if row is None:
-        raise RuntimeError(f"no state record for acting thread {thread_id}")
+        raise CurrentStateUnavailable(f"no state record for acting thread {thread_id}")
     rollout_path = Path(str(row["rollout_path"])).expanduser()
     if not rollout_path.is_absolute():
         raise RuntimeError(f"acting thread {thread_id} has no absolute rollout path")
     return rollout_path
+
+
+def native_log_span(body: str, position: int, name: str) -> tuple[dict, int] | None:
+    marker = name + "{"
+    if not body.startswith(marker, position):
+        return None
+    start = position + len(marker)
+    end = body.find("}", start)
+    if end == -1 or body[end + 1:end + 2] != ":":
+        raise RuntimeError("malformed native log span")
+    fields = {}
+    position = start
+    while position < end:
+        if body[position].isspace():
+            position += 1
+            continue
+        match = NATIVE_LOG_FIELD_PATTERN.match(body, position, end)
+        if match is None or (match.end() != end and not body[match.end()].isspace()):
+            raise RuntimeError("malformed native log span fields")
+        key, value = match.groups()
+        if key in fields:
+            raise RuntimeError("conflicting duplicate native log span fields")
+        fields[key] = json.loads(value) if value.startswith('"') else value
+        position = match.end()
+    return fields, end + 2
+
+
+def codex_log_envelope(body: object, thread_id: str) -> dict | None:
+    if body is None:
+        return None
+    if not isinstance(body, str):
+        raise RuntimeError("malformed native log message")
+    root = native_log_span(body, 0, "session_loop")
+    if root is None:
+        return None
+    root_fields, position = root
+    if root_fields.get("thread_id") != thread_id:
+        raise RuntimeError("native log session identity mismatch")
+    parents = {}
+    for name in ("submission_dispatch", "codex.turn_input"):
+        span = native_log_span(body, position, name)
+        if span is not None:
+            parents[name], position = span
+    task = native_log_span(body, position, "turn")
+    if task is None:
+        return None
+    fields, _ = task
+    if fields.get("otel.name") != "session_task.turn":
+        return None
+    if fields.get("thread.id") != thread_id:
+        raise RuntimeError("native log turn thread identity mismatch")
+    turn_id = validate_session_id(fields.get("turn.id"))
+    if "codex.turn_input" in parents:
+        parent = parents["codex.turn_input"]
+        if parent.get("conversation.id") != thread_id or parent.get("turn.id") != turn_id:
+            raise RuntimeError("native log input identity mismatch")
+    if "submission_dispatch" in parents:
+        parent = parents["submission_dispatch"]
+        if parent.get("submission.id") != turn_id or parent.get("codex.op") != "turn_input":
+            raise RuntimeError("native log submission identity mismatch")
+    return fields
+
+
+def codex_log_settings(codex_home: Path, thread_id: str) -> dict:
+    candidates = [(int(match.group(1)), path) for path in codex_home.glob("logs_*.sqlite")
+                  if (match := LOG_DATABASE_PATTERN.fullmatch(path.name))]
+    if not candidates:
+        raise RuntimeError("no runtime logs database available")
+    database_path = max(candidates, key=lambda item: item[0])[1]
+    with open_read_only_database(database_path) as connection:
+        # Use the thread/timestamp index and stop at the newest task-owned span.
+        # Message/tool payloads and parent sessions cannot supply settings.
+        rows = connection.execute(
+            "select ts, ts_nanos, feedback_log_body from logs where thread_id = ? "
+            "and target in (?, ?, ?) order by ts desc, ts_nanos desc, id desc",
+            (thread_id, "codex_core::session::turn", "codex_core::tools::parallel",
+             "codex_core::session::handlers"),
+        )
+        for row in rows:
+            fields = codex_log_envelope(row["feedback_log_body"], thread_id)
+            if fields is None:
+                continue
+            model = require_runtime_string(fields.get("model"), "native log model")
+            effort = require_runtime_string(fields.get("codex.turn.reasoning_effort"), "native log effort")
+            if effort.lower() in {"unknown", "unspecified", "default", "null", "unset"}:
+                raise RuntimeError("native log has no known reasoning effort")
+            seconds, nanos = row["ts"], row["ts_nanos"]
+            if type(seconds) is not int or type(nanos) is not int or not 0 <= nanos < 1_000_000_000:
+                raise RuntimeError("malformed native log timestamp")
+            try:
+                observed_at = datetime.datetime.fromtimestamp(seconds, datetime.UTC).strftime("%Y-%m-%dT%H:%M:%S")
+            except (OSError, OverflowError, ValueError) as error:
+                raise RuntimeError("malformed native log timestamp") from error
+            # Logs authenticate the last used settings, not ongoing activity.
+            return {
+                "turn_id": fields["turn.id"], "model": model, "reasoning_effort": effort,
+                "source": "runtime_log", "settings_status": "last_logged",
+                "observed_at": f"{observed_at}.{nanos:09d}Z",
+            }
+    raise RuntimeError(f"no authenticated native log settings for acting thread {thread_id}")
+
+
+def codex_current_settings(codex_home: Path, thread_id: str) -> dict:
+    try:
+        rollout_path = load_current_rollout(codex_home, thread_id)
+    except CurrentStateUnavailable as state_error:
+        try:
+            return codex_log_settings(codex_home, thread_id)
+        except (OSError, RuntimeError, sqlite3.Error, ValueError) as log_error:
+            raise RuntimeError(f"{state_error}; log fallback failed: {log_error}") from log_error
+    # A present rollout's identity/lifecycle validation must not be bypassed.
+    return current_turn_settings(rollout_path, thread_id)
 
 
 def current_turn_settings(rollout_path: Path, thread_id: str) -> dict[str, str]:
@@ -1044,11 +1170,13 @@ def current_main() -> int:
             if client == "codex":
                 if arguments.agent_id:
                     raise RuntimeError("Codex subagents use their own CODEX_THREAD_ID, not --agent-id")
-                rollout_path = load_current_rollout(arguments.codex_home.expanduser().resolve(), session_id)
-                native = current_turn_settings(rollout_path, session_id)
+                native = codex_current_settings(arguments.codex_home.expanduser().resolve(), session_id)
                 settings = client_settings("codex", session_id, None, native["turn_id"],
                                            native["model"], native["reasoning_effort"], native["source"])
                 settings["thread_id"] = session_id
+                if native["source"] == "runtime_log":
+                    settings["settings_status"] = native["settings_status"]
+                    settings["observed_at"] = native["observed_at"]
             else:
                 settings = claude_current_settings(arguments.claude_home.expanduser().resolve(),
                                                    session_id, arguments.agent_id)
@@ -1073,6 +1201,9 @@ def current_main() -> int:
             print(f"Agent: {settings['agent_id']}")
         print(f"Turn: {settings['turn_id']}")
         print(f"Source: {settings['source']}")
+        if settings.get("settings_status") == "last_logged":
+            print(f"Settings status: {settings['settings_status']}")
+            print(f"Observed at: {settings['observed_at']}")
     return 0
 
 
