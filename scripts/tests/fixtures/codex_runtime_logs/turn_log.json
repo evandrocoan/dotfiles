@@ -1,0 +1,6 @@
+{
+  "target": "codex_core::session::turn",
+  "thread_id": "worker",
+  "process_uuid": "pid:100:runtime-process",
+  "feedback_log_body": "session_loop{thread_id=worker}:submission_dispatch{otel.name=\"op.dispatch.turn_input\" submission.id=\"live-turn\" codex.op=\"turn_input\"}:codex.turn_input{conversation.id=worker turn.id=\"live-turn\"}:turn{otel.name=\"session_task.turn\" thread.id=worker turn.id=live-turn model=gpt-6.1-sol codex.turn.reasoning_effort=xhigh}:session_task.run:run_turn: post sampling token usage turn_id=live-turn total_usage_tokens=153523 auto_compact_scope_tokens=153523 auto_compact_scope_limit=Some(450000) auto_compact_limit_scope=Total auto_compact_window_prefill_tokens=None full_context_window_limit=Some(475000) full_context_window_limit_reached=false token_limit_reached=false model_needs_follow_up=false has_pending_input=false needs_follow_up=false"
+}
