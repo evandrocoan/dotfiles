@@ -995,16 +995,17 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
         message_id = require_runtime_string(message.get("id"), "Claude message identity")
         if latest is None or latest["message_id"] != message_id:
             latest = {"message_id": message_id, "turn_id": item.get("requestId") or message_id,
-                      "model": message.get("model"), "effort": item.get("perTurnEffort")}
+                      "model": message.get("model"), "effort": None, "perTurnEffort": None}
             pending_tools.clear()
             latest_tool_completed = False
         else:
             if message.get("model") != latest["model"]:
                 raise RuntimeError("conflicting Claude model values in one message")
-            if item.get("perTurnEffort") is not None:
-                if latest["effort"] is not None and item["perTurnEffort"] != latest["effort"]:
+        for field in ("effort", "perTurnEffort"):
+            if item.get(field) is not None:
+                if latest[field] is not None and item[field] != latest[field]:
                     raise RuntimeError("conflicting Claude effort values in one message")
-                latest["effort"] = item["perTurnEffort"]
+                latest[field] = item[field]
         latest["observed_at"] = item.get("timestamp")
         if not isinstance(content, list):
             raise RuntimeError("malformed Claude assistant content")
@@ -1021,11 +1022,14 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
 
     if latest is None or turn_finished or not (pending_tools or latest_tool_completed):
         raise RuntimeError("Claude transcript has no active turn with tool metadata in its latest message")
+    # Native effort records the outgoing request's output_config.effort.
+    # perTurnEffort is separate, optional API-system metadata, not its replacement.
+    effort = latest["effort"] if latest["effort"] is not None else latest["perTurnEffort"]
     environment_effort = os.environ.get("CLAUDE_EFFORT", "").strip()
-    if latest["effort"] and environment_effort and latest["effort"] != environment_effort:
+    if effort and environment_effort and effort != environment_effort:
         raise RuntimeError("Claude transcript and tool environment have conflicting effort values")
     settings = client_settings("claude", session_id, agent_id, latest["turn_id"], latest["model"],
-                               latest["effort"], "claude_transcript")
+                               effort, "claude_transcript")
     if not pending_tools:
         # Desktop tools can be logged only after completion. Their message's
         # settings are the last observed values, not proof of a pending call.
@@ -1086,6 +1090,7 @@ def copilot_current_settings(home: Path, session_id: str, agent_id: str | None) 
     identities = 0
     seen_ids = set()
     effort = {"level": None, "model": None}
+    configured_model = None
     latest = None
     active = False
     for event in runtime_records(path):
@@ -1109,11 +1114,20 @@ def copilot_current_settings(home: Path, session_id: str, agent_id: str | None) 
             event.get("agentId") is None or event.get("agentId") == agent_id
         ) and data.get("continuePendingWork") is not True and data.get("sessionWasActive") is not True:
             active = False
+            if agent_id:
+                configured_model = None
+                effort = {"level": None, "model": None}
         if event.get("agentId") != agent_id:
             continue
         if kind in {"session.start", "session.resume", "session.model_change"}:
             # An omitted/cleared effort does not prove a default or lack of support.
             effort = copilot_effort_settings(data)
+            configured_model = None
+        elif kind == "subagent.configured" and agent_id:
+            configured_model = require_runtime_string(data.get("model"), "Copilot configured subagent model")
+            effort = {"level": data.get("reasoningEffort"), "model": configured_model}
+        elif kind in {"subagent.completed", "subagent.failed"} and agent_id:
+            active = False
         # Model deselection preserves effort and its ownership in the native contract.
         elif kind == "user.message":
             active = False
@@ -1122,9 +1136,26 @@ def copilot_current_settings(home: Path, session_id: str, agent_id: str | None) 
                 latest is None or not active or data.get("turnId") != latest["turn_id"]
             ):
                 raise RuntimeError("Copilot turn retry has no matching active start")
+            model = data.get("model")
+            if model is None and kind == "assistant.turn_start":
+                model = configured_model
             latest = {"turn_id": require_runtime_string(data.get("turnId"), "Copilot turn identity"),
-                      "model": data.get("model"), "effort": effort}
+                      "model": model, "effort": effort,
+                      "retry": kind == "assistant.turn_retry"}
             active = True
+        elif kind == "assistant.message" and active and latest is not None and (
+            data.get("turnId") == latest["turn_id"] and not latest["retry"]
+        ) and data.get("model") is not None:
+            # Messages identify a turn, but cannot distinguish a retry attempt
+            # from a delayed fragment of the preceding attempt in that turn.
+            model = require_runtime_string(data["model"], "Copilot message model")
+            if latest["model"] is None or (
+                isinstance(latest["model"], str) and
+                latest["model"].strip().lower() in {"auto", "default", "<synthetic>"}
+            ):
+                latest["model"] = model
+            elif model != latest["model"]:
+                raise RuntimeError("conflicting Copilot model values in one turn")
         elif kind == "assistant.turn_end":
             if latest is None or data.get("turnId") != latest["turn_id"]:
                 raise RuntimeError("Copilot turn end has no matching start")
