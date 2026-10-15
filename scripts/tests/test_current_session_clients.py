@@ -92,6 +92,11 @@ def write_copilot(home, events, *, session_id='copilot-child'):
     return path
 
 
+def copilot_message(turn_id, model):
+    return {'messageId': 'message-' + turn_id, 'turnId': turn_id,
+            'model': model, 'content': '', 'toolRequests': []}
+
+
 def invoke(homes, *arguments, environment=None, input_text=None):
     env = os.environ.copy()
     for key in ('CODEX_THREAD_ID', 'CODEX_SESSION_ID', 'CLAUDE_CODE_SESSION_ID', 'CLAUDE_EFFORT'):
@@ -595,3 +600,397 @@ def test_copilot_session_context_hook_emits_native_identity_without_writes(tmp_p
     assert 'current --client copilot --session-id copilot-child --format json' in context
     assert 'subagent' in context
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize('agent_id', (None, 'worker'))
+@pytest.mark.parametrize('per_turn_effort', (None, 'xhigh'))
+def test_claude_uses_native_request_effort(runtime_homes, agent_id, per_turn_effort):
+    row = claude_call(agent_id=agent_id)
+    row.update(effort='high', perTurnEffort=per_turn_effort)
+    path = write_claude(runtime_homes['claude'], [row], agent_id=agent_id)
+    before = path.read_bytes()
+    arguments = ['--client', 'claude'] + (['--agent-id', agent_id] if agent_id else [])
+
+    result = invoke(runtime_homes, *arguments, environment={
+        'CLAUDE_CODE_SESSION_ID': 'claude-child', 'CLAUDE_EFFORT': 'high'})
+
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ''
+    assert json.loads(result.stdout) == {
+        'client': 'claude', 'session_id': 'claude-child', 'agent_id': agent_id,
+        'turn_id': 'claude-turn', 'model': 'claude-opus-5-5', 'reasoning_effort': 'high',
+        'reasoning_effort_status': 'known', 'source': 'claude_transcript',
+    }
+    assert path.read_bytes() == before
+
+
+def test_claude_native_request_effort_preserves_last_logged_status(runtime_homes):
+    row = claude_call()
+    row.pop('perTurnEffort')
+    row['effort'] = 'high'
+    write_claude(runtime_homes['claude'], [row, claude_result()])
+
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {
+        'client': 'claude', 'session_id': 'claude-child', 'agent_id': None,
+        'turn_id': 'claude-turn', 'model': 'claude-opus-5-5', 'reasoning_effort': 'high',
+        'reasoning_effort_status': 'known', 'source': 'claude_transcript',
+        'settings_status': 'last_logged', 'observed_at': '2026-10-15T12:00:00.123Z',
+    }
+
+
+@pytest.mark.parametrize(('first_effort', 'last_effort'), ((None, 'high'), ('high', None)))
+def test_claude_native_effort_survives_message_fragments(runtime_homes, first_effort, last_effort):
+    first = claude_call()
+    first['effort'] = first_effort
+    last = claude_call()
+    last['effort'] = last_effort
+    write_claude(runtime_homes['claude'], [first, last])
+
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)['reasoning_effort'] == 'high'
+
+
+@pytest.mark.parametrize('effort', ('', False, 42, []))
+def test_claude_invalid_native_effort_cannot_fall_back_to_per_turn_metadata(runtime_homes, effort):
+    row = claude_call()
+    row['effort'] = effort
+    write_claude(runtime_homes['claude'], [row])
+
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'reasoning effort' in result.stderr
+
+
+def test_claude_conflicting_native_effort_fragments_produce_no_settings(runtime_homes):
+    first = claude_call()
+    first['effort'] = 'high'
+    last = claude_call()
+    last['effort'] = 'medium'
+    write_claude(runtime_homes['claude'], [first, last])
+
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'conflicting Claude effort' in result.stderr
+
+
+def test_claude_native_effort_cannot_cross_a_new_message(runtime_homes):
+    previous = claude_call('old')
+    previous['effort'] = 'high'
+    latest = claude_call(effort=None)
+    write_claude(runtime_homes['claude'], [previous, claude_result('old'), latest])
+
+    result = invoke(runtime_homes, '--client', 'claude', environment={
+        'CLAUDE_CODE_SESSION_ID': 'claude-child', 'CLAUDE_EFFORT': 'high'})
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'reasoning effort' in result.stderr
+
+
+@pytest.mark.parametrize(('agent_id', 'expected_effort'), ((None, 'medium'), ('worker', 'high')))
+@pytest.mark.parametrize('initial_model', (None, 'auto'))
+def test_copilot_recovers_resolved_model_from_its_turn_message(
+    runtime_homes, agent_id, expected_effort, initial_model
+):
+    events = [('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'medium'})]
+    if agent_id:
+        events.append(('session.model_change', {'newModel': 'gpt-6-sol', 'reasoningEffort': 'high'},
+                       agent_id))
+    events.extend([
+        ('assistant.turn_start', {'turnId': 'current', 'model': initial_model}, agent_id),
+        ('assistant.message', copilot_message('current', 'gpt-6-sol'), agent_id),
+    ])
+    path = write_copilot(runtime_homes['copilot'], events)
+    before = path.read_bytes()
+    arguments = ['--client', 'copilot', '--session-id', 'copilot-child']
+    if agent_id:
+        arguments.extend(['--agent-id', agent_id])
+
+    result = invoke(runtime_homes, *arguments)
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {
+        'client': 'copilot', 'session_id': 'copilot-child', 'agent_id': agent_id,
+        'turn_id': 'current', 'model': 'gpt-6-sol',
+        'reasoning_effort': expected_effort,
+        'reasoning_effort_status': 'known', 'source': 'copilot_events',
+    }
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize('initial_model', (None, 'claude-sonnet-4-6'))
+def test_copilot_uses_own_subagent_configured_settings(runtime_homes, initial_model):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'medium'}),
+        ('assistant.turn_start', {'turnId': 'root', 'model': 'gpt-6-sol'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'child', 'model': initial_model}, 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {
+        'client': 'copilot', 'session_id': 'copilot-child', 'agent_id': 'worker',
+        'turn_id': 'child', 'model': 'claude-sonnet-4-6', 'reasoning_effort': 'high',
+        'reasoning_effort_status': 'known', 'source': 'copilot_events',
+    }
+
+
+@pytest.mark.parametrize('configured_agent', (None, 'sibling'))
+def test_copilot_cannot_use_another_agents_configured_settings(runtime_homes, configured_agent):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'medium'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, configured_agent),
+        ('assistant.turn_start', {'turnId': 'child', 'model': 'claude-sonnet-4-6'}, 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'reasoning effort' in result.stderr
+
+
+def test_copilot_configured_effort_is_bound_to_its_resolved_model(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'child', 'model': 'gpt-6-sol'}, 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'effort belongs to another model' in result.stderr
+
+
+def test_copilot_later_configuration_does_not_relabel_an_active_turn(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'child'}, 'worker'),
+        ('subagent.configured', {'model': 'gpt-6-sol', 'reasoningEffort': 'low',
+                                 'multiTurn': True}, 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert (data['model'], data['reasoning_effort']) == ('claude-sonnet-4-6', 'high')
+
+
+def test_copilot_new_configuration_cannot_reuse_missing_effort(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'multiTurn': True}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'child', 'model': 'claude-sonnet-4-6'}, 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'reasoning effort' in result.stderr
+
+
+@pytest.mark.parametrize('tail', ('subagent.completed', 'subagent.failed'))
+def test_copilot_configuration_cannot_reopen_a_finished_subagent(runtime_homes, tail):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'child'}, 'worker'),
+        (tail, {}, 'worker'),
+        ('assistant.message', copilot_message('child', 'claude-sonnet-4-6'), 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'no active latest turn' in result.stderr
+
+
+@pytest.mark.parametrize(('message_turn', 'message_agent'), (('previous', None), ('current', 'worker')))
+def test_copilot_message_model_requires_its_own_turn_and_agent(runtime_homes, message_turn, message_agent):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'high'}),
+        ('assistant.turn_start', {'turnId': 'current'}),
+        ('assistant.message', copilot_message(message_turn, 'gpt-6-sol'), message_agent),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'effective model' in result.stderr
+
+
+def test_copilot_message_does_not_override_a_conflicting_turn_model(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'high'}),
+        ('assistant.turn_start', {'turnId': 'current', 'model': 'gpt-6-sol'}),
+        ('assistant.message', copilot_message('current', 'gpt-6-astra')),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'conflicting Copilot model' in result.stderr
+
+
+def test_copilot_retry_does_not_reuse_the_previous_message_model(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'high'}),
+        ('assistant.turn_start', {'turnId': 'current'}),
+        ('assistant.message', copilot_message('current', 'gpt-6-sol')),
+        ('assistant.turn_retry', {'turnId': 'current', 'reason': 'retry'}),
+        ('assistant.message', copilot_message('current', 'gpt-6-sol')),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'effective model' in result.stderr
+
+
+def test_claude_native_effort_must_match_the_tool_environment(runtime_homes):
+    row = claude_call(effort='medium')
+    row['effort'] = 'high'
+    write_claude(runtime_homes['claude'], [row])
+
+    result = invoke(runtime_homes, '--client', 'claude', environment={
+        'CLAUDE_CODE_SESSION_ID': 'claude-child', 'CLAUDE_EFFORT': 'medium'})
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'conflicting effort' in result.stderr
+
+
+def test_copilot_message_recovery_keeps_the_effort_captured_at_turn_start(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'medium'}),
+        ('assistant.turn_start', {'turnId': 'current'}),
+        ('session.model_change', {'newModel': 'gpt-6-astra', 'reasoningEffort': 'high'}),
+        ('assistant.message', copilot_message('current', 'gpt-6-sol')),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert (data['model'], data['reasoning_effort']) == ('gpt-6-sol', 'medium')
+
+
+def test_copilot_message_model_cannot_supply_missing_effort(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('assistant.turn_start', {'turnId': 'current'}),
+        ('assistant.message', copilot_message('current', 'gpt-6-sol')),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'reasoning effort' in result.stderr
+
+
+@pytest.mark.parametrize('tail', (
+    ('assistant.turn_end', {'turnId': 'current'}),
+    ('abort', {'reason': 'cancelled'}),
+    ('session.shutdown', {}),
+))
+def test_copilot_message_cannot_reopen_a_finished_turn(runtime_homes, tail):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'high'}),
+        ('assistant.turn_start', {'turnId': 'current'}), tail,
+        ('assistant.message', copilot_message('current', 'gpt-6-sol')),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'no active latest turn' in result.stderr
+
+
+def test_copilot_model_change_invalidates_the_previous_configured_model(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('session.model_change', {'newModel': 'gpt-6-sol', 'reasoningEffort': 'medium'}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'child'}, 'worker'),
+        ('assistant.message', copilot_message('child', 'gpt-6-sol'), 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert (data['model'], data['reasoning_effort']) == ('gpt-6-sol', 'medium')
+
+
+def test_copilot_abandoned_resume_invalidates_subagent_configuration(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child'}),
+        ('subagent.configured', {'model': 'claude-sonnet-4-6', 'reasoningEffort': 'high',
+                                 'multiTurn': True}, 'worker'),
+        ('assistant.turn_start', {'turnId': 'old'}, 'worker'),
+        ('session.resume', {'eventCount': 3, 'resumeTime': '2026-10-12T03:00:00Z',
+                            'continuePendingWork': False}),
+        ('assistant.turn_start', {'turnId': 'new', 'model': 'claude-sonnet-4-6'}, 'worker'),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child',
+                    '--agent-id', 'worker')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'reasoning effort' in result.stderr
+
+
+def test_copilot_message_recovery_rejects_malformed_primary_model(runtime_homes):
+    write_copilot(runtime_homes['copilot'], [
+        ('session.start', {'sessionId': 'copilot-child', 'reasoningEffort': 'high'}),
+        ('assistant.turn_start', {'turnId': 'current', 'model': []}),
+        ('assistant.message', copilot_message('current', 'gpt-6-sol')),
+    ])
+
+    result = invoke(runtime_homes, '--client', 'copilot', '--session-id', 'copilot-child')
+
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert result.stderr == 'codex-session-stats current: conflicting Copilot model values in one turn\n'
