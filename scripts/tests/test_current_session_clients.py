@@ -42,10 +42,24 @@ def claude_call(message_id='claude-turn', *, model='claude-opus-5-5', effort='xh
     row = {
         'type': 'assistant', 'sessionId': 'claude-child', 'uuid': message_id,
         'requestId': message_id, 'isSidechain': agent_id is not None,
+        'timestamp': '2026-10-15T12:00:00.123Z',
         'perTurnEffort': effort,
         'message': {'id': message_id, 'model': model, 'stop_reason': 'tool_use',
                     'content': [{'type': 'tool_use', 'id': 'tool-' + message_id,
                                  'name': 'Bash', 'input': {'command': 'codex-session-stats current'}}]},
+    }
+    if agent_id is not None:
+        row['agentId'] = agent_id
+    return row
+
+
+def claude_result(message_id='claude-turn', *, agent_id=None):
+    row = {
+        'type': 'user', 'sessionId': 'claude-child',
+        'isSidechain': agent_id is not None,
+        'timestamp': '2026-10-15T12:00:01Z',
+        'message': {'content': [
+            {'type': 'tool_result', 'tool_use_id': 'tool-' + message_id}]},
     }
     if agent_id is not None:
         row['agentId'] = agent_id
@@ -157,13 +171,11 @@ def test_claude_model_change_uses_latest_pending_call(runtime_homes):
 
 
 @pytest.mark.parametrize('tail', (
-    {'type': 'user', 'sessionId': 'claude-child', 'message': {'content': [
-        {'type': 'tool_result', 'tool_use_id': 'tool-claude-turn'}]}},
     {'type': 'user', 'sessionId': 'claude-child', 'message': {'content': 'new prompt'}},
     {'type': 'assistant', 'sessionId': 'claude-child', 'message': {
         'id': 'finished', 'model': 'claude-opus-5-5', 'stop_reason': 'end_turn', 'content': []}},
 ))
-def test_claude_never_reuses_a_completed_or_previous_call(runtime_homes, tail):
+def test_claude_never_reuses_a_previous_turn(runtime_homes, tail):
     write_claude(runtime_homes['claude'], [claude_call(), tail])
     result = invoke(runtime_homes, '--client', 'claude',
                     environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
@@ -192,10 +204,11 @@ def test_missing_subagent_never_returns_parent(runtime_homes):
     assert 'missing' in result.stderr
 
 
-def test_claude_missing_effort_does_not_infer_unsupported(runtime_homes):
+@pytest.mark.parametrize('completed', (False, True))
+def test_claude_missing_effort_does_not_infer_unsupported(runtime_homes, completed):
     row = claude_call()
     row.pop('perTurnEffort')
-    write_claude(runtime_homes['claude'], [row])
+    write_claude(runtime_homes['claude'], [row] + ([claude_result()] if completed else []))
     result = invoke(runtime_homes, '--client', 'claude',
                     environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
     assert result.returncode == 1
@@ -203,10 +216,11 @@ def test_claude_missing_effort_does_not_infer_unsupported(runtime_homes):
     assert 'effort' in result.stderr.lower()
 
 
-def test_claude_environment_effort_alone_cannot_identify_the_child_effort(runtime_homes):
+@pytest.mark.parametrize('completed', (False, True))
+def test_claude_environment_effort_alone_cannot_identify_the_child_effort(runtime_homes, completed):
     row = claude_call()
     row.pop('perTurnEffort')
-    write_claude(runtime_homes['claude'], [row])
+    write_claude(runtime_homes['claude'], [row] + ([claude_result()] if completed else []))
     result = invoke(runtime_homes, '--client', 'claude', environment={
         'CLAUDE_CODE_SESSION_ID': 'claude-child', 'CLAUDE_EFFORT': 'high'})
     assert result.returncode == 1
@@ -214,7 +228,10 @@ def test_claude_environment_effort_alone_cannot_identify_the_child_effort(runtim
     assert 'effort' in result.stderr
 
 
-def test_claude_rejects_conflicting_effective_effort(runtime_homes):
+@pytest.mark.parametrize('completed', (False, True))
+def test_claude_rejects_conflicting_effective_effort(runtime_homes, completed):
+    write_claude(runtime_homes['claude'],
+                 [claude_call()] + ([claude_result()] if completed else []))
     result = invoke(runtime_homes, '--client', 'claude', environment={
         'CLAUDE_CODE_SESSION_ID': 'claude-child', 'CLAUDE_EFFORT': 'medium'})
     assert result.returncode == 1
@@ -222,15 +239,105 @@ def test_claude_rejects_conflicting_effective_effort(runtime_homes):
     assert 'conflicting effort' in result.stderr
 
 
-def test_claude_late_fragment_cannot_reopen_a_completed_tool(runtime_homes):
-    result_row = {'type': 'user', 'sessionId': 'claude-child', 'message': {'content': [
-        {'type': 'tool_result', 'tool_use_id': 'tool-claude-turn'}]}}
-    write_claude(runtime_homes['claude'], [claude_call(), result_row, claude_call()])
+def test_claude_late_fragment_keeps_completed_tool_marked_last_logged(runtime_homes):
+    write_claude(runtime_homes['claude'], [claude_call(), claude_result(), claude_call()])
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert data['settings_status'] == 'last_logged'
+    assert data['observed_at'] == '2026-10-15T12:00:00.123Z'
+
+
+@pytest.mark.parametrize('agent_id', (None, 'worker'))
+@pytest.mark.parametrize('stop_reason', (None, 'tool_use'))
+def test_claude_desktop_delayed_call_uses_last_logged_settings(runtime_homes, agent_id, stop_reason):
+    old = claude_call('old', model='claude-sonnet-4-6', effort='medium', agent_id=agent_id)
+    latest = claude_call(agent_id=agent_id)
+    latest['message']['stop_reason'] = stop_reason
+    path = write_claude(runtime_homes['claude'], [
+        old, claude_result('old', agent_id=agent_id),
+        latest, claude_result(agent_id=agent_id),
+    ], agent_id=agent_id)
+    before = path.read_bytes()
+    arguments = ['--client', 'claude'] + (['--agent-id', agent_id] if agent_id else [])
+    result = invoke(runtime_homes, *arguments, environment={
+        'CLAUDE_CODE_SESSION_ID': 'claude-child', 'CLAUDE_EFFORT': 'xhigh'})
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ''
+    assert json.loads(result.stdout) == {
+        'client': 'claude', 'session_id': 'claude-child', 'agent_id': agent_id,
+        'turn_id': 'claude-turn', 'model': 'claude-opus-5-5',
+        'reasoning_effort': 'xhigh', 'reasoning_effort_status': 'known',
+        'source': 'claude_transcript', 'settings_status': 'last_logged',
+        'observed_at': '2026-10-15T12:00:00.123Z',
+    }
+    assert path.read_bytes() == before
+
+
+def test_claude_last_logged_text_output_includes_status_and_observation_time(runtime_homes):
+    write_claude(runtime_homes['claude'], [claude_call(), claude_result()])
+    result = invoke(runtime_homes, '--client', 'claude', '--format', 'text',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == (
+        'Model: claude-opus-5-5\nReasoning effort: xhigh\nClient: claude\n'
+        'Session: claude-child\nTurn: claude-turn\nSource: claude_transcript\n'
+        'Settings status: last_logged\nObserved at: 2026-10-15T12:00:00.123Z\n')
+
+
+@pytest.mark.parametrize('timestamp', (None, '', 'invalid', '2026-10-15T12:00:00'))
+def test_claude_last_logged_requires_an_observation_timestamp(runtime_homes, timestamp):
+    row = claude_call()
+    row['timestamp'] = timestamp
+    write_claude(runtime_homes['claude'], [row, claude_result()])
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'timestamp' in result.stderr
+
+
+@pytest.mark.parametrize('stop_reason', ('end_turn', 'max_tokens', 'stop_sequence', 'refusal'))
+def test_claude_last_logged_cannot_reopen_a_finished_turn(runtime_homes, stop_reason):
+    finished = claude_call('finished')
+    finished['message'].update(stop_reason=stop_reason, content=[])
+    write_claude(runtime_homes['claude'], [
+        claude_call(), claude_result(), finished, claude_call(), claude_result(),
+    ])
     result = invoke(runtime_homes, '--client', 'claude',
                     environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
     assert result.returncode == 1
     assert result.stdout == ''
     assert 'active' in result.stderr
+
+
+@pytest.mark.parametrize('content', ('new prompt', [{'type': 'text', 'text': 'new prompt'}]))
+def test_claude_last_logged_does_not_cross_a_new_prompt(runtime_homes, content):
+    prompt = {'type': 'user', 'sessionId': 'claude-child', 'message': {'content': content}}
+    write_claude(runtime_homes['claude'], [claude_call(), claude_result(), prompt, claude_call()])
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert 'active' in result.stderr
+
+
+@pytest.mark.parametrize('row_index', (0, 1))
+@pytest.mark.parametrize(('field', 'value', 'error'), (
+    ('sessionId', 'other', 'session identity mismatch'),
+    ('agentId', 'worker', 'agent identity mismatch'),
+    ('isSidechain', True, 'agent identity mismatch'),
+))
+def test_claude_last_logged_validates_identity(runtime_homes, row_index, field, value, error):
+    rows = [claude_call(), claude_result()]
+    rows[row_index][field] = value
+    write_claude(runtime_homes['claude'], rows)
+    result = invoke(runtime_homes, '--client', 'claude',
+                    environment={'CLAUDE_CODE_SESSION_ID': 'claude-child'})
+    assert result.returncode == 1
+    assert result.stdout == ''
+    assert error in result.stderr
 
 
 @pytest.mark.parametrize('client', ('claude', 'copilot'))
