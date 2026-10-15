@@ -100,6 +100,9 @@ keepRemoteControlAwakeWhilePluggedIn = false
 open-link-in-target-preference = "external-browser"
 code-review-git-hosting-provider = "gitlab"
 
+[desktop.open-in-target-preferences]
+global = "vscode"
+
 [marketplaces.openai-bundled]
 source_type = "local"
 source = "/home/someuser/.codex/.tmp/bundled-marketplaces/openai-bundled"
