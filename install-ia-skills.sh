@@ -47,6 +47,7 @@ cat >&1 <<EOF
     and codex-session-stats from https://github.com/${REPOSITORY} or link a
     local checkout. The CLI requires Python 3 with sqlite3 and zoneinfo.
     A Copilot SessionStart hook supplies the current session identity.
+    A missing ~/.local/bin PATH entry is appended to the destination .bashrc.
 
     Skills are installed canonically in ~/.claude/skills and shared with Codex
     and Copilot through relative links in ~/.agents/skills. Existing files are
@@ -715,13 +716,47 @@ function installcodexcli() {
     fi
 }
 
-function reportclipath() {
+function configureclipath() {
     local cli_directory="${DESTINATION}/.local/bin"
+    local bashrc_path="${DESTINATION}/.bashrc"
+    local path_export='export PATH="$HOME/.local/bin:$PATH"'
+    local assignment_pattern='^[[:space:]]*(export[[:space:]]+)?PATH='
+    local line
+    local path_value
+    local existing_directory
+    local -a existing_directories
 
-    case ":${PATH}:" in
-        *":${cli_directory}:"*) ;;
-        *) printf 'Notice: Add %s to PATH and restart Codex to use codex-session-stats.\n' "${cli_directory}" ;;
-    esac
+    if [[ -f "${bashrc_path}" ]]; then
+        while IFS= read -r line || [[ -n "${line}" ]]; do
+            line="${line%%[[:space:]]#*}"
+            if [[ ! "${line}" =~ ${assignment_pattern} ]]; then
+                continue
+            fi
+            path_value="${line#*=}"
+            path_value="${path_value%"${path_value##*[![:space:]]}"}"
+            existing_directories=("${cli_directory}")
+            if [[ "${path_value}" == \'*\' ]]; then
+                path_value="${path_value#\'}"
+                path_value="${path_value%\'}"
+            else
+                path_value="${path_value//\"/}"
+                existing_directories+=('$HOME/.local/bin' '${HOME}/.local/bin' '~/.local/bin')
+            fi
+            for existing_directory in "${existing_directories[@]}"; do
+                case ":${path_value}:" in
+                    *":${existing_directory}:"*|*":${existing_directory}/:"*) return ;;
+                esac
+            done
+        done < "${bashrc_path}"
+    fi
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        printf 'Would append PATH export to %s: %s\n' "${bashrc_path}" "${path_export}"
+    else
+        printf '\n%s\n' "${path_export}" >> "${bashrc_path}"
+        printf 'Appended PATH export to %s; open a new Bash shell and restart Codex to use it.\n' "${bashrc_path}"
+    fi
+    INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
 }
 
 while [[ $# -gt 0 ]]; do
@@ -811,7 +846,7 @@ installcodexcli "${SOURCE_DIRECTORY}"
 installglobalinstructions "${SOURCE_DIRECTORY}"
 prunediscontinuedentries
 writestate
-reportclipath
+configureclipath
 
 if [[ "${UNMANAGED_SKIPPED_COUNT}" -gt 0 ]]; then
     printf 'Notice: %d existing skill item(s) were not added to the control file; use --force to replace and manage them.\n' "${UNMANAGED_SKIPPED_COUNT}"

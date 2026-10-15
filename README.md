@@ -385,9 +385,10 @@ preserved and removed from the control file.
 
 The installers also install `codex-session-stats` under the destination's
 `.local/bin/`. It requires Python 3 with `sqlite3` and `zoneinfo`, but does not
-need the Poetry environment. The Bash installer reports when that directory is
-absent from `PATH`. On Windows, the installer adds it to the current user's
-`PATH` when needed; restart Codex afterward. For another user's destination,
+need the Poetry environment. The Bash installer appends a PATH export to the
+destination's `.bashrc` when `.local/bin` is not already configured there. Open
+a new Bash shell and restart Codex afterward. On Windows, the installer adds it
+to the current user's `PATH` when needed; restart Codex afterward. For another user's destination,
 add that directory to the selected user's `PATH` separately. After installation,
 run `codex-session-stats --help` in a new shell to check command discovery.
 They also install [the Copilot session hook](.copilot/hooks/current-session.json),
