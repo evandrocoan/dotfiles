@@ -175,3 +175,99 @@ def test_missing_session_hook_fails_before_installing_skills(installer_source, t
     assert "Copilot session context source" in result.stderr
     assert not (destination / ".claude").exists()
     assert not (destination / ".local").exists()
+
+
+def test_installer_appends_cli_path_once_even_when_current_path_already_contains_it(
+    installer_source, tmp_path
+):
+    destination = tmp_path / "destination with spaces"
+    destination.mkdir()
+    bashrc = destination / ".bashrc"
+    original = "# Keep existing configuration without a final newline"
+    bashrc.write_text(original)
+    environment = os.environ.copy()
+    environment["PATH"] = str(destination / ".local/bin") + os.pathsep + environment["PATH"]
+
+    first = run_installer(installer_source, destination, "--mode", "local", environment=environment)
+    assert first.returncode == 0, first.stderr
+    expected = original + '\nexport PATH="$HOME/.local/bin:$PATH"\n'
+    assert bashrc.read_text() == expected
+
+    second = run_installer(installer_source, destination, "--mode", "local", environment=environment)
+    assert second.returncode == 0, second.stderr
+    assert bashrc.read_text() == expected
+
+
+@pytest.mark.parametrize("assignment", (
+    'export PATH="$HOME/.local/bin:$PATH"',
+    'PATH="$PATH:${HOME}/.local/bin/"',
+    'PATH=~/.local/bin:$PATH',
+    'export PATH="$PATH:DESTINATION/.local/bin"',
+    "export PATH='DESTINATION/.local/bin:/usr/bin:/bin'",
+))
+def test_installer_preserves_existing_cli_path_assignment(installer_source, tmp_path, assignment):
+    destination = tmp_path / "destination with spaces"
+    destination.mkdir()
+    bashrc = destination / ".bashrc"
+    original = "# Existing user setup\n" + assignment.replace("DESTINATION", str(destination)) + "\n"
+    bashrc.write_text(original)
+
+    result = run_installer(installer_source, destination, "--mode", "local")
+
+    assert result.returncode == 0, result.stderr
+    assert bashrc.read_text() == original
+
+
+@pytest.mark.parametrize("original", (
+    '# export PATH="$HOME/.local/bin:$PATH"\n',
+    'export PATH="$PATH" # $HOME/.local/bin\n',
+    'export PATH="$HOME/.local/bin-other:$PATH"\n',
+    "export PATH='$HOME/.local/bin:/usr/bin:/bin'\n",
+))
+def test_installer_does_not_mistake_comments_or_other_directories_for_cli_path(
+    installer_source, tmp_path, original
+):
+    destination = tmp_path / "destination"
+    destination.mkdir()
+    bashrc = destination / ".bashrc"
+    bashrc.write_text(original)
+
+    result = run_installer(installer_source, destination, "--mode", "local")
+
+    assert result.returncode == 0, result.stderr
+    assert bashrc.read_text() == original + '\nexport PATH="$HOME/.local/bin:$PATH"\n'
+
+
+def test_installer_creates_bashrc_with_portable_cli_path(installer_source, tmp_path):
+    destination = tmp_path / "destination"
+
+    result = run_installer(installer_source, destination, "--mode", "local")
+
+    assert result.returncode == 0, result.stderr
+    bashrc = destination / ".bashrc"
+    assert bashrc.read_text() == '\nexport PATH="$HOME/.local/bin:$PATH"\n'
+    environment = os.environ.copy()
+    environment["PATH"] = "/usr/bin:/bin"
+    loaded = subprocess.run(
+        ["bash", "--noprofile", "--norc", "-c",
+         'set -euo pipefail; source "$1"; printf "%s\\n" "$PATH"', "bash", str(bashrc)],
+        capture_output=True, text=True, check=False, env=environment,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    assert loaded.stdout == str(Path(environment["HOME"]) / ".local/bin") + ":/usr/bin:/bin\n"
+
+
+@pytest.mark.parametrize("existing", (False, True))
+def test_path_append_dry_run_does_not_create_or_change_bashrc(installer_source, tmp_path, existing):
+    destination = tmp_path / "destination"
+    destination.mkdir()
+    bashrc = destination / ".bashrc"
+    if existing:
+        bashrc.write_text("# Existing setup\n")
+    before = {path.name: path.read_bytes() for path in destination.iterdir()}
+
+    result = run_installer(installer_source, destination, "--mode", "local", "--dry-run")
+
+    assert result.returncode == 0, result.stderr
+    assert "Would append PATH export" in result.stdout
+    assert {path.name: path.read_bytes() for path in destination.iterdir()} == before
