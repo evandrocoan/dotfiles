@@ -959,6 +959,8 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
     latest = None
     pending_tools = set()
     completed_tools = set()
+    latest_tool_completed = False
+    turn_finished = False
     for item in runtime_records(paths[0]):
         kind = item.get("type")
         if kind not in {"user", "assistant"}:
@@ -977,9 +979,13 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
             )):
                 latest = None
                 pending_tools.clear()
+                latest_tool_completed = False
+                turn_finished = False
             elif isinstance(content, list):
                 for block in content:
                     tool_id = require_runtime_string(block.get("tool_use_id"), "Claude result tool identity")
+                    if tool_id in pending_tools:
+                        latest_tool_completed = True
                     completed_tools.add(tool_id)
                     pending_tools.discard(tool_id)
             else:
@@ -991,6 +997,7 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
             latest = {"message_id": message_id, "turn_id": item.get("requestId") or message_id,
                       "model": message.get("model"), "effort": item.get("perTurnEffort")}
             pending_tools.clear()
+            latest_tool_completed = False
         else:
             if message.get("model") != latest["model"]:
                 raise RuntimeError("conflicting Claude model values in one message")
@@ -998,6 +1005,7 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
                 if latest["effort"] is not None and item["perTurnEffort"] != latest["effort"]:
                     raise RuntimeError("conflicting Claude effort values in one message")
                 latest["effort"] = item["perTurnEffort"]
+        latest["observed_at"] = item.get("timestamp")
         if not isinstance(content, list):
             raise RuntimeError("malformed Claude assistant content")
         for block in content:
@@ -1007,16 +1015,29 @@ def claude_current_settings(home: Path, session_id: str, agent_id: str | None) -
                 tool_id = require_runtime_string(block.get("id"), "Claude tool identity")
                 if tool_id not in completed_tools:
                     pending_tools.add(tool_id)
-        if message.get("stop_reason") == "end_turn":
+        if message.get("stop_reason") not in (None, "tool_use"):
+            turn_finished = True
             pending_tools.clear()
 
-    if latest is None or not pending_tools:
-        raise RuntimeError("Claude transcript has no active tool call in its latest message")
+    if latest is None or turn_finished or not (pending_tools or latest_tool_completed):
+        raise RuntimeError("Claude transcript has no active turn with tool metadata in its latest message")
     environment_effort = os.environ.get("CLAUDE_EFFORT", "").strip()
     if latest["effort"] and environment_effort and latest["effort"] != environment_effort:
         raise RuntimeError("Claude transcript and tool environment have conflicting effort values")
-    return client_settings("claude", session_id, agent_id, latest["turn_id"], latest["model"],
-                           latest["effort"], "claude_transcript")
+    settings = client_settings("claude", session_id, agent_id, latest["turn_id"], latest["model"],
+                               latest["effort"], "claude_transcript")
+    if not pending_tools:
+        # Desktop tools can be logged only after completion. Their message's
+        # settings are the last observed values, not proof of a pending call.
+        observed_at = require_runtime_string(latest["observed_at"], "Claude observation timestamp")
+        try:
+            observed = datetime.datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise RuntimeError("malformed Claude observation timestamp") from error
+        if observed.tzinfo is None:
+            raise RuntimeError("Claude observation timestamp has no timezone")
+        settings.update(settings_status="last_logged", observed_at=observed_at)
+    return settings
 
 
 def claude_statusline_settings(arguments: argparse.Namespace) -> dict:
