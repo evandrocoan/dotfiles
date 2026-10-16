@@ -22,6 +22,15 @@ workflow rules of shared agent skills, which live in the skills themselves. Keep
 user-visible. When the user chooses a plan and a persistence trigger applies, keep detailed
 execution state in Markdown and project its current steps into the task plan.
 
+## Keep the implementation proportional
+
+Fix the requested behavior in its existing owner. Prefer a direct local change and modest
+repetition over a shared abstraction when that makes the result easier to understand and maintain.
+Do not add a framework, classifier, registry, inventory gate, configuration surface, or speculative
+edge-case support merely because the task could be generalized. Introduce one only when the user
+requests it or the current behavior demonstrably needs it. Validate the requested behavior; do not
+build extra machinery just to validate an abstraction introduced by the change itself.
+
 ## Determine the planning mode
 
 Read the [global agent instructions](../../../.codex/AGENTS.md) if they are not already in context.
