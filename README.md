@@ -702,6 +702,37 @@ status, dry runs, out-of-window polls and consumer callbacks never register perm
 `status` reports the profile name, target file and on-disk state; that is not proof of effective
 agent access or successful native continuation.
 
+The same external setup commands also create
+`codex_home/rules/codex-session-stats-gitlab-monitor.rules`. This
+[native command rule](https://learn.chatgpt.com/docs/agent-configuration/rules) allows only
+the exact installed script, exact private configuration and consumer actions (`claim`, `pause`,
+`resume`, `reanchor`, `snapshot`, `effect-intent`, `effect-receipt`, `complete`) followed by `--mr`
+to execute with the account's normal permissions. The agent keeps its restricted profile.
+The controls retain their native server, mapped conversation, active turn, ownership and effect
+checks; `snapshot` checks its caller before reading credentials. No generic shell/interpreter or
+setup/recovery command receives this exception. A user-layer rule is visible to other chats
+using that layer; it is the command and caller checks that limit its use.
+
+The script and private configuration must be owned regular files outside the writable state
+directory, without hard links. Existing script and directory modes are preserved, including
+group/world write bits; configuration and rule files must be private. Wrong ownership, invalid
+file types, links and conflicting rules stop registration without automatic chmod or replacement.
+Inspect the reported path or conflict, then repeat preflight.
+A matching rule is left untouched. Callbacks, status, dry runs and check-only preflight never
+install it. More restrictive command policies still apply.
+
+After first registration or a rule change, close the app normally and reopen it through
+`launch-app` to load the rule. Neither the monitor nor its launcher closes the current app.
+`control_rule.state = configured_on_disk` reports file validation; `load_state = not_verified`
+does not prove the running app loaded it. Repeat check-only preflight and the real continuation
+pilot before enabling the timer.
+
+Consumer JSON may use `--payload-file PATH` after the action and `--mr`. The file must be a
+mode-`0600` regular file directly in the private state directory, without symbolic/hard links,
+and at most 64 KiB. This lets the agent invoke the exact control as a simple command after
+writing its data inside the allowed state root. Existing stdin input remains supported for
+manual use. Payloads never grant ownership or replace native provenance checks.
+
 State lives separately at `~/.local/state/codex-session-stats/gitlab-monitor.sqlite3`.
 It binds the project, workspace and native endpoint; changing that binding requires a deliberately
 separate state file. Preserve the state when updating or restarting. Removing it discards
@@ -842,7 +873,9 @@ systemctl --user daemon-reload
 Disabling future polls does not cancel agent turns already submitted. Keep the private state
 unless deliberately retiring this integration after inspecting unfinished work. When retiring it,
 the monitor's named permission table can also be removed from `codex_home/config.toml` after all
-dependent turns finish. A later real poll, preflight or pilot will register missing rules again.
+dependent turns finish, together with its own `rules/codex-session-stats-gitlab-monitor.rules`
+file under that Codex home. Reopen the app to unload the command rule. A later real poll,
+preflight or pilot will register missing rules again.
 
 ### Codex VS Code history patch
 

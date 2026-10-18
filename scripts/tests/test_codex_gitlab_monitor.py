@@ -461,7 +461,13 @@ class Boundary:
     def __init__(self, tmp_path, monkeypatch):
         self.config = configure(tmp_path)
         self.path = tmp_path / "monitor.json"
-        self.module = runpy.run_path(str(CLI))
+        # Model an installed trusted executable with safe ownership/mode. The live
+        # home script may intentionally have different permissions; never chmod it.
+        self.cli = tmp_path / "bin/codex-session-stats"
+        self.cli.parent.mkdir(mode=0o700)
+        self.cli.write_bytes(CLI.read_bytes())
+        self.cli.chmod(0o700)
+        self.module = runpy.run_path(str(self.cli))
         self.code = self.module["monitor_poll"].__globals__
         # Consumer policy fixtures replace only the external GUI/process boundary.
         # Live lease, process and connected-peer checks have separate OS-level tests below.
@@ -479,7 +485,7 @@ class Boundary:
         self.cross_origin = False
         self.token = "FIXTURE_PRIVATE_TOKEN_DO_NOT_FORWARD"
         home = Path(self.config["codex_home"])
-        home.mkdir(parents=True)
+        home.mkdir(parents=True, mode=0o700)
         (home / "config.toml").write_text('[mcp_servers.gitlab.env]\nGITLAB_API_URL = "https://gitlab.example.test/api/v4"\nGITLAB_PERSONAL_ACCESS_TOKEN = "' + self.token + '"\n')
         self.codex_settings = tomllib.loads((home / "config.toml").read_text())
         self.config_version = "fixture-user-1"
@@ -677,6 +683,290 @@ def boundary(tmp_path, monkeypatch):
     return Boundary(tmp_path, monkeypatch)
 
 
+def test_poll_registers_scoped_control_rule_and_preserves_matching_file(boundary):
+    import ast
+    b = boundary
+    b.poll()
+    target = Path(b.config["codex_home"]) / "rules/codex-session-stats-gitlab-monitor.rules"
+    content = target.read_text()
+    expression = ast.parse(content).body[0].value
+    assert expression.func.id == "prefix_rule"
+    fields = {k.arg: ast.literal_eval(k.value) for k in expression.keywords}
+    assert fields["decision"] == "allow"
+    assert fields["pattern"][:4] == [str(b.cli.resolve()), "monitor-gitlab", "--config", str(b.path)]
+    assert set(fields["pattern"][4]) == {"claim", "pause", "resume", "reanchor", "snapshot",
+        "effect-intent", "effect-receipt", "complete"}
+    assert fields["pattern"][5:] == ["--mr"]
+    assert target.stat().st_mode & 0o777 == 0o600
+    before = (target.read_bytes(), target.stat().st_mtime_ns)
+    assert list(target.parent.iterdir()) == [target]
+    b.poll()
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+    assert not b.threads
+
+
+@pytest.mark.parametrize("location", ["script", "script_parent", "config_parent", "codex_home", "rules_directory"])
+@pytest.mark.parametrize("mode", [0o775, 0o777])
+def test_control_rule_accepts_existing_writable_modes_without_chmod(boundary, location, mode):
+    b = boundary
+    home = Path(b.config["codex_home"])
+    directory = home / "rules"
+    directory.mkdir(mode=0o700)
+    paths = {"script": b.cli, "script_parent": b.cli.parent, "config_parent": b.path.parent,
+             "codex_home": home, "rules_directory": directory}
+    paths[location].chmod(mode)
+    before_modes = {name: path.stat().st_mode & 0o777 for name, path in paths.items()}
+    first = b.poll()
+    target = directory / "codex-session-stats-gitlab-monitor.rules"
+    assert first["control_rule"]["state"] == "configured_on_disk"
+    assert first["control_rule"]["changed"] is True
+    assert target.read_text() == b.call("control_rule_definition", b.config, b.path)
+    assert target.stat().st_mode & 0o777 == 0o600
+    before = (target.read_bytes(), target.stat().st_mtime_ns)
+    second = b.poll()
+    assert second["control_rule"]["changed"] is False
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+    assert {name: path.stat().st_mode & 0o777 for name, path in paths.items()} == before_modes
+    assert not b.threads
+
+
+@pytest.mark.parametrize("kind", ["conflict", "same_size_conflict", "symlink", "directory_link"])
+def test_control_rule_conflict_never_overwrites_or_provisions_profile(boundary, kind):
+    b = boundary
+    directory = Path(b.config["codex_home"]) / "rules"
+    other = b.path.parent / "other-rule"
+    other.write_text('prefix_rule(pattern=["bash"],decision="allow")\n')
+    other.chmod(0o600)
+    if kind == "directory_link":
+        directory.symlink_to(b.path.parent, target_is_directory=True)
+    else:
+        directory.mkdir(mode=0o700)
+        target = directory / "codex-session-stats-gitlab-monitor.rules"
+        if kind == "symlink":
+            target.symlink_to(other)
+        else:
+            content = (b.call("control_rule_definition", b.config, b.path).replace('"claim"', '"merge"')
+                       if kind == "same_size_conflict" else other.read_text())
+            target.write_text(content)
+            target.chmod(0o600)
+    before = other.read_bytes()
+    with pytest.raises(RuntimeError, match="control rule"):
+        b.poll()
+    assert other.read_bytes() == before
+    assert "permissions" not in b.codex_settings
+    assert not b.http and not b.native
+
+
+@pytest.mark.parametrize("mode", [0o644, 0o660])
+def test_control_rule_still_rejects_nonprivate_exact_rule_without_overwriting(boundary, mode):
+    b = boundary
+    directory = Path(b.config["codex_home"]) / "rules"
+    directory.mkdir(mode=0o700)
+    target = directory / "codex-session-stats-gitlab-monitor.rules"
+    target.write_text(b.call("control_rule_definition", b.config, b.path))
+    target.chmod(mode)
+    before = (target.read_bytes(), target.stat().st_mtime_ns, target.stat().st_mode)
+    with pytest.raises(RuntimeError, match="control rule conflicts or is unsafe"):
+        b.poll()
+    assert (target.read_bytes(), target.stat().st_mtime_ns, target.stat().st_mode) == before
+    assert "permissions" not in b.codex_settings
+    assert not b.http and not b.native
+
+
+@pytest.mark.parametrize("mode", [0o640, 0o660])
+def test_control_rule_still_rejects_nonprivate_configuration(boundary, mode):
+    b = boundary
+    b.cli.chmod(0o775)
+    b.cli.parent.chmod(0o775)
+    b.path.chmod(mode)
+    with pytest.raises(RuntimeError, match="trusted configuration"):
+        b.poll()
+    assert b.path.stat().st_mode & 0o777 == mode
+    assert "permissions" not in b.codex_settings
+    assert not (Path(b.config["codex_home"]) / "rules").exists()
+    assert not b.http and not b.native
+
+
+def test_control_rule_still_requires_an_executable_script(boundary):
+    b = boundary
+    b.cli.chmod(0o660)
+    with pytest.raises(RuntimeError, match="trusted script"):
+        b.poll()
+    assert b.cli.stat().st_mode & 0o777 == 0o660
+    assert "permissions" not in b.codex_settings
+    assert not (Path(b.config["codex_home"]) / "rules").exists()
+    assert not b.http and not b.native
+
+
+@pytest.mark.parametrize("kind", ["writable_config", "writable_script"])
+def test_control_rule_trusted_paths_cannot_be_replaced_from_state(boundary, kind):
+    b = boundary
+    state_dir = Path(b.config["state_file"]).parent
+    state_dir.parent.mkdir(parents=True, mode=0o700)
+    state_dir.mkdir(mode=0o700)
+    if kind == "writable_config":
+        b.path = state_dir / "monitor.json"
+        b.path.write_text(json.dumps(b.config))
+        b.path.chmod(0o600)
+    else:
+        source = state_dir / "trusted-control"
+        source.write_text(CLI.read_text())
+        source.chmod(0o700)
+        b.monkeypatch.setitem(b.code, "__file__", str(source))
+    with pytest.raises(RuntimeError, match="trusted.*(state|script|configuration)"):
+        b.poll()
+    assert "permissions" not in b.codex_settings
+    assert not (Path(b.config["codex_home"]) / "rules").exists()
+    assert not b.http and not b.native
+
+
+def concurrent_control_rule_file(boundary, monkeypatch, *, conflicting):
+    b = boundary
+    directory = Path(b.config["codex_home"]) / "rules"
+    name = "codex-session-stats-gitlab-monitor.rules"
+    original = os.link
+    winning = []
+    def race(source, target, **kwargs):
+        descriptor = os.open(source, os.O_RDONLY, dir_fd=kwargs["src_dir_fd"])
+        with os.fdopen(descriptor, "rb") as stream:
+            content = stream.read()
+        content = b"another rule\n" if conflicting else content
+        descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600,
+                             dir_fd=kwargs["dst_dir_fd"])
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+        winning.append(content)
+        return original(source, target, **kwargs)
+    monkeypatch.setattr(os, "link", race)
+    return directory, name, winning
+
+
+def test_control_rule_publication_preserves_a_matching_concurrent_file(boundary, monkeypatch):
+    b = boundary
+    directory, name, winning = concurrent_control_rule_file(b, monkeypatch, conflicting=False)
+    result = b.call("control_rule", b.config, b.path, install=True)
+    assert result["state"] == "configured_on_disk"
+    assert result["changed"] is False
+    assert len(winning) == 1
+    assert (directory / name).read_bytes() == winning[0]
+    assert list(directory.iterdir()) == [directory / name]
+    assert not b.http and not b.native
+
+
+def test_control_rule_publication_refuses_a_conflicting_concurrent_file(boundary, monkeypatch):
+    b = boundary
+    directory, name, winning = concurrent_control_rule_file(b, monkeypatch, conflicting=True)
+    with pytest.raises(RuntimeError, match="control rule conflicts"):
+        b.call("control_rule", b.config, b.path, install=True)
+    assert len(winning) == 1
+    assert (directory / name).read_bytes() == winning[0]
+    assert list(directory.iterdir()) == [directory / name]
+    assert not b.http and not b.native
+
+
+def test_snapshot_rejects_unmapped_runtime_before_credentials_or_api(boundary, capsys):
+    b = boundary
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    b.runtime("00000000-0000-0000-0000-999999999999", "unrelated-turn")
+    b.http.clear()
+    b.native.clear()
+    before = Path(b.config["state_file"]).read_bytes()
+    credentials = []
+    original = b.code["monitor_credential"]
+    def credential(config):
+        credentials.append(True)
+        return original(config)
+    b.monkeypatch.setitem(b.code, "monitor_credential", credential)
+    b.monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config", str(b.path),
+        "snapshot", "--mr", "1"])
+    assert b.call("main") == 1
+    assert "mapped native conversation" in capsys.readouterr().err
+    assert not credentials and not b.http and not b.native
+    assert Path(b.config["state_file"]).read_bytes() == before
+    state.db.close()
+
+
+def test_snapshot_accepts_mapped_active_runtime_without_state_write(boundary, capsys):
+    b = boundary
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    before = Path(b.config["state_file"]).read_bytes()
+    b.monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config", str(b.path),
+        "snapshot", "--mr", "1"])
+    assert b.call("main") == 0
+    assert json.loads(capsys.readouterr().out)["head"] == "a" * 40
+    assert Path(b.config["state_file"]).read_bytes() == before
+    state.db.close()
+
+
+def test_private_payload_file_claim_uses_existing_native_provenance(boundary, capsys):
+    b = boundary
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state = b.state()
+    attempt = next(a for a in state.all("attempts") if a.get("kind") == "dispatch")
+    b.runtime(attempt["thread_id"], attempt["turn_id"])
+    payload = Path(b.config["state_file"]).parent / "claim.json"
+    payload.write_text(json.dumps({"attempt_id": attempt["id"], "event_id": attempt["event_id"]}))
+    payload.chmod(0o600)
+    b.monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config", str(b.path),
+        "claim", "--mr", "1", "--payload-file", str(payload)])
+    b.monkeypatch.setattr(sys, "stdin", io.StringIO("not JSON; file must be the selected source"))
+    assert b.call("main") == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["generation"] == 1
+    assert result["owner"]["turn_id"] == attempt["turn_id"]
+    assert state.get("mrs", "1")["owner"]["turn_id"] == attempt["turn_id"]
+    state.db.close()
+
+
+@pytest.mark.parametrize("kind", ["outside", "symlink", "insecure", "fifo", "oversize", "multibyte", "hardlink"])
+def test_payload_file_rejects_unsafe_input_before_claim(boundary, capsys, kind):
+    b = boundary
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state = b.state()
+    attempt = next(a for a in state.all("attempts") if a.get("kind") == "dispatch")
+    b.runtime(attempt["thread_id"], attempt["turn_id"])
+    directory = Path(b.config["state_file"]).parent
+    payload = directory / "claim.json"
+    data = json.dumps({"attempt_id": attempt["id"], "event_id": attempt["event_id"]})
+    if kind == "outside":
+        # A same-named valid file inside state makes the parent-path gate
+        # independently observable even though the reader uses an anchored dir fd.
+        payload.write_text(data)
+        payload.chmod(0o600)
+        payload = b.path.parent / "claim.json"
+    if kind == "fifo":
+        os.mkfifo(payload, 0o600)
+    elif kind in {"symlink", "hardlink"}:
+        target = directory / "target.json"
+        target.write_text(data)
+        target.chmod(0o600)
+        if kind == "symlink":
+            payload.symlink_to(target)
+        else:
+            os.link(target, payload)
+    else:
+        payload.write_text(" " * 65537 if kind == "oversize" else
+            json.dumps({"text": "á" * 40000}, ensure_ascii=False) if kind == "multibyte" else data)
+        payload.chmod(0o644 if kind == "insecure" else 0o600)
+    before = Path(b.config["state_file"]).read_bytes()
+    b.native.clear()
+    b.http.clear()
+    b.monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config", str(b.path),
+        "claim", "--mr", "1", "--payload-file", str(payload)])
+    assert b.call("main") == 1
+    assert "payload" in capsys.readouterr().err
+    assert state.get("mrs", "1")["owner"] is None
+    assert Path(b.config["state_file"]).read_bytes() == before
+    assert not b.http and not b.native
+    state.db.close()
+
+
 def test_poll_registers_only_its_named_profile_and_repeated_poll_does_not_write(boundary):
     b = boundary
     before = copy.deepcopy(b.codex_settings)
@@ -795,6 +1085,23 @@ def test_check_only_preflight_never_repairs_missing_or_partial_profile(boundary,
     assert not [r for r in b.native if r.get("method") == "config/batchWrite"]
 
 
+def test_check_only_preflight_does_not_reinstall_a_missing_control_rule(boundary, capsys):
+    b = boundary
+    b.poll()
+    target = Path(b.config["codex_home"]) / "rules/codex-session-stats-gitlab-monitor.rules"
+    target.unlink()
+    b.native.clear()
+    b.http.clear()
+    before = copy.deepcopy(b.codex_settings)
+    b.monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config", str(b.path),
+        "preflight", "--check-only"])
+    assert b.call("main") == 1
+    assert "control rule is missing" in capsys.readouterr().err
+    assert not target.exists()
+    assert b.codex_settings == before
+    assert not b.http and not b.native
+
+
 def test_native_claim_callback_does_not_repair_a_missing_profile(boundary, capsys):
     b = boundary
     b.mr(created=b.now.isoformat())
@@ -803,6 +1110,8 @@ def test_native_claim_callback_does_not_repair_a_missing_profile(boundary, capsy
     attempt = next(a for a in state.all("attempts") if a.get("kind") == "dispatch")
     b.runtime(attempt["thread_id"], attempt["turn_id"])
     del b.codex_settings["permissions"]["codex-session-stats-gitlab-monitor"]
+    rule = Path(b.config["codex_home"]) / "rules/codex-session-stats-gitlab-monitor.rules"
+    rule.unlink()
     before = copy.deepcopy(b.codex_settings)
     b.native.clear()
     b.monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config", str(b.path),
@@ -812,6 +1121,7 @@ def test_native_claim_callback_does_not_repair_a_missing_profile(boundary, capsy
     assert b.call("main") == 0
     assert json.loads(capsys.readouterr().out)["generation"] == state.get("mrs", "1")["generation"]
     assert b.codex_settings == before
+    assert not rule.exists()
     assert not [r for r in b.native if r.get("method") in {
         "config/read", "config/batchWrite", "thread/start", "thread/resume", "turn/start"}]
     assert state.get("mrs", "1")["owner"]["turn_id"] == attempt["turn_id"]
