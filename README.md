@@ -638,8 +638,8 @@ they are not all reviewed retroactively. Polling can miss activity deleted or op
 between checks; discussion scans revisit page 1 and recover still-visible changes on later passes.
 
 Prerequisites: Linux, Python 3.11 or newer, an already installed `websockets` package in the
-interpreter used by the standalone CLI, a signed-in running Codex app with its native Unix
-WebSocket endpoint, and an existing GitLab MCP server with access to the selected project.
+interpreter used by the standalone CLI, a signed-in Codex app started through `launch-app`
+below, and an existing GitLab MCP server with access to the selected project.
 No API key is needed for Codex model calls: they use the app's signed-in account and limits.
 Other commands, help and offline status do not import `websockets`. Do not add it to the common
 startup imports or install dependencies as a side effect of polling.
@@ -649,6 +649,27 @@ Create private configuration, replacing the example project URL and numeric ID:
 ```bash
 codex-session-stats monitor-gitlab configure \
   --project-url https://gitlab.example.com/group/project --project-id 123 --mcp-server gitlab
+```
+
+Close the Codex app normally, then start it with the installed application and native CLI paths.
+Replace both example paths with the app executable and its bundled native CLI:
+
+```bash
+codex-session-stats monitor-gitlab launch-app \
+  --app path/to/ChatGPT --codex path/to/resources/codex
+```
+
+Use this command whenever starting the app for monitoring. It refuses an already running app
+or native endpoint and never closes them for you. GUI arguments, when needed, go after `--`.
+The app keeps its normal sign-in and tool initialization. A private generated CLI wrapper bridges
+its main stdio connection to one native Unix WebSocket server, also used by the monitor. Other
+CLI/helper calls pass through unchanged. Do not run a separate `codex daemon` for the monitor or
+set `CODEX_APP_SERVER_WS_URL`. The launcher excludes inherited service credentials and endpoint
+overrides from the GUI environment; credentials remain in the selected Codex configuration.
+
+Once the app is open, run in another terminal:
+
+```bash
 codex-session-stats monitor-gitlab preflight
 codex-session-stats monitor-gitlab poll --dry-run
 codex-session-stats monitor-gitlab status
@@ -688,6 +709,21 @@ deduplication, MR/chat mappings and human holds and can duplicate work. Never ed
 databases to recover this monitor. `status` is offline and shows events, generations, holds,
 incomplete scans and uncertain operations; it does not initialize a database.
 
+`status` also reports `endpoint_verified`. When the app is closed it still reads the historical
+state, without changing its endpoint binding. A real poll with no verified shared app returns
+`shared_app_unavailable` before opening state or contacting GitLab. Other connected operations
+fail with a launch instruction. Runtime receipts and an active lease under
+`$XDG_RUNTIME_DIR/codex-session-stats/` bind the GUI, relay and native process identities; each
+native call also verifies the actual Unix peer. These checks are cooperative coordination under
+the same user, not a security boundary against that user. The runtime directory must remain
+outside the profile's writable state directory. Permission/process visibility failures stop access.
+
+Closing the app ends its relay and native server; an accepted review may be interrupted and must
+be reconciled from its recorded attempt, never resubmitted blindly. Reopen using `launch-app` and
+inspect status first. The GUI relay has a separate 64 MiB message limit; the monitor's read limits
+remain unchanged. A changed app bootstrap that no longer matches the main-server markers fails
+verification and needs a compatibility update before scheduling resumes.
+
 Before enabling unattended operation, verify a selected open MR through the real app:
 
 ```bash
@@ -701,6 +737,9 @@ reviews code or publishes comments. Check `human_continuation_verified` in statu
 is recorded once; an uncertain outcome must be inspected rather than repeated blindly.
 
 The MR agent itself must be able to reach the selected Unix socket and private monitor state.
+It must also read the shared runtime receipt and the relevant process/lease identities. Verify
+these checks from the restricted MR agent, plus continued use of the same MR chat in the real GUI,
+before enabling the timer. A successful protocol fixture or outside-agent check is insufficient.
 An outside-sandbox `preflight` alone does not prove that. A callback failing with
 `PermissionError, errno=13` leaves delivery pending and blocks activation until the operator
 inspects the selected profile and repeats the real continuation check. Registration alone does

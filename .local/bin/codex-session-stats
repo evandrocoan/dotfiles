@@ -1662,6 +1662,337 @@ def search_main() -> int:
 
 
 MONITOR_PERMISSION_PROFILE = "codex-session-stats-gitlab-monitor"
+MONITOR_RELAY_LIMIT = 64 * 1024 * 1024
+
+
+def monitor_process(pid: int) -> dict:
+    root = Path(f"/proc/{pid}")
+    fields = (root / "stat").read_text().rsplit(")", 1)[1].split()
+    if fields[0] in {"Z", "X"} or root.stat().st_uid != os.getuid():
+        raise RuntimeError("shared application process is no longer live or owned")
+    return {"pid": pid, "birth": fields[19], "parent": int(fields[1]),
+            "exe": str((root / "exe").resolve(strict=True))}
+
+
+def monitor_private(path: Path, *, directory=False):
+    import stat
+    metadata = path.lstat()
+    valid = stat.S_ISDIR(metadata.st_mode) if directory else stat.S_ISREG(metadata.st_mode)
+    if not valid or metadata.st_uid != os.getuid() or metadata.st_mode & 0o077:
+        raise RuntimeError("shared application runtime must be private, owned and without symlinks")
+    return metadata
+
+
+def monitor_shared_runtime(config: dict, *, create=False) -> Path:
+    base = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")).resolve()
+    monitor_private(base, directory=True)
+    root = base / "codex-session-stats"
+    target = root / ("shared-" + hashlib.sha256(config["codex_home"].encode()).hexdigest()[:20])
+    if target.is_relative_to(Path(config["state_file"]).parent.resolve()):
+        raise RuntimeError("shared runtime must be outside the monitor's writable state directory")
+    for directory in (root, target):
+        if create:
+            directory.mkdir(mode=0o700, exist_ok=True)
+        monitor_private(directory, directory=True)
+    return target
+
+
+def monitor_runtime_write(path: Path, value: dict):
+    temporary = path.with_name(path.name + "." + monitor_id())
+    try:
+        with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as stream:
+            json.dump(value, stream)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def monitor_shared_owner(config: dict) -> dict:
+    """Read-only proof of the GUI relay's live lease, never a stale receipt alone."""
+    try:
+        runtime = monitor_shared_runtime(config)
+        receipt_path = runtime / "ready.json"
+        monitor_private(receipt_path)
+        receipt = json.loads(receipt_path.read_text())
+        if receipt["codex_home"] != config["codex_home"] or receipt["socket"] != config["socket"]:
+            raise RuntimeError("shared server endpoint or Codex home differs from the monitor")
+        for role in ("gui", "proxy", "native"):
+            if monitor_process(receipt[role]["pid"]) != receipt[role]:
+                raise RuntimeError("shared server process identity changed")
+        if (receipt["proxy"]["parent"] != receipt["gui"]["pid"]
+                or receipt["native"]["parent"] != receipt["proxy"]["pid"]):
+            raise RuntimeError("shared server does not belong to the recorded GUI relay")
+        lease = monitor_private(runtime / "lease")
+        identity = f"{os.major(lease.st_dev):02x}:{os.minor(lease.st_dev):02x}:{lease.st_ino}"
+        locked = any(len(parts := line.split()) >= 6 and parts[1:4] == ["FLOCK", "ADVISORY", "WRITE"]
+                     and parts[4] == str(receipt["proxy"]["pid"]) and parts[5] == identity
+                     for line in Path("/proc/locks").read_text().splitlines())
+        metadata = Path(config["socket"]).stat()
+        import stat
+        if (not locked or [lease.st_dev, lease.st_ino] != receipt["lease"]
+                or not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid()
+                or [metadata.st_dev, metadata.st_ino] != receipt["socket_identity"]):
+            raise RuntimeError("shared server lease or socket identity is no longer valid")
+        return receipt
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
+        raise RuntimeError("shared Codex application is unavailable or unverified; close the app and use "
+                           "monitor-gitlab launch-app --app PATH --codex PATH") from error
+
+
+def monitor_shared_peer(config: dict, connection):
+    import socket
+    import struct
+    receipt = monitor_shared_owner(config)
+    peer = connection.transport.get_extra_info("socket")
+    if peer is None:
+        raise RuntimeError("shared native connection did not expose its Unix peer")
+    pid, uid, _ = struct.unpack("3i", peer.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+    if pid != receipt["native"]["pid"] or uid != os.getuid():
+        raise RuntimeError("connected native peer is not the GUI's shared server")
+
+
+def monitor_launch_app(config: dict, path: Path, app: Path, codex: Path, app_args: list):
+    import fcntl
+    if not Path(config["codex_home"]).is_dir():
+        raise RuntimeError("selected Codex home must already exist; sign in through the ordinary app first")
+    app, codex = app.expanduser().resolve(strict=True), codex.expanduser().resolve(strict=True)
+    for executable in (app, codex):
+        if not executable.is_file() or not os.access(executable, os.X_OK):
+            raise RuntimeError("application and Codex paths must be executable files")
+    # Inspect exact executable identities, never kill a running application or native daemon.
+    for entry in Path("/proc").iterdir():
+        if entry.name.isdigit() and int(entry.name) != os.getpid():
+            try:
+                process = monitor_process(int(entry.name))
+            except (FileNotFoundError, ProcessLookupError, PermissionError, RuntimeError):
+                continue
+            if process["exe"] == str(app):
+                raise RuntimeError("the selected application is already running; close it before launch-app")
+    alias = Path(config["_socket_alias"])
+    if alias.exists() or Path(config["socket"]).exists():
+        raise RuntimeError("native endpoint already exists; stop its owning application/daemon before launch-app")
+    runtime = monitor_shared_runtime(config, create=True)
+    # Serialize launch preparation, and retain an exact GUI PID/birth reservation across exec.
+    descriptor = os.open(runtime / "launch.lock", os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        monitor_private(runtime / "launch.lock")
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        launch_path = runtime / "launch.json"
+        if launch_path.exists():
+            monitor_private(launch_path)
+            old = json.loads(launch_path.read_text())
+            try:
+                current = monitor_process(old["gui"]["pid"])
+            except (FileNotFoundError, ProcessLookupError, RuntimeError):
+                current = None
+            if current and current["birth"] == old["gui"]["birth"]:
+                raise RuntimeError("a shared application launch is already reserved by a live process")
+        wrapper = runtime / "codex-proxy"
+        content = (f"#!{sys.executable}\nimport runpy\n"
+                   f"raise SystemExit(runpy.run_path({str(Path(__file__).resolve())!r})['monitor_app_proxy_main']())\n")
+        temporary = runtime / ("wrapper-" + monitor_id())
+        with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o700), "w") as stream:
+            stream.write(content)
+        os.replace(temporary, wrapper)
+        launch = {"gui": monitor_process(os.getpid()), "app": str(app), "codex": str(codex),
+                  "config": str(path), "codex_home": config["codex_home"], "wrapper": str(wrapper)}
+        monitor_runtime_write(launch_path, launch)
+        environment = {key: value for key, value in os.environ.items() if key in {
+            "PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LANGUAGE", "DISPLAY", "WAYLAND_DISPLAY",
+            "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+            "XDG_CACHE_HOME", "XDG_STATE_HOME", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "XDG_SESSION_ID",
+            "XDG_SESSION_DESKTOP", "DESKTOP_SESSION", "GDK_BACKEND", "GTK_THEME"} or key.startswith("LC_")}
+        environment.update({"CODEX_HOME": config["codex_home"], "CODEX_CLI_PATH": str(wrapper),
+                            "CODEX_STATS_APP_LAUNCH": str(launch_path)})
+        os.execve(app, [str(app), *app_args], environment)
+    finally:
+        os.close(descriptor)
+
+
+def monitor_main_bootstrap(arguments: list) -> bool:
+    # Both main GUI plugin keys distinguish its server from startup probes/helpers.
+    overrides, words = {}, []
+    index = 0
+    while index < len(arguments):
+        word = arguments[index]
+        if word in {"-c", "--config"} and index + 1 < len(arguments):
+            key, separator, value = arguments[index + 1].partition("=")
+            if separator:
+                overrides[key] = value
+            index += 2
+        else:
+            words.append(word)
+            index += 1
+    return (words == ["app-server", "--analytics-default-enabled"]
+        and overrides.get("features.code_mode_host") == "true"
+        and all(key in overrides for key in (
+            "plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled",
+            "plugins.code-review@openai-bundled.mcp_servers.code-review.enabled")))
+
+
+def monitor_app_proxy_main() -> int:
+    """Invoked only by the private CODEX_CLI_PATH executable generated by launch-app."""
+    import asyncio
+    import fcntl
+    import subprocess
+    import signal
+    child, lease, runtime, lease_owned = None, None, None, False
+    def interrupted(signum, frame):
+        raise KeyboardInterrupt
+    for signum in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(signum, interrupted)
+    try:
+        launch_path = Path(os.environ["CODEX_STATS_APP_LAUNCH"])
+        monitor_private(launch_path)
+        launch = json.loads(launch_path.read_text())
+        parent = monitor_process(os.getppid())
+        config = monitor_config(Path(launch["config"]))
+        runtime = monitor_shared_runtime(config)
+        if launch_path != runtime / "launch.json":
+            raise RuntimeError("unexpected application launch descriptor")
+        environment = dict(os.environ)
+        environment.pop("CODEX_STATS_APP_LAUNCH", None)
+        environment["CODEX_CLI_PATH"] = launch["codex"]
+        main = (parent["pid"] == launch["gui"]["pid"] and parent["birth"] == launch["gui"]["birth"]
+                and parent["exe"] == launch["app"]
+                and str(Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser().resolve()) == launch["codex_home"]
+                and os.environ.get("CODEX_INTERNAL_ORIGINATOR_OVERRIDE") == "Codex Desktop"
+                and monitor_main_bootstrap(sys.argv[1:]))
+        if not main:
+            os.execve(launch["codex"], [launch["codex"], *sys.argv[1:]], environment)
+        try:
+            from websockets.client import unix_connect
+        except ImportError as error:
+            raise RuntimeError("shared application relay requires the optional websockets package") from error
+        lease = os.open(runtime / "lease", os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        lease_metadata = monitor_private(runtime / "lease")
+        fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lease_owned = True
+        ready = runtime / "ready.json"
+        ready.unlink(missing_ok=True)
+        alias = Path(config["_socket_alias"])
+        if alias.exists() or Path(config["socket"]).exists():
+            raise RuntimeError("native endpoint appeared before the GUI relay started")
+        parent_pid = os.getpid()
+        def parent_exit_signal():
+            import ctypes
+            if ctypes.CDLL(None, use_errno=True).prctl(1, signal.SIGTERM, 0, 0, 0) != 0:
+                raise OSError("could not bind native server lifetime to its relay")
+            if os.getppid() != parent_pid:
+                os._exit(1)
+        default_alias = Path(config["codex_home"]) / "app-server-control/app-server-control.sock"
+        listener = "unix://" if alias == default_alias else "unix://" + str(alias)
+        child = subprocess.Popen([launch["codex"], *sys.argv[1:], "--listen", listener],
+                                 env=environment, stdin=subprocess.DEVNULL, stdout=sys.stderr,
+                                 preexec_fn=parent_exit_signal)
+
+        async def relay():
+            connection = None
+            deadline = asyncio.get_running_loop().time() + config["native_timeout"]
+            while asyncio.get_running_loop().time() < deadline:
+                if child.poll() is not None:
+                    raise RuntimeError("owned native server exited during startup")
+                endpoint = str(alias.resolve())
+                try:
+                    connection = await unix_connect(endpoint, compression=None, open_timeout=1,
+                        close_timeout=3, max_size=MONITOR_RELAY_LIMIT, max_queue=4)
+                    break
+                except (FileNotFoundError, ConnectionRefusedError):
+                    await asyncio.sleep(0.05)
+            if connection is None:
+                raise RuntimeError("owned native server did not become ready")
+            import socket
+            import struct
+            try:
+                peer = connection.transport.get_extra_info("socket")
+                pid, uid, _ = struct.unpack("3i", peer.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+                if pid != child.pid or uid != os.getuid():
+                    raise RuntimeError("GUI relay connected to another native server")
+                live = monitor_config(Path(launch["config"]))
+                if live["socket"] != endpoint:
+                    raise RuntimeError("native control alias does not match the configured endpoint")
+                if Path(live["state_file"]).exists():
+                    state = MonitorState(live, readonly=True)
+                    state.db.close()
+                monitor_permission_status_value = monitor_permission_status(live)["state"]
+                if monitor_permission_status_value == "conflict_or_unreadable":
+                    raise RuntimeError("existing monitor profile does not match the live endpoint")
+                metadata = Path(endpoint).stat()
+                receipt = {"codex_home": live["codex_home"], "socket": endpoint,
+                    "gui": parent, "proxy": monitor_process(os.getpid()), "native": monitor_process(child.pid),
+                    "lease": [lease_metadata.st_dev, lease_metadata.st_ino],
+                    "socket_identity": [metadata.st_dev, metadata.st_ino]}
+                reader = asyncio.StreamReader(limit=MONITOR_RELAY_LIMIT + 1)
+                transport, _ = await asyncio.get_running_loop().connect_read_pipe(
+                    lambda: asyncio.StreamReaderProtocol(reader), sys.stdin.buffer)
+                loop = asyncio.get_running_loop()
+                output_transport, output_protocol = await loop.connect_write_pipe(
+                    lambda: asyncio.streams.FlowControlMixin(loop=loop), sys.stdout.buffer)
+                writer = asyncio.StreamWriter(output_transport, output_protocol, None, loop)
+                initialization = []
+                initialized = asyncio.Event()
+
+                async def startup_watchdog():
+                    await asyncio.wait_for(initialized.wait(), max(0, deadline - loop.time()))
+                    # Successful startup removes the deadline, not the live relay.
+                    await loop.create_future()
+
+                async def to_native():
+                    while raw := await reader.readline():
+                        if len(raw) > MONITOR_RELAY_LIMIT:
+                            raise RuntimeError("GUI relay message exceeds 64 MiB")
+                        message = json.loads(raw)
+                        if message.get("method") == "initialize" and "id" in message:
+                            initialization.append(message["id"])
+                        await connection.send(raw.decode().rstrip("\n"))
+
+                async def to_gui():
+                    async for raw in connection:
+                        if not isinstance(raw, str) or len(raw.encode()) > MONITOR_RELAY_LIMIT:
+                            raise RuntimeError("native GUI relay message exceeds 64 MiB or is binary")
+                        message = json.loads(raw)
+                        writer.write((raw + "\n").encode())
+                        await writer.drain()
+                        if (message.get("id") in initialization and "result" in message
+                                and "error" not in message and "method" not in message):
+                            monitor_runtime_write(ready, receipt)
+                            initialized.set()
+                            initialization.clear()
+
+                tasks = [asyncio.create_task(to_native()), asyncio.create_task(to_gui()),
+                         asyncio.create_task(startup_watchdog())]
+                try:
+                    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                    for task in done:
+                        task.result()
+                finally:
+                    ready.unlink(missing_ok=True)
+                    for task in tasks:
+                        task.cancel()
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    transport.close()
+                    output_transport.close()
+            finally:
+                ready.unlink(missing_ok=True)
+                await connection.close()
+
+        asyncio.run(relay())
+        return 0
+    except (Exception, KeyboardInterrupt) as error:
+        print(f"codex-session-stats application relay: {type(error).__name__}: {error}", file=sys.stderr)
+        return 1
+    finally:
+        if lease is not None:
+            if runtime is not None and lease_owned:
+                (runtime / "ready.json").unlink(missing_ok=True)
+            if child is not None and child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait(timeout=5)
+            os.close(lease)
 
 
 def monitor_permission_definition(config: dict) -> dict:
@@ -1866,6 +2197,8 @@ def monitor_config(path: Path) -> dict:
         raise RuntimeError("invalid weekdays")
     ZoneInfo(data["timezone"])
     for name in ("codex_home", "cwd", "socket", "state_file"):
+        if name == "socket":
+            data["_socket_alias"] = str(Path(data[name]).expanduser().absolute())
         data[name] = str(Path(data[name]).expanduser().resolve())
     if Path(data["state_file"]).is_relative_to(Path(data["codex_home"])):
         raise RuntimeError("monitor state must be outside Codex runtime storage")
@@ -1879,7 +2212,7 @@ class MonitorState:
 
     BUCKETS = {"meta", "mrs", "notes", "events", "attempts", "operations", "cases"}
 
-    def __init__(self, config: dict, *, readonly: bool = False):
+    def __init__(self, config: dict, *, readonly: bool = False, offline_endpoint=False):
         self.config = config
         path = Path(config["state_file"])
         if path.exists() and (path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077):
@@ -1909,7 +2242,12 @@ class MonitorState:
                     self.put("meta", "observation_start", monitor_now().isoformat())
         expected = {"schema": 1, "binding": {key: config[key] for key in
             ("gitlab_url", "project_id", "project_path", "socket", "cwd")}}
-        if self.get("meta", "identity") != expected:
+        actual = self.get("meta", "identity")
+        if (readonly and offline_endpoint and not Path(config["socket"]).exists()
+                and isinstance(actual, dict) and actual.get("schema") == 1):
+            # Diagnostic only: retain the historical endpoint instead of rebinding it.
+            expected["binding"]["socket"] = actual.get("binding", {}).get("socket")
+        if actual != expected:
             self.db.close()
             raise RuntimeError("monitor database belongs to another project, endpoint or schema")
 
@@ -1951,6 +2289,7 @@ def monitor_native(config: dict, method: str, params: dict) -> dict:
     """The optional dependency belongs exclusively to native-connection operations."""
     if config.get("_native_guard"):
         config["_native_guard"]()
+    monitor_shared_owner(config)
     import asyncio
     try:
         from websockets.client import unix_connect
@@ -1963,6 +2302,7 @@ def monitor_native(config: dict, method: str, params: dict) -> dict:
         async with unix_connect(config["socket"], compression=None,
                 open_timeout=config["native_timeout"], close_timeout=3,
                 max_size=config["max_response_bytes"], max_queue=32) as socket:
+            monitor_shared_peer(config, socket)
             await socket.send(json.dumps({"id": 1, "method": "initialize", "params": {
                 "clientInfo": {"name": "codex_stats_gitlab_monitor", "version": "1"},
                 "capabilities": {"experimentalApi": True}}}))
@@ -1973,6 +2313,9 @@ def monitor_native(config: dict, method: str, params: dict) -> dict:
                         raise RuntimeError("native Codex initialization rejected")
                     break
             await socket.send(json.dumps({"method": "initialized", "params": {}}))
+            if config.get("_native_guard"):
+                config["_native_guard"]()
+            monitor_shared_peer(config, socket)
             await socket.send(json.dumps({"id": 2, "method": method, "params": params}))
             while True:
                 response = json.loads(await socket.recv())
@@ -3176,6 +3519,10 @@ def monitor_poll(config: dict, path: Path, *, dry_run=False):
         return {"skipped": "outside_window", "mutated": False}
     if dry_run:
         return monitor_poll_iteration(config, path, None, dry_run=True)
+    try:
+        monitor_shared_owner(config)
+    except RuntimeError:
+        return {"skipped": "shared_app_unavailable", "mutated": False}
     lock = monitor_acquire_lock(config)
     if lock is None:
         return {"skipped": "poll_already_running"}
@@ -3281,6 +3628,10 @@ def monitor_main() -> int:
     configure.add_argument("--project-url", required=True)
     configure.add_argument("--project-id", type=positive_integer, required=True)
     configure.add_argument("--mcp-server", default="gitlab")
+    launch = commands.add_parser("launch-app", help="start the closed GUI with one native server shared by the monitor")
+    launch.add_argument("--app", type=Path, required=True)
+    launch.add_argument("--codex", type=Path, required=True)
+    launch.add_argument("app_args", nargs=argparse.REMAINDER, help="optional GUI arguments after --")
     commands.add_parser("status", help="read persisted observations offline without optional packages")
     preflight = commands.add_parser("preflight", help="verify access and register the monitor's missing permission rules")
     preflight.add_argument("--check-only", action="store_true", help="verify without creating or repairing Codex permissions")
@@ -3325,6 +3676,14 @@ def monitor_main() -> int:
             result = {"configured": True, "config": str(path)}
         else:
             config = monitor_config(path)
+            if arguments.action == "launch-app":
+                app_args = arguments.app_args
+                if app_args[:1] == ["--"]:
+                    app_args = app_args[1:]
+                monitor_launch_app(config, path, arguments.app, arguments.codex, app_args)
+                raise RuntimeError("application launch unexpectedly returned")
+            if arguments.action not in {"status", "poll"}:
+                monitor_shared_owner(config)
             if arguments.action in {"pilot", "recover"}:
                 lock_descriptor = monitor_acquire_lock(config)
                 if lock_descriptor is None:
@@ -3333,9 +3692,15 @@ def monitor_main() -> int:
                 exists = Path(config["state_file"]).exists()
                 result = {"configured": True, "initialized": exists,
                           "project_id": config["project_id"], "mrs": [],
+                          "endpoint_verified": False,
                           "permission_profile": monitor_permission_status(config)}
+                try:
+                    monitor_shared_owner(config)
+                    result["endpoint_verified"] = True
+                except RuntimeError:
+                    pass
                 if exists:
-                    state = MonitorState(config, readonly=True)
+                    state = MonitorState(config, readonly=True, offline_endpoint=True)
                     result.update({"observation_start": state.get("meta", "observation_start"),
                                    "inventory_complete": state.get("meta", "inventory_complete"),
                                    "inventory_error": state.get("meta", "inventory_error"),
