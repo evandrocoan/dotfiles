@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Open the installed Codex app through the GitLab monitor launcher."""
+
+import argparse
+import os
+from pathlib import Path
+import shutil
+import sys
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Open Codex with the GitLab monitor's shared application server.",
+    )
+    parser.parse_args()
+    application = shutil.which("chatgpt")
+    if application is None:
+        print("Error: chatgpt was not found on PATH; check the Codex app installation.", file=sys.stderr)
+        return 1
+    try:
+        directory = Path(application).resolve(strict=True).parent
+        control = Path(__file__).resolve(strict=True).with_name("codex-session-stats")
+        os.execv(control, [str(control), "monitor-gitlab", "launch-app",
+                          "--app", str(directory / "ChatGPT"),
+                          "--codex", str(directory / "resources/codex")])
+    except OSError as error:
+        print(f"Error: could not start Codex Monitor: {error}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

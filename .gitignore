@@ -102,6 +102,7 @@
 !/.local/bin/redmine_time_send.py
 !/.local/share
 !/.local/share/applications
+!/.local/share/applications/codex-monitor.desktop
 !/.local/share/applications/sublime_text_logs.desktop
 !/.local/share/applications/sublime_text_vanilla.desktop
 !/.local/share/applications/menulibre-ahgora.desktop

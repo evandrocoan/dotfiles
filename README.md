@@ -659,8 +659,14 @@ codex-session-stats monitor-gitlab launch-app \
   --app path/to/ChatGPT --codex path/to/resources/codex
 ```
 
-Use this command whenever starting the app for monitoring. It refuses an already running app
-or native endpoint and never closes them for you. GUI arguments, when needed, go after `--`.
+For daily use, choose **Codex Monitor** in the applications menu. Its
+[desktop entry](.local/share/applications/codex-monitor.desktop) calls the
+[portable launcher](.local/bin/codex-monitor), which locates the installed `chatgpt` command and
+uses the app and bundled native CLI beside its resolved launcher. To see startup errors, run
+`~/.local/bin/codex-monitor` in a terminal.
+
+Both entry points refuse an already running app or native endpoint and never close them for you.
+For optional GUI arguments, use the direct `launch-app` command and put them after `--`.
 The app keeps its normal sign-in and tool initialization. A private generated CLI wrapper bridges
 its main stdio connection to one native Unix WebSocket server, also used by the monitor. Other
 CLI/helper calls pass through unchanged. Do not run a separate `codex daemon` for the monitor or

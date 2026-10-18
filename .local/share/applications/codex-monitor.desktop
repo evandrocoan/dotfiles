@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Codex Monitor
+Comment=Open Codex with the shared GitLab monitor server
+Exec=sh -c "exec \\"\\$HOME/.local/bin/codex-monitor\\""
+Icon=chatgpt
+Terminal=false
+Categories=Development;
+StartupNotify=true
