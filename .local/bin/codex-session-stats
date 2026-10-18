@@ -2588,14 +2588,15 @@ def monitor_is_open(config: dict, now=None) -> bool:
 
 
 class MonitorGate:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, *, manual_pilot=False):
         import time
         self.config = config
+        self.manual_pilot = manual_pilot
         self.deadline = time.monotonic() + config["cycle_seconds"]
 
     def check(self):
         import time
-        if not monitor_is_open(self.config):
+        if not self.manual_pilot and not monitor_is_open(self.config):
             raise MonitorDeferred("outside_window")
         if time.monotonic() >= self.deadline:
             raise MonitorDeferred("global_cycle_budget")
@@ -2860,6 +2861,35 @@ def monitor_thread(config: dict, thread_id: str, *, active_inventory=False) -> d
     return thread
 
 
+def monitor_pilot_instructions(config: dict, config_path: Path, iid: int, attempt: dict) -> str:
+    import shlex
+    control = shlex.join([str(Path(__file__).resolve()), "monitor-gitlab", "--config", str(config_path)])
+    return f"""
+SPECIAL BOUNDED INTEGRATION PILOT FOR EVENT {attempt['event_id']} ONLY:
+The human selected {config['model']} {config['effort']} for this diagnostic. No additional agents.
+Do not review code or publish anything. Use the current controls below, even if older history
+describes stdin commands. Control CLI: {control}
+For each JSON payload, write an owned mode-0600 regular file directly inside
+{str(Path(config['state_file']).parent)}, then invoke the exact control as a standalone simple
+command with --mr {iid} --payload-file PATH. No wrapper, pipeline, symlink or permission changes.
+First claim --mr {iid} using JSON
+{{"attempt_id":"{attempt['id']}","event_id":"{attempt['event_id']}"}}.
+If claim fails, stop without effects. Use only the returned generation and event identifiers.
+Immediately pause --mr {iid} with generation and question exactly:
+Para concluir o teste de pausa e retomada deste MR, responda aqui: continuar.
+Persist the pause before ending with that exact plain-text final question.
+Only a LATER actual native human answer continuar in this same chat can resume the case.
+Never fabricate a human answer or count this automated output as consent. On that sufficient
+answer use resume --mr {iid} with case_id, expected_generation, answer_sufficient:true and
+answer_summary. Then complete --mr {iid} with the NEW generation, ONLY the returned pilot
+event_ids, reviewed_head equal to its claimed to_head, and remaining_concerns:[]; no code review
+is performed or claimed. Briefly confirm the native continuation test in Portuguese.
+Ordinary pending work remains separate. Do not change files outside your owned private payloads,
+change configuration, retry uncertain effects or request Full Access. Later ordinary events
+continue under the standing review contract; this exception is only for this diagnostic event.
+"""
+
+
 def monitor_bootstrap(config: dict, config_path: Path, iid: int, attempt: dict) -> str:
     import shlex
     control = shlex.join([str(Path(__file__).resolve()), "monitor-gitlab", "--config", str(config_path)])
@@ -2960,16 +2990,7 @@ Work already started and user continuations may finish outside polling hours.
 Automation bootstrap marker: {attempt['marker']}
 """
     if attempt.get("pilot_hold"):
-        text += f"""
-SPECIAL BOUNDED INTEGRATION PILOT FOR EVENT {attempt['event_id']} ONLY:
-Claim this event, then immediately call pause with question exactly:
-Para concluir o teste de pausa e retomada deste MR, responda aqui: continuar.
-End with that exact final question. Do not review code or publish anything for this pilot.
-When the actual user later answers continuar in this chat, resume via the documented control,
-then complete ONLY the pilot event at its claimed head and briefly confirm the native continuation
-test in Portuguese. Do not review/publish for this diagnostic event. Later ordinary events follow
-the standing review contract above. This is a real human hold test, never fabricate an answer.
-"""
+        text += monitor_pilot_instructions(config, config_path, iid, attempt)
     return text
 
 
@@ -3018,7 +3039,9 @@ def monitor_accept(state: MonitorState, attempt_id: str, turn_id: str, *, proven
 
 
 def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: MonitorGitLab,
-                     iid: int, gate: MonitorGate):
+                     iid: int, gate: MonitorGate, *, pilot_only=False):
+    if gate.manual_pilot and not pilot_only:
+        raise RuntimeError("manual pilot gate cannot dispatch ordinary review work")
     record = state.get("mrs", str(iid))
     if record.get("delivery_conflict"):
         return "delivery_conflict"
@@ -3030,6 +3053,10 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
     pending = [e for e in events if e["state"] == "pending"]
     if not pending:
         return "unchanged"
+    if (pilot_only and (len(pending) != 1 or pending[0]["reasons"] != ["pilot_hold"] or pending[0]["notes"])):
+        raise RuntimeError("manual pilot requires only its pure diagnostic event; ordinary or mixed work is pending")
+    if "pilot_hold" in pending[0]["reasons"] and pending[0]["reasons"] != ["pilot_hold"]:
+        raise RuntimeError("mixed pilot and ordinary work requires operator inspection")
     mr = api.mr(iid)
     if mr["state"] != "opened" or mr["sha"] != record["head"]:
         return "changed_before_dispatch"
@@ -3063,9 +3090,12 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
         if bootstrap:
             attempt["bootstrap_text"] = monitor_bootstrap(config, path, iid, attempt)
         else:
-            attempt["output"] = json.dumps({"attempt_id": attempt["id"], "event_id": event["id"],
+            output = {"attempt_id": attempt["id"], "event_id": event["id"],
                 "marker": attempt["marker"], "iid": iid, "from_head": event["from_head"],
-                "to_head": event["to_head"], "notes": effective}, sort_keys=True)
+                "to_head": event["to_head"], "notes": effective}
+            if attempt["pilot_hold"]:
+                output["pilot_instructions"] = monitor_pilot_instructions(config, path, iid, attempt)
+            attempt["output"] = json.dumps(output, sort_keys=True)
         gate.check()
         event.update({"state": "attempting", "attempt_id": attempt["id"]})
         state.put("attempts", attempt["id"], attempt)
@@ -3093,6 +3123,53 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
                 state.put("events", f"{iid}:{event['id']}", event)
         raise
     return "submitted"
+
+
+def monitor_hold_check(config: dict, path: Path, state: MonitorState, api: MonitorGitLab,
+                       mr: dict, gate: MonitorGate):
+    """Create one diagnostic, or reuse its proven unstarted/recovered event."""
+    gate.check()
+    iid = mr["iid"]
+    record = state.get("mrs", str(iid))
+    if record.get("case_id") or record.get("owner") or record.get("delivery_conflict"):
+        raise RuntimeError("pilot cannot run over a human hold, owner or delivery conflict")
+    if any(o["state"] not in {"confirmed", "abandoned_no_effect"} for o in state.all("operations", f"{iid}:")):
+        raise RuntimeError("pilot requires reconciliation of uncertain public effects")
+    events = state.all("events", f"{iid}:")
+    if any(e["reasons"] != ["pilot_hold"] and e["state"] in {
+            "pending", "attempting", "accepted", "uncertain", "claimed"} for e in events):
+        raise RuntimeError("pilot cannot acquire ordinary or mixed review work")
+    pilots = [e for e in events if "pilot_hold" in e["reasons"]]
+    if len(pilots) > 1:
+        raise RuntimeError("multiple pilot events require operator inspection")
+    if pilots:
+        event = pilots[0]
+        if event["state"] != "pending" or event["reasons"] != ["pilot_hold"] or event["notes"]:
+            raise RuntimeError("pilot already recorded; inspect status and recover its current attempt before retrying")
+        attempt = state.get("attempts", event.get("attempt_id", ""))
+        if event.get("attempt_id"):
+            if (not attempt or attempt.get("kind") != "dispatch" or attempt.get("iid") != iid
+                    or attempt.get("event_id") != event["id"] or attempt.get("thread_id") != record["thread_id"]
+                    or attempt.get("pilot_hold") is not True
+                    or not ((attempt["state"] == "operator_retried" and attempt.get("duplicate_risk_acknowledged") is True)
+                            or (attempt["state"] == "unstarted" and not attempt.get("turn_id")))):
+                raise RuntimeError("pilot requires its exact current explicitly recovered or unstarted attempt")
+        elif any(a.get("event_id") == event["id"] for a in state.all("attempts")):
+            raise RuntimeError("pilot has an unbound prior attempt; inspect before retrying")
+        if event["to_head"] != mr["sha"]:
+            raise RuntimeError("pilot head changed; inspect before retrying")
+    if record["head"] != mr["sha"]:
+        raise RuntimeError("pilot head changed; inspect before retrying")
+    thread = monitor_thread(config, record["thread_id"], active_inventory=True)
+    if thread["status"]["type"] not in {"idle", "notLoaded"}:
+        raise RuntimeError("pilot requires an idle native conversation")
+    if not pilots:
+        with state.atomic():
+            record = state.get("mrs", str(iid))
+            if record.get("owner") or record.get("case_id") or record.get("delivery_conflict"):
+                raise RuntimeError("pilot ownership changed before event creation")
+            monitor_add_event(state, record, to_head=mr["sha"], reason="pilot_hold")
+    return monitor_dispatch(config, path, state, api, iid, gate, pilot_only=True)
 
 
 def monitor_work(state: MonitorState, record: dict) -> dict:
@@ -3257,7 +3334,8 @@ def monitor_resume(config: dict, state: MonitorState, iid: int, payload: dict):
                 or record["generation"] != case["generation"] or current["state"] != "awaiting_user"):
             raise RuntimeError("case ownership changed before human continuation")
         events = list(case["interrupted_owner"]["event_ids"])
-        pending = [e for e in state.all("events", f"{iid}:") if e["state"] == "pending"]
+        diagnostic = any("pilot_hold" in state.get("events", f"{iid}:{event_id}")["reasons"] for event_id in events)
+        pending = [] if diagnostic else [e for e in state.all("events", f"{iid}:") if e["state"] == "pending"]
         for event in pending[:10]:
             event["state"] = "claimed"
             state.put("events", f"{iid}:{event['id']}", event)
@@ -3363,7 +3441,9 @@ def monitor_validate_resolution(config: dict, state: MonitorState, api: MonitorG
 def monitor_effect_intent(config: dict, state: MonitorState, api: MonitorGitLab, iid: int, payload: dict):
     thread_id, turn_id = monitor_control_identity(config, state, iid)
     record = state.get("mrs", str(iid))
-    monitor_assert_owner(record, thread_id, turn_id, payload["generation"])
+    owner = monitor_assert_owner(record, thread_id, turn_id, payload["generation"])
+    if any("pilot_hold" in state.get("events", f"{iid}:{event_id}")["reasons"] for event_id in owner["event_ids"]):
+        raise RuntimeError("pilot work cannot authorize public effects")
     kind, key = payload.get("kind"), payload.get("key")
     if kind not in {"finding", "reply", "resolve"} or not isinstance(key, str) or not 1 <= len(key) <= 256:
         raise RuntimeError("effect requires a supported kind and stable bounded key")
@@ -3589,6 +3669,10 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
         return {"diagnostic_absence_recorded": True}
     if attempt["kind"] != "dispatch":
         raise RuntimeError("unsupported recovery attempt")
+    event = state.get("events", f"{iid}:{attempt['event_id']}")
+    if (not event or event.get("attempt_id") != attempt["id"]
+            or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed"}):
+        raise RuntimeError("recovery requires the event's current eligible attempt; old recovery cannot release new work")
     monitor_reconcile(config, state, iid)
     thread = monitor_thread(config, record["thread_id"], active_inventory=True)
     if thread["status"]["type"] not in {"idle", "notLoaded"}:
@@ -3596,6 +3680,10 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
     with state.atomic():
         record = state.get("mrs", str(iid))
         attempt = state.get("attempts", attempt["id"])
+        event = state.get("events", f"{iid}:{attempt['event_id']}")
+        if (not event or event.get("attempt_id") != attempt["id"]
+                or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed"}):
+            raise RuntimeError("recovery requires the event's current eligible attempt; state changed")
         if record.get("case_id") or record.get("delivery_conflict") or any(o["state"] not in {"confirmed", "abandoned_no_effect"}
                                         for o in state.all("operations", f"{iid}:")):
             raise RuntimeError("a human hold or uncertain public effect prohibits redelivery")
@@ -3817,9 +3905,10 @@ def monitor_main() -> int:
     recover.add_argument("--acknowledge-duplicate-risk", action="store_true", required=True)
     pilot = commands.add_parser("pilot", help="prepare one explicitly selected MR conversation")
     pilot.add_argument("--mr", type=positive_integer, required=True)
-    pilot.add_argument("--verify", action="store_true", help="start a bounded read-only native integration check")
-    pilot.add_argument("--hold-check", action="store_true", help="test a real native user pause/resume without public effects")
-    pilot.add_argument("--diagnose-socket", action="store_true", help="one read-only in-agent preflight after a failed callback")
+    diagnostic = pilot.add_mutually_exclusive_group()
+    diagnostic.add_argument("--verify", action="store_true", help="start a bounded read-only native integration check")
+    diagnostic.add_argument("--hold-check", action="store_true", help="manually test or resume a recovered pause/resume pilot, without public effects")
+    diagnostic.add_argument("--diagnose-socket", action="store_true", help="one read-only in-agent preflight after a failed callback")
     arguments = parser.parse_args(sys.argv[2:])
     lock_descriptor = None
     try:
@@ -3835,6 +3924,10 @@ def monitor_main() -> int:
             result = {"configured": True, "config": str(path)}
         else:
             config = monitor_config(path)
+            pilot_gate = None
+            if arguments.action == "pilot":
+                pilot_gate = MonitorGate(config, manual_pilot=True)
+                config = {**config, "_native_guard": pilot_gate.check}
             if arguments.action == "launch-app":
                 app_args = arguments.app_args
                 if app_args[:1] == ["--"]:
@@ -3915,7 +4008,7 @@ def monitor_main() -> int:
                 control_rule = monitor_control_rule(config, path)
                 if arguments.action == "preflight" and arguments.check_only and control_rule["state"] != "configured_on_disk":
                     raise RuntimeError("monitor control rule is missing; run preflight outside the agent, then reopen the app")
-                api = MonitorGitLab(config)
+                api = MonitorGitLab(config, config.get("_native_guard"))
                 actor = api.get("/user")
                 api.project()
                 if arguments.action == "preflight":
@@ -3939,14 +4032,7 @@ def monitor_main() -> int:
                     result = {"iid": mr["iid"], "thread_id": thread_id,
                               "prepared": True, "review_started": False, "control_rule": control_rule}
                     if arguments.hold_check:
-                        gate = MonitorGate(config)
-                        gate.check()
-                        with state.atomic():
-                            if any("pilot_hold" in e["reasons"] for e in state.all("events", f"{mr['iid']}:")):
-                                raise RuntimeError("human continuation pilot already recorded; inspect its status")
-                            record = state.get("mrs", str(mr["iid"]))
-                            monitor_add_event(state, record, to_head=mr["sha"], reason="pilot_hold")
-                        result["hold_check"] = monitor_dispatch(config, path, state, api, mr["iid"], gate)
+                        result["hold_check"] = monitor_hold_check(config, path, state, api, mr, pilot_gate)
                     if arguments.verify or arguments.diagnose_socket:
                         current_mr = state.get("mrs", str(mr["iid"]))
                         if current_mr.get("case_id") or current_mr.get("owner"):

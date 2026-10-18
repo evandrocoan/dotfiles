@@ -1858,6 +1858,335 @@ def test_pilot_cli_refuses_held_conversation_and_operator_recovery_takes_poll_lo
         os.close(lock)
 
 
+def monitor_cli(b, capsys, *arguments):
+    b.monkeypatch.setattr(sys, "argv", [str(b.cli), "monitor-gitlab", "--config", str(b.path), *arguments])
+    code = b.module["main"]()
+    return code, capsys.readouterr()
+
+
+def pilot_control(b, capsys, action, payload):
+    target = Path(b.config["state_file"]).parent / "fixture-payload.json"
+    target.write_text(json.dumps(payload))
+    target.chmod(0o600)
+    code, output = monitor_cli(b, capsys, action, "--mr", "1", "--payload-file", str(target))
+    assert code == 0, output.err
+    return json.loads(output.out)
+
+
+def recorded_pilot(b, capsys):
+    b.mr()
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 0, output.err
+    assert json.loads(output.out)["hold_check"] == "submitted"
+    state = b.state()
+    attempt = next(a for a in state.all("attempts") if a.get("kind") == "dispatch")
+    return state, attempt
+
+
+def recover_pilot(b, capsys, attempt):
+    b.finish(attempt["thread_id"], attempt["turn_id"])
+    code, output = monitor_cli(b, capsys, "recover", "--attempt", attempt["id"], "--acknowledge-duplicate-risk")
+    assert code == 0, output.err
+    assert json.loads(output.out)["pending"] == attempt["event_id"]
+
+
+@pytest.mark.parametrize("sunday", [False, True])
+def test_recovered_pilot_cli_reuses_event_and_completes_only_real_human_fixture_work(boundary, capsys, sunday):
+    b = boundary
+    state, original = recorded_pilot(b, capsys)
+    tid = original["thread_id"]
+    b.runtime(tid, original["turn_id"])
+    external = b.respond
+    def inaccessible_callback(method, params):
+        if method == "thread/read":
+            raise PermissionError("fixture callback cannot reach native socket")
+        return external(method, params)
+    b.respond = inaccessible_callback
+    with pytest.raises(RuntimeError, match="transport failed"):
+        b.call("claim", b.config, state, 1,
+               {"attempt_id": original["id"], "event_id": original["event_id"]})
+    assert state.get("mrs", "1")["owner"] is None
+    b.respond = external
+    recover_pilot(b, capsys, original)
+    assert state.get("mrs", "1")["bootstrap_verified"] is True
+    if sunday:
+        b.now = dt.datetime(2026, 10, 18, 13, tzinfo=dt.timezone.utc)
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 0, output.err
+    assert json.loads(output.out)["hold_check"] == "submitted"
+    retry = next(a for a in state.all("attempts") if a.get("kind") == "dispatch" and a["state"] == "accepted")
+    assert retry["id"] != original["id"] and retry["thread_id"] == tid
+    assert retry["event_id"] == original["event_id"] and retry["bootstrap"] is False
+    assert len(b.threads) == 1 and len(state.all("events")) == 1
+    assert state.get("attempts", original["id"])["state"] == "operator_retried"
+    request = [r["params"] for r in b.native if r.get("method") == "turn/start"][-1]
+    assert request["input"] == []
+    delivered = b.items[retry["turn_id"]]
+    assert [i["type"] for i in delivered] == ["functionCallOutput"]
+    payload = json.loads(request["toolOutput"]["output"])
+    assert payload["attempt_id"] == retry["id"] and payload["event_id"] == original["event_id"]
+    instructions = payload["pilot_instructions"]
+    for text in (str(b.cli), "--payload-file", str(Path(b.config["state_file"]).parent),
+                 retry["id"], original["event_id"], "pause", "resume", "complete",
+                 "Do not review code or publish", "0600"):
+        assert text in instructions
+    assert b.token not in instructions
+    b.runtime(tid, retry["turn_id"])
+    work = pilot_control(b, capsys, "claim", {"attempt_id": retry["id"], "event_id": retry["event_id"]})
+    question = "Para concluir o teste de pausa e retomada deste MR, responda aqui: continuar."
+    paused = pilot_control(b, capsys, "pause", {"generation": work["generation"], "question": question})
+    b.items[retry["turn_id"]].append({"type": "agentMessage", "phase": "final_answer", "text": question})
+    b.finish(tid, retry["turn_id"])
+    # A real producer cycle while held discovers ordinary work; the diagnostic
+    # human continuation must leave it pending instead of acquiring a review.
+    b.now = dt.datetime(2026, 10, 19, 10, tzinfo=dt.timezone.utc)
+    b.mrs[1]["sha"] = "b" * 40
+    b.poll()
+    normal = next(e for e in state.all("events") if e["state"] == "pending")
+    assert normal["reasons"] == ["head"]
+    human_turn(b, tid, "continuar")
+    resumed = pilot_control(b, capsys, "resume", {"case_id": paused["case_id"],
+        "expected_generation": paused["generation"], "answer_sufficient": True, "answer_summary": "continuar"})
+    assert resumed["owner"]["origin"] == "human"
+    assert resumed["owner"]["event_ids"] == [original["event_id"]]
+    completed = pilot_control(b, capsys, "complete", {"generation": resumed["generation"],
+        "event_ids": [original["event_id"]], "reviewed_head": "a" * 40})
+    assert completed["pilot_only"] is True
+    record = state.get("mrs", "1")
+    assert record["human_continuation_verified"] is True and record["owner"] is None
+    assert "reviewed_head" not in record and record["head"] == "b" * 40
+    assert state.get("events", "1:" + normal["id"])["state"] == "pending"
+    assert state.get("events", "1:" + original["event_id"])["state"] == "reviewed"
+    assert state.all("operations") == []
+    state.db.close()
+
+
+@pytest.mark.parametrize("after_resend", [False, True])
+def test_recovery_cli_rejects_repeated_or_stale_attempt_without_mutation(boundary, capsys, after_resend):
+    b = boundary
+    state, original = recorded_pilot(b, capsys)
+    recover_pilot(b, capsys, original)
+    if after_resend:
+        b.poll()
+        current = next(a for a in state.all("attempts") if a.get("kind") == "dispatch" and a["state"] == "accepted")
+        b.finish(current["thread_id"], current["turn_id"])
+    before = Path(b.config["state_file"]).read_bytes()
+    code, output = monitor_cli(b, capsys, "recover", "--attempt", original["id"], "--acknowledge-duplicate-risk")
+    assert code == 1 and output.err
+    assert Path(b.config["state_file"]).read_bytes() == before
+    if after_resend:
+        recover_pilot(b, capsys, current)
+        assert state.get("events", "1:" + original["event_id"])["state"] == "pending"
+    state.db.close()
+
+
+def test_recovery_revalidates_current_attempt_after_native_inspection(boundary, capsys):
+    b = boundary
+    state, original = recorded_pilot(b, capsys)
+    b.finish(original["thread_id"], original["turn_id"])
+    external = b.respond
+    raced = []
+    def changed_during_inspection(method, params):
+        result = external(method, params)
+        if method == "thread/read" and not raced:
+            with state.atomic():
+                event = state.get("events", "1:" + original["event_id"])
+                event["attempt_id"] = "different-current-attempt"
+                state.put("events", "1:" + event["id"], event)
+            raced.append(True)
+        return result
+    b.respond = changed_during_inspection
+    code, output = monitor_cli(b, capsys, "recover", "--attempt", original["id"], "--acknowledge-duplicate-risk")
+    assert code == 1 and "current" in output.err and raced == [True]
+    assert state.get("events", "1:" + original["event_id"])["state"] == "accepted"
+    assert state.get("events", "1:" + original["event_id"])["attempt_id"] == "different-current-attempt"
+    assert state.get("attempts", original["id"])["state"] == "accepted"
+    assert state.get("mrs", "1")["generation"] == 0
+    state.db.close()
+
+
+@pytest.mark.parametrize("obstacle", ["unrecovered", "missing_ack", "wrong_event", "wrong_thread", "wrong_iid",
+    "wrong_pointer", "mixed", "ordinary_pending", "uncertain_effect", "hold", "owner", "busy", "changed_head",
+    "unstarted_with_turn"])
+def test_pilot_cli_rejects_ineligible_retry_without_new_event_or_turn(boundary, capsys, obstacle):
+    b = boundary
+    state, original = recorded_pilot(b, capsys)
+    b.finish(original["thread_id"], original["turn_id"])
+    if obstacle != "unrecovered":
+        recover_pilot(b, capsys, original)
+    with state.atomic():
+        record = state.get("mrs", "1")
+        event = state.get("events", "1:" + original["event_id"])
+        attempt = state.get("attempts", original["id"])
+        if obstacle == "missing_ack": attempt.pop("duplicate_risk_acknowledged")
+        if obstacle == "wrong_event": attempt["event_id"] = b.call("id")
+        if obstacle == "wrong_thread": attempt["thread_id"] = "00000000-0000-0000-0000-999999999999"
+        if obstacle == "wrong_iid": attempt["iid"] = 2
+        if obstacle == "unstarted_with_turn": attempt["state"] = "unstarted"
+        if obstacle == "wrong_pointer": event["attempt_id"] = b.call("id")
+        if obstacle == "mixed": event["reasons"] = ["head", "pilot_hold"]
+        if obstacle == "ordinary_pending":
+            ordinary = {**copy.deepcopy(event), "id": b.call("id"), "reasons": ["head"]}
+            state.put("events", "1:" + ordinary["id"], ordinary)
+        if obstacle == "uncertain_effect":
+            state.put("operations", "1:prior", {"id": "prior", "iid": 1, "state": "uncertain"})
+        if obstacle == "hold": record["case_id"] = "held-case"
+        if obstacle == "owner": record["owner"] = {"turn_id": "existing-owner"}
+        state.put("mrs", "1", record)
+        state.put("events", "1:" + event["id"], event)
+        state.put("attempts", attempt["id"], attempt)
+    if obstacle == "busy": b.threads[original["thread_id"]]["status"] = {"type": "active"}
+    if obstacle == "changed_head": b.mrs[1]["sha"] = "b" * 40
+    before = Path(b.config["state_file"]).read_bytes()
+    turns_before = len([r for r in b.native if r.get("method") == "turn/start"])
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 1 and output.err
+    assert Path(b.config["state_file"]).read_bytes() == before
+    assert len([r for r in b.native if r.get("method") == "turn/start"]) == turns_before
+    state.db.close()
+
+
+def test_recorded_unstarted_pilot_reuses_event_without_duplicate_recovery(boundary, capsys, monkeypatch):
+    import time
+    b = boundary
+    b.mr()
+    state = b.state()
+    original_clock = time.monotonic
+    # Cross the real gate's deadline only after the producer commits an intent,
+    # before it can submit turn/start. Keep guard/orchestration code unchanged.
+    def expire_after_intent():
+        return b.config["cycle_seconds"] + 1 if any(
+            a.get("kind") == "dispatch" and a["state"] == "attempting"
+            for a in state.all("attempts")) else 0
+    monkeypatch.setattr(time, "monotonic", expire_after_intent)
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 1 and "global_cycle_budget" in output.err
+    attempt = next(a for a in state.all("attempts") if a.get("kind") == "dispatch")
+    assert attempt["state"] == "unstarted" and "turn_id" not in attempt
+    assert not [r for r in b.native if r.get("method") == "turn/start"]
+    monkeypatch.setattr(time, "monotonic", original_clock)
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 0 and json.loads(output.out)["hold_check"] == "submitted", output.err
+    current = next(a for a in state.all("attempts") if a.get("kind") == "dispatch" and a["state"] == "accepted")
+    assert current["id"] != attempt["id"] and current["event_id"] == attempt["event_id"]
+    assert len(state.all("events")) == 1 and len(b.threads) == 1
+    state.db.close()
+
+
+def test_manual_pilot_sunday_preserves_automatic_window_and_unstarted_event(boundary, capsys):
+    b = boundary
+    b.mr()
+    b.now = dt.datetime(2026, 10, 18, 13, tzinfo=dt.timezone.utc)
+    calls = [0]
+    def busy_after_creation(route):
+        if route == "/projects/42/merge_requests/1":
+            calls[0] += 1
+            if calls[0] == 2:
+                next(iter(b.threads.values()))["status"] = {"type": "active"}
+    b.after_http = busy_after_creation
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 0, output.err
+    assert json.loads(output.out)["hold_check"] == "native_busy"
+    state = b.state()
+    event = state.all("events")[0]
+    assert event["state"] == "pending" and "attempt_id" not in event
+    assert not [a for a in state.all("attempts") if a.get("kind") == "dispatch"]
+    b.after_http = None
+    next(iter(b.threads.values()))["status"] = {"type": "idle"}
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 0 and json.loads(output.out)["hold_check"] == "submitted", output.err
+    assert [e["id"] for e in state.all("events")] == [event["id"]]
+    before = Path(b.config["state_file"]).read_bytes()
+    b.http.clear(); b.native.clear()
+    assert b.poll() == {"skipped": "outside_window", "mutated": False}
+    assert not b.http and not b.native and Path(b.config["state_file"]).read_bytes() == before
+    state.db.close()
+
+
+@pytest.mark.parametrize("origin", ["automatic", "human"])
+def test_pilot_owner_cannot_register_public_effect(boundary, capsys, origin):
+    b = boundary
+    state, attempt = recorded_pilot(b, capsys)
+    b.runtime(attempt["thread_id"], attempt["turn_id"])
+    work = b.call("claim", b.config, state, 1, {"attempt_id": attempt["id"], "event_id": attempt["event_id"]})
+    if origin == "human":
+        question = "Continuar o teste."
+        paused = b.call("pause", b.config, state, 1, {"generation": work["generation"], "question": question})
+        b.items[attempt["turn_id"]].append({"type": "agentMessage", "phase": "final_answer", "text": question})
+        b.finish(attempt["thread_id"], attempt["turn_id"])
+        human_turn(b, attempt["thread_id"], "continuar")
+        work = b.call("resume", b.config, state, 1, {"case_id": paused["case_id"],
+            "expected_generation": paused["generation"], "answer_sufficient": True, "answer_summary": "continuar"})
+    snapshot = b.call("snapshot", b.config, b.api(), 1)
+    b.http.clear(); b.native.clear()
+    with pytest.raises(RuntimeError, match="pilot.*public"):
+        b.call("effect_intent", b.config, state, b.api(), 1,
+            {"generation": work["generation"], "kind": "finding", "key": "forbidden", "body": "no publication",
+             "head": snapshot["head"], "snapshot": snapshot["fingerprint"]})
+    assert state.all("operations") == [] and not b.http
+    assert not [r for r in b.native if r.get("method") == "mcpServer/tool/call"]
+    state.db.close()
+
+
+def test_pilot_budget_covers_entry_http_before_provisioning(boundary, monkeypatch, capsys):
+    b = boundary
+    b.mr()
+    elapsed = [0]
+    monkeypatch.setattr("time.monotonic", lambda: elapsed[0])
+    b.after_http = lambda route: elapsed.__setitem__(0, b.config["cycle_seconds"] + 1)
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 1 and "global_cycle_budget" in output.err
+    assert [urlsplit(r.full_url).path for r in b.http] == ["/api/v4/user"]
+    assert not b.native and not Path(b.config["state_file"]).exists()
+
+
+def test_pilot_budget_also_guards_native_provisioning(boundary, monkeypatch, capsys):
+    b = boundary
+    b.mr()
+    elapsed = [0]
+    monkeypatch.setattr("time.monotonic", lambda: elapsed[0])
+    external = b.respond
+    def exhaust_native_budget(method, params):
+        result = external(method, params)
+        if method == "config/read":
+            elapsed[0] = b.config["cycle_seconds"] + 1
+        return result
+    b.respond = exhaust_native_budget
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check")
+    assert code == 1 and "global_cycle_budget" in output.err
+    assert [r["method"] for r in b.native if r.get("id") == 2] == ["config/read"]
+    assert "permissions" not in b.codex_settings and not Path(b.config["state_file"]).exists()
+
+
+def test_manual_gate_cannot_dispatch_ordinary_work_and_default_dispatch_refuses_mixed_pilot(boundary, capsys):
+    b = boundary
+    state, attempt = recorded_pilot(b, capsys)
+    recover_pilot(b, capsys, attempt)
+    b.http.clear(); b.native.clear()
+    gate = b.module["MonitorGate"](b.config, manual_pilot=True)
+    with pytest.raises(RuntimeError, match="manual pilot gate"):
+        b.call("dispatch", b.config, b.path, state, b.api(), 1, gate)
+    assert not b.http and not b.native
+    with state.atomic():
+        event = state.get("events", "1:" + attempt["event_id"])
+        event["reasons"] = ["head", "pilot_hold"]
+        state.put("events", "1:" + event["id"], event)
+    with pytest.raises(RuntimeError, match="mixed pilot"):
+        b.call("dispatch", b.config, b.path, state, b.api(), 1, b.module["MonitorGate"](b.config))
+    assert not b.http and not b.native
+    assert state.get("events", "1:" + event["id"])["state"] == "pending"
+    state.db.close()
+
+
+@pytest.mark.parametrize("other", ["--verify", "--diagnose-socket"])
+def test_pilot_diagnostic_flags_are_exclusive_before_effects(boundary, capsys, other):
+    b = boundary
+    with pytest.raises(SystemExit) as error:
+        monitor_cli(b, capsys, "pilot", "--mr", "1", "--hold-check", other)
+    assert error.value.code == 2
+    assert not b.http and not b.native and not Path(b.config["state_file"]).exists()
+
+
 def test_resolution_context_change_can_be_disposed_only_by_exact_native_user_case(boundary):
     b = boundary
     b.mr(created=b.now.isoformat())

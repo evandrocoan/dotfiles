@@ -773,6 +773,18 @@ answer `continuar` **there** to exercise actual native human continuation. Neith
 reviews code or publishes comments. Check `human_continuation_verified` in status. Each check
 is recorded once; an uncertain outcome must be inspected rather than repeated blindly.
 
+These are explicit manual diagnostics and may run outside the automatic polling window. A
+pause/resume pilot uses only its diagnostic event; ordinary pending work, human holds, active
+reviews and uncertain effects block a new pilot. Its later human continuation leaves ordinary
+events pending and cannot authorize publication. Choose only one diagnostic flag per invocation.
+
+If a pause/resume pilot failed after submission, inspect its current attempt and use the
+explicit recovery command below. Then repeat `pilot --mr 34 --hold-check`: it reuses that same
+recovered event and conversation with a new attempt, rather than creating another pilot. A
+definitely unstarted diagnostic can also continue without duplicate-risk recovery. An accepted,
+uncertain or completed pilot cannot be freely repeated. No timer activation is needed for this
+manual check; the automatic schedule remains unchanged.
+
 The MR agent itself must be able to reach the selected Unix socket and private monitor state.
 It must also read the shared runtime receipt and the relevant process/lease identities. Verify
 these checks from the restricted MR agent, plus continued use of the same MR chat in the real GUI,
@@ -834,6 +846,8 @@ codex-session-stats monitor-gitlab recover --help
 
 `recover --attempt ID --acknowledge-duplicate-risk` releases a reconciled idle delivery for retry;
 prior analysis might repeat, while confirmed public effects retain their stable identities.
+The ID must identify the event's current eligible attempt. An old or already recovered attempt
+cannot release a newer delivery; inspect status again before recovering that newer attempt.
 Conversation creation recovery additionally requires `--thread-id ID` for an inspected existing
 chat. If inspection confirms no conversation was created, `--confirm-no-conversation` explicitly
 permits another creation with the acknowledged duplicate risk. It also handles a process killed
