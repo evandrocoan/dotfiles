@@ -15,6 +15,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Add a new dependency](#add-a-new-dependency)
       - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
+      - [Automatic GitLab MR review](#automatic-gitlab-mr-review)
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
@@ -546,7 +547,8 @@ This creates `~/scripts/.venv/` and installs all dependencies from `poetry.lock`
 
 Scripts in `~/.local/bin/` that use this environment have their shebang pointing directly to `~/scripts/.venv/bin/python`, so they work without any manual activation.
 The skill installers distribute `codex-session-stats` separately; it uses an available Python 3
-interpreter and the standard library.
+interpreter and the standard library for its reports. Its optional GitLab monitor uses
+the existing `websockets` package only when connecting to the native Codex app server.
 
 #### Add a new dependency
 
@@ -626,6 +628,182 @@ result as conclusive. Subagents and inherited compacted transcripts are opt-in; 
 are excluded. Identical mirrored messages are grouped while repeated messages at distinct times
 remain separately searchable.
 
+
+#### Automatic GitLab MR review
+
+`codex-session-stats monitor-gitlab` polls one project without a model call when nothing
+changes. Each MR gets its own persistent Codex conversation. New commits and discussion
+replies continue that conversation. Historical MRs/comments establish the initial baseline;
+they are not all reviewed retroactively. Polling can miss activity deleted or opened/closed
+between checks; discussion scans revisit page 1 and recover still-visible changes on later passes.
+
+Prerequisites: Linux, Python 3.11 or newer, an already installed `websockets` package in the
+interpreter used by the standalone CLI, a signed-in running Codex app with its native Unix
+WebSocket endpoint, and an existing GitLab MCP server with access to the selected project.
+No API key is needed for Codex model calls: they use the app's signed-in account and limits.
+Other commands, help and offline status do not import `websockets`. Do not add it to the common
+startup imports or install dependencies as a side effect of polling.
+
+Create private configuration, replacing the example project URL and numeric ID:
+
+```bash
+codex-session-stats monitor-gitlab configure \
+  --project-url https://gitlab.example.com/group/project --project-id 123 --mcp-server gitlab
+codex-session-stats monitor-gitlab preflight
+codex-session-stats monitor-gitlab poll --dry-run
+codex-session-stats monitor-gitlab status
+```
+
+Configuration defaults to `~/.config/codex-session-stats/gitlab-monitor.json`, mode `0600`;
+`--config PATH` goes before the action. `configure` refuses to overwrite an existing file.
+Inspect/edit it to select `cwd`, `codex_home`, `socket`, model/effort, timezone, hours or resource
+bounds. The default model is `gpt-6.1-sol` with `xhigh`. The selected MCP server in
+`codex_home/config.toml` must already expose `GITLAB_API_URL` and
+`GITLAB_PERSONAL_ACCESS_TOKEN` in its `env` table. The monitor reads that existing credential
+directly, checks its HTTPS origin and project, and never copies the token into tasks or units.
+An unavailable server/credential/model is a visible failure, not a reason to change permissions.
+
+`preflight`, an eligible real `poll`, and `pilot` automatically register missing rules under
+`[permissions.codex-session-stats-gitlab-monitor]` in the selected `codex_home/config.toml`.
+They use Codex's native configuration editor with a version check. A matching profile causes
+no write; compatible partial rules are completed. Conflicting rules or an overriding layer stop
+the operation for inspection. Global sandbox/approval defaults, other profiles and unrelated
+settings are preserved. No Full Access setting is required or selected.
+
+The profile inherits `:read-only`, permits writes in the owned private monitor state directory
+(mode `0700`), and allows the exact configured native Unix socket. Reads remain broad. MR chats
+explicitly select it and enable their network proxy with a GitLab-host rule; global feature
+settings stay unchanged. MCP tools retain their own controls. Socket access reaches the Codex
+control interface and is not restricted to individual native methods.
+
+Use `preflight --check-only` to inspect without creating or repairing the profile. Help, offline
+status, dry runs, out-of-window polls and consumer callbacks never register permissions.
+`status` reports the profile name, target file and on-disk state; that is not proof of effective
+agent access or successful native continuation.
+
+State lives separately at `~/.local/state/codex-session-stats/gitlab-monitor.sqlite3`.
+It binds the project, workspace and native endpoint; changing that binding requires a deliberately
+separate state file. Preserve the state when updating or restarting. Removing it discards
+deduplication, MR/chat mappings and human holds and can duplicate work. Never edit Codex runtime
+databases to recover this monitor. `status` is offline and shows events, generations, holds,
+incomplete scans and uncertain operations; it does not initialize a database.
+
+Before enabling unattended operation, verify a selected open MR through the real app:
+
+```bash
+codex-session-stats monitor-gitlab pilot --mr 34 --verify
+codex-session-stats monitor-gitlab pilot --mr 34 --hold-check
+```
+
+The first check only confirms runtime and GitLab access. The second pauses in that MR's chat;
+answer `continuar` **there** to exercise actual native human continuation. Neither diagnostic
+reviews code or publishes comments. Check `human_continuation_verified` in status. Each check
+is recorded once; an uncertain outcome must be inspected rather than repeated blindly.
+
+The MR agent itself must be able to reach the selected Unix socket and private monitor state.
+An outside-sandbox `preflight` alone does not prove that. A callback failing with
+`PermissionError, errno=13` leaves delivery pending and blocks activation until the operator
+inspects the selected profile and repeats the real continuation check. Registration alone does
+not prove that cold resume or UI continuation retains the profile. The monitor does not change
+global client sandbox/approval settings to work around a failed check. In-agent socket diagnostics
+use `preflight --check-only` and cannot repair permissions from inside the agent.
+
+The agent posts supported findings inline when a valid diff position exists, otherwise as a
+regular discussion. It answers relevant replies and explains verified fixes before resolving
+threads. It supplements others' comments when evidence is missing; disagreement with a human
+gets a closure recommendation. Verified bot false positives can be explained and resolved.
+Every concern in the full thread must be disposed of before whole-thread closure. Uncertainty
+creates a durable hold before the agent asks a plain-text question in that MR's Codex chat.
+Only a sufficient actual user answer there resumes it. Other MRs continue while it waits.
+
+Install the user units after validation:
+
+```bash
+mkdir -p ~/.config/systemd/user
+install -m 0644 ~/scripts/install/systemd/user/codex-gitlab-monitor.service ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/systemd/user/codex-gitlab-monitor.timer ~/.config/systemd/user/
+systemd-analyze --user verify ~/.config/systemd/user/codex-gitlab-monitor.service ~/.config/systemd/user/codex-gitlab-monitor.timer
+systemctl --user daemon-reload
+systemctl --user enable --now codex-gitlab-monitor.timer
+systemctl --user list-timers codex-gitlab-monitor.timer
+```
+
+The timer starts every 15 minutes, Monday–Saturday, **07:00–21:45 America/Sao_Paulo**.
+Sunday is excluded; holidays are ordinary days. The CLI also checks the window before every new
+polling request/task submission. Already submitted work and human continuations may finish
+after 22:00. Missed starts are not replayed; the next eligible poll resumes durable observations.
+This is a user service: it requires the user's session and running signed-in Codex app. It does
+not start Codex or enable system-wide services/lingering. Changing the CLI window/cadence also
+requires a matching timer override, followed by daemon reload and timer restart.
+
+Diagnose without resubmitting work:
+
+```bash
+systemctl --user status codex-gitlab-monitor.timer codex-gitlab-monitor.service
+journalctl --user -u codex-gitlab-monitor.service --since today
+codex-session-stats monitor-gitlab status
+codex-session-stats monitor-gitlab preflight --check-only
+systemd-analyze calendar 'Mon..Sat *-*-* 07..21:00/15:00 America/Sao_Paulo'
+```
+
+A note/page cap remains incomplete until the configured bound is raised; raising it does not fix
+an insufficient global `cycle_seconds` budget. The persistent MR pivot prevents one large history
+from monopolizing every start. Missing/archived conversations are never silently replaced.
+Uncertain delivery or publication is not automatically retried. Inspect the named attempt, exact
+native chat/turn and GitLab state first. The explicit recovery interface is:
+
+```bash
+codex-session-stats monitor-gitlab recover --help
+```
+
+`recover --attempt ID --acknowledge-duplicate-risk` releases a reconciled idle delivery for retry;
+prior analysis might repeat, while confirmed public effects retain their stable identities.
+Conversation creation recovery additionally requires `--thread-id ID` for an inspected existing
+chat. If inspection confirms no conversation was created, `--confirm-no-conversation` explicitly
+permits another creation with the acknowledged duplicate risk. It also handles a process killed
+while creation was still marked `attempting`. Poll, pilot and operator recovery share a lock;
+consumer callbacks use short independent transactions. Human holds and uncertain public effects block delivery recovery. Use the MR conversation
+to reconcile a registered public operation via `effect-receipt`; never blindly repost it. The
+consumer controls accept bounded JSON on stdin and verify the acting native conversation/turn.
+If a finished owner needs recovery, use `recover --mr IID --owner-turn TURN_ID
+--acknowledge-duplicate-risk`. If an inspected public effect is definitely absent, use
+`recover --mr IID --operation OPERATION_ID --acknowledge-duplicate-risk`; authenticated
+read-back must find no matching note/resolution before it can be abandoned. This explicit
+operator decision accepts delayed-visibility/duplicate risk, preserves the old marker for
+later reconciliation, and never clears a human hold. A new candidate still needs a fresh
+generation/context check; recovery itself publishes nothing.
+
+If a question turn was interrupted before its final question appeared, instruct the agent in that
+MR chat to re-present it. Its `reanchor` control takes `case_id` and `expected_generation`, keeps
+the hold, returns the exact stored question and requires another later human answer. It grants
+no review ownership. A completed anchored question cannot be replaced this way.
+
+If a resolution was observed but its context changed before read-back, the agent pauses with
+`operation_id`. Only a sufficient native human answer for that exact case may use
+`resume.accept_observed_resolution` to settle the observed effect. Changed-context evidence
+stays recorded and new concerns still need analysis; nothing is reopened or resolved again.
+Receipts can read closed/merged MRs; new public-effect intents still require an open MR.
+
+Diagnostic inputs are registered before submission and can never count as human answers, even
+when an acknowledgement is lost. Resolve an inspected diagnostic with `recover --attempt ID
+--turn-id TURN_ID --acknowledge-duplicate-risk`; if no native diagnostic exists, the explicit
+`--confirm-no-diagnostic` alternative records that absence after a bounded history check.
+Unknown legacy diagnostic provenance fails closed until inspected. Pilots cannot start over
+an existing human hold, owner or busy native turn.
+
+To update, stop the timer, retain private config/state, replace the CLI/unit sources, repeat
+preflight and the unit install/reload commands, then restart the timer. To disable/remove:
+
+```bash
+systemctl --user disable --now codex-gitlab-monitor.timer
+rm ~/.config/systemd/user/codex-gitlab-monitor.timer ~/.config/systemd/user/codex-gitlab-monitor.service
+systemctl --user daemon-reload
+```
+
+Disabling future polls does not cancel agent turns already submitted. Keep the private state
+unless deliberately retiring this integration after inspecting unfinished work. When retiring it,
+the monitor's named permission table can also be removed from `codex_home/config.toml` after all
+dependent turns finish. A later real poll, preflight or pilot will register missing rules again.
 
 ### Codex VS Code history patch
 

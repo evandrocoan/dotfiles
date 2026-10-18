@@ -1,0 +1,12 @@
+[Unit]
+Description=Observe GitLab merge requests for native Codex review
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h
+ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab poll
+TimeoutStartSec=5min
+UMask=0077
+StandardOutput=journal
+StandardError=journal

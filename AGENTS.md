@@ -60,6 +60,15 @@ Key scripts:
 | `create-remmina-desktops.sh` | Generates `.desktop` icons from saved Remmina connections |
 | `upload_to_s3_glacier_deep.sh` | Uploads files to S3 Glacier Deep Archive |
 
+### Standalone CLI dependencies
+
+For standalone multi-command scripts such as `.local/bin/codex-session-stats`, import
+command-specific optional dependencies only inside the function or subcommand that uses them.
+Keep shared startup, unrelated commands and help independent of those packages. A missing
+optional package must fail only the operation that needs it, with an actionable diagnostic.
+Apply the same isolation to future command-specific dependencies so adding one feature does not
+break the rest of the standalone CLI.
+
 ### Systemd user services
 
 Installed via `cp -rv ~/scripts/install/* ~/.config/` followed by
