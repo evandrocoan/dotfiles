@@ -252,6 +252,18 @@ that is not listed there:
    requests the corresponding remote mutation. A remote URL alone grants no
    write authority.
 
+## Keep work proportional and maintainable
+
+Keep every task focused on the user's requested outcome. Choose the simplest approach that meets
+the actual requirements and is easy to understand, use, and maintain. Prefer existing mechanisms
+and focused changes when they satisfy that outcome. Do not expand the scope to hypothetical needs
+or add complexity without a concrete benefit to the current task.
+
+Judge simplicity by the total cost of understanding, operating, and maintaining the result, not
+by line count or cleverness. Abstraction, reuse, and additional supporting work are appropriate
+when the current requirements justify their cost. Preserve required correctness, safety, and
+validation; simplification must not remove necessary behavior or evidence.
+
 ## General safeguards
 
 - When web browsing reaches bot verification, wait for the user to complete it.

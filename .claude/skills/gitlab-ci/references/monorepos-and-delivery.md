@@ -15,12 +15,7 @@ Combine `rules:changes` with an explicit pipeline source. Verify its comparison 
 tags, schedules, and new branches; use `compare_to` where the intended baseline is otherwise ambiguous. A path filter
 is a scheduling optimization, not proof that an unlisted shared file cannot affect the component.
 
-For a localized path-filter correction, edit the existing job or product rules directly. Keep
-literal paths and small language-specific globs close to their consumers. Do not introduce a
-repository-wide extension registry, selector-variable inheritance, a change-detection framework,
-or an inventory gate solely to avoid running tests for documentation. A few repeated paths are
-preferable to coupling unrelated products through a new classification layer. Keep scanner and
-reporter admission aligned using the existing YAML reuse mechanisms.
+Keep scanner and reporter admission aligned using the existing YAML reuse mechanisms.
 
 Treat local wildcard includes as executable expansion. Check for duplicate job names and inspect the fully merged
 configuration. A shared external template that owns global keys such as `workflow`, `stages`, `default`, or top-level
