@@ -2,7 +2,7 @@
 Description=Drain GitLab review queue and check the configured polling schedule
 
 [Timer]
-OnCalendar=*-*-* *:*:00
+OnCalendar=*-*-* *:00/15:00
 Persistent=false
 AccuracySec=30s
 Unit=codex-gitlab-monitor.service

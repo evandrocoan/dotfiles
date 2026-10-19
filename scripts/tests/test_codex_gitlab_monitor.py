@@ -3589,3 +3589,535 @@ def test_review_queue_distinct_human_resumes_share_one_global_slot(boundary):
     assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
     assert all(case["state"] == "answered" for case in state.all("cases"))
     assert len(queue_attempts(b)) == 2
+
+
+def named_project_boundary(b):
+    """Keep production selection/config/state; extend only native external replies."""
+    target, _ = analysis_config(b.path.parent, b.config)
+    b.config = b.call('config', b.path)
+    roots = [b.path.parent / 'source-main', b.path.parent / 'source-extra']
+    for root in roots:
+        root.mkdir()
+    project = {'id': '11111111-1111-1111-1111-111111111111', 'name': 'fixture-project',
+               'roots': [{'path': str(root)} for root in roots]}
+    b.project_pages = [{'data': [project], 'nextCursor': None}]
+    original = b.respond
+    def respond(method, params):
+        if method == 'project/list':
+            return copy.deepcopy(b.project_pages[int(params.get('cursor', '0'))])
+        result = original(method, params)
+        if method == 'thread/start':
+            thread = result['thread']
+            thread.update(projectId=params.get('projectId'), createdAt=int(b.now.timestamp()),
+                environments=[{'environmentId': 'local', 'cwd': thread['cwd'],
+                    'runtimeWorkspaceRoots': params.get('runtimeWorkspaceRoots', [thread['cwd']])}])
+        return result
+    b.respond = respond
+    return target, project, [str(root) for root in roots]
+
+
+def select_named_project(b):
+    result = b.call('select_project', b.path, 'fixture-project')
+    b.config = b.call('config', b.path)
+    return result
+
+
+def test_named_project_selection_preserves_old_chat_and_uses_two_roots_for_new_chat(boundary):
+    b = boundary
+    target, project, roots = named_project_boundary(b)
+    state = b.state()
+    old_id = b.call('ensure_thread', b.config, state, b.mr())
+    old_cwd = b.config['cwd']
+    with state.atomic():
+        record = state.get('mrs', '1')
+        record.update(generation=8, bootstrap_verified=True, human_continuation_verified=True)
+        state.put('mrs', '1', record)
+    before = {bucket: list(state.db.execute(f'SELECT key,value FROM {bucket} ORDER BY key'))
+              for bucket in state.BUCKETS - {'meta'}}
+    native_before = copy.deepcopy(b.threads[old_id])
+    marker = len(b.native)
+    result = select_named_project(b)
+    assert result['selected'] is True
+    assert 'workspace' not in tomllib.loads(target.read_text())
+    assert tomllib.loads(target.read_text())['codex_project_name'] == 'fixture-project'
+    assert b.config['cwd'] == roots[0]
+    assert all(request.get('method') in {'initialize', 'initialized', 'project/list', 'thread/read', 'thread/list',
+                                        'thread/turns/list'} for request in b.native[marker:])
+    assert b.threads[old_id] == native_before
+    assert {bucket: list(state.db.execute(f'SELECT key,value FROM {bucket} ORDER BY key'))
+            for bucket in state.BUCKETS - {'meta'}} == before
+    with pytest.raises(RuntimeError, match='binding changed'):
+        with state.atomic():
+            state.put('meta', 'stale', True)
+    fresh = b.state()
+    assert b.call('thread', b.config, old_id)['cwd'] == old_cwd
+    b.call('prepare_thread', b.config, old_id)
+    new_id = b.call('ensure_thread', b.config, fresh, b.mr(2))
+    assert b.threads[new_id]['projectId'] == project['id']
+    assert b.threads[new_id]['cwd'] == roots[0]
+    assert b.threads[new_id]['environments'][0]['runtimeWorkspaceRoots'] == roots
+    assert b.call('thread', b.config, new_id, active_inventory=True, allow_empty=True)['id'] == new_id
+    raw = (b.path.read_bytes(), target.read_bytes())
+    assert select_named_project(b)['changed'] is False
+    assert (b.path.read_bytes(), target.read_bytes()) == raw
+
+
+@pytest.mark.parametrize('change', ['duplicate', 'rename', 'id', 'reorder', 'secondary', 'cursor'])
+def test_named_project_drift_blocks_native_creation_without_attempt(boundary, change):
+    b = boundary
+    _, project, roots = named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    if change == 'duplicate':
+        b.project_pages[0]['nextCursor'] = '1'
+        b.project_pages.append({'data': [{**project, 'id': '22222222-2222-2222-2222-222222222222'}], 'nextCursor': None})
+    elif change == 'rename':
+        b.project_pages[0]['data'][0]['name'] = 'renamed'
+    elif change == 'id':
+        b.project_pages[0]['data'][0]['id'] = '22222222-2222-2222-2222-222222222222'
+    elif change == 'reorder':
+        b.project_pages[0]['data'][0]['roots'].reverse()
+    elif change == 'secondary':
+        b.project_pages[0]['data'][0]['roots'] = [{'path': roots[0]}]
+    else:
+        del b.project_pages[0]['nextCursor']
+    before = len(b.native)
+    with pytest.raises(RuntimeError, match='project'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert not state.all('attempts')
+    assert not any(r.get('method') == 'thread/start' for r in b.native[before:])
+
+
+def test_named_project_secondary_root_inside_writable_state_is_rejected(boundary):
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    forbidden = Path(b.config['state_file']).parent / 'source'
+    forbidden.mkdir(parents=True)
+    b.project_pages[0]['data'][0]['roots'][1]['path'] = str(forbidden)
+    before = (b.path.read_bytes(), target.read_bytes())
+    with pytest.raises(RuntimeError, match='state'):
+        select_named_project(b)
+    assert before == (b.path.read_bytes(), target.read_bytes())
+    assert 'codex_project_name' not in tomllib.loads(target.read_text())
+
+
+def test_named_project_status_is_offline_and_existing_thread_stays_in_original_context(boundary, monkeypatch, capsys):
+    b = boundary
+    target, _, roots = named_project_boundary(b)
+    select_named_project(b)
+    b.state().db.close()
+    poison = types.ModuleType('websockets')
+    monkeypatch.setitem(sys.modules, 'websockets', poison)
+    def forbidden(*args, **kwargs):
+        pytest.fail('offline status must not contact native server')
+    monkeypatch.setitem(b.code, 'monitor_native', forbidden)
+    monkeypatch.setattr(sys, 'argv', [str(b.cli), 'monitor-gitlab', '--config', str(b.path), 'status'])
+    assert b.module['monitor_main']() == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out['codex_project_name'] == 'fixture-project'
+    assert out['cwd'] == roots[0]
+    assert 'workspace' not in tomllib.loads(target.read_text())
+
+
+@pytest.mark.parametrize('phase', ['intent', 'barrier', 'bound', 'toml', 'json'])
+def test_named_project_selection_recovers_interruption_and_blocks_stale_connections(boundary, monkeypatch, phase):
+    from contextlib import contextmanager
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    old = b.state()
+    atomic = b.module['MonitorState'].atomic
+    replace, fsync = os.replace, b.code['monitor_fsync_directory']
+    armed = True
+    def interrupt():
+        nonlocal armed
+        if armed:
+            armed = False
+            raise OSError('fixture cutover interruption')
+    @contextmanager
+    def transaction(self, **kwargs):
+        with atomic(self, **kwargs):
+            yield
+        receipt = self.get('meta', 'project_selection')
+        if receipt and ((phase == 'barrier' and receipt['state'] == 'prepared')
+                        or (phase == 'bound' and receipt['state'] == 'bound')):
+            interrupt()
+    def publish(source, destination):
+        replace(source, destination)
+        if phase == 'toml' and Path(destination) == target or phase == 'json' and Path(destination) == b.path:
+            interrupt()
+    def durable(directory):
+        fsync(directory)
+        if phase == 'intent' and b.path.with_name(b.path.name + '.project-selection').exists():
+            interrupt()
+    monkeypatch.setattr(b.module['MonitorState'], 'atomic', transaction)
+    monkeypatch.setattr(os, 'replace', publish)
+    monkeypatch.setitem(b.code, 'monitor_fsync_directory', durable)
+    with pytest.raises(OSError, match='cutover interruption'):
+        select_named_project(b)
+    with pytest.raises(RuntimeError, match='selection|binding changed'):
+        with old.atomic():
+            old.put('meta', 'stale', True)
+    def unavailable(*args, **kwargs):
+        pytest.fail('prepared selection must recover locally with the app unavailable')
+    monkeypatch.setitem(b.code, 'monitor_native', unavailable)
+    assert select_named_project(b)['selected'] is True
+    fresh = b.state()
+    assert fresh.get('meta', 'project_selection')['state'] == 'completed'
+    assert 'workspace' not in tomllib.loads(target.read_text())
+    assert not b.path.with_name(b.path.name + '.project-selection').exists()
+
+
+@pytest.mark.parametrize('field', ['root', 'project'])
+def test_named_project_creation_records_returned_id_before_context_validation(boundary, field):
+    b = boundary
+    _, _, _ = named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def wrong(method, params):
+        result = original(method, params)
+        if method == 'thread/start':
+            if field == 'root':
+                result['thread']['environments'][0]['runtimeWorkspaceRoots'].pop()
+            else:
+                result['thread']['projectId'] = None
+        return result
+    b.respond = wrong
+    state = b.state()
+    with pytest.raises(RuntimeError, match='project|workspace'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['thread_id'] in b.threads
+    assert attempt['state'] == 'uncertain'
+    assert not state.get('mrs', '1').get('thread_id')
+    count = len(b.threads)
+    with pytest.raises(RuntimeError, match='uncertain'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert len(b.threads) == count
+
+
+def test_named_project_existing_chat_continues_normal_review_with_original_context(boundary):
+    b = boundary
+    named_project_boundary(b)
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    queue_complete(b, state, attempt, work)
+    b.finish(attempt['thread_id'], attempt['turn_id'])
+    b.call('queue_reconcile', b.config, state)
+    old_id, old_cwd = attempt['thread_id'], b.config['cwd']
+    select_named_project(b)
+    b.mr(sha='b' * 40, created=b.now.isoformat())
+    b.poll()
+    current, next_attempt, claimed = b.active_claim()
+    assert next_attempt['id'] != attempt['id']
+    assert next_attempt['thread_id'] == old_id
+    queue_complete(b, current, next_attempt, claimed)
+    assert current.get('mrs', '1')['reviewed_head'] == 'b' * 40
+    assert b.threads[old_id]['cwd'] == old_cwd
+    assert b.threads[old_id]['projectId'] is None
+    assert len(b.threads) == 1
+
+
+@pytest.mark.parametrize('change', ['missing-environment', 'busy', 'ambiguous-environment', 'secondary-in-state'])
+def test_named_project_unavailable_existing_context_refuses_selection_without_mutation(boundary, change):
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    state = b.state()
+    old_id = b.call('ensure_thread', b.config, state, b.mr())
+    if change == 'missing-environment':
+        del b.threads[old_id]['environments']
+    elif change == 'busy':
+        b.threads[old_id]['status'] = {'type': 'active'}
+    elif change == 'ambiguous-environment':
+        b.threads[old_id]['environments'] *= 2
+    else:
+        forbidden = Path(b.config['state_file']).parent / 'source'
+        forbidden.mkdir()
+        b.threads[old_id]['environments'][0]['runtimeWorkspaceRoots'].append(str(forbidden))
+    files = (b.path.read_bytes(), target.read_bytes())
+    before = b.call('selection_snapshot', state)
+    marker = len(b.native)
+    with pytest.raises(RuntimeError, match='environment|idle|state'):
+        select_named_project(b)
+    assert (b.path.read_bytes(), target.read_bytes()) == files
+    assert b.call('selection_snapshot', state) == before
+    assert not b.path.with_name(b.path.name + '.project-selection').exists()
+    assert not any(r.get('method') in {'thread/resume', 'thread/start', 'thread/metadata/update'}
+                   for r in b.native[marker:])
+
+
+@pytest.mark.parametrize('obstacle', ['owner', 'hold', 'queue-tail', 'uncertain', 'effect'])
+def test_named_project_active_or_uncertain_work_blocks_selection(boundary, obstacle):
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    state = b.state()
+    old_id = b.call('ensure_thread', b.config, state, b.mr())
+    with state.atomic():
+        record = state.get('mrs', '1')
+        if obstacle == 'owner':
+            record['owner'] = {'turn_id': 'still-running'}
+        elif obstacle == 'hold':
+            record['case_id'] = 'case'
+        elif obstacle == 'queue-tail':
+            state.put('meta', 'review_request:tail', {'id': 'tail', 'iid': 1, 'state': 'active',
+                'sequence': 1, 'thread_id': old_id, 'turn_id': 'still-running'})
+        elif obstacle == 'uncertain':
+            state.put('attempts', 'uncertain', {'id': 'uncertain', 'iid': 1, 'state': 'uncertain'})
+        else:
+            state.put('operations', '1:effect', {'id': 'effect', 'state': 'attempting'})
+        state.put('mrs', '1', record)
+    before = (b.path.read_bytes(), target.read_bytes(), b.call('selection_snapshot', state))
+    with pytest.raises(RuntimeError, match='owner|hold|tails|uncertain|effects'):
+        select_named_project(b)
+    assert before == (b.path.read_bytes(), target.read_bytes(), b.call('selection_snapshot', state))
+
+
+@pytest.mark.parametrize('kind', ['toml-conflict', 'missing-binding', 'wrong-name', 'json-name'])
+def test_named_project_configuration_rejects_duplicate_or_unbound_authority(boundary, kind):
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    select_named_project(b)
+    data = json.loads(b.path.read_text())
+    if kind == 'toml-conflict':
+        target.write_text(target.read_text() + 'workspace = "workspace"\n')
+    elif kind == 'missing-binding':
+        del data['codex_project_binding']
+    elif kind == 'wrong-name':
+        data['codex_project_binding']['name'] = 'other'
+    else:
+        data['codex_project_name'] = 'fixture-project'
+    b.path.write_text(json.dumps(data))
+    with pytest.raises(RuntimeError, match='workspace|binding|TOML'):
+        b.call('config', b.path)
+
+
+@pytest.mark.parametrize('extra', ['valid-hosting', 'wrong-thread', 'wrong-date', 'arbitrary', 'reordered'])
+def test_named_project_thread_checks_all_sources_and_only_its_bounded_hosting_root(boundary, extra):
+    b = boundary
+    _, _, roots = named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    tid = b.call('ensure_thread', b.config, state, b.mr())
+    thread = b.threads[tid]
+    runtime = thread['environments'][0]['runtimeWorkspaceRoots']
+    if extra == 'reordered':
+        runtime.reverse()
+    else:
+        day = b.now.date() + dt.timedelta(days=1 if extra != 'wrong-date' else 4)
+        end = tid if extra != 'wrong-thread' else '22222222-2222-2222-2222-222222222222'
+        path = Path(b.config['codex_home']) / 'visualizations' / day.strftime('%Y/%m/%d') / end
+        if extra == 'arbitrary':
+            path = b.path.parent / 'unrequested'
+        path.mkdir(parents=True)
+        runtime.append(str(path))
+    if extra == 'valid-hosting':
+        assert b.call('thread', b.config, tid)['id'] == tid
+    else:
+        with pytest.raises(RuntimeError, match='context mismatch'):
+            b.call('thread', b.config, tid)
+
+
+def test_named_project_binding_includes_secondary_root_and_identity_for_stale_connections(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    old = b.state()
+    changed = copy.deepcopy(b.config)
+    changed['codex_project_binding']['roots'] = changed['codex_project_binding']['roots'][:1]
+    with pytest.raises(RuntimeError, match='another project'):
+        b.module['MonitorState'](changed)
+    changed = copy.deepcopy(b.config)
+    changed['codex_project_binding']['id'] = '22222222-2222-2222-2222-222222222222'
+    with pytest.raises(RuntimeError, match='another project'):
+        b.module['MonitorState'](changed, readonly=True)
+    assert old.get('meta', 'identity') == b.call('state_identity', b.config)
+
+
+@pytest.mark.parametrize('tamper', ['receipt', 'business-state', 'toml', 'json'])
+def test_named_project_interrupted_selection_refuses_changed_inputs_without_overwrite(boundary, monkeypatch, tamper):
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    state = b.state()
+    replace = os.replace
+    def interrupted(source, destination):
+        if Path(destination) == target:
+            raise OSError('fixture stopped before file publication')
+        return replace(source, destination)
+    monkeypatch.setattr(os, 'replace', interrupted)
+    with pytest.raises(OSError, match='stopped before'):
+        select_named_project(b)
+    with state.atomic(workspace_adoption=True):
+        if tamper == 'receipt':
+            state.put('meta', 'project_selection', {'intent': 'forged', 'state': 'bound'})
+        elif tamper == 'business-state':
+            state.put('events', '1:forged', {'state': 'pending'})
+    if tamper == 'toml':
+        target.write_text(target.read_text() + '# concurrent edit\n')
+    elif tamper == 'json':
+        data = json.loads(b.path.read_text()); data['parallel'] = 2
+        b.path.write_text(json.dumps(data))
+    before = (b.path.read_bytes(), target.read_bytes(), b.call('selection_snapshot', state))
+    monkeypatch.setattr(os, 'replace', replace)
+    with pytest.raises(RuntimeError, match='changed'):
+        select_named_project(b)
+    assert before == (b.path.read_bytes(), target.read_bytes(), b.call('selection_snapshot', state))
+
+
+def test_named_project_explicit_selection_can_accept_verified_new_root_for_same_name(boundary):
+    b = boundary
+    _, _, roots = named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    tid = b.call('ensure_thread', b.config, state, b.mr())
+    third = b.path.parent / 'new-secondary'; third.mkdir()
+    b.project_pages[0]['data'][0]['roots'].append({'path': str(third)})
+    assert select_named_project(b)['changed'] is True
+    assert b.threads[tid]['environments'][0]['runtimeWorkspaceRoots'] == roots
+    assert b.call('thread', b.config, tid)['id'] == tid
+    fresh = b.state()
+    new_id = b.call('ensure_thread', b.config, fresh, b.mr(2))
+    assert b.threads[new_id]['environments'][0]['runtimeWorkspaceRoots'] == [*roots, str(third)]
+
+
+@pytest.mark.parametrize('failure', ['write', 'fsync'])
+def test_named_project_intent_publication_is_atomic_when_disk_fails(boundary, monkeypatch, failure):
+    import errno
+    b = boundary
+    target, _, _ = named_project_boundary(b)
+    state = b.state()
+    before = (b.path.read_bytes(), target.read_bytes(), b.call('selection_snapshot', state))
+    fdopen, fsync = os.fdopen, os.fsync
+    def intent_descriptor(descriptor):
+        return 'monitor-select-intent-' in os.readlink(f'/proc/self/fd/{descriptor}') or (
+            os.readlink(f'/proc/self/fd/{descriptor}') == str(b.path) + '.project-selection')
+    class PartialWrite:
+        def __init__(self, stream):
+            self.stream = stream
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            self.stream.close()
+        def write(self, data):
+            self.stream.write(data[:2]); self.stream.flush()
+            raise OSError(errno.ENOSPC, 'fixture partial intent write')
+    def open_stream(descriptor, *args, **kwargs):
+        wrapped = failure == 'write' and intent_descriptor(descriptor)
+        stream = fdopen(descriptor, *args, **kwargs)
+        return PartialWrite(stream) if wrapped else stream
+    def sync(descriptor):
+        if failure == 'fsync' and intent_descriptor(descriptor):
+            raise OSError(errno.ENOSPC, 'fixture intent fsync failure')
+        return fsync(descriptor)
+    monkeypatch.setattr(os, 'fdopen', open_stream)
+    monkeypatch.setattr(os, 'fsync', sync)
+    with pytest.raises(OSError, match='fixture'):
+        select_named_project(b)
+    assert not b.path.with_name(b.path.name + '.project-selection').exists()
+    assert before == (b.path.read_bytes(), target.read_bytes(), b.call('selection_snapshot', state))
+    assert b.call('config', b.path)['cwd'] == b.config['cwd']
+    assert not list(b.path.parent.glob('.monitor-select-intent-*'))
+
+
+def test_named_project_cached_secondary_root_must_stay_outside_writable_state(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    data = json.loads(b.path.read_text())
+    forbidden = Path(b.config['state_file']).parent / 'cached-source'; forbidden.mkdir()
+    data['codex_project_binding']['roots'][1] = str(forbidden)
+    b.path.write_text(json.dumps(data))
+    with pytest.raises(RuntimeError, match='outside agent-writable state'):
+        b.call('config', b.path)
+
+
+def test_named_project_creation_ack_is_enough_when_independent_grouping_is_not_persisted(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def native_response(method, params):
+        result = original(method, params)
+        if method == 'thread/start':
+            acknowledgement = copy.deepcopy(result)
+            # Actual runtime: start ACK has the requested project; a separate
+            # pre-input read has no persisted sidebar metadata yet.
+            b.threads[result['thread']['id']]['projectId'] = None
+            return acknowledgement
+        return result
+    b.respond = native_response
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    queue_complete(b, state, attempt, work)
+    record = state.get('mrs', '1')
+    assert record['thread_id'] == attempt['thread_id']
+    assert record['reviewed_head'] == 'a' * 40
+    assert b.threads[record['thread_id']]['projectId'] is None
+    assert sum(r.get('method') == 'thread/start' for r in b.native) == 1
+    assert sum(r.get('method') == 'turn/start' for r in b.native) == 1
+    assert not any(r.get('method') == 'thread/metadata/update' for r in b.native)
+
+
+@pytest.mark.parametrize('project', [None, 'missing', '22222222-2222-2222-2222-222222222222'])
+def test_named_project_creation_rejects_wrong_ack_even_when_later_read_has_expected_project(boundary, project):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def native_response(method, params):
+        result = original(method, params)
+        if method == 'thread/start':
+            result = copy.deepcopy(result)
+            if project == 'missing':
+                result['thread'].pop('projectId')
+            else:
+                result['thread']['projectId'] = project
+        return result
+    b.respond = native_response
+    state = b.state()
+    with pytest.raises(RuntimeError, match='project'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['state'] == 'uncertain' and attempt['thread_id'] in b.threads
+    assert not state.get('mrs', '1').get('thread_id')
+    with pytest.raises(RuntimeError, match='uncertain'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert len(b.threads) == 1
+
+
+def test_named_project_mr_mapping_survives_chat_rename_new_head_reply_and_missing_selector(boundary):
+    b = boundary
+    named_project_boundary(b)
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    queue_complete(b, state, attempt, work)
+    b.finish(attempt['thread_id'], attempt['turn_id'])
+    b.call('queue_reconcile', b.config, state)
+    tid = attempt['thread_id']
+    select_named_project(b)
+    b.threads[tid]['name'] = 'User renamed this chat'
+    b.config = b.call('config', b.path)
+    assert b.state().get('mrs', '1')['thread_id'] == tid
+    original = b.respond
+    def native_response(method, params):
+        assert method != 'project/list', 'existing MR must not depend on the new-chat selector'
+        return original(method, params)
+    b.respond = native_response
+    marker = len(b.native)
+    b.mr(sha='b' * 40, created=b.now.isoformat())['title'] = 'Renamed MR'
+    b.poll()
+    current, next_attempt, claimed = b.active_claim()
+    assert next_attempt['thread_id'] == tid and next_attempt['id'] != attempt['id']
+    queue_complete(b, current, next_attempt, claimed)
+    b.finish(tid, next_attempt['turn_id'])
+    b.call('queue_reconcile', b.config, current)
+    b.note(body='Reply on an existing discussion', created=b.now.isoformat())
+    b.poll()
+    final, comment_attempt, comment_claim = b.active_claim()
+    assert comment_attempt['thread_id'] == tid
+    queue_complete(b, final, comment_attempt, comment_claim)
+    assert final.get('mrs', '1')['thread_id'] == tid
+    assert final.get('mrs', '1')['reviewed_head'] == 'b' * 40
+    assert not any(r.get('method') in {'project/list', 'thread/start'} for r in b.native[marker:])
+    assert len(b.threads) == 1

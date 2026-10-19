@@ -690,23 +690,55 @@ bounds. The default model is `gpt-6.1-sol` with `xhigh`. The selected MCP server
 directly, checks its HTTPS origin and project, and never copies the token into tasks or units.
 An unavailable server/credential/model is a visible failure, not a reason to change permissions.
 
-To keep analysis settings in one place, store this private mode-`0600` file at
-`~/.local/share/codex-session-stats/config.toml`:
+For a monitor already using `analysis_config`, select the existing Codex project by its exact
+name. The name must identify one project, including across all inventory pages:
+
+```bash
+codex-session-stats monitor-gitlab select-project --name "YOUR_CODEX_PROJECT"
+codex-session-stats monitor-gitlab status
+```
+
+The private mode-`0600` root file at `~/.local/share/codex-session-stats/config.toml` then contains:
 
 ```toml
 model = "gpt-6.1-sol"
 model_reasoning_effort = "xhigh"
-workspace = "workspace"
+codex_project_name = "YOUR_CODEX_PROJECT"
 ```
 
-The monitor loads this file explicitly through `analysis_config` in its base JSON; it is not a
-Codex project `.codex/config.toml`. `workspace` is optional and defaults to the sibling
-`workspace/`. Relative paths resolve from the TOML directory; absolute paths and `~` are also
-accepted. The directory must already exist and stay outside the agent-writable state. The TOML
-must be owned, private and outside that state; unknown keys are rejected. JSON `cwd`, `model`
-and `effort` cannot coexist with `analysis_config`. Changing this path after initialization is
-rejected by the stored binding checks; editing it alone does not move existing chats. The adoption
-procedure below switches an existing JSON-only setup to this TOML.
+The monitor loads this file explicitly through `analysis_config`; it is separate from Codex's
+project `.codex/config.toml`. Selection derives the primary directory and every additional source
+folder from the project. New MR chats start in that native project with all those folders.
+Visible sidebar grouping requires a separate assignment through the desktop app.
+Existing mapped chats keep their original project, directory, IDs, history and pilot indicators.
+Selection does not start a model, move a chat, change permissions, publish or activate the timer.
+It refuses active reviews, native queue tails, human holds and uncertain effects/deliveries.
+Creation uses the project acknowledged by `thread/start` and independently checks the chat ID,
+directory and source roots. Empty chats may omit native project metadata in later reads;
+that metadata does not block the ordinary first review or cause an extra initialization turn.
+
+The base JSON retains generated native binding metadata and original chat contexts so `status`
+works offline. Do not edit those generated IDs/paths. Before creating a new chat, the monitor checks
+that the unique name still has the same native identity and ordered folders. Existing MR chats
+reuse their saved context without querying this selector. A rename, duplicate or folder change
+requires inspection and another explicit selection for future creation. The private `.project-selection`
+intent and SQLite barrier protect an interrupted transfer. Repeat the exact command without
+editing either config; recovery rolls forward locally even if the app is closed. Other commands
+refuse partial selection, and stale open callbacks cannot write through the changed binding.
+
+The monitor's SQLite identity binds the GitLab origin and project; each MR IID then maps to one
+native chat ID. Later commits and discussion changes enqueue work for that saved ID, including
+after restart or a chat/MR title change. Titles and sidebar grouping are display information.
+Busy chats retain queued work, and a user hold stays paused until the real answer arrives in
+that same chat. A missing, archived or uncertain chat requires explicit recovery rather than
+automatic replacement.
+
+The TOML must be owned, private and outside agent-writable state; unknown keys are rejected.
+`codex_project_name` excludes `workspace`. Legacy TOML without a project name still accepts optional
+`workspace`, defaulting to the sibling `workspace/`; relative paths resolve from the TOML directory,
+and absolute paths or `~` are accepted. That directory must already exist outside writable state.
+JSON `cwd`, `model` and `effort` cannot coexist with `analysis_config`. Use the legacy adoption
+procedure below to switch an existing JSON-only setup to this TOML before selecting a project.
 
 After adopting this analysis TOML, migrate project and schedule authority without changing
 values or the existing SQLite binding:
@@ -739,8 +771,8 @@ registered automatic continuation keeps the actual answer, interrupted event set
 it starts only after the answering turn ends. `status` shows queue entries and scan cadence
 offline. Keep the state database when updating or restarting.
 
-For an existing monitor, create a new MR conversation directly in that workspace first. Keep
-the old conversation available. Once the exact new ID is idle and empty, adopt it explicitly,
+For a legacy JSON-only monitor, create a new MR conversation in the intended workspace first.
+Keep the old conversation available. Once the exact new ID is idle and empty, adopt it explicitly,
 replacing the example MR and ID:
 
 ```bash
@@ -820,9 +852,10 @@ writing its data inside the allowed state root. Existing stdin input remains sup
 manual use. Payloads never grant ownership or replace native provenance checks.
 
 State lives separately at `~/.local/state/codex-session-stats/gitlab-monitor.sqlite3`.
-It binds the project, workspace and native endpoint. Only the explicit `adopt-workspace` operation
-above changes the workspace binding in place; other binding changes require deliberately separate
-state. Preserve the state when updating or restarting. Removing it discards
+It binds the GitLab project, creation context and native endpoint. `select-project` changes the
+future creation context while pinning existing chats to their original context; legacy
+`adopt-workspace` explicitly replaces one mapped chat. Other binding changes require deliberately
+separate state. Preserve the state when updating or restarting. Removing it discards
 deduplication, MR/chat mappings and human holds and can duplicate work. Never edit Codex runtime
 databases to recover this monitor. `status` is offline and shows events, generations, holds,
 incomplete scans and uncertain operations; it does not initialize a database.
@@ -897,18 +930,19 @@ systemctl --user enable --now codex-gitlab-monitor.timer
 systemctl --user list-timers codex-gitlab-monitor.timer
 ```
 
-The timer wakes `tick` every minute. The root TOML owns the real schedule and inventory interval;
-with the default interval it scans every 15 minutes, Monday–Saturday, within
+The timer wakes `tick` every 15 minutes. The root TOML owns the allowed window and inventory
+interval; with the default interval it scans every 15 minutes, Monday–Saturday, within
 **07:00–22:00 America/Sao_Paulo** (the closing hour is excluded).
 Sunday is excluded; holidays are ordinary days. The CLI also checks the window before every new
 polling request/task submission. Already submitted work and human continuations may finish
 after 22:00. Missed starts are not replayed; the next eligible poll resumes durable observations.
 This is a user service: it requires the user's session and running signed-in Codex app. It does
 not start Codex or enable system-wide services/lingering. Edit the root TOML to change the window
-or interval; no timer override is needed. `poll` explicitly requests a full scan within the window;
-`tick` honors the persisted inventory interval, including after failed or partial scans. Intermediate
-wakes drain eligible queued work with fresh MR/head checks. Installing updated units requires
-`daemon-reload`; restart an already-enabled timer after changing its unit.
+or inventory interval; the timer's wake-up cadence remains 15 minutes. `poll` explicitly requests
+a full scan within the window; `tick` honors the persisted inventory interval, including after
+failed or partial scans. Each wake drains eligible queued work with fresh MR/head checks.
+Installing updated units requires `daemon-reload`; restart an already-enabled timer after
+changing its unit.
 
 Diagnose without resubmitting work:
 

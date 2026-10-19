@@ -2000,7 +2000,13 @@ def monitor_permission_definition(config: dict) -> dict:
     from urllib.parse import urlsplit
     state_dir = Path(config["state_file"]).parent.resolve()
     codex_home = Path(config["codex_home"]).resolve()
-    protected = (Path.home().resolve(), Path(config["cwd"]).resolve(), codex_home)
+    roots = [config["cwd"]]
+    binding = config.get("codex_project_binding")
+    if binding:
+        roots.extend(binding["roots"])
+        for context in binding["existing_threads"].values():
+            roots.extend(context["roots"])
+    protected = (Path.home().resolve(), codex_home, *(Path(root).resolve() for root in roots))
     if (any(path.is_relative_to(state_dir) for path in protected)
             or state_dir.is_relative_to(codex_home)):
         raise RuntimeError("monitor state directory must be private and separate from workspace/Codex roots")
@@ -2128,6 +2134,8 @@ def monitor_prepare_thread(config: dict, thread_id: str):
     if response["thread"]["id"] != thread_id:
         raise RuntimeError("native resume returned another MR conversation")
     monitor_verify_permission_selection(response)
+    if config.get("codex_project_name"):
+        monitor_verify_thread_context(config, response["thread"], thread_id)
 
 
 def monitor_trusted_control_path(path: Path, state_dir: Path, *, private: bool, diagnostic=False):
@@ -2330,6 +2338,153 @@ MONITOR_TOML_SCHEDULE = {"timezone", "weekdays", "open_hour", "close_hour", "int
 MONITOR_TOML_OPTIONS = MONITOR_TOML_PROJECT | MONITOR_TOML_SCHEDULE | {"parallel"}
 
 
+def monitor_project_roots(roots, state_dir: Path) -> list:
+    if not isinstance(roots, list) or not roots or len(roots) > 100:
+        raise RuntimeError("invalid Codex project roots")
+    for root in roots:
+        if (not isinstance(root, str) or not Path(root).is_absolute()
+                or str(Path(root).resolve()) != root or not Path(root).is_dir()):
+            raise RuntimeError("Codex project roots must be canonical existing absolute directories")
+        if Path(root).is_relative_to(state_dir):
+            raise RuntimeError("Codex project root must be outside agent-writable state")
+    if len(set(roots)) != len(roots):
+        raise RuntimeError("duplicate Codex project roots")
+    return list(roots)
+
+
+def monitor_project_binding(binding, name: str, state_dir: Path) -> dict:
+    if (not isinstance(binding, dict) or set(binding) != {"id", "name", "roots", "existing_threads"}
+            or binding["name"] != name
+            or not re.fullmatch(r"[a-f0-9-]{36}", str(binding["id"]))
+            or not isinstance(binding["existing_threads"], dict)):
+        raise RuntimeError("invalid Codex project binding; run select-project --name NAME")
+    monitor_project_roots(binding["roots"], state_dir)
+    for thread_id, context in binding["existing_threads"].items():
+        if (not re.fullmatch(r"[a-f0-9-]{36}", thread_id) or not isinstance(context, dict)
+                or set(context) != {"cwd", "project_id", "roots"}
+                or context["project_id"] is not None
+                and not re.fullmatch(r"[a-f0-9-]{36}", str(context["project_id"]))):
+            raise RuntimeError("invalid existing conversation project context")
+        roots = monitor_project_roots(context["roots"], state_dir)
+        if context["cwd"] != roots[0]:
+            raise RuntimeError("invalid existing conversation primary directory")
+    return binding
+
+
+def monitor_resolve_project(config: dict, name: str) -> dict:
+    if (not isinstance(name, str) or not name.strip() or len(name) > 256
+            or any(ord(c) < 32 for c in name)):
+        raise RuntimeError("invalid Codex project name")
+    matches, cursor, seen = [], None, set()
+    for _ in range(config["max_history_pages"]):
+        params = {"limit": 100}
+        if cursor:
+            params["cursor"] = cursor
+        page = monitor_native(config, "project/list", params)
+        if (not isinstance(page.get("data"), list) or "nextCursor" not in page
+                or page["nextCursor"] is not None and
+                (not isinstance(page["nextCursor"], str) or not page["nextCursor"])
+                or any(not isinstance(p, dict) or not isinstance(p.get("name"), str)
+                       or not re.fullmatch(r"[a-f0-9-]{36}", str(p.get("id", ""))) for p in page["data"])):
+            raise RuntimeError("invalid Codex project inventory page")
+        matches.extend(p for p in page["data"] if p["name"] == name)
+        cursor = page["nextCursor"]
+        if cursor is None:
+            break
+        if cursor in seen:
+            raise RuntimeError("repeated Codex project inventory cursor")
+        seen.add(cursor)
+    else:
+        raise RuntimeError("Codex project inventory exceeds page bound")
+    if len(matches) != 1:
+        raise RuntimeError("Codex project name must match exactly one project: " + name)
+    selected = matches[0]
+    entries = selected.get("roots")
+    if not isinstance(entries, list) or any(not isinstance(r, dict) or "path" not in r for r in entries):
+        raise RuntimeError("invalid Codex project roots")
+    return {"id": selected["id"], "name": name,
+            "roots": monitor_project_roots([r["path"] for r in entries], Path(config["state_file"]).parent)}
+
+
+def monitor_verify_project(config: dict):
+    if config.get("codex_project_name"):
+        actual = monitor_resolve_project(config, config["codex_project_name"])
+        expected = {k: config["codex_project_binding"][k] for k in ("id", "name", "roots")}
+        if actual != expected:
+            raise RuntimeError("Codex project identity or ordered roots changed; inspect and run select-project")
+
+
+def monitor_thread_context(config: dict, thread_id: str) -> dict:
+    binding = config["codex_project_binding"]
+    return binding["existing_threads"].get(thread_id, {
+        "cwd": binding["roots"][0], "project_id": binding["id"], "roots": binding["roots"]})
+
+
+def monitor_thread_source_roots(config: dict, thread: dict) -> list:
+    environments = thread.get("environments")
+    if (not isinstance(environments, list) or len(environments) != 1
+            or not isinstance(environments[0], dict) or environments[0].get("environmentId") != "local"
+            or environments[0].get("cwd") != thread.get("cwd")):
+        raise RuntimeError("native project workspace environment is unavailable or ambiguous")
+    roots = environments[0].get("runtimeWorkspaceRoots")
+    if not isinstance(roots, list) or any(not isinstance(r, str) for r in roots):
+        raise RuntimeError("native project workspace roots are unavailable")
+    hosting = set()
+    if type(thread.get("createdAt")) is int:
+        date = datetime.datetime.fromtimestamp(thread["createdAt"], datetime.timezone.utc).date()
+        for delta in (-1, 0, 1):
+            day = date + datetime.timedelta(days=delta)
+            hosting.add(str(Path(config["codex_home"]) / "visualizations" /
+                            day.strftime("%Y/%m/%d") / thread["id"]))
+    extras = [r for r in roots if r in hosting]
+    if len(extras) > 1 or len(set(roots)) != len(roots):
+        raise RuntimeError("native project workspace has conflicting hosting roots")
+    for root in extras:
+        if str(Path(root).resolve()) != root:
+            raise RuntimeError("native project hosting workspace is not canonical")
+    return [r for r in roots if r not in hosting]
+
+
+def monitor_verify_thread_context(config: dict, thread: dict, thread_id: str):
+    context = monitor_thread_context(config, thread_id)
+    if (thread.get("id") != thread_id or thread.get("cwd") != context["cwd"]
+            or monitor_thread_source_roots(config, thread) != context["roots"]):
+        raise RuntimeError("native conversation project/workspace context mismatch")
+
+
+def monitor_analysis_values(settings: dict, path: Path, state_dir: Path) -> dict:
+    required = {"model", "model_reasoning_effort"}
+    if not required <= set(settings) or set(settings) - required - {"workspace", "codex_project_name"} - MONITOR_TOML_OPTIONS:
+        raise RuntimeError("unknown or missing TOML settings")
+    for group in (MONITOR_TOML_PROJECT, MONITOR_TOML_SCHEDULE):
+        if set(settings) & group and not group <= set(settings):
+            raise RuntimeError("incomplete TOML project or schedule group")
+    if not isinstance(settings["model"], str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", settings["model"]):
+        raise RuntimeError("invalid model")
+    if settings["model_reasoning_effort"] not in {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}:
+        raise RuntimeError("invalid model_reasoning_effort")
+    result = {"model": settings["model"], "effort": settings["model_reasoning_effort"],
+              **{k: v for k, v in settings.items() if k in MONITOR_TOML_OPTIONS}}
+    if "codex_project_name" in settings:
+        name = settings["codex_project_name"]
+        if ("workspace" in settings or not isinstance(name, str) or not name.strip()
+                or len(name) > 256 or any(ord(c) < 32 for c in name)):
+            raise RuntimeError("codex_project_name requires a nonempty name and excludes workspace")
+        return {**result, "codex_project_name": name}
+    workspace = settings.get("workspace", "workspace")
+    if not isinstance(workspace, str) or not workspace.strip():
+        raise RuntimeError("invalid workspace: expected a nonempty path")
+    workspace = Path(workspace).expanduser()
+    if not workspace.is_absolute():
+        workspace = path.parent / workspace
+    workspace = workspace.resolve()
+    if not workspace.is_dir():
+        raise RuntimeError("workspace directory does not exist")
+    if workspace.is_relative_to(state_dir):
+        raise RuntimeError("workspace must be outside agent-writable state")
+    return {**result, "cwd": str(workspace)}
+
+
 def monitor_analysis_settings(path: Path, state_dir: Path, *, diagnostic=False) -> dict:
     """Read the monitor's small analysis TOML, outside its writable state."""
     import stat
@@ -2346,37 +2501,14 @@ def monitor_analysis_settings(path: Path, state_dir: Path, *, diagnostic=False) 
         if len(raw) > 65536:
             raise RuntimeError("file exceeds 64 KiB")
         settings = tomllib.loads(raw.decode("utf-8"))
-        required = {"model", "model_reasoning_effort"}
-        if not required <= set(settings) or set(settings) - required - {"workspace"} - MONITOR_TOML_OPTIONS:
-            raise RuntimeError("unknown or missing TOML settings")
-        for group in (MONITOR_TOML_PROJECT, MONITOR_TOML_SCHEDULE):
-            if set(settings) & group and not group <= set(settings):
-                raise RuntimeError("incomplete TOML project or schedule group")
-        if (not isinstance(settings["model"], str)
-                or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", settings["model"])):
-            raise RuntimeError("invalid model")
-        if settings["model_reasoning_effort"] not in {
-                "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}:
-            raise RuntimeError("invalid model_reasoning_effort")
-        workspace = settings.get("workspace", "workspace")
-        if not isinstance(workspace, str) or not workspace.strip():
-            raise RuntimeError("invalid workspace: expected a nonempty path")
-        workspace = Path(workspace).expanduser()
-        if not workspace.is_absolute():
-            workspace = path.parent / workspace
-        workspace = workspace.resolve()
-        if not workspace.is_dir():
-            raise RuntimeError("workspace directory does not exist")
-        if workspace.is_relative_to(state_dir):
-            raise RuntimeError("workspace must be outside agent-writable state")
-        return {"cwd": str(workspace), "model": settings["model"],
-                "effort": settings["model_reasoning_effort"],
-                **{k: v for k, v in settings.items() if k in MONITOR_TOML_OPTIONS}}
+        return monitor_analysis_values(settings, path, state_dir)
     except (OSError, RuntimeError, ValueError, TypeError) as error:
         raise RuntimeError(f"invalid analysis configuration: {error}") from error
 
 
 def monitor_config(path: Path, *, diagnostic=False) -> dict:
+    if path.with_name(path.name + ".project-selection").exists():
+        raise RuntimeError("project selection is pending; repeat select-project --name NAME")
     return monitor_config_data(path, json.loads(path.read_text(encoding="utf-8")), diagnostic=diagnostic)
 
 
@@ -2386,6 +2518,8 @@ def monitor_config_data(path: Path, data: dict, *, diagnostic=False, analysis_se
         raise RuntimeError("unsupported monitor configuration version")
     if os.name == "posix" and path.stat().st_mode & 0o077:
         raise RuntimeError("monitor configuration must be private (chmod 600)")
+    if "codex_project_name" in data:
+        raise RuntimeError("codex_project_name belongs only in the analysis TOML")
     if "analysis_config" in data:
         if any(key in data for key in ("model", "effort", "cwd")):
             raise RuntimeError("duplicate analysis settings: use only analysis_config, without model/effort/cwd")
@@ -2403,6 +2537,14 @@ def monitor_config_data(path: Path, data: dict, *, diagnostic=False, analysis_se
         data.update(settings)
         data["analysis_config"] = str(target)
     data.setdefault("parallel", 1)
+    if data.get("codex_project_name"):
+        monitor_trusted_control_path(path, Path(data["state_file"]).expanduser().resolve().parent,
+                                     private=True, diagnostic=diagnostic)
+        binding = monitor_project_binding(data.get("codex_project_binding"), data["codex_project_name"],
+                                          Path(data["state_file"]).expanduser().resolve().parent)
+        data["cwd"] = binding["roots"][0]
+    elif "codex_project_binding" in data:
+        raise RuntimeError("Codex project binding requires codex_project_name in the analysis TOML")
     origin, project = monitor_project_url(data["gitlab_url"] + "/" + data["project_path"])
     if origin != data["gitlab_url"] or project != data["project_path"]:
         raise RuntimeError("noncanonical monitor project identity")
@@ -2426,6 +2568,7 @@ def monitor_config_data(path: Path, data: dict, *, diagnostic=False, analysis_se
         raise RuntimeError("monitor state must be outside Codex runtime storage")
     if not Path(data["cwd"]).is_dir():
         raise RuntimeError("configured workspace directory does not exist")
+    data["_config_path"] = str(path)
     return data
 
 
@@ -2538,17 +2681,30 @@ def monitor_fsync_directory(path):
         os.close(descriptor)
 
 
+def monitor_state_identity(config: dict) -> dict:
+    binding = {key: config[key] for key in ("gitlab_url", "project_id", "project_path", "socket", "cwd")}
+    if config.get("codex_project_name"):
+        binding["codex_project"] = config["codex_project_binding"]
+    return {"schema": 1, "binding": binding}
+
+
+def monitor_selection_pending(config: dict) -> bool:
+    path = config.get("_config_path")
+    return bool(path and Path(path).with_name(Path(path).name + ".project-selection").exists())
+
+
 class MonitorState:
     """Only this monitor's versioned database; never a client session database."""
 
     BUCKETS = {"meta", "mrs", "notes", "events", "attempts", "operations", "cases"}
 
     def __init__(self, config: dict, *, readonly: bool = False, offline_endpoint=False,
-                 workspace_adoption=False):
+                 workspace_adoption=False, project_selection=False):
         self.config = config
         self.ready = False
-        self.expected = {"schema": 1, "binding": {key: config[key] for key in
-            ("gitlab_url", "project_id", "project_path", "socket", "cwd")}}
+        self.expected = monitor_state_identity(config)
+        if not project_selection and monitor_selection_pending(config):
+            raise RuntimeError("project selection is pending; repeat select-project --name NAME")
         path = Path(config["state_file"])
         if workspace_adoption and not path.is_file():
             raise RuntimeError("workspace adoption requires existing monitor state")
@@ -2569,16 +2725,14 @@ class MonitorState:
             with self.atomic():
                 for bucket in sorted(self.BUCKETS):
                     self.db.execute(f"CREATE TABLE IF NOT EXISTS {bucket} (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
-                binding = {key: config[key] for key in ("gitlab_url", "project_id", "project_path", "socket", "cwd")}
-                expected = {"schema": 1, "binding": binding}
+                expected = monitor_state_identity(config)
                 current = self.get("meta", "identity")
                 if current is not None and current != expected:
                     raise RuntimeError("monitor database belongs to another project, endpoint or schema")
                 if current is None:
                     self.put("meta", "identity", expected)
                     self.put("meta", "observation_start", monitor_now().isoformat())
-        expected = {"schema": 1, "binding": {key: config[key] for key in
-            ("gitlab_url", "project_id", "project_path", "socket", "cwd")}}
+        expected = monitor_state_identity(config)
         actual = self.get("meta", "identity")
         if readonly and offline_endpoint and isinstance(actual, dict) and actual.get("schema") == 1:
             try:
@@ -2596,7 +2750,11 @@ class MonitorState:
         recovering = (workspace_adoption and pending and expected in
                       [adoption.get("old_identity"), adoption.get("new_identity")]
                       and actual in [adoption.get("old_identity"), adoption.get("new_identity")])
-        if actual != expected and not recovering:
+        selection = self.get("meta", "project_selection")
+        if selection is not None and (not isinstance(selection, dict) or selection.get("state") != "completed") and not project_selection:
+            self.db.close()
+            raise RuntimeError("project selection is pending; repeat select-project --name NAME")
+        if actual != expected and not recovering and not project_selection:
             self.db.close()
             raise RuntimeError("monitor database belongs to another project, endpoint or schema")
         if pending and not workspace_adoption:
@@ -2612,6 +2770,10 @@ class MonitorState:
             self.db.execute("BEGIN IMMEDIATE")
             try:
                 if self.ready and not workspace_adoption:
+                    selection = self.get("meta", "project_selection")
+                    if (monitor_selection_pending(self.config) or selection is not None
+                            and (not isinstance(selection, dict) or selection.get("state") != "completed")):
+                        raise RuntimeError("project selection is pending; repeat select-project --name NAME")
                     adoption = self.get("meta", "workspace_adoption")
                     if adoption is not None and adoption.get("state") != "completed":
                         raise RuntimeError("workspace adoption is pending; repeat the exact adopt-workspace command")
@@ -2657,6 +2819,209 @@ def monitor_operator_file(path: Path, state_dir: Path | None = None) -> tuple[by
         raise RuntimeError("operator configuration exceeds 64 KiB")
     signature = (metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns)
     return raw, signature
+
+
+def monitor_selection_snapshot(state: MonitorState) -> str:
+    rows = {bucket: list(state.db.execute(f"SELECT key,value FROM {bucket} ORDER BY key"))
+            for bucket in sorted(state.BUCKETS)}
+    rows["meta"] = [row for row in rows["meta"] if row[0] not in {"identity", "project_selection"}]
+    return monitor_digest(rows)
+
+
+def monitor_project_selection_idle(state: MonitorState):
+    adoption = state.get("meta", "workspace_adoption")
+    if adoption and adoption.get("state") != "completed":
+        raise RuntimeError("finish the existing workspace adoption before project selection")
+    if any(m.get("owner") or m.get("case_id") or m.get("delivery_conflict")
+           or m.get("recovery_required") for m in state.all("mrs")):
+        raise RuntimeError("project selection requires no owner, human hold or recovery")
+    if any(r["state"] == "active" for r in monitor_queue(state)):
+        raise RuntimeError("project selection requires all native queue tails to finish")
+    if any(e["state"] not in {"reviewed", "superseded", "suppressed", "pending"} for e in state.all("events")):
+        raise RuntimeError("project selection requires reconciliation of unfinished delivery")
+    if any(o["state"] not in {"confirmed", "abandoned_no_effect"} for o in state.all("operations")):
+        raise RuntimeError("project selection requires reconciliation of public effects")
+    if any(a["state"] in {"attempting", "uncertain"} for a in state.all("attempts")):
+        raise RuntimeError("project selection requires reconciliation of uncertain attempts")
+
+
+def monitor_existing_contexts(config: dict, state: MonitorState) -> dict:
+    contexts = dict(config.get("codex_project_binding", {}).get("existing_threads", {}))
+    for record in state.all("mrs"):
+        thread_id = record.get("thread_id")
+        if not thread_id:
+            continue
+        thread = monitor_native(config, "thread/read", {"threadId": thread_id, "includeTurns": False})["thread"]
+        if thread.get("id") != thread_id or thread.get("status", {}).get("type") not in {"idle", "notLoaded"}:
+            raise RuntimeError("project selection requires idle existing conversations")
+        if config.get("codex_project_name"):
+            monitor_verify_thread_context(config, thread, thread_id)
+        elif thread.get("cwd") != config["cwd"]:
+            raise RuntimeError("existing conversation workspace changed before project selection")
+        contexts[thread_id] = {"cwd": thread["cwd"], "project_id": thread.get("projectId"),
+                               "roots": monitor_thread_source_roots(config, thread)}
+    return contexts
+
+
+def monitor_select_project(path: Path, name: str) -> dict:
+    """Change future creation context; never move, resume or replace an existing chat."""
+    import tempfile
+    import tomllib
+    intent_path = path.with_name(path.name + ".project-selection")
+    raw, signature = monitor_operator_file(path)
+    recovering = intent_path.exists()
+    if recovering:
+        intent_raw, _ = monitor_operator_file(intent_path)
+        intent = json.loads(intent_raw)
+        if intent.get("name") != name or intent.get("version") != 1:
+            raise RuntimeError("project selection intent/arguments mismatch")
+        base = json.loads(intent["json_before"])
+    else:
+        base = json.loads(raw)
+    if not isinstance(base.get("analysis_config"), str):
+        raise RuntimeError("project selection requires an existing analysis_config TOML")
+    target = Path(base["analysis_config"]).expanduser()
+    if not target.is_absolute():
+        target = path.parent / target
+    target = Path(os.path.abspath(target))
+    state_dir = Path(base["state_file"]).expanduser().resolve().parent
+    monitor_operator_file(path, state_dir)
+    analysis, analysis_signature = monitor_operator_file(target, state_dir)
+    old_analysis = intent["toml_before"].encode() if recovering else analysis
+    old_values = monitor_analysis_values(tomllib.loads(old_analysis.decode()), target, state_dir)
+    old_config = monitor_config_data(path, base, analysis_settings=old_values)
+    lock = monitor_acquire_lock(old_config)
+    if lock is None:
+        raise RuntimeError("poll/operator already running; retry project selection after it finishes")
+    state = None
+    try:
+        if recovering:
+            state = MonitorState(old_config, workspace_adoption=True, project_selection=True)
+        else:
+            project = monitor_resolve_project(old_config, name)
+            previous = old_config.get("codex_project_binding", {})
+            if (old_config.get("codex_project_name") == name
+                    and project == {k: previous.get(k) for k in ("id", "name", "roots")}):
+                state = MonitorState(old_config)
+                return {"selected": True, "changed": False, "codex_project_name": name,
+                        "cwd": old_config["cwd"]}
+            state = MonitorState(old_config)
+            monitor_project_selection_idle(state)
+            contexts = monitor_existing_contexts(old_config, state)
+            binding = {**project, "existing_threads": contexts}
+            new_base = {**base, "codex_project_binding": binding}
+            settings = tomllib.loads(old_analysis.decode())
+            settings.pop("workspace", None)
+            settings["codex_project_name"] = name
+            new_analysis = "".join(k + " = " + json.dumps(v, ensure_ascii=False) + "\n"
+                                   for k, v in settings.items()).encode()
+            new_raw = (json.dumps(new_base, ensure_ascii=False, indent=2) + "\n").encode()
+            new_values = monitor_analysis_values(settings, target, state_dir)
+            new_config = monitor_config_data(path, new_base, analysis_settings=new_values)
+            monitor_permission_definition(new_config)
+            intent = {"version": 1, "name": name, "target": str(target),
+                "json_before": raw.decode(), "json_after": new_raw.decode(),
+                "toml_before": old_analysis.decode(), "toml_after": new_analysis.decode(),
+                "snapshot": monitor_selection_snapshot(state)}
+            intent_raw = json.dumps(intent, ensure_ascii=False).encode()
+            if len(intent_raw) > 65536:
+                raise RuntimeError("project selection intent exceeds the private 64 KiB configuration bound")
+            with state.atomic():
+                monitor_project_selection_idle(state)
+                if (monitor_selection_snapshot(state) != intent["snapshot"]
+                        or monitor_operator_file(path) != (raw, signature)
+                        or monitor_operator_file(target) != (analysis, analysis_signature)):
+                    raise RuntimeError("project selection inputs changed before preparation")
+                descriptor, temporary = tempfile.mkstemp(prefix=".monitor-select-intent-", dir=path.parent)
+                try:
+                    with os.fdopen(descriptor, "wb") as stream:
+                        stream.write(intent_raw)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    if os.path.lexists(intent_path):
+                        raise RuntimeError("project selection intent appeared before publication")
+                    os.replace(temporary, intent_path)
+                    monitor_fsync_directory(path.parent)
+                finally:
+                    if os.path.exists(temporary):
+                        os.unlink(temporary)
+
+        # The private intent, not writable SQL receipts, is publication authority.
+        new_raw, new_analysis = intent["json_after"].encode(), intent["toml_after"].encode()
+        new_base = json.loads(new_raw)
+        new_settings = tomllib.loads(new_analysis.decode())
+        allowed_settings = tomllib.loads(old_analysis.decode())
+        allowed_settings.pop("workspace", None)
+        allowed_settings["codex_project_name"] = name
+        if (intent["target"] != str(target) or new_settings != allowed_settings
+                or {k: v for k, v in new_base.items() if k != "codex_project_binding"}
+                != {k: v for k, v in base.items() if k != "codex_project_binding"}
+                or raw not in {intent["json_before"].encode(), new_raw}
+                or analysis not in {old_analysis, new_analysis}):
+            raise RuntimeError("project selection configuration changed; inspect before retry")
+        new_config = monitor_config_data(path, new_base,
+            analysis_settings=monitor_analysis_values(new_settings, target, state_dir))
+        monitor_permission_definition(new_config)
+        old_identity, new_identity = monitor_state_identity(old_config), monitor_state_identity(new_config)
+        marker = {"intent": hashlib.sha256(intent_raw).hexdigest(), "state": "prepared"}
+        with state.atomic(workspace_adoption=True):
+            receipt = state.get("meta", "project_selection")
+            if (monitor_selection_snapshot(state) != intent["snapshot"]
+                    or state.get("meta", "identity") not in [old_identity, new_identity]
+                    or receipt is not None and receipt.get("state") != "completed"
+                    and receipt not in [marker, {**marker, "state": "bound"}]):
+                raise RuntimeError("project selection state/receipt changed before recovery")
+            if receipt is None or receipt.get("state") == "completed" and receipt.get("intent") != marker["intent"]:
+                if state.get("meta", "identity") != old_identity:
+                    raise RuntimeError("project selection old binding changed")
+                state.put("meta", "project_selection", marker)
+        if not recovering:
+            monitor_verify_project(new_config)
+            if monitor_existing_contexts(old_config, state) != new_config["codex_project_binding"]["existing_threads"]:
+                raise RuntimeError("existing conversation context changed after selection barrier")
+        with state.atomic(workspace_adoption=True):
+            if (monitor_selection_snapshot(state) != intent["snapshot"]
+                    or state.get("meta", "identity") not in [old_identity, new_identity]):
+                raise RuntimeError("project selection state changed before binding")
+            state.put("meta", "identity", new_identity)
+            state.put("meta", "project_selection", {**marker, "state": "bound"})
+        for destination, before, expected_signature, after in (
+                (target, analysis, analysis_signature, new_analysis),
+                (path, raw, signature, new_raw)):
+            if monitor_operator_file(destination) != (before, expected_signature):
+                raise RuntimeError("project selection file changed before publication")
+            if destination == path and monitor_operator_file(target)[0] != new_analysis:
+                raise RuntimeError("project selection TOML changed before publication")
+            if before != after:
+                descriptor, temporary = tempfile.mkstemp(prefix=".monitor-select-", dir=destination.parent)
+                try:
+                    with os.fdopen(descriptor, "wb") as stream:
+                        stream.write(after)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    if monitor_operator_file(destination) != (before, expected_signature):
+                        raise RuntimeError("project selection file changed during publication")
+                    os.replace(temporary, destination)
+                    monitor_fsync_directory(destination.parent)
+                finally:
+                    if os.path.exists(temporary):
+                        os.unlink(temporary)
+        with state.atomic(workspace_adoption=True):
+            if (monitor_operator_file(path)[0] != new_raw or monitor_operator_file(target)[0] != new_analysis
+                    or monitor_selection_snapshot(state) != intent["snapshot"]
+                    or state.get("meta", "identity") != new_identity
+                    or state.get("meta", "project_selection") != {**marker, "state": "bound"}):
+                raise RuntimeError("project selection changed before completion")
+            state.put("meta", "project_selection", {**marker, "state": "completed"})
+        intent_path.unlink()
+        monitor_fsync_directory(path.parent)
+        return {"selected": True, "changed": True, "codex_project_name": name,
+                "cwd": new_config["cwd"], "roots": new_config["codex_project_binding"]["roots"],
+                "preserved_conversations": len(new_config["codex_project_binding"]["existing_threads"])}
+    finally:
+        if state is not None:
+            state.db.close()
+        os.close(lock)
 
 
 def monitor_workspace_record(old: dict, thread_id: str, attempt_id: str, config: dict) -> dict:
@@ -3413,6 +3778,12 @@ def monitor_effective_notes(state: MonitorState, event: dict) -> list:
 
 def monitor_ensure_thread(config: dict, state: MonitorState, mr: dict) -> str:
     iid = mr["iid"]
+    current = state.get("mrs", str(iid)) or {}
+    if current.get("thread_id"):
+        return current["thread_id"]
+    if current.get("creation_attempt"):
+        raise RuntimeError("conversation creation is uncertain; inspect and recover the named attempt")
+    monitor_verify_project(config)
     selection = monitor_permission_selection(config)
     selection["config"]["model_reasoning_effort"] = config["effort"]
     with state.atomic():
@@ -3429,19 +3800,31 @@ def monitor_ensure_thread(config: dict, state: MonitorState, mr: dict) -> str:
         state.put("attempts", attempt["id"], attempt)
         state.put("mrs", str(iid), record)
     try:
+        context = ({"projectId": config["codex_project_binding"]["id"],
+                    "runtimeWorkspaceRoots": config["codex_project_binding"]["roots"]}
+                   if config.get("codex_project_name") else {})
         result = monitor_native(config, "thread/start", {"cwd": config["cwd"],
             "model": config["model"], "threadSource": "cli", "ephemeral": False,
-            "serviceName": "codex_stats_gitlab_monitor", **selection})
+            "serviceName": "codex_stats_gitlab_monitor", **context, **selection})
         thread = result["thread"]
         thread_id = thread["id"]
         if not isinstance(thread_id, str) or not re.fullmatch(r"[a-f0-9-]{36}", thread_id):
             raise RuntimeError("native thread/start returned an invalid conversation ID")
+        # Keep an acknowledged ID even if profile/context validation subsequently fails.
+        with state.atomic():
+            attempt["thread_id"] = thread_id
+            state.put("attempts", attempt["id"], attempt)
         monitor_verify_permission_selection(result)
+        if config.get("codex_project_name"):
+            if thread.get("projectId") != config["codex_project_binding"]["id"]:
+                raise RuntimeError("native thread/start did not acknowledge the requested Codex project")
+            monitor_thread(config, thread_id)
     except BaseException as error:
         with state.atomic():
-            attempt["state"] = "unstarted" if isinstance(error, MonitorDeferred) else "uncertain"
+            deferred = isinstance(error, MonitorDeferred) and not attempt.get("thread_id")
+            attempt["state"] = "unstarted" if deferred else "uncertain"
             state.put("attempts", attempt["id"], attempt)
-            if isinstance(error, MonitorDeferred):
+            if deferred:
                 record = state.get("mrs", str(iid))
                 record["creation_attempt"] = None
                 state.put("mrs", str(iid), record)
@@ -3481,8 +3864,10 @@ def monitor_turns(config: dict, thread_id: str) -> list:
 
 def monitor_thread_listed(config: dict, thread_id: str, *, archived: bool) -> bool:
     cursor = None
+    cwd = (monitor_thread_context(config, thread_id)["cwd"]
+           if config.get("codex_project_name") else config["cwd"])
     for _ in range(config["max_history_pages"]):
-        params = {"archived": archived, "cwd": config["cwd"], "limit": 100, "modelProviders": [],
+        params = {"archived": archived, "cwd": cwd, "limit": 100, "modelProviders": [],
             "sourceKinds": ["cli", "vscode", "exec", "appServer", "subAgent", "subAgentReview",
                             "subAgentCompact", "subAgentThreadSpawn", "subAgentOther", "unknown"]}
         if cursor:
@@ -3515,7 +3900,9 @@ def monitor_pending_thread(state: MonitorState, iid: int, thread_id: str) -> boo
 
 def monitor_thread(config: dict, thread_id: str, *, active_inventory=False, allow_empty=False) -> dict:
     thread = monitor_native(config, "thread/read", {"threadId": thread_id, "includeTurns": False})["thread"]
-    if thread.get("id") != thread_id or thread.get("cwd") != config["cwd"]:
+    if config.get("codex_project_name"):
+        monitor_verify_thread_context(config, thread, thread_id)
+    elif thread.get("id") != thread_id or thread.get("cwd") != config["cwd"]:
         raise RuntimeError("native conversation identity/workspace mismatch")
     if active_inventory:
         if monitor_thread_listed(config, thread_id, archived=False):
@@ -4740,6 +5127,8 @@ def monitor_main() -> int:
     adopt.add_argument("--mr", type=positive_integer, required=True)
     adopt.add_argument("--thread-id", required=True)
     commands.add_parser("migrate-config", help="move project/schedule authority to the root TOML")
+    select = commands.add_parser("select-project", help="select a named Codex project for new chats; preserve existing chats")
+    select.add_argument("--name", required=True)
     commands.add_parser("tick", help="drain the queue and poll only when the TOML interval is due")
     launch = commands.add_parser("launch-app", help="start the closed GUI with one native server shared by the monitor")
     launch.add_argument("--app", type=Path, required=True)
@@ -4791,6 +5180,8 @@ def monitor_main() -> int:
             result = {"configured": True, "config": str(path)}
         elif arguments.action == "migrate-config":
             result = monitor_migrate_config(path)
+        elif arguments.action == "select-project":
+            result = monitor_select_project(path, arguments.name)
         else:
             config = monitor_config(path, diagnostic=arguments.action == "status")
             pilot_gate = None
@@ -4816,6 +5207,7 @@ def monitor_main() -> int:
                 exists = Path(config["state_file"]).exists()
                 result = {"configured": True, "initialized": exists,
                           "project_id": config["project_id"], "mrs": [],
+                          "codex_project_name": config.get("codex_project_name"), "cwd": config["cwd"],
                           "parallel": config.get("parallel", 1), "queue": [],
                           "endpoint_verified": False,
                           "permission_profile": monitor_permission_status(config),
