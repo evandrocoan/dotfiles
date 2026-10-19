@@ -2158,22 +2158,24 @@ def monitor_trusted_control_path(path: Path, state_dir: Path, *, private: bool, 
             raise RuntimeError(f"trusted {label} directory must be owned by the current user or root: {parent}")
 
 
-def monitor_control_rule_definition(config: dict, path: Path) -> str:
+def monitor_control_rule_definition(config: dict, path: Path, *, diagnostic=False) -> str:
     monitor_permission_definition(config)
     state_dir = Path(config["state_file"]).parent.resolve()
     script, source = Path(__file__).resolve(strict=True), path.resolve(strict=True)
-    monitor_trusted_control_path(script, state_dir, private=False)
-    monitor_trusted_control_path(source, state_dir, private=True)
+    monitor_trusted_control_path(script, state_dir, private=False, diagnostic=diagnostic)
+    monitor_trusted_control_path(source, state_dir, private=True, diagnostic=diagnostic)
     pattern = [str(script), "monitor-gitlab", "--config", str(source),
                [*MONITOR_CONTROL_ACTIONS, "snapshot"], "--mr"]
     return "prefix_rule(pattern=" + json.dumps(pattern, ensure_ascii=False) + ', decision="allow")\n'
 
 
-def monitor_control_rule(config: dict, path: Path, *, install=False) -> dict:
+def monitor_control_rule(config: dict, path: Path, *, install=False, diagnostic=False) -> dict:
     """Publish only our exact rule; never repair a conflicting or unsafe file."""
     import contextlib
     import stat
-    expected = monitor_control_rule_definition(config, path).encode()
+    if diagnostic and install:
+        raise RuntimeError("diagnostic control rule inspection cannot install a rule")
+    expected = monitor_control_rule_definition(config, path, diagnostic=diagnostic).encode()
     home = Path(config["codex_home"])
     name = MONITOR_PERMISSION_PROFILE + ".rules"
     result = {"file": str(home / "rules" / name), "state": "missing", "changed": False,
@@ -2247,7 +2249,7 @@ def monitor_control_rule(config: dict, path: Path, *, install=False) -> dict:
 
 def monitor_control_rule_status(config: dict, path: Path) -> dict:
     try:
-        return monitor_control_rule(config, path)
+        return monitor_control_rule(config, path, diagnostic=True)
     except (OSError, RuntimeError, ValueError) as error:
         return {"file": str(Path(config["codex_home"]) / "rules" / (MONITOR_PERMISSION_PROFILE + ".rules")),
                 "state": "conflict_or_unreadable", "diagnostic": str(error), "load_state": "not_verified"}

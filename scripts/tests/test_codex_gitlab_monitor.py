@@ -402,13 +402,10 @@ def restricted_monitor_metadata(monkeypatch, *, ancestor=None, endpoint=None):
     monkeypatch.setattr(Path, "stat", stat)
 
 
-@pytest.mark.parametrize("fault,rule_state", [
-    ("ancestor", "conflict_or_unreadable"), ("endpoint", "missing"),
-    ("both", "conflict_or_unreadable"),
-])
+@pytest.mark.parametrize("fault", ["ancestor", "endpoint", "both"])
 @pytest.mark.parametrize("initialized", [False, True])
 def test_offline_status_reads_held_state_under_restricted_metadata(
-        tmp_path, monkeypatch, capsys, fault, rule_state, initialized):
+        tmp_path, monkeypatch, capsys, fault, initialized):
     config = configure(tmp_path)
     target, _ = analysis_config(tmp_path, config)
     module = runpy.run_path(str(CLI))
@@ -444,7 +441,7 @@ def test_offline_status_reads_held_state_under_restricted_metadata(
     assert result["configured"] is True
     assert result["initialized"] is initialized
     assert result["endpoint_verified"] is False
-    assert result["control_rule"]["state"] == rule_state
+    assert result["control_rule"]["state"] == "missing"
     assert result["control_rule"]["load_state"] == "not_verified"
     assert result["mrs"] == ([mr] if initialized else [])
     if initialized:
@@ -965,6 +962,110 @@ def test_poll_registers_scoped_control_rule_and_preserves_matching_file(boundary
     b.poll()
     assert (target.read_bytes(), target.stat().st_mtime_ns) == before
     assert not b.threads
+
+
+def test_offline_status_checks_installed_rule_under_remapped_ancestor(boundary, monkeypatch, capsys):
+    b = boundary
+    settings, _ = analysis_config(b.path.parent, b.config)
+    b.config = b.call("config", b.path)
+    rule = b.call("control_rule", b.config, b.path, install=True)
+    target = Path(rule["file"])
+    state = b.state()
+    mr = {"iid": 42, "generation": 7, "owner": None, "case_id": "held"}
+    case = {"id": "held", "iid": 42, "state": "awaiting_user"}
+    state.put("mrs", "42", mr)
+    state.put("cases", "held", case)
+    state.db.close()
+    paths = [b.cli, b.path, settings, Path(b.config["state_file"]), target]
+    before = {p: (p.read_bytes(), p.stat().st_mode, p.stat().st_mtime_ns) for p in paths}
+    restricted_monitor_metadata(monkeypatch, ancestor=b.path.parent)
+    def forbidden(*args, **kwargs):
+        pytest.fail("offline rule inspection must not connect, read credentials or provision permissions")
+    for name in ("monitor_native", "monitor_credential", "monitor_ensure_permissions", "MonitorGitLab"):
+        monkeypatch.setitem(b.code, name, forbidden)
+    code, captured = monitor_cli(b, capsys, "status")
+    assert code == 0, captured.err
+    result = json.loads(captured.out)
+    assert result["control_rule"] == {**rule, "changed": False}
+    assert result["control_rule"]["state"] == "configured_on_disk"
+    assert result["control_rule"]["load_state"] == "not_verified"
+    assert result["mrs"] == [mr] and result["cases"] == [case]
+    assert {p: (p.read_bytes(), p.stat().st_mode, p.stat().st_mtime_ns) for p in paths} == before
+    assert not b.http and not b.native
+
+
+@pytest.mark.parametrize("fault,diagnostic", [
+    ("bytes", "control rule conflicts or is unsafe"),
+    ("rule_mode", "control rule conflicts or is unsafe"),
+    ("rule_link", "control rule is unavailable or unsafe"),
+    ("directory_link", "control rule is unavailable or unsafe"),
+    ("directory_owner", "control rule directory must be owned"),
+    ("config_mode", "trusted configuration"),
+    ("script_mode", "trusted script"),
+])
+def test_rule_diagnostic_keeps_leaf_and_directory_guards(boundary, monkeypatch, fault, diagnostic):
+    b = boundary
+    target = Path(b.call("control_rule", b.config, b.path, install=True)["file"])
+    if fault == "bytes":
+        target.write_text(target.read_text().replace('"claim"', '"merge"'))
+    elif fault == "rule_mode":
+        target.chmod(0o644)
+    elif fault == "rule_link":
+        other = target.with_name("other.rules")
+        target.rename(other)
+        target.symlink_to(other.name)
+    elif fault == "directory_link":
+        directory = target.parent
+        other = directory.with_name("actual-rules")
+        directory.rename(other)
+        directory.symlink_to(other.name, target_is_directory=True)
+    elif fault == "directory_owner":
+        original_fstat = os.fstat
+        directory = target.parent.stat()
+        def fstat(descriptor):
+            metadata = original_fstat(descriptor)
+            if (metadata.st_dev, metadata.st_ino) == (directory.st_dev, directory.st_ino):
+                fields = list(metadata)
+                fields[4] = os.getuid() + 1
+                return os.stat_result(fields)
+            return metadata
+        monkeypatch.setattr(os, "fstat", fstat)
+    elif fault == "config_mode":
+        b.path.chmod(0o640)
+    else:
+        b.cli.chmod(0o600)
+    paths = [b.cli, b.path, target]
+    before = {p: (p.read_bytes(), p.stat().st_mode, p.stat().st_mtime_ns) for p in paths}
+    restricted_monitor_metadata(monkeypatch, ancestor=b.path.parent)
+    result = b.call("control_rule_status", b.config, b.path)
+    assert result["state"] == "conflict_or_unreadable"
+    assert diagnostic in result["diagnostic"]
+    assert result["load_state"] == "not_verified"
+    assert {p: (p.read_bytes(), p.stat().st_mode, p.stat().st_mtime_ns) for p in paths} == before
+    assert not b.http and not b.native
+
+
+@pytest.mark.parametrize("install", [False, True])
+def test_control_rule_keeps_strict_ancestor_checks(boundary, monkeypatch, install):
+    b = boundary
+    before = (b.cli.read_bytes(), b.path.read_bytes())
+    restricted_monitor_metadata(monkeypatch, ancestor=b.path.parent)
+    with pytest.raises(RuntimeError, match="trusted script directory must be owned"):
+        b.call("control_rule", b.config, b.path, install=install)
+    assert (b.cli.read_bytes(), b.path.read_bytes()) == before
+    assert not (Path(b.config["codex_home"]) / "rules").exists()
+    assert not b.http and not b.native
+
+
+def test_diagnostic_rule_installation_fails_before_definition_access(boundary, monkeypatch):
+    b = boundary
+    def forbidden(*args, **kwargs):
+        pytest.fail("diagnostic installation must fail before definition or filesystem access")
+    monkeypatch.setitem(b.code, "monitor_control_rule_definition", forbidden)
+    with pytest.raises(RuntimeError, match="diagnostic.*install"):
+        b.call("control_rule", b.config, b.path, diagnostic=True, install=True)
+    assert not (Path(b.config["codex_home"]) / "rules").exists()
+    assert not b.http and not b.native
 
 
 @pytest.mark.parametrize("location", ["script", "script_parent", "config_parent", "codex_home", "rules_directory"])
