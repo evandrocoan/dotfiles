@@ -3605,8 +3605,13 @@ def named_project_boundary(b):
                        'label': project['name'], 'path': str(roots[0]), 'hostId': 'local'}]
     b.app_assignments = {}
     b.after_app_move = None
+    b.unloaded_environments = {}
     original = b.respond
     def respond(method, params):
+        if method == 'thread/resume' and params['threadId'] in b.unloaded_environments:
+            thread = b.threads[params['threadId']]
+            thread.update(status={'type': 'idle'},
+                          environments=b.unloaded_environments.pop(params['threadId']))
         if method == 'project/list':
             return copy.deepcopy(b.project_pages[int(params.get('cursor', '0'))])
         if method == 'mcpServer/tool/call' and params['server'] == 'codex_app':
@@ -3642,6 +3647,279 @@ def select_named_project(b):
     result = b.call('select_project', b.path, 'fixture-project')
     b.config = b.call('config', b.path)
     return result
+
+
+def unload_named_chat(b, thread_id):
+    """Replay the native cold-read shape; only resume restores the saved environment."""
+    thread = b.threads[thread_id]
+    b.unloaded_environments[thread_id] = copy.deepcopy(thread['environments'])
+    thread.update(status={'type': 'notLoaded'}, environments=None)
+
+
+def pending_cold_chat(b):
+    named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    mr = b.mr(created=b.now.isoformat())
+    b.call('observe_mr', state, b.api(), mr)
+    thread_id = b.call('ensure_thread', b.config, state, mr)
+    unload_named_chat(b, thread_id)
+    b.native.clear()
+    return state, thread_id
+
+
+@pytest.mark.parametrize('omitted', [False, True])
+def test_cold_chat_readiness_does_not_resume_or_claim_verified_roots(boundary, omitted):
+    b = boundary
+    state, thread_id = pending_cold_chat(b)
+    if omitted:
+        del b.threads[thread_id]['environments']
+    before = {bucket: list(state.db.execute(f'SELECT key,value FROM {bucket} ORDER BY key'))
+              for bucket in state.BUCKETS}
+    ready = b.call('queue_ready', b.config, state)
+    request = b.call('queue', state)[0]
+    assert ready[request['id']]['eligible'] is True
+    assert 'error' not in ready[request['id']]
+    assert b.threads[thread_id].get('environments') is None
+    assert not [r for r in b.native if r.get('method') in {'thread/resume', 'turn/start'}]
+    assert {bucket: list(state.db.execute(f'SELECT key,value FROM {bucket} ORDER BY key'))
+            for bucket in state.BUCKETS} == before
+    with pytest.raises(RuntimeError, match='environment is unavailable'):
+        b.call('thread', b.config, thread_id)
+
+
+def test_cold_empty_chat_dispatch_resumes_before_first_model_input(boundary):
+    b = boundary
+    state, thread_id = pending_cold_chat(b)
+    result = b.poll()
+    assert result['errors'] == {}
+    assert result['dispatch'] == {'1': 'submitted'}
+    methods = [r['method'] for r in b.native if r.get('id') == 2]
+    assert methods.count('thread/resume') == methods.count('turn/start') == 1
+    assert methods.index('thread/resume') < methods.index('turn/start')
+    assert 'thread/start' not in methods and 'thread/name/set' not in methods
+    assert not [r for r in b.native if r.get('params', {}).get('server') == 'codex_app']
+    attempt = queue_attempts(b)[0]
+    assert attempt['thread_id'] == thread_id and attempt['state'] == 'accepted'
+    start = next(r['params'] for r in b.native if r.get('method') == 'turn/start')
+    assert start['input'] == [{'type': 'text', 'text': attempt['bootstrap_text']}]
+    assert state.get('events', '1:' + attempt['event_id'])['state'] == 'accepted'
+    assert b.call('queue', state)[0]['state'] == 'active'
+
+
+@pytest.mark.parametrize('pinned', [False, True])
+def test_cold_saved_chat_dispatch_preserves_original_context_and_mapping(boundary, pinned):
+    b = boundary
+    named_project_boundary(b)
+    if not pinned:
+        select_named_project(b)
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, first, work = b.active_claim()
+    queue_complete(b, state, first, work)
+    b.finish(first['thread_id'], first['turn_id'])
+    b.call('queue_reconcile', b.config, state)
+    thread_id = first['thread_id']
+    context = copy.deepcopy(b.threads[thread_id])
+    if pinned:
+        select_named_project(b)
+    unload_named_chat(b, thread_id)
+    b.native.clear()
+    b.mr(sha='b' * 40, created=b.now.isoformat())
+    result = b.poll()
+    assert result['errors'] == {} and result['dispatch'] == {'1': 'submitted'}
+    current, attempt, claimed = b.active_claim()
+    assert attempt['id'] != first['id'] and attempt['thread_id'] == thread_id
+    assert attempt['bootstrap'] is False
+    assert b.threads[thread_id]['cwd'] == context['cwd']
+    assert b.threads[thread_id]['environments'] == context['environments']
+    assert b.threads[thread_id]['projectId'] == context['projectId']
+    assert len(b.threads) == 1
+    assert len([r for r in b.native if r.get('method') == 'thread/resume']) == 1
+    assert not [r for r in b.native if r.get('method') in {'thread/start', 'thread/name/set'}
+                or r.get('params', {}).get('server') == 'codex_app']
+    queue_complete(b, current, attempt, claimed)
+    assert current.get('mrs', '1')['reviewed_head'] == 'b' * 40
+
+
+@pytest.mark.parametrize(('fault', 'error'), [
+    ('id', 'identity/workspace mismatch'), ('cwd', 'identity/workspace mismatch'),
+    ('idle', 'environment is unavailable'), ('empty-environment', 'environment is unavailable'),
+    ('malformed-environment', 'environment is unavailable'),
+    ('archived', 'archived or absent'), ('history', 'archived or absent'),
+])
+def test_cold_chat_pre_resume_denials_never_load_or_dispatch(boundary, fault, error):
+    b = boundary
+    state, thread_id = pending_cold_chat(b)
+    thread = b.threads[thread_id]
+    if fault == 'id': thread['id'] = '00000000-0000-0000-0000-999999999999'
+    if fault == 'cwd': thread['cwd'] = str(b.path.parent)
+    if fault == 'idle': thread['status'] = {'type': 'idle'}
+    if fault == 'empty-environment': thread['environments'] = []
+    if fault == 'malformed-environment': thread['environments'] = [{}]
+    if fault == 'archived': thread['archived'] = True
+    if fault == 'history': b.turns[thread_id] = [{'id': 'unproven', 'status': 'completed'}]
+    result = b.poll()
+    assert error in result['errors']['1']
+    assert not [r for r in b.native if r.get('method') in {'thread/resume', 'turn/start'}]
+    assert queue_attempts(b) == []
+    assert b.call('queue', state)[0]['state'] == 'queued'
+    assert all(e['state'] == 'pending' for e in state.all('events'))
+
+
+@pytest.mark.parametrize(('fault', 'error'), [
+    ('id', 'another MR conversation'), ('cwd', 'context mismatch'),
+    ('missing-environment', 'environment is unavailable'), ('roots', 'context mismatch'),
+    ('reorder', 'context mismatch'), ('profile', 'permission profile'),
+])
+def test_cold_chat_resume_must_prove_identity_profile_and_all_roots(boundary, fault, error):
+    b = boundary
+    state, thread_id = pending_cold_chat(b)
+    external = b.respond
+    def invalid_resume(method, params):
+        result = external(method, params)
+        if method == 'thread/resume':
+            thread = result['thread']
+            if fault == 'id': thread['id'] = '00000000-0000-0000-0000-999999999999'
+            if fault == 'cwd': thread['cwd'] = str(b.path.parent)
+            if fault == 'missing-environment': thread['environments'] = None
+            if fault == 'roots': thread['environments'][0]['runtimeWorkspaceRoots'].pop()
+            if fault == 'reorder': thread['environments'][0]['runtimeWorkspaceRoots'].reverse()
+            if fault == 'profile': result['activePermissionProfile'] = None
+        return result
+    b.respond = invalid_resume
+    result = b.poll()
+    assert error in result['errors']['1']
+    assert len([r for r in b.native if r.get('method') == 'thread/resume']) == 1
+    assert not [r for r in b.native if r.get('method') == 'turn/start']
+    assert queue_attempts(b) == []
+    assert b.call('queue', state)[0]['state'] == 'queued'
+    assert all(e['state'] == 'pending' for e in state.all('events'))
+
+
+@pytest.mark.parametrize('status', ['active', 'notLoaded'])
+def test_cold_chat_nonidle_resume_cannot_reserve_or_start_review(boundary, status):
+    b = boundary
+    state, thread_id = pending_cold_chat(b)
+    external = b.respond
+    def nonidle_resume(method, params):
+        result = external(method, params)
+        if method == 'thread/resume':
+            result['thread']['status'] = {'type': status}
+        return result
+    b.respond = nonidle_resume
+    result = b.poll()
+    assert result['errors'] == {} and result['dispatch'] == {'1': 'native_busy'}
+    assert len([r for r in b.native if r.get('method') == 'thread/resume']) == 1
+    assert not [r for r in b.native if r.get('method') == 'turn/start']
+    assert queue_attempts(b) == []
+    assert b.call('queue', state)[0]['state'] == 'queued'
+    assert all(e['state'] == 'pending' for e in state.all('events'))
+
+
+@pytest.mark.parametrize(('capacity', 'expected', 'attempt_count'), [
+    (False, 'queue_fifo', 0), (True, 'queue_capacity', 1),
+])
+def test_cold_chat_fifo_and_capacity_do_not_resume_unselected_chats(boundary, capacity, expected, attempt_count):
+    b = boundary
+    state, first_id = pending_cold_chat(b)
+    if capacity:
+        assert b.poll()['dispatch'] == {'1': 'submitted'}
+    mr = b.mr(iid=2, created=b.now.isoformat())
+    b.call('observe_mr', state, b.api(), mr)
+    second_id = b.call('ensure_thread', b.config, state, mr)
+    unload_named_chat(b, second_id)
+    b.native.clear()
+    result = b.call('dispatch', b.config, b.path, state, b.api(), 2, b.module['MonitorGate'](b.config))
+    assert result == expected
+    assert b.threads[second_id]['environments'] is None
+    assert not [r for r in b.native if r.get('method') in {'thread/resume', 'turn/start'}]
+    assert len(queue_attempts(b)) == attempt_count
+    assert state.get('mrs', '1')['thread_id'] == first_id
+    assert state.get('mrs', '2')['thread_id'] == second_id
+
+
+def test_cold_chat_human_hold_is_preserved_without_resume(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    state, attempt, paused = queue_hold(b)
+    unload_named_chat(b, attempt['thread_id'])
+    b.mr(sha='b' * 40, created=b.now.isoformat())
+    b.native.clear()
+    b.poll()
+    assert state.get('mrs', '1')['case_id'] == paused['case_id']
+    assert state.get('cases', paused['case_id'])['state'] == 'awaiting_user'
+    assert not [r for r in b.native if r.get('method') in {'thread/resume', 'turn/start'}]
+    assert len(queue_attempts(b)) == 1
+
+
+def test_cold_chat_busy_before_resume_stays_queued(boundary):
+    b = boundary
+    state, thread_id = pending_cold_chat(b)
+    b.threads[thread_id].update(status={'type': 'active'},
+                              preview='A human task is running',
+                              environments=b.unloaded_environments.pop(thread_id))
+    result = b.poll()
+    assert result['errors'] == {} and result['dispatch'] == {'1': 'queue_waiting'}
+    assert not [r for r in b.native if r.get('method') in {'thread/resume', 'turn/start'}]
+    assert queue_attempts(b) == []
+    assert b.call('queue', state)[0]['state'] == 'queued'
+
+
+@pytest.mark.parametrize('flag', ['--hold-check', '--verify', '--diagnose-socket'])
+def test_cold_chat_pilot_resumes_before_its_single_diagnostic_turn(boundary, capsys, flag):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    b.mr()
+    code, output = monitor_cli(b, capsys, 'pilot', '--mr', '1')
+    assert code == 0, output.err
+    thread_id = json.loads(output.out)['thread_id']
+    unload_named_chat(b, thread_id)
+    b.native.clear()
+    code, output = monitor_cli(b, capsys, 'pilot', '--mr', '1', flag)
+    assert code == 0, output.err
+    assert json.loads(output.out)['thread_id'] == thread_id
+    requests = [r for r in b.native if r.get('id') == 2]
+    methods = [r['method'] for r in requests]
+    assert methods.count('thread/resume') == methods.count('turn/start') == 1
+    assert methods.index('thread/resume') < methods.index('turn/start')
+    assert 'thread/start' not in methods
+    attempts = [a for a in b.state().all('attempts') if a['kind'] != 'conversation']
+    assert len(attempts) == 1
+    assert attempts[0]['state'] == 'accepted' and attempts[0]['thread_id'] == thread_id
+
+
+@pytest.mark.parametrize('flag', ['--hold-check', '--verify', '--diagnose-socket'])
+@pytest.mark.parametrize('status', ['active', 'notLoaded'])
+def test_cold_chat_pilot_nonidle_resume_never_records_attempt_or_turn(boundary, capsys, flag, status):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    b.mr()
+    code, output = monitor_cli(b, capsys, 'pilot', '--mr', '1')
+    assert code == 0, output.err
+    thread_id = json.loads(output.out)['thread_id']
+    unload_named_chat(b, thread_id)
+    b.native.clear()
+    external = b.respond
+    def nonidle_resume(method, params):
+        result = external(method, params)
+        if method == 'thread/resume':
+            result['thread']['status'] = {'type': status}
+        return result
+    b.respond = nonidle_resume
+    code, output = monitor_cli(b, capsys, 'pilot', '--mr', '1', flag)
+    if flag == '--hold-check':
+        assert code == 0 and json.loads(output.out)['hold_check'] == 'native_busy'
+    else:
+        assert code == 1 and 'idle resumed conversation' in output.err
+    assert len([r for r in b.native if r.get('method') == 'thread/resume']) == 1
+    assert not [r for r in b.native if r.get('method') == 'turn/start']
+    state = b.state()
+    assert [a for a in state.all('attempts') if a['kind'] != 'conversation'] == []
+    assert not any(r['state'] == 'active' for r in b.call('queue', state))
 
 
 def test_named_project_selection_preserves_old_chat_and_uses_two_roots_for_new_chat(boundary):

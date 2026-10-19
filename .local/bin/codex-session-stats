@@ -2136,6 +2136,7 @@ def monitor_prepare_thread(config: dict, thread_id: str):
     monitor_verify_permission_selection(response)
     if config.get("codex_project_name"):
         monitor_verify_thread_context(config, response["thread"], thread_id)
+    return response["thread"]
 
 
 def monitor_trusted_control_path(path: Path, state_dir: Path, *, private: bool, diagnostic=False):
@@ -3607,7 +3608,8 @@ def monitor_queue_ready(config, state, *, human_iid=None):
                     continue
             if record.get("thread_id") and request["iid"] != human_iid:
                 thread = monitor_thread(config, record["thread_id"], active_inventory=True,
-                                        allow_empty=monitor_pending_thread(state, record["iid"], record["thread_id"]))
+                                        allow_empty=monitor_pending_thread(state, record["iid"], record["thread_id"]),
+                                        before_resume=True)
                 if thread["status"]["type"] not in {"idle", "notLoaded"}:
                     continue
             observation["eligible"] = True
@@ -3952,10 +3954,19 @@ def monitor_pending_thread(state: MonitorState, iid: int, thread_id: str) -> boo
         and attempt.get("thread_id") == thread_id)
 
 
-def monitor_thread(config: dict, thread_id: str, *, active_inventory=False, allow_empty=False) -> dict:
+def monitor_thread(config: dict, thread_id: str, *, active_inventory=False, allow_empty=False,
+                   before_resume=False) -> dict:
     thread = monitor_native(config, "thread/read", {"threadId": thread_id, "includeTurns": False})["thread"]
     if config.get("codex_project_name"):
-        monitor_verify_thread_context(config, thread, thread_id)
+        # Cold reads omit runtime environments. Only scheduling may defer that proof;
+        # ordinary resume must verify the materialized roots before any model input.
+        if (before_resume and thread.get("status", {}).get("type") == "notLoaded"
+                and thread.get("environments") is None):
+            context = monitor_thread_context(config, thread_id)
+            if thread.get("id") != thread_id or thread.get("cwd") != context["cwd"]:
+                raise RuntimeError("native conversation identity/workspace mismatch")
+        else:
+            monitor_verify_thread_context(config, thread, thread_id)
     elif thread.get("id") != thread_id or thread.get("cwd") != config["cwd"]:
         raise RuntimeError("native conversation identity/workspace mismatch")
     if active_inventory:
@@ -4194,16 +4205,17 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
     gate.check()
     thread_id = monitor_ensure_thread(config, state, mr)
     gate.check()
-    thread = monitor_thread(config, thread_id)
+    thread = monitor_thread(config, thread_id, before_resume=True)
     if thread["status"]["type"] not in {"idle", "notLoaded"}:
         return "native_busy"
     thread = monitor_thread(config, thread_id, active_inventory=True,
-                            allow_empty=monitor_pending_thread(state, iid, thread_id))
+                            allow_empty=monitor_pending_thread(state, iid, thread_id), before_resume=True)
     status = thread["status"]["type"]
     if status not in {"idle", "notLoaded"}:
         return "native_busy"
     gate.check()
-    monitor_prepare_thread(config, thread_id)
+    if monitor_prepare_thread(config, thread_id)["status"]["type"] != "idle":
+        return "native_busy"
     ready = monitor_queue_ready(config, state)
     with state.atomic():
         record = state.get("mrs", str(iid))
@@ -4324,7 +4336,7 @@ def monitor_hold_check(config: dict, path: Path, state: MonitorState, api: Monit
     if record["head"] != mr["sha"]:
         raise RuntimeError("pilot head changed; inspect before retrying")
     thread = monitor_thread(config, record["thread_id"], active_inventory=True,
-                            allow_empty=monitor_pending_thread(state, iid, record["thread_id"]))
+                            allow_empty=monitor_pending_thread(state, iid, record["thread_id"]), before_resume=True)
     if thread["status"]["type"] not in {"idle", "notLoaded"}:
         raise RuntimeError("pilot requires an idle native conversation")
     if not pilots:
@@ -5360,10 +5372,11 @@ def monitor_main() -> int:
                         if current_mr.get("case_id") or current_mr.get("owner"):
                             raise RuntimeError("pilot diagnostics cannot run over a human hold or owned review")
                         thread = monitor_thread(config, thread_id, active_inventory=True,
-                            allow_empty=monitor_pending_thread(state, mr["iid"], thread_id))
+                            allow_empty=monitor_pending_thread(state, mr["iid"], thread_id), before_resume=True)
                         if thread["status"]["type"] not in {"idle", "notLoaded"}:
                             raise RuntimeError("pilot diagnostic requires an idle native conversation")
-                        monitor_prepare_thread(config, thread_id)
+                        if monitor_prepare_thread(config, thread_id)["status"]["type"] != "idle":
+                            raise RuntimeError("pilot diagnostic requires an idle resumed conversation")
                         kind = "pilot_socket_check" if arguments.diagnose_socket else "pilot_check"
                         with state.atomic():
                             attempts = [a for a in state.all("attempts")
