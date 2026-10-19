@@ -3411,6 +3411,44 @@ def monitor_mcp(config: dict, thread_id: str, tool: str, arguments: dict):
     return json.loads(blocks[0]["text"])
 
 
+def monitor_assign_app_project(config: dict, thread_id: str):
+    """Use the app's separate project namespace for a newly created chat only."""
+    def call(tool, arguments):
+        response = monitor_native(config, "mcpServer/tool/call", {"threadId": thread_id,
+            "server": "codex_app", "tool": tool, "arguments": arguments})
+        blocks = response.get("content") if isinstance(response, dict) else None
+        if (not isinstance(blocks, list) or len(blocks) != 1 or response.get("isError")
+                or not isinstance(blocks[0], dict) or blocks[0].get("type") != "text"
+                or not isinstance(blocks[0].get("text"), str)):
+            raise RuntimeError(f"Codex app {tool} returned an error or unsupported envelope")
+        try:
+            result = json.loads(blocks[0]["text"])
+        except ValueError as error:
+            raise RuntimeError(f"Codex app {tool} returned invalid JSON") from error
+        if not isinstance(result, dict):
+            raise RuntimeError(f"Codex app {tool} returned an unsupported result")
+        return result
+
+    inventory = call("list_projects", {})
+    projects = inventory.get("projects")
+    if (inventory.get("schemaVersion") != 2 or not isinstance(projects, list)
+            or any(not isinstance(project, dict) for project in projects)):
+        raise RuntimeError("Codex app project inventory is unavailable or unsupported")
+    matches = [project for project in projects if project.get("projectKind") == "local"
+               and project.get("hostId") == "local" and project.get("label") == config["codex_project_name"]]
+    if len(matches) != 1:
+        raise RuntimeError("Codex app project name must match exactly one local project")
+    project = matches[0]
+    project_id = project.get("projectId")
+    if (not isinstance(project_id, str) or not re.fullmatch(r"[a-f0-9-]{36}", project_id)
+            or project.get("path") != config["codex_project_binding"]["roots"][0]):
+        raise RuntimeError("Codex app project identity or primary directory mismatch")
+    expected = {"source": "codex", "threadId": thread_id, "hostId": "local", "projectId": project_id}
+    acknowledgement = call("move_thread_to_project", expected)
+    if any(acknowledgement.get(key) != value for key, value in expected.items()):
+        raise RuntimeError("Codex app did not acknowledge the requested chat/project assignment")
+
+
 
 def monitor_queue(state):
     return sorted(state.all("meta", "review_request:"), key=lambda r: r["sequence"])
@@ -3819,6 +3857,21 @@ def monitor_ensure_thread(config: dict, state: MonitorState, mr: dict) -> str:
             if thread.get("projectId") != config["codex_project_binding"]["id"]:
                 raise RuntimeError("native thread/start did not acknowledge the requested Codex project")
             monitor_thread(config, thread_id)
+            with state.atomic():
+                current = state.get("mrs", str(iid))
+                if current.get("creation_attempt") != attempt["id"] or current.get("thread_id"):
+                    raise RuntimeError("creation mapping changed before app assignment")
+                known = set(config["codex_project_binding"]["existing_threads"])
+                for saved in state.all("mrs"):
+                    known.add(saved.get("thread_id"))
+                    known.update(old.get("thread_id") for old in saved.get("previous_conversations", []))
+                known.update(old.get("thread_id") for old in state.all("attempts")
+                             if old.get("kind") == "conversation" and old["id"] != attempt["id"])
+                if thread_id in known:
+                    raise RuntimeError("native creation returned an existing monitor conversation")
+            monitor_native(config, "thread/name/set", {"threadId": thread_id,
+                "name": f"{config['project_path'].split('/')[-1]} !{iid} — Revisão automática"})
+            monitor_assign_app_project(config, thread_id)
     except BaseException as error:
         with state.atomic():
             deferred = isinstance(error, MonitorDeferred) and not attempt.get("thread_id")
@@ -3839,8 +3892,9 @@ def monitor_ensure_thread(config: dict, state: MonitorState, mr: dict) -> str:
         state.put("mrs", str(iid), record)
         attempt.update({"state": "accepted", "thread_id": thread_id})
         state.put("attempts", attempt["id"], attempt)
-    monitor_native(config, "thread/name/set", {"threadId": thread_id,
-        "name": f"{config['project_path'].split('/')[-1]} !{iid} — Revisão automática"})
+    if not config.get("codex_project_name"):
+        monitor_native(config, "thread/name/set", {"threadId": thread_id,
+            "name": f"{config['project_path'].split('/')[-1]} !{iid} — Revisão automática"})
     return thread_id
 
 

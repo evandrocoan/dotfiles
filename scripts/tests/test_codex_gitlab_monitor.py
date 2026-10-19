@@ -3601,16 +3601,38 @@ def named_project_boundary(b):
     project = {'id': '11111111-1111-1111-1111-111111111111', 'name': 'fixture-project',
                'roots': [{'path': str(root)} for root in roots]}
     b.project_pages = [{'data': [project], 'nextCursor': None}]
+    b.app_projects = [{'projectId': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'projectKind': 'local',
+                       'label': project['name'], 'path': str(roots[0]), 'hostId': 'local'}]
+    b.app_assignments = {}
+    b.after_app_move = None
     original = b.respond
     def respond(method, params):
         if method == 'project/list':
             return copy.deepcopy(b.project_pages[int(params.get('cursor', '0'))])
+        if method == 'mcpServer/tool/call' and params['server'] == 'codex_app':
+            if params['tool'] == 'list_projects':
+                payload = {'schemaVersion': 2, 'projects': b.app_projects}
+            elif params['tool'] == 'move_thread_to_project':
+                arguments = params['arguments']
+                tid = arguments['threadId']
+                assert b.threads[tid]['name']
+                assert arguments['source'] == 'codex' and arguments['hostId'] == 'local'
+                b.app_assignments[tid] = arguments['projectId']
+                if b.after_app_move:
+                    b.after_app_move(tid)
+                payload = {'source': 'codex', 'threadId': tid, 'hostId': 'local',
+                           'projectId': arguments['projectId']}
+            else:
+                raise AssertionError(params['tool'])
+            return {'content': [{'type': 'text', 'text': json.dumps(payload)}], 'isError': False}
         result = original(method, params)
         if method == 'thread/start':
             thread = result['thread']
             thread.update(projectId=params.get('projectId'), createdAt=int(b.now.timestamp()),
                 environments=[{'environmentId': 'local', 'cwd': thread['cwd'],
                     'runtimeWorkspaceRoots': params.get('runtimeWorkspaceRoots', [thread['cwd']])}])
+        if method == 'thread/name/set':
+            b.threads[params['threadId']]['name'] = params['name']
         return result
     b.respond = respond
     return target, project, [str(root) for root in roots]
@@ -4121,3 +4143,333 @@ def test_named_project_mr_mapping_survives_chat_rename_new_head_reply_and_missin
     assert final.get('mrs', '1')['reviewed_head'] == 'b' * 40
     assert not any(r.get('method') in {'project/list', 'thread/start'} for r in b.native[marker:])
     assert len(b.threads) == 1
+
+
+def app_requests(b, tool=None):
+    return [r['params'] for r in b.native if r.get('method') == 'mcpServer/tool/call'
+            and r['params']['server'] == 'codex_app'
+            and (tool is None or r['params']['tool'] == tool)]
+
+
+def test_new_chat_app_assignment_uses_local_name_and_app_id_before_acceptance(boundary):
+    b = boundary
+    _, project, roots = named_project_boundary(b)
+    select_named_project(b)
+    b.app_projects.extend([
+        {'projectKind': 'chatgpt', 'label': 'fixture-project', 'projectId': 'cloud-id'},
+        {'projectKind': 'remote', 'hostId': 'ssh:other', 'label': 'fixture-project'},
+        {**b.app_projects[0], 'label': 'fixture-project-', 'projectId': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'}])
+    state = b.state()
+    def observe(tid):
+        record = state.get('mrs', '1')
+        attempt = state.get('attempts', record['creation_attempt'])
+        assert record['thread_id'] is None
+        assert attempt['state'] == 'attempting' and attempt['thread_id'] == tid
+        assert b.turns[tid] == []
+    b.after_app_move = observe
+    tid = b.call('ensure_thread', b.config, state, b.mr())
+    assert b.app_assignments == {tid: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+    assert b.app_assignments[tid] != project['id']
+    assert b.threads[tid]['environments'][0]['runtimeWorkspaceRoots'] == roots
+    assert state.get('mrs', '1')['thread_id'] == tid
+    assert state.all('attempts')[0]['state'] == 'accepted'
+    assert len(app_requests(b, 'list_projects')) == len(app_requests(b, 'move_thread_to_project')) == 1
+
+
+def test_existing_named_chat_never_queries_or_changes_app_assignment_after_restart(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    tid = attempt['thread_id']
+    queue_complete(b, state, attempt, work)
+    b.finish(tid, attempt['turn_id'])
+    b.call('queue_reconcile', b.config, state)
+    b.app_assignments[tid] = 'user-selected-other-project'
+    b.threads[tid]['name'] = 'User renamed chat'
+    b.config = b.call('config', b.path)
+    original = b.respond
+    def unavailable(method, params):
+        assert method != 'project/list'
+        assert not (method == 'mcpServer/tool/call' and params['server'] == 'codex_app')
+        return original(method, params)
+    b.respond = unavailable
+    b.mr(sha='b' * 40, created=b.now.isoformat())
+    b.note(body='New reply', created=b.now.isoformat())
+    b.poll()
+    current, following, claimed = b.active_claim()
+    queue_complete(b, current, following, claimed)
+    assert following['thread_id'] == tid
+    assert b.app_assignments[tid] == 'user-selected-other-project'
+    assert b.threads[tid]['name'] == 'User renamed chat'
+    assert len(b.threads) == 1
+
+
+@pytest.mark.parametrize('change', ['missing', 'duplicate', 'path', 'host', 'kind', 'id'])
+def test_new_chat_app_project_refusal_retains_id_without_assignment_or_retry(boundary, change):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    if change == 'missing':
+        b.app_projects.clear()
+    elif change == 'duplicate':
+        b.app_projects.append({**b.app_projects[0], 'projectId': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               'path': str(b.path.parent)})
+    else:
+        key, value = {'path': ('path', str(b.path.parent)), 'host': ('hostId', 'ssh:other'),
+                      'kind': ('projectKind', 'chatgpt'), 'id': ('projectId', 'invalid')}[change]
+        b.app_projects[0][key] = value
+    state = b.state()
+    with pytest.raises(RuntimeError, match='Codex app'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['state'] == 'uncertain' and attempt['thread_id'] in b.threads
+    assert state.get('mrs', '1')['thread_id'] is None
+    assert b.app_assignments == {} and not app_requests(b, 'move_thread_to_project')
+    count = len(b.native)
+    with pytest.raises(RuntimeError, match='uncertain'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert len(b.native) == count and len(b.threads) == 1
+
+
+@pytest.mark.parametrize('tool', ['list_projects', 'move_thread_to_project'])
+@pytest.mark.parametrize('failure', ['denied', 'envelope', 'json', 'shape'])
+def test_new_chat_app_invalid_result_never_accepts_or_dispatches(boundary, tool, failure):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def response(method, params):
+        result = original(method, params)
+        if method == 'mcpServer/tool/call' and params['server'] == 'codex_app' and params['tool'] == tool:
+            result = {'denied': {'isError': True, 'content': []},
+                      'envelope': {'content': [{'type': 'image'}]},
+                      'json': {'content': [{'type': 'text', 'text': 'not JSON'}]},
+                      'shape': {'content': [{'type': 'text', 'text': '[]'}]}}[failure]
+        return result
+    b.respond = response
+    state = b.state()
+    with pytest.raises(RuntimeError, match='Codex app'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert state.all('attempts')[0]['state'] == 'uncertain'
+    assert state.get('mrs', '1')['thread_id'] is None
+    assert not any(r.get('method') == 'turn/start' for r in b.native)
+    count = len(b.native)
+    with pytest.raises(RuntimeError, match='uncertain'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert len(b.native) == count
+
+
+@pytest.mark.parametrize('field', ['source', 'threadId', 'hostId', 'projectId'])
+def test_new_chat_app_wrong_ack_keeps_known_id_and_uncertainty(boundary, field):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def response(method, params):
+        result = original(method, params)
+        if method == 'mcpServer/tool/call' and params['server'] == 'codex_app' and params['tool'] == 'move_thread_to_project':
+            payload = json.loads(result['content'][0]['text'])
+            payload[field] = 'wrong'
+            result['content'][0]['text'] = json.dumps(payload)
+        return result
+    b.respond = response
+    state = b.state()
+    with pytest.raises(RuntimeError, match='Codex app'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['state'] == 'uncertain'
+    assert b.app_assignments == {attempt['thread_id']: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
+    assert state.get('mrs', '1')['thread_id'] is None
+
+
+def test_new_chat_app_lost_ack_preserves_effect_and_never_retries_after_reload(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    def disconnect(tid):
+        raise TimeoutError('fixture lost app assignment acknowledgement')
+    b.after_app_move = disconnect
+    state = b.state()
+    with pytest.raises(RuntimeError, match=r'transport failed or timed out \(TimeoutError') as caught:
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert isinstance(caught.value.__cause__, TimeoutError)
+    attempt = state.all('attempts')[0]
+    assert attempt['state'] == 'uncertain' and attempt['thread_id'] in b.app_assignments
+    state.db.close()
+    fresh = b.state()
+    count = len(b.native)
+    with pytest.raises(RuntimeError, match='uncertain'):
+        b.call('ensure_thread', b.config, fresh, b.mr())
+    assert len(b.native) == count and len(b.threads) == 1
+
+
+def test_new_chat_app_interruption_before_local_acceptance_leaves_mapping_unset(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    def fail_local_acceptance(tid):
+        state.db.execute("""CREATE TEMP TRIGGER fail_accept BEFORE UPDATE ON attempts
+            WHEN json_extract(NEW.value, '$.state') = 'accepted'
+            BEGIN SELECT RAISE(ABORT, 'fixture stopped before acceptance'); END""")
+    b.after_app_move = fail_local_acceptance
+    with pytest.raises(sqlite3.IntegrityError, match='stopped before acceptance'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['state'] == 'attempting' and attempt['thread_id'] in b.app_assignments
+    assert state.get('mrs', '1')['thread_id'] is None
+    state.db.close()
+    count = len(b.native)
+    with pytest.raises(RuntimeError, match='uncertain'):
+        b.call('ensure_thread', b.config, b.state(), b.mr())
+    assert len(b.native) == count
+
+
+@pytest.mark.parametrize('known', ['mapping', 'attempt', 'previous', 'binding'])
+def test_new_chat_app_rejects_known_ids_before_naming_or_moving(boundary, known):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    old_id = b.call('ensure_thread', b.config, state, b.mr())
+    if known == 'binding':
+        extra = b.path.parent / 'new-source'; extra.mkdir()
+        b.project_pages[0]['data'][0]['roots'].append({'path': str(extra)})
+        select_named_project(b)
+        state = b.state()
+    old_record = state.get('mrs', '1')
+    with state.atomic():
+        if known != 'mapping':
+            old_record['thread_id'] = None
+        if known in {'previous', 'binding'}:
+            state.db.execute('DELETE FROM attempts WHERE key=?', (old_record['creation_attempt'],))
+        if known == 'previous':
+            old_record['previous_conversations'] = [{'thread_id': old_id}]
+        state.put('mrs', '1', old_record)
+    before = copy.deepcopy(b.threads[old_id])
+    original = b.respond
+    def duplicate(method, params):
+        result = original(method, params)
+        if method == 'thread/start':
+            result = copy.deepcopy(result)
+            result['thread']['id'] = old_id
+        return result
+    b.respond = duplicate
+    marker = len(b.native)
+    with pytest.raises(RuntimeError, match='existing monitor conversation|already mapped'):
+        b.call('ensure_thread', b.config, state, b.mr(2))
+    attempt = next(a for a in state.all('attempts') if a['iid'] == 2)
+    assert attempt['thread_id'] == old_id and attempt['state'] == 'uncertain'
+    assert b.threads[old_id] == before
+    assert state.get('mrs', '2')['thread_id'] is None
+    assert not any(r.get('method') == 'thread/name/set' or
+                   r.get('method') == 'mcpServer/tool/call' and r['params']['server'] == 'codex_app'
+                   for r in b.native[marker:])
+
+
+def test_new_chat_app_rechecks_creation_authority_before_first_mutation(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    original = b.respond
+    def changed(method, params):
+        result = original(method, params)
+        if method == 'thread/start':
+            with state.atomic():
+                record = state.get('mrs', '1')
+                record['creation_attempt'] = 'other-attempt'
+                state.put('mrs', '1', record)
+        return result
+    b.respond = changed
+    with pytest.raises(RuntimeError, match='mapping changed'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['thread_id'] in b.threads and attempt['state'] == 'uncertain'
+    assert state.get('mrs', '1')['thread_id'] is None
+    assert not any(r.get('method') == 'thread/name/set' for r in b.native)
+    assert not app_requests(b)
+
+
+def test_new_chat_app_final_mapping_revalidates_after_move(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    state = b.state()
+    def concurrent_change(tid):
+        with state.atomic():
+            record = state.get('mrs', '1')
+            record['creation_attempt'] = 'other-attempt'
+            state.put('mrs', '1', record)
+    b.after_app_move = concurrent_change
+    with pytest.raises(RuntimeError, match='mapping changed'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['thread_id'] in b.app_assignments
+    assert state.get('mrs', '1')['thread_id'] is None
+
+
+def test_uncertain_app_assignment_operator_recovery_never_moves_inspected_chat(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    def disconnect(tid):
+        raise TimeoutError('fixture lost app assignment acknowledgement')
+    b.after_app_move = disconnect
+    state = b.state()
+    with pytest.raises(RuntimeError, match=r'transport failed or timed out \(TimeoutError') as caught:
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert isinstance(caught.value.__cause__, TimeoutError)
+    attempt = state.all('attempts')[0]
+    tid = attempt['thread_id']
+    b.app_assignments[tid] = 'operator-corrected-project'
+    marker = len(app_requests(b))
+    assert b.call('recover', b.config, state, {'attempt_id': attempt['id'], 'thread_id': tid}) == {'recovered_thread': tid}
+    assert len(app_requests(b)) == marker
+    assert state.get('mrs', '1')['thread_id'] == tid
+    assert b.app_assignments[tid] == 'operator-corrected-project'
+
+
+@pytest.mark.parametrize('payload', [
+    {'schemaVersion': 3, 'projects': []},
+    {'schemaVersion': 2, 'projects': {}},
+    {'schemaVersion': 2, 'projects': [None]},
+])
+def test_new_chat_app_unsupported_inventory_does_not_assign(boundary, payload):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def response(method, params):
+        if method == 'mcpServer/tool/call' and params['server'] == 'codex_app' and params['tool'] == 'list_projects':
+            return {'content': [{'type': 'text', 'text': json.dumps(payload)}]}
+        return original(method, params)
+    b.respond = response
+    state = b.state()
+    with pytest.raises(RuntimeError, match='Codex app project inventory'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    assert state.all('attempts')[0]['state'] == 'uncertain'
+    assert not app_requests(b, 'move_thread_to_project')
+    assert state.get('mrs', '1')['thread_id'] is None
+
+
+def test_new_chat_app_naming_failure_preserves_id_without_assignment(boundary):
+    b = boundary
+    named_project_boundary(b)
+    select_named_project(b)
+    original = b.respond
+    def response(method, params):
+        if method == 'thread/name/set':
+            raise RuntimeError('fixture naming denied')
+        return original(method, params)
+    b.respond = response
+    state = b.state()
+    with pytest.raises(RuntimeError, match='fixture naming denied'):
+        b.call('ensure_thread', b.config, state, b.mr())
+    attempt = state.all('attempts')[0]
+    assert attempt['thread_id'] in b.threads and attempt['state'] == 'uncertain'
+    assert not app_requests(b)
+    assert state.get('mrs', '1')['thread_id'] is None

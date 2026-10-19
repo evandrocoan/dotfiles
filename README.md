@@ -709,13 +709,19 @@ codex_project_name = "YOUR_CODEX_PROJECT"
 The monitor loads this file explicitly through `analysis_config`; it is separate from Codex's
 project `.codex/config.toml`. Selection derives the primary directory and every additional source
 folder from the project. New MR chats start in that native project with all those folders.
-Visible sidebar grouping requires a separate assignment through the desktop app.
+For each new chat, the monitor also finds the corresponding local project by name through the
+desktop app and assigns its sidebar grouping before starting the review. The app's project tools
+must be available through the shared server; no project ID needs to be configured manually.
 Existing mapped chats keep their original project, directory, IDs, history and pilot indicators.
 Selection does not start a model, move a chat, change permissions, publish or activate the timer.
 It refuses active reviews, native queue tails, human holds and uncertain effects/deliveries.
 Creation uses the project acknowledged by `thread/start` and independently checks the chat ID,
 directory and source roots. Empty chats may omit native project metadata in later reads;
 that metadata does not block the ordinary first review or cause an extra initialization turn.
+An unavailable app tool, duplicate local name, mismatched primary directory or uncertain assignment
+leaves the created ID recorded for explicit recovery, without starting a review or creating another
+chat. Inspect and, if needed, correct that new chat's grouping in the app before recovering the
+exact creation attempt. Recovery binds the inspected ID and never moves it automatically.
 
 The base JSON retains generated native binding metadata and original chat contexts so `status`
 works offline. Do not edit those generated IDs/paths. Before creating a new chat, the monitor checks
