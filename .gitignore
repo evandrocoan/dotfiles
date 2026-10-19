@@ -91,6 +91,7 @@
 .local/bin/xfce4-popup-whiskermenu
 .local/bin/xfce4-popup-windowmenu
 .local/bin/yamllint
+.local/bin/agy
 
 !/.local/bin/changexfce4dpi.sh
 !/.local/bin/run_as_user.sh

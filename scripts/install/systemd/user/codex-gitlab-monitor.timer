@@ -1,8 +1,8 @@
 [Unit]
-Description=Check GitLab merge requests every 15 minutes during working hours
+Description=Drain GitLab review queue and check the configured polling schedule
 
 [Timer]
-OnCalendar=Mon..Sat *-*-* 07..21:00/15:00 America/Sao_Paulo
+OnCalendar=*-*-* *:*:00
 Persistent=false
 AccuracySec=30s
 Unit=codex-gitlab-monitor.service

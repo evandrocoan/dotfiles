@@ -385,6 +385,130 @@ def test_offline_status_retains_historical_endpoint_without_allowing_writable_re
         module["MonitorState"](live)
 
 
+def restricted_monitor_metadata(monkeypatch, *, ancestor=None, endpoint=None):
+    original_lstat, original_stat = Path.lstat, Path.stat
+    def lstat(path, *args, **kwargs):
+        metadata = original_lstat(path, *args, **kwargs)
+        if path == ancestor:
+            fields = list(metadata)
+            fields[4] = os.getuid() + 1
+            return os.stat_result(fields)
+        return metadata
+    def stat(path, *args, **kwargs):
+        if path == endpoint:
+            raise PermissionError(13, "sandbox endpoint inspection denied", str(path))
+        return original_stat(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "lstat", lstat)
+    monkeypatch.setattr(Path, "stat", stat)
+
+
+@pytest.mark.parametrize("fault,rule_state", [
+    ("ancestor", "conflict_or_unreadable"), ("endpoint", "missing"),
+    ("both", "conflict_or_unreadable"),
+])
+@pytest.mark.parametrize("initialized", [False, True])
+def test_offline_status_reads_held_state_under_restricted_metadata(
+        tmp_path, monkeypatch, capsys, fault, rule_state, initialized):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    module = runpy.run_path(str(CLI))
+    loaded = module["monitor_config"](tmp_path / "monitor.json")
+    mr = {"iid": 42, "generation": 7, "owner": None, "case_id": "held",
+          "human_continuation_verified": False}
+    case = {"id": "held", "iid": 42, "state": "awaiting_user"}
+    state_file = Path(config["state_file"])
+    if initialized:
+        historical = {**loaded, "socket": str(tmp_path / "historical.sock")}
+        state = module["MonitorState"](historical)
+        state.put("mrs", "42", mr)
+        state.put("cases", "held", case)
+        state.db.close()
+    paths = [target, tmp_path / "monitor.json"] + ([state_file] if initialized else [])
+    before = {p: (p.read_bytes(), p.stat().st_mode, p.stat().st_mtime_ns) for p in paths}
+    restricted_monitor_metadata(monkeypatch,
+        ancestor=tmp_path if fault in {"ancestor", "both"} else None,
+        endpoint=Path(loaded["socket"]) if fault in {"endpoint", "both"} else None)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "absent-runtime"))
+    def forbidden(*args, **kwargs):
+        pytest.fail("offline status must not connect, read credentials or provision permissions")
+    code = module["monitor_main"].__globals__
+    for name in ("monitor_native", "monitor_credential", "monitor_ensure_permissions", "MonitorGitLab"):
+        assert name in code
+        monkeypatch.setitem(code, name, forbidden)
+    monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config",
+                                     str(tmp_path / "monitor.json"), "status"])
+    assert module["monitor_main"]() == 0
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
+    assert captured.err == ""
+    assert result["configured"] is True
+    assert result["initialized"] is initialized
+    assert result["endpoint_verified"] is False
+    assert result["control_rule"]["state"] == rule_state
+    assert result["control_rule"]["load_state"] == "not_verified"
+    assert result["mrs"] == ([mr] if initialized else [])
+    if initialized:
+        assert result["cases"] == [case]
+        for readonly in (False, True):
+            with pytest.raises(RuntimeError, match="another project, endpoint or schema"):
+                module["MonitorState"](loaded, readonly=readonly)
+    assert {p: (p.read_bytes(), p.stat().st_mode, p.stat().st_mtime_ns) for p in paths} == before
+    assert state_file.exists() is initialized
+    assert not (Path(config["codex_home"]) / "rules").exists()
+
+
+@pytest.mark.parametrize("arguments", [
+    ["preflight", "--check-only"], ["resume", "--mr", "42"], ["poll", "--dry-run"],
+])
+def test_nonstatus_commands_keep_analysis_ancestor_ownership_checks(
+        tmp_path, monkeypatch, capsys, arguments):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    module = runpy.run_path(str(CLI))
+    before = (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+    restricted_monitor_metadata(monkeypatch, ancestor=tmp_path)
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid configuration must fail before native or credential access")
+    code = module["monitor_main"].__globals__
+    for name in ("monitor_shared_owner", "monitor_native", "monitor_credential", "MonitorGitLab"):
+        monkeypatch.setitem(code, name, forbidden)
+    monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config",
+                                     str(tmp_path / "monitor.json"), *arguments])
+    assert module["monitor_main"]() == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "trusted configuration directory must be owned" in captured.err
+    with pytest.raises(RuntimeError, match="trusted configuration directory must be owned"):
+        module["monitor_config"](tmp_path / "monitor.json")
+    assert (target.read_bytes(), (tmp_path / "monitor.json").read_bytes()) == before
+    assert not Path(config["state_file"]).exists()
+
+
+@pytest.mark.parametrize("field", ["schema", "project_id", "gitlab_url", "cwd"])
+def test_offline_denied_endpoint_does_not_hide_other_binding_mismatches(
+        tmp_path, monkeypatch, capsys, field):
+    config = configure(tmp_path)
+    module = runpy.run_path(str(CLI))
+    state = module["MonitorState"]({**config, "socket": str(tmp_path / "historical.sock")})
+    identity = state.get("meta", "identity")
+    if field == "schema":
+        identity["schema"] = 2
+    else:
+        identity["binding"][field] = 99 if field == "project_id" else "other"
+    state.put("meta", "identity", identity)
+    state.db.close()
+    before = Path(config["state_file"]).read_bytes()
+    restricted_monitor_metadata(monkeypatch, endpoint=Path(config["socket"]))
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "absent-runtime"))
+    monkeypatch.setattr(sys, "argv", [str(CLI), "monitor-gitlab", "--config",
+                                     str(tmp_path / "monitor.json"), "status"])
+    assert module["monitor_main"]() == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "another project, endpoint or schema" in captured.err
+    assert Path(config["state_file"]).read_bytes() == before
+
+
 def run_monitor(tmp_path, *arguments, input_text=None, extra_env=None):
     environment = os.environ.copy()
     environment.update({"HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path / "config"),
@@ -505,7 +629,7 @@ def test_analysis_toml_rejects_invalid_settings(tmp_path, content):
     assert "analysis configuration" in result.stderr
 
 
-@pytest.mark.parametrize("kind", ["public", "symlink", "inside_state", "oversized"])
+@pytest.mark.parametrize("kind", ["public", "symlink", "ancestor_symlink", "inside_state", "oversized"])
 def test_analysis_toml_keeps_trusted_source_boundary(tmp_path, kind):
     config = configure(tmp_path)
     target, data = analysis_config(tmp_path, config)
@@ -515,6 +639,10 @@ def test_analysis_toml_keeps_trusted_source_boundary(tmp_path, kind):
         other = target.with_name("real.toml")
         target.rename(other)
         target.symlink_to(other.name)
+    elif kind == "ancestor_symlink":
+        other = target.parent.with_name("real-analysis")
+        target.parent.rename(other)
+        target.parent.symlink_to(other.name, target_is_directory=True)
     elif kind == "inside_state":
         directory = Path(config["state_file"]).parent
         directory.mkdir(parents=True, mode=0o700)
@@ -1600,6 +1728,8 @@ def test_control_cli_and_restart_keep_real_human_hold(boundary, monkeypatch, cap
     assert status.returncode == 0, status.stderr
     assert json.loads(status.stdout)["cases"][0]["id"] == paused["case_id"]
     assert b.state().get("mrs", "1")["case_id"] == paused["case_id"]
+    # The question turn must finish before another MR can occupy its slot.
+    b.finish(attempt["thread_id"], attempt["turn_id"])
     # Automation on another MR still proceeds; it cannot clear this hold.
     b.mr(iid=2, created=b.now.isoformat())
     b.poll()
@@ -2026,7 +2156,8 @@ def test_first_poll_bootstraps_unlisted_empty_chat_in_configured_workspace_once(
     assert len([r for r in b.native if r.get("method") == "turn/start"]) == 1
     assert len(b.threads) == 1
     inventories = [r["params"] for r in b.native if r.get("method") == "thread/list"]
-    assert [p["archived"] for p in inventories] == [False, True]
+    # Dispatch and its admission-readiness check both verify the empty-chat exception.
+    assert [p["archived"] for p in inventories] == [False, True, False, True]
     assert all(p["modelProviders"] == [] and "appServer" in p["sourceKinds"] for p in inventories)
     state.db.close()
 
@@ -2807,7 +2938,8 @@ def test_pilot_diagnostic_flags_are_exclusive_before_effects(boundary, capsys, o
     assert not b.http and not b.native and not Path(b.config["state_file"]).exists()
 
 
-def test_resolution_context_change_can_be_disposed_only_by_exact_native_user_case(boundary):
+@pytest.mark.parametrize("queued_recovery", [False, True])
+def test_resolution_context_change_can_be_disposed_only_by_exact_native_user_case(boundary, queued_recovery):
     b = boundary
     b.mr(created=b.now.isoformat())
     root = b.note(author=8)
@@ -2840,7 +2972,11 @@ def test_resolution_context_change_can_be_disposed_only_by_exact_native_user_cas
     b.poll()
     b.items[attempt["turn_id"]].append({"type": "agentMessage", "phase": "final_answer", "text": paused["question"]})
     b.finish(attempt["thread_id"], attempt["turn_id"])
-    human_turn(b, attempt["thread_id"], "Aceito o encerramento observado; analise o novo contexto")
+    if queued_recovery:
+        b.mr(iid=2, created=b.now.isoformat())
+        b.poll()
+        competing = next(a for a in queue_attempts(b) if a["iid"] == 2)
+    human = human_turn(b, attempt["thread_id"], "Aceito o encerramento observado; analise o novo contexto")
     answer = {"case_id": paused["case_id"], "expected_generation": paused["generation"],
               "answer_sufficient": True, "answer_summary": "User accepted this observed outcome",
               "accept_observed_resolution": "wrong-operation"}
@@ -2850,9 +2986,606 @@ def test_resolution_context_change_can_be_disposed_only_by_exact_native_user_cas
     answer["accept_observed_resolution"] = op["id"]
     b.now = dt.datetime(2026, 10, 18, 2, tzinfo=dt.timezone.utc)
     resumed = b.call("resume", b.config, state, 1, answer)
+    if queued_recovery:
+        assert resumed["queued"] and state.get("mrs", "1")["owner"] is None
+        b.finish(attempt["thread_id"], human)
+        b.finish(competing["thread_id"], competing["turn_id"])
+        b.now = dt.datetime(2026, 10, 19, 13, tzinfo=dt.timezone.utc)
+        b.poll()
+        continuation = next(a for a in queue_attempts(b) if a.get("continuation"))
+        b.runtime(continuation["thread_id"], continuation["turn_id"])
+        resumed = b.call("claim", b.config, state, 1, {"attempt_id": continuation["id"], "event_id": continuation["event_id"]})
+        before_recovery = copy.deepcopy(resumed["operations"])
+        assert {o["id"] for o in before_recovery} == {explanation["id"], op["id"]}
+        decision = next(o for o in before_recovery if o["id"] == op["id"])
+        assert decision["context_decision_turn"] == human
+        assert decision["context_accepted_by_case"] == paused["case_id"]
+        b.finish(continuation["thread_id"], continuation["turn_id"])
+        b.call("operator_recovery", b.config, state, 1, {"owner_turn": continuation["turn_id"]})
+        b.poll()
+        retried = next(a for a in queue_attempts(b) if a.get("continuation") and a["id"] != continuation["id"])
+        assert retried["continuation"] == continuation["continuation"]
+        b.runtime(retried["thread_id"], retried["turn_id"])
+        resumed = b.call("claim", b.config, state, 1, {"attempt_id": retried["id"], "event_id": retried["event_id"]})
+        assert resumed["operations"] == before_recovery
     receipt = state.get("operations", f"1:{op['id']}")
     assert receipt["state"] == "confirmed" and receipt["context_accepted_by_case"] == paused["case_id"]
     assert receipt["snapshot"] != receipt["observed_snapshot"] or receipt["head"] != receipt["observed_head"]
     b.call("complete", b.config, state, 1, {"generation": resumed["generation"],
         "event_ids": resumed["owner"]["event_ids"], "reviewed_head": "b" * 40})
     assert state.get("mrs", "1")["reviewed_head"] == "b" * 40
+
+
+# Production entrypoints and SQLite keep these tests independent of queue internals.
+def test_root_toml_migration_moves_complete_groups_and_preserves_identity(tmp_path):
+    config = configure(tmp_path)
+    target, base = analysis_config(tmp_path, config)
+    result = run_monitor(tmp_path, "migrate-config")
+    assert result.returncode == 0, result.stderr
+    settings = tomllib.loads(target.read_text())
+    keys = {"gitlab_url", "project_path", "project_id", "timezone", "weekdays", "open_hour", "close_hour", "interval_minutes"}
+    assert {k: settings[k] for k in keys} == {k: config[k] for k in keys}
+    assert settings["parallel"] == 1
+    remaining = json.loads((tmp_path / "monitor.json").read_text())
+    assert remaining == {k: v for k, v in base.items() if k not in keys}
+    assert target.stat().st_mode & 0o777 == 0o600
+    loaded = runpy.run_path(str(CLI))["monitor_config"](tmp_path / "monitor.json")
+    assert loaded["parallel"] == 1 and loaded["project_id"] == config["project_id"]
+    before = (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+    assert run_monitor(tmp_path, "migrate-config").returncode == 0
+    assert before == (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+
+
+@pytest.mark.parametrize("value", [0, -1, True, "1", 1.5])
+def test_root_toml_parallel_rejects_nonpositive_or_noninteger(tmp_path, value):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    with target.open("a") as stream:
+        stream.write("parallel = " + json.dumps(value) + "\n")
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 1 and "positive integer" in result.stderr
+
+
+@pytest.mark.parametrize("kind", ["partial", "duplicate", "mismatch", "bad-hours", "symlink"])
+def test_root_toml_migration_refuses_unsafe_transfer_without_writes(tmp_path, kind):
+    config = configure(tmp_path)
+    target, data = analysis_config(tmp_path, config)
+    if kind == "partial":
+        target.write_text(target.read_text() + 'project_id = 42\n')
+    elif kind in {"duplicate", "mismatch"}:
+        target.write_text(target.read_text() + 'gitlab_url = "https://gitlab.example.test"\nproject_path = "engineering/project"\nproject_id = ' + ("42" if kind == "duplicate" else "43") + '\n')
+    elif kind == "bad-hours":
+        data["close_hour"] = 1
+        (tmp_path / "monitor.json").write_text(json.dumps(data))
+    else:
+        real = target.with_suffix(".real")
+        target.rename(real)
+        target.symlink_to(real)
+    before = (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+    if kind == "duplicate":
+        assert run_monitor(tmp_path, "status").returncode == 1
+        assert run_monitor(tmp_path, "migrate-config").returncode == 0
+        return
+    result = run_monitor(tmp_path, "migrate-config")
+    assert result.returncode == 1, result.stdout
+    assert before == (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+
+
+@pytest.mark.parametrize("concurrent_edit", [False, True])
+def test_root_toml_migration_recovers_only_exact_interrupted_files(tmp_path, monkeypatch, concurrent_edit):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    module = runpy.run_path(str(CLI))
+    original = os.replace
+    def interrupted(source, destination):
+        if Path(destination) == tmp_path / "monitor.json":
+            raise OSError("fixture power failure after TOML publication")
+        return original(source, destination)
+    monkeypatch.setattr(os, "replace", interrupted)
+    with pytest.raises(OSError, match="power failure"):
+        module["monitor_migrate_config"](tmp_path / "monitor.json")
+    assert "project_id" in tomllib.loads(target.read_text())
+    assert run_monitor(tmp_path, "status").returncode == 1
+    if concurrent_edit:
+        target.write_text(target.read_text() + "# unrelated editor change\n")
+    monkeypatch.setattr(os, "replace", original)
+    before = (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+    result = run_monitor(tmp_path, "migrate-config")
+    assert result.returncode == (1 if concurrent_edit else 0), result.stderr
+    if concurrent_edit:
+        assert before == (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+
+
+def queue_attempts(b):
+    return [a for a in b.state().all("attempts") if a.get("kind") == "dispatch"]
+
+
+def queue_complete(b, state, attempt, work):
+    b.runtime(attempt["thread_id"], attempt["turn_id"])
+    return b.call("complete", b.config, state, attempt["iid"], {
+        "generation": work["generation"], "event_ids": work["owner"]["event_ids"],
+        "reviewed_head": max(work["events"], key=lambda e: e["last_sequence"])["to_head"]})
+
+
+def test_review_queue_serializes_native_tail_and_advances_between_inventory_scans(boundary):
+    b = boundary
+    for iid in (1, 2, 3):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll(scheduled=True)
+    assert len(queue_attempts(b)) == 1
+    state, first, work = b.active_claim()
+    queue_complete(b, state, first, work)
+    scans = len([r for r in b.http if urlsplit(r.full_url).path.endswith("/merge_requests")])
+    b.now += dt.timedelta(minutes=1)
+    b.poll(scheduled=True)
+    assert len(queue_attempts(b)) == 1
+    b.finish(first["thread_id"], first["turn_id"])
+    b.now += dt.timedelta(minutes=1)
+    result = b.poll(scheduled=True)
+    assert result["inventory_due"] is False
+    assert len(queue_attempts(b)) == 2
+    assert len([r for r in b.http if urlsplit(r.full_url).path.endswith("/merge_requests")]) == scans
+    assert [a["iid"] for a in sorted(queue_attempts(b), key=lambda a: a["created_at"])] == [1, 2]
+    assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
+
+
+@pytest.mark.parametrize("status", ["failed", "interrupted", "completed"])
+def test_review_queue_terminal_without_complete_requires_recovery_and_rejects_late_claim(boundary, status):
+    b = boundary
+    for iid in (1, 2):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll()
+    state = b.state()
+    first = queue_attempts(b)[0]
+    b.finish(first["thread_id"], first["turn_id"])
+    b.turns[first["thread_id"]][0]["status"] = status
+    b.poll()
+    assert len(queue_attempts(b)) == 2
+    assert state.get("mrs", "1")["recovery_required"]
+    assert state.get("events", "1:" + first["event_id"])["state"] != "reviewed"
+    b.runtime(first["thread_id"], first["turn_id"])
+    with pytest.raises(RuntimeError, match="stale|closed"):
+        b.call("claim", b.config, state, 1, {"attempt_id": first["id"], "event_id": first["event_id"]})
+
+
+def test_review_queue_missing_native_evidence_and_lowered_capacity_never_release_slots(boundary):
+    b = boundary
+    b.config["parallel"] = 2
+    for iid in (1, 2, 3):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll()
+    assert len(queue_attempts(b)) == 2
+    b.config["parallel"] = 1
+    first = queue_attempts(b)[0]
+    b.turns[first["thread_id"]] = []
+    b.poll()
+    assert len(queue_attempts(b)) == 2
+    assert sum(r["state"] == "active" for r in b.call("queue", b.state())) == 2
+
+
+def test_review_queue_coalescing_retains_fifo_across_connections_and_skips_busy(boundary):
+    b = boundary
+    for iid in (1, 2, 3):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll()
+    state, first, work = b.active_claim()
+    before = next(r for r in b.call("queue", state) if r["iid"] == 2)
+    b.mrs[2]["sha"] = "b" * 40
+    b.poll()
+    assert next(r for r in b.call("queue", b.state()) if r["iid"] == 2)["sequence"] == before["sequence"]
+    thread = b.call("ensure_thread", b.config, state, b.mrs[2])
+    b.threads[thread]["status"] = {"type": "active"}
+    queue_complete(b, state, first, work)
+    b.finish(first["thread_id"], first["turn_id"])
+    b.poll()
+    assert {a["iid"] for a in queue_attempts(b)} == {1, 3}
+    assert next(r for r in b.call("queue", state) if r["iid"] == 2)["state"] == "queued"
+
+
+def queue_hold(b):
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, attempt, work = b.active_claim()
+    paused = b.call("pause", b.config, state, 1, {"generation": work["generation"], "question": "Qual comportamento esperado?"})
+    b.items[attempt["turn_id"]].append({"type": "agentMessage", "phase": "final_answer", "text": paused["question"]})
+    b.finish(attempt["thread_id"], attempt["turn_id"])
+    return state, attempt, paused
+
+
+def test_review_queue_queues_real_answer_and_later_claims_complete_bundle(boundary):
+    b = boundary
+    state, original, paused = queue_hold(b)
+    b.mr(iid=2, created=b.now.isoformat())
+    b.mrs[1]["sha"] = "b" * 40
+    b.note()
+    b.poll()
+    second = next(a for a in queue_attempts(b) if a["iid"] == 2)
+    human = human_turn(b, original["thread_id"], "Use o comportamento descrito")
+    payload = {"case_id": paused["case_id"], "expected_generation": paused["generation"],
+               "answer_sufficient": True, "answer_summary": "Use the described behavior"}
+    queued = b.call("resume", b.config, state, 1, payload)
+    assert queued["queued"] is True and "End this turn" in queued["instructions"]
+    assert state.get("mrs", "1")["owner"] is None
+    assert b.call("resume", b.config, state, 1, payload) == queued
+    with pytest.raises(RuntimeError, match="ownership"):
+        b.call("complete", b.config, state, 1, {"generation": state.get("mrs", "1")["generation"]})
+    b.runtime(second["thread_id"], second["turn_id"])
+    second_work = b.call("claim", b.config, state, 2, {"attempt_id": second["id"], "event_id": second["event_id"]})
+    queue_complete(b, state, second, second_work)
+    b.finish(second["thread_id"], second["turn_id"])
+    b.poll()
+    assert len(queue_attempts(b)) == 2
+    b.finish(original["thread_id"], human)
+    b.poll()
+    continuation = next(a for a in queue_attempts(b) if a.get("continuation"))
+    assert continuation["bootstrap"] is False and len(continuation["event_ids"]) == 2
+    assert continuation["continuation"]["answer_turn"] == human
+    b.runtime(continuation["thread_id"], continuation["turn_id"])
+    work = b.call("claim", b.config, state, 1, {"attempt_id": continuation["id"], "event_id": continuation["event_id"]})
+    assert work["owner"]["origin"] == "automatic" and work["owner"]["case_id"] == paused["case_id"]
+    assert set(work["owner"]["event_ids"]) == set(continuation["event_ids"])
+    queue_complete(b, state, continuation, work)
+    assert all(e["state"] == "reviewed" for e in state.all("events", "1:") if e["id"] in continuation["event_ids"])
+
+
+def test_review_queue_failed_scan_consumes_cadence_and_outside_window_is_readonly(boundary):
+    b = boundary
+    b.mr()
+    b.note()
+    b.fail_page = 1
+    b.poll(scheduled=True)
+    scans = len([r for r in b.http if urlsplit(r.full_url).path.endswith("/merge_requests")])
+    b.now += dt.timedelta(minutes=1)
+    b.poll(scheduled=True)
+    assert len([r for r in b.http if urlsplit(r.full_url).path.endswith("/merge_requests")]) == scans
+    b.now += dt.timedelta(minutes=15)
+    b.poll(scheduled=True)
+    assert len([r for r in b.http if urlsplit(r.full_url).path.endswith("/merge_requests")]) == scans + 1
+    b.now = b.now.replace(hour=2)
+    before = Path(b.config["state_file"]).read_bytes()
+    result = b.poll(scheduled=True)
+    assert result["skipped"] == "outside_window"
+    assert Path(b.config["state_file"]).read_bytes() == before
+
+
+def test_review_queue_atomic_reservations_from_two_real_connections(boundary):
+    import concurrent.futures
+    import threading
+    b = boundary
+    state = b.state()
+    for iid in (1, 2):
+        mr = b.mr(iid=iid, created=b.now.isoformat())
+        b.call("observe_mr", state, b.api(), mr)
+    ready = b.call("queue_ready", b.config, state)
+    request = b.call("queue", state)[0]
+    barrier = threading.Barrier(2)
+    def compete():
+        connection = b.state()
+        barrier.wait(timeout=5)
+        with connection.atomic():
+            admitted = b.call("reserve", b.config, connection, request["id"], ready,
+                              thread_id="native-thread", turn_id="native-turn", generation=0)
+        connection.db.close()
+        return bool(admitted)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: compete(), range(2)))
+    assert sorted(results) == [False, True]
+    assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
+
+
+def test_review_queue_revalidates_skipped_ticket_before_fifo_admission(boundary):
+    b = boundary
+    state = b.state()
+    for iid in (1, 2):
+        b.call("observe_mr", state, b.api(), b.mr(iid=iid, created=b.now.isoformat()))
+    with state.atomic():
+        record = state.get("mrs", "1")
+        record["case_id"] = "held-fixture"
+        state.put("mrs", "1", record)
+    ready = b.call("queue_ready", b.config, state)
+    second = b.call("queue", state)[1]
+    other = b.state()
+    with other.atomic():
+        record = other.get("mrs", "1")
+        record["case_id"] = None
+        other.put("mrs", "1", record)
+    with state.atomic():
+        assert b.call("reserve", b.config, state, second["id"], ready, generation=0) is None
+    assert not any(r["state"] == "active" for r in b.call("queue", state))
+
+
+def test_review_queue_backfill_counts_active_legacy_but_not_completed_history(boundary):
+    b = boundary
+    for iid in (1, 2):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll()
+    state, first, work = b.active_claim()
+    with state.atomic():
+        state.db.execute("DELETE FROM meta WHERE key LIKE 'review_request:%'")
+    b.call("queue_reconcile", b.config, state)
+    assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
+    queue_complete(b, state, first, work)
+    b.finish(first["thread_id"], first["turn_id"])
+    # Model the historical paused automatic attempt after human completion.
+    with state.atomic():
+        attempt = state.get("attempts", first["id"])
+        attempt["state"] = "claimed"
+        state.put("attempts", first["id"], attempt)
+        state.db.execute("DELETE FROM meta WHERE key LIKE 'review_request:%'")
+    b.call("queue_reconcile", b.config, state)
+    assert not any(r["state"] == "active" for r in b.call("queue", state))
+    assert state.get("mrs", "1").get("recovery_required") is None
+
+
+@pytest.mark.parametrize("forgery", ["question", "mixed", "changed-answer"])
+def test_review_queue_never_dispatches_without_unchanged_actual_answer(boundary, forgery):
+    b = boundary
+    state, original, paused = queue_hold(b)
+    b.mr(iid=2, created=b.now.isoformat())
+    b.poll()
+    human = human_turn(b, original["thread_id"], "continuar")
+    if forgery == "question":
+        b.items[human][0]["content"][0]["text"] = "Continuar?"
+    elif forgery == "mixed":
+        b.items[human].append({"type": "userMessage", "content": [{"type": "text", "text": original["bootstrap_text"]}]})
+    payload = {"case_id": paused["case_id"], "expected_generation": paused["generation"],
+               "answer_sufficient": True, "answer_summary": "continuar"}
+    if forgery != "changed-answer":
+        with pytest.raises(RuntimeError, match="question-only|automation"):
+            b.call("resume", b.config, state, 1, payload)
+        assert state.get("mrs", "1")["case_id"] == paused["case_id"]
+        return
+    assert b.call("resume", b.config, state, 1, payload)["queued"]
+    b.items[human][0]["content"][0]["text"] = "different later input"
+    b.finish(original["thread_id"], human)
+    second = next(a for a in queue_attempts(b) if a["iid"] == 2)
+    b.finish(second["thread_id"], second["turn_id"])
+    b.poll()
+    assert not any(a.get("continuation") for a in queue_attempts(b))
+
+
+def test_review_queue_recovery_keeps_full_answered_event_bundle(boundary):
+    b = boundary
+    state, original, paused = queue_hold(b)
+    b.mr(iid=2, created=b.now.isoformat())
+    b.mrs[1]["sha"] = "b" * 40
+    b.note()
+    b.poll()
+    human = human_turn(b, original["thread_id"], "continuar")
+    payload = {"case_id": paused["case_id"], "expected_generation": paused["generation"],
+               "answer_sufficient": True, "answer_summary": "continuar"}
+    assert b.call("resume", b.config, state, 1, payload)["queued"]
+    b.finish(original["thread_id"], human)
+    second = next(a for a in queue_attempts(b) if a["iid"] == 2)
+    b.finish(second["thread_id"], second["turn_id"])
+    b.poll()
+    continuation = next(a for a in queue_attempts(b) if a.get("continuation"))
+    b.runtime(continuation["thread_id"], continuation["turn_id"])
+    work = b.call("claim", b.config, state, 1, {"attempt_id": continuation["id"], "event_id": continuation["event_id"]})
+    b.finish(continuation["thread_id"], continuation["turn_id"])
+    b.call("operator_recovery", b.config, state, 1, {"owner_turn": continuation["turn_id"]})
+    b.poll()
+    retried = next(a for a in queue_attempts(b) if a.get("continuation") and a["id"] != continuation["id"])
+    assert retried["continuation"] == continuation["continuation"]
+    assert set(retried["event_ids"]) == set(work["owner"]["event_ids"])
+    assert state.get("cases", paused["case_id"])["answer_turn"] == human
+
+
+@pytest.mark.parametrize("unavailable", ["archived", "uncertain-creation"])
+def test_review_queue_unavailable_head_does_not_block_other_mrs(boundary, unavailable):
+    b = boundary
+    state = b.state()
+    for iid in (1, 2):
+        b.call("observe_mr", state, b.api(), b.mr(iid=iid, created=b.now.isoformat()))
+    if unavailable == "archived":
+        tid = b.call("ensure_thread", b.config, state, b.mrs[1])
+        b.threads[tid]["archived"] = True
+    else:
+        external = b.respond
+        def lost_creation(method, params):
+            result = external(method, params)
+            if method == "thread/start":
+                raise TimeoutError("fixture lost creation acknowledgement")
+            return result
+        b.respond = lost_creation
+        with pytest.raises(RuntimeError, match="transport failed"):
+            b.call("ensure_thread", b.config, state, b.mrs[1])
+        b.respond = external
+    b.poll()
+    assert [a["iid"] for a in queue_attempts(b)] == [2]
+    assert next(r for r in b.call("queue", state) if r["iid"] == 1)["state"] == "queued"
+
+
+def test_review_queue_legacy_complete_before_first_backfill_retains_native_tail(boundary):
+    b = boundary
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, first, work = b.active_claim()
+    with state.atomic():
+        state.db.execute("DELETE FROM meta WHERE key LIKE 'review_request:%'")
+    queue_complete(b, state, first, work)
+    b.mr(iid=2, created=b.now.isoformat())
+    b.poll()
+    assert len(queue_attempts(b)) == 1
+    b.finish(first["thread_id"], first["turn_id"])
+    b.poll()
+    assert len(queue_attempts(b)) == 2
+
+
+def test_review_queue_mixed_terminal_releases_slot_and_requeues_registered_work(boundary):
+    b = boundary
+    b.mr(created=b.now.isoformat())
+    b.poll()
+    state, first, work = b.active_claim()
+    queue_complete(b, state, first, work)
+    b.finish(first["thread_id"], first["turn_id"])
+    b.note()
+    b.poll()
+    mixed = next(a for a in queue_attempts(b) if a["state"] == "accepted")
+    b.items[mixed["turn_id"]].append({"type": "userMessage", "content": [{"type": "text", "text": "Human request"}]})
+    b.finish(mixed["thread_id"], mixed["turn_id"])
+    b.call("reconcile", b.config, state, 1)
+    b.mr(iid=2, created=b.now.isoformat())
+    b.poll()
+    assert len(queue_attempts(b)) == 3
+    assert state.get("attempts", mixed["id"])["state"] == "mixed_deferred"
+    assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
+
+
+def test_review_queue_continuation_survives_late_own_note_suppression(boundary):
+    b = boundary
+    b.mr()
+    b.poll()
+    b.note()
+    b.poll()
+    state, first, work = b.active_claim()
+    assert work["events"][0]["reasons"] == ["comment"]
+    snap = b.call("snapshot", b.config, b.api(), 1)
+    publication = b.call("effect_intent", b.config, state, b.api(), 1, {
+        "generation": work["generation"], "head": "a" * 40, "snapshot": snap["fingerprint"],
+        "kind": "finding", "key": "late-receipt", "body": "Concrete finding"})
+    paused = b.call("pause", b.config, state, 1, {"generation": work["generation"], "question": "Qual comportamento?"})
+    b.items[first["turn_id"]].append({"type": "agentMessage", "phase": "final_answer", "text": paused["question"]})
+    b.finish(first["thread_id"], first["turn_id"])
+    b.mr(iid=2, created=b.now.isoformat())
+    b.mrs[1]["sha"] = "b" * 40
+    b.poll()
+    human = human_turn(b, first["thread_id"], "continuar")
+    assert b.call("resume", b.config, state, 1, {"case_id": paused["case_id"],
+        "expected_generation": paused["generation"], "answer_sufficient": True, "answer_summary": "continuar"})["queued"]
+    # Authenticated provider visibility confirms a previously uncertain own publication.
+    b.discussions[1][0]["notes"][0]["body"] = publication["body"]
+    b.finish(first["thread_id"], human)
+    second = next(a for a in queue_attempts(b) if a["iid"] == 2)
+    b.finish(second["thread_id"], second["turn_id"])
+    b.poll()
+    continuation = next(a for a in queue_attempts(b) if a.get("continuation"))
+    b.runtime(first["thread_id"], continuation["turn_id"])
+    resumed = b.call("claim", b.config, state, 1, {"attempt_id": continuation["id"], "event_id": continuation["event_id"]})
+    assert len(resumed["owner"]["event_ids"]) == 2
+    queue_complete(b, state, continuation, resumed)
+
+
+def test_review_queue_conflicting_ack_keeps_capacity_until_exact_reconciliation(boundary):
+    b = boundary
+    for iid in (1, 2):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll()
+    state, first, work = b.active_claim()
+    other = {"id": "conflicting-turn", "status": "inProgress"}
+    b.turns[first["thread_id"]].insert(0, other)
+    b.items[other["id"]] = copy.deepcopy(b.items[first["turn_id"]])
+    with pytest.raises(RuntimeError, match="conflicts"):
+        b.call("accept", state, first["id"], other["id"])
+    b.finish(first["thread_id"], first["turn_id"])
+    b.threads[first["thread_id"]]["status"] = {"type": "active"}
+    b.poll()
+    assert len(queue_attempts(b)) == 1
+    assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
+
+
+@pytest.mark.parametrize("conflict", ["rule", "profile"])
+def test_review_queue_intermediate_tick_preserves_preflight_refusals(boundary, conflict):
+    b = boundary
+    for iid in (1, 2):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll(scheduled=True)
+    state, first, work = b.active_claim()
+    queue_complete(b, state, first, work)
+    b.finish(first["thread_id"], first["turn_id"])
+    if conflict == "rule":
+        rule = Path(b.config["codex_home"]) / "rules/codex-session-stats-gitlab-monitor.rules"
+        rule.write_text("conflicting rule\n")
+    else:
+        b.codex_settings["permissions"]["codex-session-stats-gitlab-monitor"]["extends"] = ":workspace-write"
+    b.now += dt.timedelta(minutes=1)
+    with pytest.raises(RuntimeError, match="conflict"):
+        b.poll(scheduled=True)
+    assert len(queue_attempts(b)) == 1
+
+
+def test_review_queue_competing_production_resumes_admit_one_native_owner(boundary):
+    import concurrent.futures
+    import threading
+    b = boundary
+    state, original, paused = queue_hold(b)
+    human = human_turn(b, original["thread_id"], "continuar")
+    barrier = threading.Barrier(2)
+    payload = {"case_id": paused["case_id"], "expected_generation": paused["generation"],
+               "answer_sufficient": True, "answer_summary": "continuar"}
+    def compete():
+        connection = b.state()
+        barrier.wait(timeout=5)
+        try:
+            return b.call("resume", b.config, connection, 1, payload)
+        except RuntimeError as error:
+            return str(error)
+        finally:
+            connection.db.close()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: compete(), range(2)))
+    assert any(isinstance(result, dict) and result.get("owner", {}).get("turn_id") == human for result in results)
+    reservations = [r for r in b.call("queue", state) if r["state"] == "active"]
+    assert len(reservations) == 1 and reservations[0]["turn_id"] == human
+    assert state.get("mrs", "1")["owner"]["turn_id"] == human
+    assert len(queue_attempts(b)) == 1
+
+
+def test_review_queue_distinct_human_resumes_share_one_global_slot(boundary):
+    import concurrent.futures
+    import threading
+    b = boundary
+    b.config["parallel"] = 2
+    for iid in (1, 2):
+        b.mr(iid=iid, created=b.now.isoformat())
+    b.poll()
+    state = b.state()
+    identities, payloads = {}, {}
+    for attempt in queue_attempts(b):
+        iid = attempt["iid"]
+        b.runtime(attempt["thread_id"], attempt["turn_id"])
+        work = b.call("claim", b.config, state, iid, {"attempt_id": attempt["id"], "event_id": attempt["event_id"]})
+        paused = b.call("pause", b.config, state, iid, {"generation": work["generation"], "question": "Qual comportamento?"})
+        b.items[attempt["turn_id"]].append({"type": "agentMessage", "phase": "final_answer", "text": paused["question"]})
+        b.finish(attempt["thread_id"], attempt["turn_id"])
+        human = human_turn(b, attempt["thread_id"], "continuar")
+        identities[iid] = (attempt["thread_id"], human)
+        payloads[iid] = {"case_id": paused["case_id"], "expected_generation": paused["generation"],
+                         "answer_sufficient": True, "answer_summary": "continuar"}
+    b.call("queue_reconcile", b.config, state)
+    b.config["parallel"] = 1
+    runtime = threading.local()
+    b.monkeypatch.setitem(b.code, "monitor_runtime", lambda config: identities[runtime.iid])
+    real_ready = b.code["monitor_queue_ready"]
+    before_observation = threading.Barrier(2)
+    after_observation = threading.Barrier(2)
+    later_ticket_admitted = threading.Event()
+    def overlapping_ready(*args, **kwargs):
+        # Only scheduling is controlled: both production readiness results remain real.
+        before_observation.wait(timeout=5)
+        result = real_ready(*args, **kwargs)
+        after_observation.wait(timeout=5)
+        tickets = [r for r in b.call("queue", args[1]) if r["state"] == "queued"]
+        runtime.earlier = tickets[0]["iid"] == runtime.iid
+        # The later ticket is eligible while the earlier MR still awaits its answer.
+        # Its transaction completes before the older answer tries to reserve capacity.
+        if runtime.earlier:
+            assert later_ticket_admitted.wait(timeout=5)
+        return result
+    b.monkeypatch.setitem(b.code, "monitor_queue_ready", overlapping_ready)
+    def resume(iid):
+        runtime.iid = iid
+        connection = b.state()
+        try:
+            return b.call("resume", b.config, connection, iid, payloads[iid])
+        finally:
+            if not runtime.earlier:
+                later_ticket_admitted.set()
+            connection.db.close()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(resume, (1, 2)))
+    assert sum(result.get("queued", False) for result in results) == 1
+    assert sum(bool(record.get("owner")) for record in state.all("mrs")) == 1
+    assert sum(r["state"] == "active" for r in b.call("queue", state)) == 1
+    assert all(case["state"] == "answered" for case in state.all("cases"))
+    assert len(queue_attempts(b)) == 2

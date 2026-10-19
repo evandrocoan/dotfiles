@@ -2130,11 +2130,11 @@ def monitor_prepare_thread(config: dict, thread_id: str):
     monitor_verify_permission_selection(response)
 
 
-def monitor_trusted_control_path(path: Path, state_dir: Path, *, private: bool):
+def monitor_trusted_control_path(path: Path, state_dir: Path, *, private: bool, diagnostic=False):
     import stat
     label = "configuration" if private else "script"
     metadata = path.lstat()
-    if (path.is_relative_to(state_dir) or not stat.S_ISREG(metadata.st_mode)
+    if ((state_dir is not None and path.is_relative_to(state_dir)) or not stat.S_ISREG(metadata.st_mode)
             or metadata.st_uid != os.getuid() or metadata.st_nlink != 1
             or (private and metadata.st_mode & 0o077)
             or (not private and not os.access(path, os.X_OK))):
@@ -2142,7 +2142,10 @@ def monitor_trusted_control_path(path: Path, state_dir: Path, *, private: bool):
         raise RuntimeError(f"trusted {label} must be owned, regular, outside writable state and {requirement}")
     for parent in path.parents:
         metadata = parent.lstat()
-        if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid not in {0, os.getuid()}:
+        # A read-only sandbox can remap root-owned ancestors to an overflow UID.
+        # Only offline diagnostics may omit this ownership proof; types stay strict.
+        if (not stat.S_ISDIR(metadata.st_mode)
+                or (not diagnostic and metadata.st_uid not in {0, os.getuid()})):
             raise RuntimeError(f"trusted {label} directory must be owned by the current user or root: {parent}")
 
 
@@ -2322,12 +2325,17 @@ def monitor_default_config(project_url: str, project_id: int, server: str) -> di
     }
 
 
-def monitor_analysis_settings(path: Path, state_dir: Path) -> dict:
+MONITOR_TOML_PROJECT = {"gitlab_url", "project_path", "project_id"}
+MONITOR_TOML_SCHEDULE = {"timezone", "weekdays", "open_hour", "close_hour", "interval_minutes"}
+MONITOR_TOML_OPTIONS = MONITOR_TOML_PROJECT | MONITOR_TOML_SCHEDULE | {"parallel"}
+
+
+def monitor_analysis_settings(path: Path, state_dir: Path, *, diagnostic=False) -> dict:
     """Read the monitor's small analysis TOML, outside its writable state."""
     import stat
     import tomllib
     try:
-        monitor_trusted_control_path(path, state_dir, private=True)
+        monitor_trusted_control_path(path, state_dir, private=True, diagnostic=diagnostic)
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         with os.fdopen(descriptor, "rb") as stream:
             metadata = os.fstat(stream.fileno())
@@ -2339,8 +2347,11 @@ def monitor_analysis_settings(path: Path, state_dir: Path) -> dict:
             raise RuntimeError("file exceeds 64 KiB")
         settings = tomllib.loads(raw.decode("utf-8"))
         required = {"model", "model_reasoning_effort"}
-        if not required <= set(settings) or set(settings) - required - {"workspace"}:
-            raise RuntimeError("expected model, model_reasoning_effort and optional workspace")
+        if not required <= set(settings) or set(settings) - required - {"workspace"} - MONITOR_TOML_OPTIONS:
+            raise RuntimeError("unknown or missing TOML settings")
+        for group in (MONITOR_TOML_PROJECT, MONITOR_TOML_SCHEDULE):
+            if set(settings) & group and not group <= set(settings):
+                raise RuntimeError("incomplete TOML project or schedule group")
         if (not isinstance(settings["model"], str)
                 or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", settings["model"])):
             raise RuntimeError("invalid model")
@@ -2359,21 +2370,43 @@ def monitor_analysis_settings(path: Path, state_dir: Path) -> dict:
         if workspace.is_relative_to(state_dir):
             raise RuntimeError("workspace must be outside agent-writable state")
         return {"cwd": str(workspace), "model": settings["model"],
-                "effort": settings["model_reasoning_effort"]}
+                "effort": settings["model_reasoning_effort"],
+                **{k: v for k, v in settings.items() if k in MONITOR_TOML_OPTIONS}}
     except (OSError, RuntimeError, ValueError, TypeError) as error:
         raise RuntimeError(f"invalid analysis configuration: {error}") from error
 
 
-def monitor_config(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
+def monitor_config(path: Path, *, diagnostic=False) -> dict:
+    return monitor_config_data(path, json.loads(path.read_text(encoding="utf-8")), diagnostic=diagnostic)
+
+
+def monitor_config_data(path: Path, data: dict, *, diagnostic=False, analysis_settings=None) -> dict:
+    data = dict(data)
     if data.get("version") != 1:
         raise RuntimeError("unsupported monitor configuration version")
     if os.name == "posix" and path.stat().st_mode & 0o077:
         raise RuntimeError("monitor configuration must be private (chmod 600)")
+    if "analysis_config" in data:
+        if any(key in data for key in ("model", "effort", "cwd")):
+            raise RuntimeError("duplicate analysis settings: use only analysis_config, without model/effort/cwd")
+        reference = data["analysis_config"]
+        if not isinstance(reference, str) or not reference:
+            raise RuntimeError("invalid analysis configuration path")
+        target = Path(reference).expanduser()
+        if not target.is_absolute():
+            target = path.parent / target
+        target = Path(os.path.abspath(target))
+        settings = analysis_settings if analysis_settings is not None else monitor_analysis_settings(target,
+            Path(data["state_file"]).expanduser().resolve().parent, diagnostic=diagnostic)
+        if MONITOR_TOML_OPTIONS & set(settings) & set(data):
+            raise RuntimeError("duplicate TOML/JSON project, schedule or parallel settings; run migrate-config")
+        data.update(settings)
+        data["analysis_config"] = str(target)
+    data.setdefault("parallel", 1)
     origin, project = monitor_project_url(data["gitlab_url"] + "/" + data["project_path"])
     if origin != data["gitlab_url"] or project != data["project_path"]:
         raise RuntimeError("noncanonical monitor project identity")
-    for name in ("project_id", "interval_minutes", "http_timeout", "native_timeout",
+    for name in ("project_id", "parallel", "interval_minutes", "http_timeout", "native_timeout",
                  "max_response_bytes", "max_pages", "max_notes_per_mr", "max_mrs",
                  "cycle_seconds", "max_history_pages"):
         if type(data.get(name)) is not int or data[name] < 1:
@@ -2385,18 +2418,6 @@ def monitor_config(path: Path) -> dict:
             or any(type(d) is not int or not 0 <= d <= 6 for d in data["weekdays"])):
         raise RuntimeError("invalid weekdays")
     ZoneInfo(data["timezone"])
-    if "analysis_config" in data:
-        if any(key in data for key in ("model", "effort", "cwd")):
-            raise RuntimeError("duplicate analysis settings: use only analysis_config, without model/effort/cwd")
-        reference = data["analysis_config"]
-        if not isinstance(reference, str) or not reference:
-            raise RuntimeError("invalid analysis configuration path")
-        target = Path(reference).expanduser()
-        if not target.is_absolute():
-            target = path.parent / target
-        target = Path(os.path.abspath(target))
-        data.update(monitor_analysis_settings(target, Path(data["state_file"]).expanduser().resolve().parent))
-        data["analysis_config"] = str(target)
     for name in ("codex_home", "cwd", "socket", "state_file"):
         if name == "socket":
             data["_socket_alias"] = str(Path(data[name]).expanduser().absolute())
@@ -2406,6 +2427,115 @@ def monitor_config(path: Path) -> dict:
     if not Path(data["cwd"]).is_dir():
         raise RuntimeError("configured workspace directory does not exist")
     return data
+
+
+def monitor_migrate_config(path: Path):
+    """Explicit two-file authority transfer, with a private crash-recovery intent."""
+    import hashlib
+    import tomllib
+    raw, signature = monitor_operator_file(path)
+    base = json.loads(raw)
+    state_dir = Path(base["state_file"]).expanduser().resolve().parent
+    monitor_operator_file(path, state_dir)
+    if "analysis_config" not in base:
+        raise RuntimeError("migration requires an existing analysis_config TOML")
+    target = Path(base["analysis_config"]).expanduser()
+    if not target.is_absolute():
+        target = path.parent / target
+    target = Path(os.path.abspath(target))
+    analysis, analysis_signature = monitor_operator_file(target, state_dir)
+    settings = tomllib.loads(analysis.decode("utf-8"))
+    intent_path = path.with_name(path.name + ".migration")
+    digest = lambda value: hashlib.sha256(value).hexdigest()
+    if intent_path.exists():
+        intent_raw, _ = monitor_operator_file(intent_path)
+        intent = json.loads(intent_raw)
+        if (intent.get("target") != str(target)
+                or digest(raw) not in {intent["json_before"], intent["json_after"]}
+                or digest(analysis) not in {intent["toml_before"], intent["toml_after"]}):
+            raise RuntimeError("configuration changed since migration intent; inspect before retry")
+        new_analysis = intent["toml_text"].encode("utf-8")
+        new_raw = intent["json_text"].encode("utf-8")
+        if digest(new_raw) != intent["json_after"] or digest(new_analysis) != intent["toml_after"]:
+            raise RuntimeError("corrupt migration intent output")
+    else:
+        for group in (MONITOR_TOML_PROJECT, MONITOR_TOML_SCHEDULE):
+            if set(base) & group and not group <= set(base):
+                raise RuntimeError("incomplete JSON project or schedule group")
+            if set(settings) & group and not group <= set(settings):
+                raise RuntimeError("incomplete TOML project or schedule group")
+            if not group <= set(settings) and not group <= set(base):
+                raise RuntimeError("incomplete JSON project or schedule group")
+        for key in MONITOR_TOML_OPTIONS & set(base) & set(settings):
+            if type(base[key]) is not type(settings[key]) or base[key] != settings[key]:
+                raise RuntimeError("conflicting migration settings: " + key)
+        additions = {k: base[k] for k in sorted(MONITOR_TOML_OPTIONS & set(base) - set(settings))}
+        if "parallel" not in settings and "parallel" not in additions:
+            additions["parallel"] = 1
+        new_analysis = analysis.rstrip() + b"\n"
+        for key, value in additions.items():
+            new_analysis += (key + " = " + json.dumps(value, ensure_ascii=False) + "\n").encode("utf-8")
+        tomllib.loads(new_analysis.decode("utf-8"))
+        new_base = {k: v for k, v in base.items() if k not in MONITOR_TOML_OPTIONS}
+        new_raw = (json.dumps(new_base, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        intent = {"target": str(target), "json_before": digest(raw), "json_after": digest(new_raw),
+                  "toml_before": digest(analysis), "toml_after": digest(new_analysis),
+                  "json_text": new_raw.decode("utf-8"), "toml_text": new_analysis.decode("utf-8")}
+        validated_analysis = monitor_analysis_settings(target, Path(base["state_file"]).expanduser().resolve().parent)
+        validated_analysis.update({k: v for k, v in tomllib.loads(new_analysis.decode("utf-8")).items()
+                                   if k in MONITOR_TOML_OPTIONS})
+        preview = monitor_config_data(path, new_base, analysis_settings=validated_analysis)
+        if Path(preview["state_file"]).exists():
+            checked_state = MonitorState(preview, readonly=True)
+            checked_state.db.close()
+        if monitor_operator_file(path) != (raw, signature) or monitor_operator_file(target) != (analysis, analysis_signature):
+            raise RuntimeError("configuration changed before migration")
+        intent_text = json.dumps(intent)
+        if len(intent_text.encode("utf-8")) > 65536:
+            raise RuntimeError("migration intent exceeds 64 KiB; shorten configuration comments before migration")
+        with os.fdopen(os.open(intent_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600), "w") as stream:
+            stream.write(intent_text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        monitor_fsync_directory(path.parent)
+    for destination, before, expected_signature, after in (
+            (target, analysis, analysis_signature, new_analysis), (path, raw, signature, new_raw)):
+        if monitor_operator_file(destination) != (before, expected_signature):
+            raise RuntimeError("configuration changed during migration")
+        if destination == path and monitor_operator_file(target, state_dir)[0] != new_analysis:
+            raise RuntimeError("TOML changed during migration")
+        if before == after:
+            continue
+        import tempfile
+        descriptor, temporary = tempfile.mkstemp(prefix=".monitor-migrate-", dir=destination.parent)
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(after)
+                stream.flush()
+                os.fsync(stream.fileno())
+            if monitor_operator_file(destination) != (before, expected_signature):
+                raise RuntimeError("configuration changed before publication")
+            os.replace(temporary, destination)
+            monitor_fsync_directory(destination.parent)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+    config = monitor_config(path)
+    # The stored project/workspace/endpoint identity remains authoritative when initialized.
+    if Path(config["state_file"]).exists():
+        state = MonitorState(config, readonly=True)
+        state.db.close()
+    intent_path.unlink()
+    monitor_fsync_directory(path.parent)
+    return {"migrated": True, "analysis_config": str(target), "parallel": config["parallel"]}
+
+
+def monitor_fsync_directory(path):
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 class MonitorState:
@@ -2450,10 +2580,14 @@ class MonitorState:
         expected = {"schema": 1, "binding": {key: config[key] for key in
             ("gitlab_url", "project_id", "project_path", "socket", "cwd")}}
         actual = self.get("meta", "identity")
-        if (readonly and offline_endpoint and not Path(config["socket"]).exists()
-                and isinstance(actual, dict) and actual.get("schema") == 1):
-            # Diagnostic only: retain the historical endpoint instead of rebinding it.
-            expected["binding"]["socket"] = actual.get("binding", {}).get("socket")
+        if readonly and offline_endpoint and isinstance(actual, dict) and actual.get("schema") == 1:
+            try:
+                endpoint_visible = Path(config["socket"]).exists()
+            except PermissionError:
+                endpoint_visible = False
+            if not endpoint_visible:
+                # Diagnostic only: retain the historical endpoint instead of rebinding it.
+                expected["binding"]["socket"] = actual.get("binding", {}).get("socket")
         adoption = self.get("meta", "workspace_adoption")
         if adoption is not None and not isinstance(adoption, dict):
             self.db.close()
@@ -2510,7 +2644,7 @@ class MonitorState:
             f"SELECT value FROM {bucket} WHERE key LIKE ? ORDER BY key", (prefix + "%",))]
 
 
-def monitor_operator_file(path: Path, state_dir: Path) -> tuple[bytes, tuple]:
+def monitor_operator_file(path: Path, state_dir: Path | None = None) -> tuple[bytes, tuple]:
     import stat
     monitor_trusted_control_path(path, state_dir, private=True)
     with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as stream:
@@ -2595,6 +2729,10 @@ def monitor_adopt_workspace(config: dict, path: Path, analysis: Path, iid: int, 
     state_dir = Path(config["state_file"]).parent
     settings = monitor_analysis_settings(analysis, state_dir)
     monitor_permission_definition({**config, **settings})
+    for key in MONITOR_TOML_OPTIONS & set(settings) - {"parallel"}:
+        if settings[key] != config[key] or type(settings[key]) is not type(config[key]):
+            raise RuntimeError("workspace adoption cannot change project or schedule")
+    transferred = {"cwd", "model", "effort"} | (MONITOR_TOML_OPTIONS & set(settings))
     analysis_raw, _ = monitor_operator_file(analysis, state_dir)
     raw, signature = monitor_operator_file(path, state_dir)
     state = MonitorState(config, workspace_adoption=True)
@@ -2606,7 +2744,7 @@ def monitor_adopt_workspace(config: dict, path: Path, analysis: Path, iid: int, 
                 raise RuntimeError("analysis configuration is already selected; inspect existing adoption")
             old = monitor_workspace_idle(state, iid)
             monitor_workspace_native(state, config, {**config, **settings}, old["thread_id"], thread_id)
-            updated = {key: value for key, value in original.items() if key not in {"cwd", "model", "effort"}}
+            updated = {key: value for key, value in original.items() if key not in transferred}
             updated["analysis_config"] = str(analysis)
             new_raw = (json.dumps(updated, ensure_ascii=False, indent=2) + "\n").encode()
             identity = state.get("meta", "identity")
@@ -2636,7 +2774,7 @@ def monitor_adopt_workspace(config: dict, path: Path, analysis: Path, iid: int, 
             raise RuntimeError("workspace adoption receipt/arguments mismatch")
         old_raw, new_raw = receipt["old_json"].encode(), receipt["new_json"].encode()
         old_data, new_data = json.loads(old_raw), json.loads(new_raw)
-        allowed = {key: value for key, value in old_data.items() if key not in {"cwd", "model", "effort"}}
+        allowed = {key: value for key, value in old_data.items() if key not in transferred}
         allowed["analysis_config"] = str(analysis)
         if ("analysis_config" in old_data or new_data != allowed
                 or new_raw != (json.dumps(allowed, ensure_ascii=False, indent=2) + "\n").encode()
@@ -2908,6 +3046,217 @@ def monitor_mcp(config: dict, thread_id: str, tool: str, arguments: dict):
     return json.loads(blocks[0]["text"])
 
 
+
+def monitor_queue(state):
+    return sorted(state.all("meta", "review_request:"), key=lambda r: r["sequence"])
+
+
+def monitor_enqueue(state, iid, *, continuation=None):
+    """Called inside the event/answer transaction; coalescing retains FIFO position."""
+    queued = next((r for r in monitor_queue(state) if r["iid"] == iid and r["state"] == "queued"), None)
+    if queued:
+        if continuation:
+            queued["continuation"] = continuation
+            state.put("meta", "review_request:" + queued["id"], queued)
+        return queued
+    sequence = (state.get("meta", "review_queue_sequence") or 0) + 1
+    state.put("meta", "review_queue_sequence", sequence)
+    request = {"id": monitor_id(), "sequence": sequence, "iid": iid, "state": "queued",
+               "created_at": monitor_now().isoformat()}
+    if continuation:
+        request["continuation"] = continuation
+    state.put("meta", "review_request:" + request["id"], request)
+    return request
+
+
+def monitor_queue_backfill(state):
+    """Adopt only current unfinished work, never historical paused attempts."""
+    with state.atomic():
+        requests = monitor_queue(state)
+        for record in state.all("mrs"):
+            iid = record["iid"]
+            events = state.all("events", f"{iid}:")
+            if any(e["state"] == "pending" for e in events):
+                monitor_enqueue(state, iid)
+            if any(r["iid"] == iid and r["state"] == "active" for r in requests):
+                continue
+            owner = record.get("owner")
+            case = state.get("cases", record["case_id"]) if record.get("case_id") else None
+            interrupted = owner or (case or {}).get("interrupted_owner")
+            attempts = [a for a in state.all("attempts") if a.get("iid") == iid
+                        and a.get("thread_id") == record.get("thread_id") and a.get("kind") == "dispatch"
+                        and a["state"] in {"attempting", "uncertain", "accepted", "claimed"}
+                        and any(e.get("attempt_id") == a["id"] and e["state"] in
+                                {"attempting", "uncertain", "accepted", "claimed"} for e in events)]
+            if not interrupted and not attempts:
+                continue
+            if interrupted:
+                # A closed reservation already represents this historical owner.
+                if any(r.get("turn_id") == interrupted["turn_id"] and r["iid"] == iid for r in requests):
+                    continue
+                attempt = next((a for a in attempts if a["id"] == interrupted.get("attempt_id")), {})
+            else:
+                attempt = attempts[0]
+                if any(r.get("attempt_id") == attempt["id"] for r in requests):
+                    continue
+            sequence = (state.get("meta", "review_queue_sequence") or 0) + 1
+            state.put("meta", "review_queue_sequence", sequence)
+            request = {"id": monitor_id(), "sequence": sequence, "iid": iid, "state": "active",
+                       "thread_id": record["thread_id"], "generation": record["generation"],
+                       "turn_id": (interrupted or {}).get("turn_id") or attempt.get("turn_id"),
+                       "attempt_id": attempt.get("id"), "legacy": True}
+            if case:
+                request["disposition"] = "held"
+            state.put("meta", "review_request:" + request["id"], request)
+
+
+def monitor_queue_reconcile(config, state):
+    monitor_queue_backfill(state)
+    for snapshot in monitor_queue(state):
+        if snapshot["state"] != "active":
+            continue
+        try:
+            record = state.get("mrs", str(snapshot["iid"]))
+            if record.get("delivery_conflict"):
+                monitor_reconcile(config, state, snapshot["iid"])
+                if state.get("mrs", str(snapshot["iid"])).get("delivery_conflict"):
+                    continue
+            if not snapshot.get("turn_id") and snapshot.get("attempt_id"):
+                monitor_reconcile(config, state, snapshot["iid"])
+                attempt = state.get("attempts", snapshot["attempt_id"])
+                if attempt.get("turn_id"):
+                    with state.atomic():
+                        current = state.get("meta", "review_request:" + snapshot["id"])
+                        if current == snapshot:
+                            current["turn_id"] = attempt["turn_id"]
+                            state.put("meta", "review_request:" + current["id"], current)
+                            snapshot = current
+            if not snapshot.get("turn_id"):
+                continue
+            turns = monitor_turns(config, snapshot["thread_id"])
+            terminal = next((t for t in turns if t["id"] == snapshot["turn_id"]
+                             and t["status"] in {"completed", "failed", "interrupted"}), None)
+            if not terminal:
+                continue
+            if snapshot.get("attempt_id"):
+                attempt = state.get("attempts", snapshot["attempt_id"])
+                if not monitor_attempt_evidence(config, attempt, snapshot["turn_id"]):
+                    continue
+            with state.atomic():
+                current = state.get("meta", "review_request:" + snapshot["id"])
+                if current != snapshot:
+                    continue
+                record = state.get("mrs", str(current["iid"]))
+                if record.get("delivery_conflict"):
+                    continue
+                disposition = current.get("disposition")
+                if not disposition:
+                    # Exact terminal execution frees capacity, but never silently retries
+                    # unfinished business or allows a late callback to resurrect authority.
+                    disposition = "recovery_required"
+                    owner = record.get("owner")
+                    if owner and owner["turn_id"] == current["turn_id"]:
+                        owner["revoked"] = True
+                    record["generation"] += 1
+                    record["recovery_required"] = current["id"]
+                    if current.get("attempt_id"):
+                        attempt = state.get("attempts", current["attempt_id"])
+                        if attempt["state"] in {"attempting", "uncertain", "accepted", "claimed"}:
+                            attempt["state"] = "recovery_required"
+                            state.put("attempts", attempt["id"], attempt)
+                    state.put("mrs", str(record["iid"]), record)
+                current.update({"state": disposition, "terminal_status": terminal["status"],
+                                "ended_at": monitor_now().isoformat()})
+                state.put("meta", "review_request:" + current["id"], current)
+        except RuntimeError:
+            # Missing/ambiguous native evidence occupies capacity; no timeout retry.
+            continue
+
+
+def monitor_queue_ready(config, state, *, human_iid=None):
+    """Observe every ticket, including skipped ones, for transactional CAS."""
+    ready = {}
+    for request in monitor_queue(state):
+        if request["state"] != "queued":
+            continue
+        record = state.get("mrs", str(request["iid"]))
+        observation = {"request": request, "record": record, "eligible": False}
+        ready[request["id"]] = observation
+        if (not record or record.get("owner") or record.get("recovery_required")
+                or record.get("delivery_conflict") or record.get("state") != "opened"
+                or (record.get("case_id") and request["iid"] != human_iid)):
+            continue
+        if not record.get("thread_id") and record.get("creation_attempt"):
+            continue
+        try:
+            continuation = request.get("continuation")
+            if continuation:
+                case = state.get("cases", continuation["case_id"])
+                if (not case or case.get("answer_turn") != continuation["answer_turn"]
+                        or case["state"] != "answered" or case["question_turn"] != continuation["question_turn"]):
+                    continue
+                turns = monitor_turns(config, record["thread_id"])
+                if not any(t["id"] == continuation["answer_turn"] and t["status"] in
+                           {"completed", "failed", "interrupted"} for t in turns):
+                    continue
+                texts = monitor_human_input(config, state, record["thread_id"], continuation["answer_turn"])
+                if monitor_digest(texts) != continuation["answer_fingerprint"]:
+                    continue
+            if record.get("thread_id") and request["iid"] != human_iid:
+                thread = monitor_thread(config, record["thread_id"], active_inventory=True,
+                                        allow_empty=monitor_pending_thread(state, record["iid"], record["thread_id"]))
+                if thread["status"]["type"] not in {"idle", "notLoaded"}:
+                    continue
+            observation["eligible"] = True
+        except RuntimeError as error:
+            observation["error"] = str(error)
+            continue
+    return ready
+
+
+def monitor_reserve(config, state, request_id, ready, **identity):
+    """Inside BEGIN IMMEDIATE: capacity, FIFO and identity share one commit."""
+    if sum(r["state"] == "active" for r in monitor_queue(state)) >= config.get("parallel", 1):
+        return None
+    for request in monitor_queue(state):
+        if request["state"] != "queued":
+            continue
+        observation = ready.get(request["id"])
+        if observation is None:
+            return None
+        if request != observation["request"] or state.get("mrs", str(request["iid"])) != observation["record"]:
+            return None
+        if not observation["eligible"]:
+            continue
+        if request["id"] != request_id:
+            return None
+        request.update({"state": "active", **identity})
+        state.put("meta", "review_request:" + request["id"], request)
+        return request
+    return None
+
+
+def monitor_queue_finish(state, record, turn_id, disposition, owner):
+    requests = monitor_queue(state)
+    if not any(r["state"] == "active" and r["iid"] == record["iid"] and r.get("turn_id") == turn_id for r in requests):
+        # A legacy callback can arrive before the first poll/backfill after upgrade.
+        sequence = (state.get("meta", "review_queue_sequence") or 0) + 1
+        state.put("meta", "review_queue_sequence", sequence)
+        legacy = {"id": monitor_id(), "sequence": sequence, "iid": record["iid"], "state": "active",
+                  "thread_id": record["thread_id"], "turn_id": turn_id,
+                  "attempt_id": owner.get("attempt_id"), "generation": record["generation"], "legacy": True}
+        requests.append(legacy)
+    for request in requests:
+        if request["state"] == "active" and request["iid"] == record["iid"] and request.get("turn_id") == turn_id:
+            request["disposition"] = disposition
+            state.put("meta", "review_request:" + request["id"], request)
+
+
+def monitor_continuation_result(request):
+    return {"queued": True, "request_id": request["id"], "sequence": request["sequence"],
+            "instructions": "Answer recorded. End this turn now. No review or public effects are authorized. "
+                            "The monitor will continue through its registered automatic queue."}
+
 def monitor_add_event(state: MonitorState, record: dict, *, from_head=None,
                       to_head=None, notes=None, reason="change"):
     iid = record["iid"]
@@ -2929,12 +3278,17 @@ def monitor_add_event(state: MonitorState, record: dict, *, from_head=None,
         revisions[str(note["id"])] = note
     latest = to_head or record["head"]
     if earliest == latest and not revisions and reasons <= {"head", "change"}:
+        for request in monitor_queue(state):
+            if request["iid"] == iid and request["state"] == "queued" and not request.get("continuation"):
+                request["state"] = "cancelled"
+                state.put("meta", "review_request:" + request["id"], request)
         return None
     event = {"id": monitor_id(), "iid": iid, "state": "pending", "from_head": earliest,
              "to_head": latest, "first_sequence": first_sequence,
              "last_sequence": record["sequence"], "notes": list(revisions.values()),
              "reasons": sorted(reasons), "created_at": monitor_now().isoformat()}
     state.put("events", f"{iid}:{event['id']}", event)
+    monitor_enqueue(state, iid)
     return event
 
 
@@ -3048,7 +3402,7 @@ def monitor_runtime(config: dict) -> tuple[str, str]:
 def monitor_assert_owner(record: dict, thread_id: str, turn_id: str, generation: int):
     owner = record.get("owner")
     if (record.get("thread_id") != thread_id or not owner or owner["turn_id"] != turn_id
-            or record["generation"] != generation or record.get("case_id") or record.get("delivery_conflict")):
+            or owner.get("revoked") or record["generation"] != generation or record.get("case_id") or record.get("delivery_conflict")):
         raise RuntimeError("stale, mismatched or paused MR ownership")
     return owner
 
@@ -3286,7 +3640,7 @@ Only a LATER actual user reply here can resolve the hold. Polling/GitLab comment
 elapsed time and registered automation turns are not consent. For a sufficient human answer run
 resume --mr {iid} with case_id, expected_generation, answer_sufficient:true and answer_summary;
 optional bot_note_override:{{id,revision}} only if that exact native answer explicitly identifies
-that specific note revision as automated. Resume atomically transfers ownership and returns
+that specific note revision as automated. If resume returns queued=true, end the turn immediately without review or public effects; the registered queue will continue later. Otherwise resume atomically transfers ownership and returns
 interrupted plus locally pending work, prior receipts and a NEW generation, without a timer turn.
 Question-only/explanation-only/insufficient answers keep the hold; answer the question and stop.
 If a resolution is observed but its head/thread context changed before receipt, do not re-resolve
@@ -3337,6 +3691,11 @@ def monitor_accept(state: MonitorState, attempt_id: str, turn_id: str, *, proven
             conflict = True
         else:
             attempt["turn_id"] = turn_id
+            if attempt.get("request_id"):
+                request = state.get("meta", "review_request:" + attempt["request_id"])
+                if request and request["state"] == "active":
+                    request["turn_id"] = turn_id
+                    state.put("meta", "review_request:" + request["id"], request)
             if attempt["state"] in {"attempting", "uncertain"}:
                 attempt["state"] = "accepted"
             state.put("attempts", attempt_id, attempt)
@@ -3358,21 +3717,36 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
                      iid: int, gate: MonitorGate, *, pilot_only=False):
     if gate.manual_pilot and not pilot_only:
         raise RuntimeError("manual pilot gate cannot dispatch ordinary review work")
+    monitor_queue_reconcile(config, state)
     record = state.get("mrs", str(iid))
+    if record.get("recovery_required"):
+        return "recovery_required"
+    request = next((r for r in monitor_queue(state) if r["iid"] == iid and r["state"] == "queued"), None)
+    continuation = (request or {}).get("continuation")
     if record.get("delivery_conflict"):
         return "delivery_conflict"
     if record.get("case_id") or record.get("owner"):
         return "awaiting_user" if record.get("case_id") else "owned"
     events = state.all("events", f"{iid}:")
-    if any(e["state"] in {"attempting", "accepted", "uncertain", "claimed"} for e in events):
+    if not continuation and any(e["state"] in {"attempting", "accepted", "uncertain", "claimed"} for e in events):
         return "delivery_or_review_pending"
-    pending = [e for e in events if e["state"] == "pending"]
+    pending = ([state.get("events", f"{iid}:{event_id}") for event_id in continuation["event_ids"]]
+               if continuation else [e for e in events if e["state"] == "pending"])
     if not pending:
         return "unchanged"
     if (pilot_only and (len(pending) != 1 or pending[0]["reasons"] != ["pilot_hold"] or pending[0]["notes"])):
         raise RuntimeError("manual pilot requires only its pure diagnostic event; ordinary or mixed work is pending")
     if "pilot_hold" in pending[0]["reasons"] and pending[0]["reasons"] != ["pilot_hold"]:
         raise RuntimeError("mixed pilot and ordinary work requires operator inspection")
+    ready = monitor_queue_ready(config, state)
+    if request and ready.get(request["id"], {}).get("error"):
+        raise RuntimeError(ready[request["id"]]["error"])
+    if not request or request["id"] not in ready or not ready[request["id"]]["eligible"]:
+        return "queue_waiting"
+    if sum(r["state"] == "active" for r in monitor_queue(state)) >= config.get("parallel", 1):
+        return "queue_capacity"
+    if next((key for key, value in ready.items() if value["eligible"]), None) != request["id"]:
+        return "queue_fifo"
     mr = api.mr(iid)
     if mr["state"] != "opened" or mr["sha"] != record["head"]:
         return "changed_before_dispatch"
@@ -3389,37 +3763,56 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
         return "native_busy"
     gate.check()
     monitor_prepare_thread(config, thread_id)
+    ready = monitor_queue_ready(config, state)
     with state.atomic():
         record = state.get("mrs", str(iid))
         if record.get("case_id") or record.get("owner"):
             return "ownership_changed"
         event = state.get("events", f"{iid}:{pending[0]['id']}")
-        if event["state"] != "pending":
+        if not continuation and event["state"] != "pending":
             return "event_changed"
         # Late own-publication receipts do not alter accepted immutable work.
         effective = monitor_effective_notes(state, event)
-        if not effective and event["reasons"] == ["comment"]:
+        if not continuation and not effective and event["reasons"] == ["comment"]:
             event["state"] = "suppressed"
             state.put("events", f"{iid}:{event['id']}", event)
+            current_request = state.get("meta", "review_request:" + request["id"])
+            current_request["state"] = "cancelled"
+            state.put("meta", "review_request:" + request["id"], current_request)
             return "own_effect_suppressed"
         bootstrap = not record.get("bootstrap_verified", False)
         attempt = {"id": monitor_id(), "kind": "dispatch", "iid": iid,
             "thread_id": thread_id, "event_id": event["id"], "state": "attempting",
             "marker": monitor_id(), "bootstrap": bootstrap, "created_at": monitor_now().isoformat()}
+        reservation = monitor_reserve(config, state, request["id"], ready,
+            thread_id=thread_id, attempt_id=attempt["id"], generation=record["generation"])
+        if not reservation:
+            return "queue_waiting"
+        attempt["request_id"] = reservation["id"]
+        attempt["event_ids"] = [e["id"] for e in pending]
+        if continuation:
+            attempt["continuation"] = continuation
         attempt["pilot_hold"] = "pilot_hold" in event["reasons"]
         if bootstrap:
             attempt["bootstrap_text"] = monitor_bootstrap(config, path, iid, attempt)
         else:
             output = {"attempt_id": attempt["id"], "event_id": event["id"],
                 "marker": attempt["marker"], "iid": iid, "from_head": event["from_head"],
-                "to_head": event["to_head"], "notes": effective}
+                "to_head": event["to_head"], "notes": effective,
+                "continuation": continuation,
+                "instructions": "Claim this exact attempt before review. Continue the answered case and all "
+                                "interrupted events/receipts returned by claim. Never fabricate human ownership."}
             if attempt["pilot_hold"]:
-                output["pilot_instructions"] = monitor_pilot_instructions(config, path, iid, attempt)
+                output["pilot_instructions"] = (
+                    "Do not review code or publish. This is the actual user's answered diagnostic continuation. "
+                    "Claim the exact attempt, then complete its diagnostic events; do not create another question."
+                    if continuation else monitor_pilot_instructions(config, path, iid, attempt))
             attempt["output"] = json.dumps(output, sort_keys=True)
         gate.check()
-        event.update({"state": "attempting", "attempt_id": attempt["id"]})
+        for event in pending:
+            event.update({"state": "attempting", "attempt_id": attempt["id"]})
+            state.put("events", f"{iid}:{event['id']}", event)
         state.put("attempts", attempt["id"], attempt)
-        state.put("events", f"{iid}:{event['id']}", event)
     params = {"threadId": thread_id, "model": config["model"], "effort": config["effort"],
               "permissions": MONITOR_PERMISSION_PROFILE, "input": []}
     if bootstrap:
@@ -3438,9 +3831,16 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
             if current["state"] == "attempting":
                 current["state"] = "uncertain" if submitted else "unstarted"
                 state.put("attempts", attempt["id"], current)
-                event = state.get("events", f"{iid}:{event['id']}")
-                event["state"] = "uncertain" if submitted else "pending"
-                state.put("events", f"{iid}:{event['id']}", event)
+                for event_id in current["event_ids"]:
+                    failed_event = state.get("events", f"{iid}:{event_id}")
+                    failed_event["state"] = "uncertain" if submitted else "pending"
+                    state.put("events", f"{iid}:{event_id}", failed_event)
+                if not submitted:
+                    request = state.get("meta", "review_request:" + current["request_id"])
+                    request["state"] = "queued"
+                    for key in ("attempt_id", "turn_id", "thread_id", "generation"):
+                        request.pop(key, None)
+                    state.put("meta", "review_request:" + request["id"], request)
         raise
     return "submitted"
 
@@ -3529,6 +3929,13 @@ def monitor_claim(config: dict, state: MonitorState, iid: int, payload: dict):
         if (record.get("thread_id") != thread_id or record.get("delivery_conflict")
                 or (attempt.get("turn_id") and attempt["turn_id"] != turn_id)):
             raise RuntimeError("conversation/turn identity changed during claim")
+        if attempt.get("request_id"):
+            request = state.get("meta", "review_request:" + attempt["request_id"])
+            if (not request or request["state"] != "active"
+                    or (not record.get("owner") and request["generation"] != record["generation"])):
+                raise RuntimeError("review reservation is closed or stale")
+            request["turn_id"] = turn_id
+            state.put("meta", "review_request:" + request["id"], request)
         if record.get("owner"):
             owner = monitor_assert_owner(record, thread_id, turn_id, record["generation"])
             if owner.get("attempt_id") != attempt["id"]:
@@ -3543,7 +3950,15 @@ def monitor_claim(config: dict, state: MonitorState, iid: int, payload: dict):
         if attempt["bootstrap"]:
             record["bootstrap_verified"] = True
         record["owner"] = {"origin": "automatic", "turn_id": turn_id,
-                           "attempt_id": attempt["id"], "event_ids": [event["id"]]}
+                           "attempt_id": attempt["id"], "event_ids": attempt.get("event_ids", [event["id"]])}
+        if attempt.get("continuation"):
+            record["owner"]["case_id"] = attempt["continuation"]["case_id"]
+        for event_id in record["owner"]["event_ids"]:
+            other = state.get("events", f"{iid}:{event_id}")
+            if other.get("attempt_id") != attempt["id"] or other["state"] not in {"attempting", "uncertain", "accepted"}:
+                raise RuntimeError("continuation event set changed")
+            other["state"] = "claimed"
+            state.put("events", f"{iid}:{event_id}", other)
         event["state"] = "claimed"
         attempt.update({"state": "claimed", "turn_id": turn_id})
         state.put("mrs", str(iid), record)
@@ -3573,6 +3988,7 @@ def monitor_pause(config: dict, state: MonitorState, iid: int, payload: dict):
         record["generation"] += 1
         record.update({"owner": None, "case_id": case["id"]})
         case["generation"] = record["generation"]
+        monitor_queue_finish(state, record, turn_id, "held", owner)
         state.put("cases", case["id"], case)
         state.put("mrs", str(iid), record)
         return {"case_id": case["id"], "generation": record["generation"], "held": True,
@@ -3631,6 +4047,18 @@ def monitor_reanchor(config: dict, state: MonitorState, iid: int, payload: dict)
 def monitor_resume(config: dict, state: MonitorState, iid: int, payload: dict):
     thread_id, turn_id = monitor_control_identity(config, state, iid)
     case = state.get("cases", payload["case_id"])
+    if case and case["iid"] == iid and case["state"] == "answered" and case.get("answer_turn") == turn_id:
+        monitor_human_input(config, state, thread_id, turn_id)
+        record = state.get("mrs", str(iid))
+        if record.get("owner") and record["owner"]["turn_id"] == turn_id:
+            monitor_assert_owner(record, thread_id, turn_id, record["generation"])
+            return monitor_work(state, record)
+        request = next((r for r in monitor_queue(state) if r.get("continuation", {}).get("case_id") == case["id"]), None)
+        if request:
+            return monitor_continuation_result(request)
+        record = state.get("mrs", str(iid))
+        monitor_assert_owner(record, thread_id, turn_id, record["generation"])
+        return monitor_work(state, record)
     if not case or case["iid"] != iid or case["state"] != "awaiting_user":
         raise RuntimeError("case is not awaiting a human answer")
     turns = monitor_turns(config, thread_id)
@@ -3643,12 +4071,17 @@ def monitor_resume(config: dict, state: MonitorState, iid: int, payload: dict):
     if not any(i["type"] == "agentMessage" and i.get("phase") == "final_answer"
                and case["question"] in i.get("text", "") for i in question_items):
         raise RuntimeError("completed turn does not contain the persisted final question")
-    monitor_human_input(config, state, thread_id, turn_id)
+    human_texts = monitor_human_input(config, state, thread_id, turn_id)
     if payload.get("answer_sufficient") is not True or not payload.get("answer_summary"):
         raise RuntimeError("hold requires a sufficient actual native human answer; question-only input cannot resume")
     override = payload.get("bot_note_override")
     if override and (override != {"id": case["note_id"], "revision": case["revision"]}):
         raise RuntimeError("bot override must name the exact paused note and revision")
+    monitor_queue_reconcile(config, state)
+    # A sufficient human answer receives an ordinary FIFO ticket, not priority.
+    with state.atomic():
+        monitor_enqueue(state, iid)
+    ready = monitor_queue_ready(config, state, human_iid=iid)
     with state.atomic():
         record = state.get("mrs", str(iid))
         current = state.get("cases", case["id"])
@@ -3663,7 +4096,6 @@ def monitor_resume(config: dict, state: MonitorState, iid: int, payload: dict):
             event["state"] = "claimed"
             state.put("events", f"{iid}:{event['id']}", event)
             events.append(event["id"])
-        record["generation"] += 1
         disposition = payload.get("accept_observed_resolution")
         if disposition:
             operation = state.get("operations", f"{iid}:{disposition}")
@@ -3673,13 +4105,30 @@ def monitor_resume(config: dict, state: MonitorState, iid: int, payload: dict):
             operation.update({"state": "confirmed", "context_accepted_by_case": case["id"],
                               "context_decision_turn": turn_id})
             state.put("operations", f"{iid}:{operation['id']}", operation)
+        request = next(r for r in monitor_queue(state) if r["iid"] == iid and r["state"] == "queued")
+        continuation = {"case_id": case["id"], "answer_turn": turn_id, "question_turn": case["question_turn"],
+                        "event_ids": events, "answer_fingerprint": monitor_digest(human_texts), "answer_summary": str(payload["answer_summary"])[:4000],
+                        "bot_override": override, "accepted_resolution": disposition,
+                        "operation_ids": [o["id"] for o in state.all("operations", f"{iid}:")]}
+        reservation = monitor_reserve(config, state, request["id"], ready,
+            thread_id=thread_id, turn_id=turn_id, generation=record["generation"])
+        record["generation"] += 1
         record.update({"case_id": None, "owner": {"origin": "human", "turn_id": turn_id,
                                                     "event_ids": events, "case_id": case["id"]}})
         current.update({"state": "answered", "answer_turn": turn_id,
                         "answer_summary": str(payload["answer_summary"])[:4000], "bot_override": override,
                         "accepted_resolution": disposition})
+        if not reservation:
+            record["owner"] = None
+            request["continuation"] = continuation
+            state.put("meta", "review_request:" + request["id"], request)
+        else:
+            reservation["continuation"] = continuation
+            state.put("meta", "review_request:" + reservation["id"], reservation)
         state.put("cases", case["id"], current)
         state.put("mrs", str(iid), record)
+        if not reservation:
+            return monitor_continuation_result(request)
         return monitor_work(state, record)
 
 
@@ -3892,7 +4341,10 @@ def monitor_complete(config: dict, state: MonitorState, iid: int, payload: dict)
         if not pilot_only:
             record["reviewed_head"] = payload["reviewed_head"]
         else:
-            record["human_continuation_verified"] = owner["origin"] == "human"
+            answered_case = state.get("cases", owner["case_id"]) if owner.get("case_id") else None
+            record["human_continuation_verified"] = bool(answered_case and answered_case["state"] == "answered"
+                                                        and answered_case.get("answer_turn"))
+        monitor_queue_finish(state, record, turn_id, "completed", owner)
         state.put("mrs", str(iid), record)
         return {"completed": True, "reviewed_head": record.get("reviewed_head"), "pilot_only": pilot_only}
 
@@ -3920,16 +4372,53 @@ def monitor_reconcile(config: dict, state: MonitorState, iid: int):
             items = monitor_native_items(config, thread_id, candidates[0]["id"])
             # Only a proven mixed-input race is automatically deferred. Missing evidence is uncertain.
             if (not attempt["bootstrap"] and any(i["type"] == "userMessage" for i in items)
-                    and any(i["type"] == "functionCallOutput" and i.get("output") == attempt["output"] for i in items)
+                    and any(i["type"] == "functionCallOutput" and i.get("name") == "gitlab_monitor_event"
+                            and i.get("output") == attempt["output"] for i in items)
                     and not any(o.get("owner_turn") == candidates[0]["id"] for o in state.all("operations", f"{iid}:"))):
                 with state.atomic():
-                    attempt["state"] = "mixed_deferred"
-                    event = state.get("events", f"{iid}:{attempt['event_id']}")
-                    if event["state"] in {"attempting", "accepted", "uncertain"}:
-                        event["state"] = "pending"
+                    current = state.get("attempts", attempt["id"])
+                    current_mr = state.get("mrs", str(iid))
+                    if (current != attempt or current_mr.get("owner") or current_mr.get("case_id")
+                            or current_mr.get("delivery_conflict")):
+                        continue
+                    event_ids = current.get("event_ids", [current["event_id"]])
+                    bundle = [state.get("events", f"{iid}:{event_id}") for event_id in event_ids]
+                    if any(not event or event.get("attempt_id") != attempt["id"] or event["state"] not in
+                           {"attempting", "accepted", "uncertain"} for event in bundle):
+                        continue
+                    current["state"] = "mixed_deferred"
+                    for event in bundle:
+                        event["state"] = "claimed" if current.get("continuation") else "pending"
                         state.put("events", f"{iid}:{event['id']}", event)
-                        state.put("attempts", attempt["id"], attempt)
+                    for request in monitor_queue(state):
+                        if request["state"] == "active" and request.get("attempt_id") == current["id"]:
+                            request.update({"state": "mixed_deferred", "terminal_status": "completed"})
+                            state.put("meta", "review_request:" + request["id"], request)
+                    current_mr["generation"] += 1
+                    state.put("mrs", str(iid), current_mr)
+                    state.put("attempts", current["id"], current)
+                    monitor_enqueue(state, iid, continuation=current.get("continuation"))
 
+
+
+def monitor_queue_recover(state, record, attempt=None, owner=None):
+    """Operator recovery preserves the immutable answered-case continuation bundle."""
+    lineage = (attempt or {}).get("continuation")
+    for request in monitor_queue(state):
+        if request["iid"] != record["iid"]:
+            continue
+        if ((attempt and request.get("attempt_id") == attempt["id"])
+                or (owner and request.get("turn_id") == owner["turn_id"])):
+            lineage = lineage or request.get("continuation")
+            request["state"] = "operator_recovered"
+            state.put("meta", "review_request:" + request["id"], request)
+    record.pop("recovery_required", None)
+    if lineage:
+        for event_id in lineage["event_ids"]:
+            event = state.get("events", f"{record['iid']}:{event_id}")
+            event["state"] = "claimed"
+            state.put("events", f"{record['iid']}:{event_id}", event)
+    monitor_enqueue(state, record["iid"], continuation=lineage)
 
 def monitor_recover(config: dict, state: MonitorState, payload: dict):
     attempt = state.get("attempts", payload["attempt_id"])
@@ -4000,7 +4489,7 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
         raise RuntimeError("historical conversation attempt cannot recover the current mapping")
     event = state.get("events", f"{iid}:{attempt['event_id']}")
     if (not event or event.get("attempt_id") != attempt["id"]
-            or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed"}):
+            or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed", "recovery_required"}):
         raise RuntimeError("recovery requires the event's current eligible attempt; old recovery cannot release new work")
     monitor_reconcile(config, state, iid)
     thread = monitor_thread(config, record["thread_id"], active_inventory=True,
@@ -4012,7 +4501,7 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
         attempt = state.get("attempts", attempt["id"])
         event = state.get("events", f"{iid}:{attempt['event_id']}")
         if (not event or event.get("attempt_id") != attempt["id"]
-                or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed"}):
+                or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed", "recovery_required"}):
             raise RuntimeError("recovery requires the event's current eligible attempt; state changed")
         if record.get("case_id") or record.get("delivery_conflict") or any(o["state"] not in {"confirmed", "abandoned_no_effect"}
                                         for o in state.all("operations", f"{iid}:")):
@@ -4021,7 +4510,7 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
         if owner and owner.get("attempt_id") != attempt["id"]:
             raise RuntimeError("another owner holds the MR")
         event = state.get("events", f"{iid}:{attempt['event_id']}")
-        if event["state"] not in {"attempting", "uncertain", "accepted", "claimed"}:
+        if event["state"] not in {"attempting", "uncertain", "accepted", "claimed", "recovery_required"}:
             raise RuntimeError("event is already reconciled or reviewed; no retry needed")
         record["generation"] += 1
         record["owner"] = None
@@ -4030,6 +4519,8 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
         state.put("mrs", str(iid), record)
         state.put("events", f"{iid}:{event['id']}", event)
         state.put("attempts", attempt["id"], attempt)
+        monitor_queue_recover(state, record, attempt=attempt, owner=owner)
+        state.put("mrs", str(iid), record)
     return {"pending": event["id"], "warning": "a prior turn may have analyzed this work; confirmed effects remain deduplicated"}
 
 
@@ -4080,13 +4571,14 @@ def monitor_operator_recovery(config: dict, state: MonitorState, iid: int, paylo
             if attempt.get("iid") == iid and attempt.get("turn_id") == expected_turn and attempt.get("kind") == "dispatch":
                 attempt["state"] = "operator_retried"
                 state.put("attempts", attempt["id"], attempt)
+        monitor_queue_recover(state, record, owner=record["owner"])
         record["generation"] += 1
         record["owner"] = None
         state.put("mrs", str(iid), record)
     return {"released_owner": expected_turn, "warning": "unfinished analysis is queued again; prior confirmed effects are retained"}
 
 
-def monitor_poll(config: dict, path: Path, *, dry_run=False):
+def monitor_poll(config: dict, path: Path, *, dry_run=False, scheduled=False):
     if not monitor_is_open(config):
         return {"skipped": "outside_window", "mutated": False}
     if dry_run:
@@ -4101,6 +4593,14 @@ def monitor_poll(config: dict, path: Path, *, dry_run=False):
     try:
         state = MonitorState(config)
         try:
+            if scheduled:
+                last = state.get("meta", "inventory_started_at")
+                if last and (monitor_now() - datetime.datetime.fromisoformat(last)).total_seconds() < config["interval_minutes"] * 60:
+                    gate = MonitorGate(config)
+                    return {"inventory_due": False, **monitor_drain_queue(config, path, state, gate)}
+            # A failed/partial scan also consumes the interval: no full scan every minute.
+            with state.atomic():
+                state.put("meta", "inventory_started_at", monitor_now().isoformat())
             return monitor_poll_iteration(config, path, state)
         finally:
             state.db.close()
@@ -4125,6 +4625,37 @@ def monitor_acquire_lock(config: dict):
         return None
     return descriptor
 
+
+
+def monitor_drain_queue(config, path, state, gate):
+    config = {**config, "_native_guard": gate.check}
+    monitor_control_rule(config, path)
+    monitor_ensure_permissions(config)
+    monitor_control_rule(config, path, install=True)
+    monitor_queue_reconcile(config, state)
+    result = {"dispatch": {}, "errors": {}}
+    api = MonitorGitLab(config, gate.check)
+    for request in monitor_queue(state):
+        if request["state"] != "queued":
+            continue
+        if sum(r["state"] == "active" for r in monitor_queue(state)) >= config.get("parallel", 1):
+            break
+        iid = request["iid"]
+        try:
+            gate.check()
+            record = state.get("mrs", str(iid))
+            if record.get("case_id") or record.get("owner") or record.get("recovery_required"):
+                continue
+            mr = api.mr(iid)
+            monitor_observe_mr(state, api, mr)
+            if mr["state"] != "opened":
+                continue
+            result["dispatch"][str(iid)] = monitor_dispatch(config, path, state, api, iid, gate)
+        except RuntimeError as error:
+            result["errors"][str(iid)] = str(error)
+            if isinstance(error, MonitorDeferred):
+                break
+    return result
 
 def monitor_poll_iteration(config: dict, path: Path, state, *, dry_run=False):
     gate = MonitorGate(config)
@@ -4208,6 +4739,8 @@ def monitor_main() -> int:
     adopt.add_argument("--analysis-config", type=Path, required=True)
     adopt.add_argument("--mr", type=positive_integer, required=True)
     adopt.add_argument("--thread-id", required=True)
+    commands.add_parser("migrate-config", help="move project/schedule authority to the root TOML")
+    commands.add_parser("tick", help="drain the queue and poll only when the TOML interval is due")
     launch = commands.add_parser("launch-app", help="start the closed GUI with one native server shared by the monitor")
     launch.add_argument("--app", type=Path, required=True)
     launch.add_argument("--codex", type=Path, required=True)
@@ -4246,7 +4779,7 @@ def monitor_main() -> int:
     arguments = parser.parse_args(sys.argv[2:])
     lock_descriptor = None
     try:
-        path = arguments.config.expanduser().resolve()
+        path = Path(os.path.abspath(arguments.config.expanduser()))
         if arguments.action == "configure":
             data = monitor_default_config(arguments.project_url, arguments.project_id, arguments.mcp_server)
             if path.exists():
@@ -4256,8 +4789,10 @@ def monitor_main() -> int:
                 json.dump(data, stream, ensure_ascii=False, indent=2)
                 stream.write("\n")
             result = {"configured": True, "config": str(path)}
+        elif arguments.action == "migrate-config":
+            result = monitor_migrate_config(path)
         else:
-            config = monitor_config(path)
+            config = monitor_config(path, diagnostic=arguments.action == "status")
             pilot_gate = None
             if arguments.action == "pilot":
                 pilot_gate = MonitorGate(config, manual_pilot=True)
@@ -4268,7 +4803,7 @@ def monitor_main() -> int:
                     app_args = app_args[1:]
                 monitor_launch_app(config, path, arguments.app, arguments.codex, app_args)
                 raise RuntimeError("application launch unexpectedly returned")
-            if arguments.action not in {"status", "poll"}:
+            if arguments.action not in {"status", "poll", "tick"}:
                 monitor_shared_owner(config)
             if arguments.action in {"pilot", "recover", "adopt-workspace"}:
                 lock_descriptor = monitor_acquire_lock(config)
@@ -4281,6 +4816,7 @@ def monitor_main() -> int:
                 exists = Path(config["state_file"]).exists()
                 result = {"configured": True, "initialized": exists,
                           "project_id": config["project_id"], "mrs": [],
+                          "parallel": config.get("parallel", 1), "queue": [],
                           "endpoint_verified": False,
                           "permission_profile": monitor_permission_status(config),
                           "control_rule": monitor_control_rule_status(config, path)}
@@ -4291,7 +4827,9 @@ def monitor_main() -> int:
                     pass
                 if exists:
                     state = MonitorState(config, readonly=True, offline_endpoint=True)
-                    result.update({"observation_start": state.get("meta", "observation_start"),
+                    result.update({"queue": monitor_queue(state),
+                                   "inventory_started_at": state.get("meta", "inventory_started_at"),
+                                   "observation_start": state.get("meta", "observation_start"),
                                    "inventory_complete": state.get("meta", "inventory_complete"),
                                    "inventory_error": state.get("meta", "inventory_error"),
                                    "mrs": state.all("mrs"), "attempts": [{k: v for k, v in a.items()
@@ -4300,8 +4838,9 @@ def monitor_main() -> int:
                                    "operations": [{k: v for k, v in o.items() if k != "body"}
                                                   for o in state.all("operations")]})
                     state.db.close()
-            elif arguments.action == "poll":
-                result = monitor_poll(config, path, dry_run=arguments.dry_run)
+            elif arguments.action in {"poll", "tick"}:
+                result = monitor_poll(config, path, dry_run=getattr(arguments, "dry_run", False),
+                                      scheduled=arguments.action == "tick")
             elif arguments.action == "recover":
                 state = MonitorState(config)
                 try:

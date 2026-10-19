@@ -708,6 +708,37 @@ and `effort` cannot coexist with `analysis_config`. Changing this path after ini
 rejected by the stored binding checks; editing it alone does not move existing chats. The adoption
 procedure below switches an existing JSON-only setup to this TOML.
 
+After adopting this analysis TOML, migrate project and schedule authority without changing
+values or the existing SQLite binding:
+
+```bash
+codex-session-stats monitor-gitlab migrate-config
+codex-session-stats monitor-gitlab status
+```
+
+The root file then also contains `gitlab_url`, `project_path`, `project_id`, `timezone`,
+`weekdays` (Monday=0, Sunday=6), `open_hour`, `close_hour`, `interval_minutes` and `parallel`.
+Project and schedule are complete groups; partial groups, unknown TOML keys and duplicate
+JSON/TOML authority are rejected. Legacy JSON and three-field TOML configurations remain
+readable. `parallel` defaults to 1 and accepts only positive integers. The migration writes
+TOML first and then removes the transferred JSON fields. If interrupted, repeat it without
+editing either file; its private `.migration` intent permits only the exact recorded inputs
+and outputs. Conflicting or concurrently edited files require inspection. Keep credentials,
+endpoint, state paths and resource bounds in the base JSON/existing credential source.
+
+The durable FIFO queue admits at most `parallel` monitor reviews. Coalesced unsent changes
+retain their place; held, busy or unavailable MRs are skipped without discarding their work.
+Completion/pause callbacks retain capacity until the exact native turn ends. A terminal turn
+without completion remains recovery-required, with stale authority revoked; uncertain submission
+retains capacity until reconciled. Lowering the limit does not cancel active work. This controls
+monitor admissions; manually started chats are outside the queue.
+
+A sufficient real answer resumes in the same human turn when FIFO and capacity permit.
+Otherwise `resume` returns `queued=true`: that turn must end without review/effects. The later
+registered automatic continuation keeps the actual answer, interrupted event set and receipts;
+it starts only after the answering turn ends. `status` shows queue entries and scan cadence
+offline. Keep the state database when updating or restarting.
+
 For an existing monitor, create a new MR conversation directly in that workspace first. Keep
 the old conversation available. Once the exact new ID is idle and empty, adopt it explicitly,
 replacing the example MR and ID:
@@ -739,7 +770,7 @@ recovery for inspection. A completed repeat preserves subsequent generations and
 flags. The file replacement includes sync/read-back checks; it is not an atomic comparison with
 an unrelated editor's write.
 
-`preflight`, an eligible real `poll`, and `pilot` automatically register missing rules under
+`preflight`, eligible real `poll`/`tick` runs, and `pilot` automatically register missing rules under
 `[permissions.codex-session-stats-gitlab-monitor]` in the selected `codex_home/config.toml`.
 They use Codex's native configuration editor with a version check. A matching profile causes
 no write; compatible partial rules are completed. Conflicting rules or an overriding layer stop
@@ -866,13 +897,18 @@ systemctl --user enable --now codex-gitlab-monitor.timer
 systemctl --user list-timers codex-gitlab-monitor.timer
 ```
 
-The timer starts every 15 minutes, Monday–Saturday, **07:00–21:45 America/Sao_Paulo**.
+The timer wakes `tick` every minute. The root TOML owns the real schedule and inventory interval;
+with the default interval it scans every 15 minutes, Monday–Saturday, within
+**07:00–22:00 America/Sao_Paulo** (the closing hour is excluded).
 Sunday is excluded; holidays are ordinary days. The CLI also checks the window before every new
 polling request/task submission. Already submitted work and human continuations may finish
 after 22:00. Missed starts are not replayed; the next eligible poll resumes durable observations.
 This is a user service: it requires the user's session and running signed-in Codex app. It does
-not start Codex or enable system-wide services/lingering. Changing the CLI window/cadence also
-requires a matching timer override, followed by daemon reload and timer restart.
+not start Codex or enable system-wide services/lingering. Edit the root TOML to change the window
+or interval; no timer override is needed. `poll` explicitly requests a full scan within the window;
+`tick` honors the persisted inventory interval, including after failed or partial scans. Intermediate
+wakes drain eligible queued work with fresh MR/head checks. Installing updated units requires
+`daemon-reload`; restart an already-enabled timer after changing its unit.
 
 Diagnose without resubmitting work:
 
@@ -881,7 +917,7 @@ systemctl --user status codex-gitlab-monitor.timer codex-gitlab-monitor.service
 journalctl --user -u codex-gitlab-monitor.service --since today
 codex-session-stats monitor-gitlab status
 codex-session-stats monitor-gitlab preflight --check-only
-systemd-analyze calendar 'Mon..Sat *-*-* 07..21:00/15:00 America/Sao_Paulo'
+systemd-analyze calendar '*-*-* *:*:00'
 ```
 
 A note/page cap remains incomplete until the configured bound is raised; raising it does not fix

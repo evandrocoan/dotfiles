@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=oneshot
 WorkingDirectory=%h
-ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab poll
+ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab tick
 TimeoutStartSec=5min
 UMask=0077
 StandardOutput=journal
