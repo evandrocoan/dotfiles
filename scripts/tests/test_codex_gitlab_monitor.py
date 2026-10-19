@@ -406,6 +406,130 @@ def configure(tmp_path):
     return json.loads((tmp_path / "monitor.json").read_text())
 
 
+def analysis_config(tmp_path, config):
+    root = tmp_path / "analysis"
+    root.mkdir(mode=0o700)
+    (root / "workspace").mkdir(mode=0o700)
+    target = root / "config.toml"
+    target.write_text('model = "gpt-6.1-sol"\nmodel_reasoning_effort = "high"\n')
+    target.chmod(0o600)
+    data = {k: v for k, v in config.items() if k not in {"cwd", "model", "effort"}}
+    data["analysis_config"] = "analysis/config.toml"
+    (tmp_path / "monitor.json").write_text(json.dumps(data))
+    return target, data
+
+
+def test_analysis_toml_is_the_single_source_and_status_stays_offline(tmp_path):
+    config = configure(tmp_path)
+    target, data = analysis_config(tmp_path, config)
+    module = runpy.run_path(str(CLI))
+    loaded = module["monitor_config"](tmp_path / "monitor.json")
+    assert loaded["cwd"] == str(target.parent / "workspace")
+    assert (loaded["model"], loaded["effort"]) == ("gpt-6.1-sol", "high")
+    before = (target.read_bytes(), (tmp_path / "monitor.json").read_bytes())
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["initialized"] is False
+    assert (target.read_bytes(), (tmp_path / "monitor.json").read_bytes()) == before
+    assert not Path(config["state_file"]).exists()
+
+
+@pytest.mark.parametrize("kind", ["relative", "absolute", "home"])
+def test_analysis_toml_resolves_configurable_workspace_from_its_own_directory(tmp_path, monkeypatch, kind):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    workspace = tmp_path / "work trees" / "selected"
+    workspace.mkdir(parents=True)
+    choices = {"relative": "../work trees/selected", "absolute": str(workspace),
+               "home": "~/work trees/selected"}
+    monkeypatch.setenv("HOME", str(tmp_path))
+    target.write_text(target.read_text() + f"workspace = {json.dumps(choices[kind])}\n")
+    module = runpy.run_path(str(CLI))
+    loaded = module["monitor_config"](tmp_path / "monitor.json")
+    assert loaded["cwd"] == str(workspace)
+    assert (loaded["model"], loaded["effort"]) == ("gpt-6.1-sol", "high")
+
+
+@pytest.mark.parametrize("value", ['""', '12', '[]', '{}'])
+def test_analysis_toml_rejects_invalid_workspace_value(tmp_path, value):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    target.write_text(target.read_text() + f"workspace = {value}\n")
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 1
+    assert "invalid workspace" in result.stderr
+    assert not Path(config["state_file"]).exists()
+
+
+@pytest.mark.parametrize("kind", ["missing", "file", "state", "state_symlink"])
+def test_analysis_toml_keeps_configured_workspace_directory_boundary(tmp_path, kind):
+    config = configure(tmp_path)
+    target, _ = analysis_config(tmp_path, config)
+    state_dir = Path(config["state_file"]).parent
+    state_dir.mkdir(parents=True, mode=0o700)
+    workspace = target.parent / "selected"
+    if kind == "file": workspace.touch()
+    if kind == "state": workspace = state_dir
+    if kind == "state_symlink": workspace.symlink_to(state_dir, target_is_directory=True)
+    target.write_text(target.read_text() + f"workspace = {json.dumps(str(workspace))}\n")
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 1
+    assert "analysis configuration" in result.stderr
+    assert not Path(config["state_file"]).exists()
+
+
+@pytest.mark.parametrize("key", ["cwd", "model", "effort"])
+def test_analysis_toml_rejects_duplicate_json_authority(tmp_path, key):
+    config = configure(tmp_path)
+    target, data = analysis_config(tmp_path, config)
+    data[key] = config[key]
+    (tmp_path / "monitor.json").write_text(json.dumps(data))
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 1
+    assert "duplicate analysis settings" in result.stderr
+
+
+@pytest.mark.parametrize("content", [
+    'model = "gpt-6.1-sol"\nmodel_reasoning_effort = "high"\napproval_policy = "never"\n',
+    'model = "gpt-6.1-sol"\n',
+    'model = 12\nmodel_reasoning_effort = "high"\n',
+    'model = "gpt-6.1-sol"\nmodel_reasoning_effort = "invalid"\n',
+    'not valid toml',
+])
+def test_analysis_toml_rejects_invalid_settings(tmp_path, content):
+    config = configure(tmp_path)
+    target, data = analysis_config(tmp_path, config)
+    target.write_text(content)
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 1
+    assert "analysis configuration" in result.stderr
+
+
+@pytest.mark.parametrize("kind", ["public", "symlink", "inside_state", "oversized"])
+def test_analysis_toml_keeps_trusted_source_boundary(tmp_path, kind):
+    config = configure(tmp_path)
+    target, data = analysis_config(tmp_path, config)
+    if kind == "public":
+        target.chmod(0o644)
+    elif kind == "symlink":
+        other = target.with_name("real.toml")
+        target.rename(other)
+        target.symlink_to(other.name)
+    elif kind == "inside_state":
+        directory = Path(config["state_file"]).parent
+        directory.mkdir(parents=True, mode=0o700)
+        other = directory / "config.toml"
+        other.write_bytes(target.read_bytes())
+        other.chmod(0o600)
+        data["analysis_config"] = str(other)
+        (tmp_path / "monitor.json").write_text(json.dumps(data))
+    else:
+        target.write_text("#" + "x" * 65536)
+    result = run_monitor(tmp_path, "status")
+    assert result.returncode == 1
+    assert "analysis configuration" in result.stderr
+
+
 def test_monitor_configure_is_private_and_status_does_not_initialize_state(tmp_path):
     config = configure(tmp_path)
     assert config["project_id"] == 42
@@ -616,7 +740,8 @@ class Boundary:
             return {"status": "ok", "version": self.config_version, "filePath": params["filePath"]}
         if method == "thread/start":
             tid = f"00000000-0000-0000-0000-{len(self.threads) + 1:012d}"
-            thread = {"id": tid, "cwd": self.config["cwd"], "status": {"type": "idle"}}
+            thread = {"id": tid, "cwd": params.get("cwd", self.config["cwd"]), "status": {"type": "idle"},
+                      "preview": "", "ephemeral": False, "source": "vscode", "modelProvider": "openai"}
             self.threads[tid] = thread
             self.turns[tid] = []
             return {"thread": thread, "activePermissionProfile": {
@@ -625,7 +750,14 @@ class Boundary:
             return {"thread": self.threads[params["threadId"]], "activePermissionProfile": {
                 "id": params.get("permissions"), "extends": ":read-only"}}
         if method == "thread/list":
-            return {"data": [t for t in self.threads.values() if not t.get("archived")], "nextCursor": None}
+            archived = params.get("archived", False)
+            sources = params.get("sourceKinds") or ["cli", "vscode"]
+            providers = params.get("modelProviders")
+            return {"data": [t for t in self.threads.values()
+                if bool(t.get("archived")) == archived and (archived or t.get("preview", ""))
+                and (not params.get("cwd") or t["cwd"] == params["cwd"])
+                and t["source"] in sources and (not providers or t["modelProvider"] in providers)],
+                "nextCursor": None}
         if method == "thread/name/set":
             return {}
         if method == "thread/turns/list":
@@ -637,6 +769,8 @@ class Boundary:
             return {"content": [{"type": "text", "text": json.dumps({"id": "7", "web_url": "https://gitlab.example.test/reviewer"})}]}
         if method == "turn/start":
             tid = params["threadId"]
+            if params["input"] and not self.threads[tid]["preview"]:
+                self.threads[tid]["preview"] = params["input"][0]["text"][:128]
             turn = {"id": f"turn-{len(self.items) + 1}", "status": "inProgress", "startedAt": int(self.now.timestamp())}
             self.turns[tid].insert(0, turn)
             self.threads[tid]["status"] = {"type": "active"}
@@ -1862,6 +1996,492 @@ def monitor_cli(b, capsys, *arguments):
     b.monkeypatch.setattr(sys, "argv", [str(b.cli), "monitor-gitlab", "--config", str(b.path), *arguments])
     code = b.module["main"]()
     return code, capsys.readouterr()
+
+
+def test_first_poll_bootstraps_unlisted_empty_chat_in_configured_workspace_once(boundary):
+    b = boundary
+    target, _ = analysis_config(b.path.parent, b.config)
+    workspace = target.parent / "selected workspace"
+    workspace.mkdir()
+    target.write_text(target.read_text() + 'workspace = "selected workspace"\n')
+    b.config = b.call("config", b.path)
+    b.mr(created=b.now.isoformat())
+    result = b.poll()
+    assert result["errors"] == {}
+    assert result["dispatch"] == {"1": "submitted"}
+    state = b.state()
+    record = state.get("mrs", "1")
+    starts = [r["params"] for r in b.native if r.get("method") == "thread/start"]
+    turns = [r["params"] for r in b.native if r.get("method") == "turn/start"]
+    assert len(starts) == len(turns) == 1
+    assert starts[0]["cwd"] == str(workspace)
+    assert turns[0]["threadId"] == record["thread_id"]
+    assert (turns[0]["model"], turns[0]["effort"]) == ("gpt-6.1-sol", "high")
+    assert turns[0]["permissions"] == "codex-session-stats-gitlab-monitor"
+    assert turns[0]["input"][0]["text"].startswith("Standing task explicitly approved")
+    assert "toolOutput" not in turns[0]
+    assert state.get("attempts", record["creation_attempt"])["state"] == "accepted"
+    assert len([a for a in state.all("attempts") if a["kind"] == "dispatch"]) == 1
+    b.poll()
+    assert len([r for r in b.native if r.get("method") == "turn/start"]) == 1
+    assert len(b.threads) == 1
+    inventories = [r["params"] for r in b.native if r.get("method") == "thread/list"]
+    assert [p["archived"] for p in inventories] == [False, True]
+    assert all(p["modelProviders"] == [] and "appServer" in p["sourceKinds"] for p in inventories)
+    state.db.close()
+
+
+@pytest.mark.parametrize("flag, result_key", [("--hold-check", "hold_check"), ("--verify", "verification_turn_id")])
+def test_first_pilot_input_accepts_unlisted_empty_chat(boundary, capsys, flag, result_key):
+    b = boundary
+    b.mr()
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", flag)
+    assert code == 0, output.err
+    assert json.loads(output.out)[result_key]
+    assert len([r for r in b.native if r.get("method") == "thread/start"]) == 1
+    assert len([r for r in b.native if r.get("method") == "turn/start"]) == 1
+
+
+def empty_dispatch_candidate(b):
+    mr = b.mr()
+    state = b.state()
+    tid = b.call("ensure_thread", b.config, state, mr)
+    with state.atomic():
+        record = state.get("mrs", "1")
+        b.call("add_event", state, record, to_head=record["head"], reason="head")
+    return state, tid
+
+
+@pytest.mark.parametrize("obstacle", ["archived", "ephemeral", "missing_ephemeral", "missing_preview", "nonempty_unlisted",
+    "history", "creation_id", "creation_kind", "creation_iid", "creation_thread", "creation_state", "bootstrap"])
+def test_empty_dispatch_exception_requires_current_creation_and_unused_nonarchived_metadata(boundary, obstacle):
+    b = boundary
+    state, tid = empty_dispatch_candidate(b)
+    if obstacle == "archived":
+        b.threads[tid].update(archived=True, source="appServer", modelProvider="other-provider")
+    if obstacle == "ephemeral": b.threads[tid]["ephemeral"] = True
+    if obstacle in {"missing_ephemeral", "missing_preview"}:
+        field = obstacle.removeprefix("missing_")
+        external = b.respond
+        def incomplete(method, params):
+            response = external(method, params)
+            if method == "thread/read":
+                response = copy.deepcopy(response)
+                response["thread"].pop(field)
+            return response
+        b.respond = incomplete
+    if obstacle == "nonempty_unlisted":
+        b.threads[tid]["preview"] = "previous input"
+        external = b.respond
+        def hidden(method, params):
+            if method == "thread/list" and not params["archived"]:
+                return {"data": [], "nextCursor": None}
+            return external(method, params)
+        b.respond = hidden
+    if obstacle == "history": b.turns[tid] = [{"id": "used-turn", "status": "completed"}]
+    with state.atomic():
+        record = state.get("mrs", "1")
+        attempt = state.get("attempts", record["creation_attempt"])
+        if obstacle == "creation_id": attempt["id"] = b.call("id")
+        if obstacle == "creation_kind": attempt["kind"] = "dispatch"
+        if obstacle == "creation_iid": attempt["iid"] = 2
+        if obstacle == "creation_thread": attempt["thread_id"] = b.call("id")
+        if obstacle == "creation_state": attempt["state"] = "uncertain"
+        if obstacle == "bootstrap": record["bootstrap_verified"] = True
+        state.put("attempts", record["creation_attempt"], attempt)
+        state.put("mrs", "1", record)
+    before = {bucket: state.all(bucket) for bucket in state.BUCKETS}
+    native_before = len(b.native)
+    with pytest.raises(RuntimeError, match="archived or absent"):
+        b.call("dispatch", b.config, b.path, state, b.api(), 1, b.module["MonitorGate"](b.config))
+    assert {bucket: state.all(bucket) for bucket in state.BUCKETS} == before
+    assert not [r for r in b.native[native_before:] if r.get("method") in {"thread/start", "thread/resume", "turn/start"}]
+    state.db.close()
+
+
+def test_default_inventory_validation_does_not_accept_empty_metadata_alone(boundary):
+    b = boundary
+    state, tid = empty_dispatch_candidate(b)
+    with pytest.raises(RuntimeError, match="archived or absent"):
+        b.call("thread", b.config, tid, active_inventory=True)
+    assert not [r for r in b.native if r.get("method") == "turn/start"]
+    state.db.close()
+
+
+@pytest.mark.parametrize("failure, message", [
+    ("active_cursor", "invalid native inventory"), ("active_bad_cursor", "invalid native inventory"),
+    ("active_cap", "inventory exceeds"), ("archived_cursor", "invalid native inventory"),
+    ("archived_cap", "inventory exceeds"), ("history_cap", "history exceeds"),
+    ("archived_later_match", "archived or absent"), ("history_cursor", "invalid native history"),
+    ("history_data", "invalid native history"),
+])
+def test_empty_dispatch_requires_complete_native_history_and_both_inventories(boundary, failure, message):
+    b = boundary
+    state, tid = empty_dispatch_candidate(b)
+    b.config["max_history_pages"] = 2
+    external = b.respond
+    def damaged(method, params):
+        if method == "thread/list":
+            if not params["archived"]:
+                if failure == "active_cursor": return {"data": []}
+                if failure == "active_bad_cursor": return {"data": [], "nextCursor": []}
+                if failure == "active_cap": return {"data": [], "nextCursor": "more"}
+            else:
+                if failure == "archived_cursor": return {"data": []}
+                if failure == "archived_cap": return {"data": [], "nextCursor": "more-archives"}
+                if failure == "archived_later_match":
+                    if not params.get("cursor"): return {"data": [], "nextCursor": "next-archive"}
+                    return {"data": [b.threads[tid]], "nextCursor": None}
+        if method == "thread/turns/list":
+            if failure == "history_cursor": return {"data": []}
+            if failure == "history_data": return {"data": {}, "nextCursor": None}
+            if failure == "history_cap": return {"data": [], "nextCursor": "more-history"}
+        return external(method, params)
+    b.respond = damaged
+    before = {bucket: state.all(bucket) for bucket in state.BUCKETS}
+    native_before = len(b.native)
+    with pytest.raises(RuntimeError, match=message):
+        b.call("dispatch", b.config, b.path, state, b.api(), 1, b.module["MonitorGate"](b.config))
+    assert {bucket: state.all(bucket) for bucket in state.BUCKETS} == before
+    assert not [r for r in b.native[native_before:] if r.get("method") in {"thread/start", "turn/start"}]
+    state.db.close()
+
+
+@pytest.mark.parametrize("race", [False, True])
+def test_empty_creation_recovery_cannot_bind_a_stale_creation_attempt(boundary, race):
+    b = boundary
+    mr = b.mr()
+    state = b.state()
+    tid = b.call("ensure_thread", b.config, state, mr)
+    record = state.get("mrs", "1")
+    attempt = state.get("attempts", record["creation_attempt"])
+    replacement = b.call("id")
+    with state.atomic():
+        record["thread_id"] = None
+        if not race: record["creation_attempt"] = replacement
+        attempt["state"] = "uncertain"
+        state.put("mrs", "1", record)
+        state.put("attempts", attempt["id"], attempt)
+    external = b.respond
+    def changed(method, params):
+        response = external(method, params)
+        if race and method == "thread/read":
+            with state.atomic():
+                current = state.get("mrs", "1")
+                current["creation_attempt"] = replacement
+                state.put("mrs", "1", current)
+        return response
+    b.respond = changed
+    native_before = len(b.native)
+    with pytest.raises(RuntimeError, match="creation"):
+        b.call("recover", b.config, state, {"attempt_id": attempt["id"], "thread_id": tid})
+    assert state.get("mrs", "1")["thread_id"] is None
+    assert state.get("mrs", "1")["creation_attempt"] == replacement
+    assert state.get("attempts", attempt["id"])["state"] == "uncertain"
+    if not race: assert len(b.native) == native_before
+    state.db.close()
+
+
+def workspace_candidate(b, capsys):
+    b.mr()
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1")
+    assert code == 0, output.err
+    state = b.state()
+    with state.atomic():
+        record = state.get("mrs", "1")
+        record.update(generation=4, bootstrap_verified=True, human_continuation_verified=True)
+        state.put("mrs", "1", record)
+        state.put("events", "1:old-event", {"id": "old-event", "iid": 1, "state": "reviewed",
+            "reasons": ["pilot_hold"], "notes": [], "attempt_id": "old-dispatch",
+            "from_head": "a" * 40, "to_head": "a" * 40})
+        state.put("attempts", "old-dispatch", {"id": "old-dispatch", "iid": 1,
+            "kind": "dispatch", "state": "accepted", "thread_id": record["thread_id"],
+            "event_id": "old-event", "turn_id": "old-turn", "bootstrap": True,
+            "bootstrap_text": "historical standing instructions"})
+        state.put("cases", "old-case", {"id": "old-case", "iid": 1, "state": "answered"})
+    b.turns[record["thread_id"]] = [{"id": "old-turn", "status": "completed"}]
+    b.threads[record["thread_id"]]["preview"] = "historical standing instructions"
+    b.items["old-turn"] = [{"type": "userMessage", "content": [
+        {"type": "text", "text": "historical standing instructions"}]}]
+    raw = b.path.read_bytes()
+    target, _ = analysis_config(b.path.parent, b.config)
+    b.path.write_bytes(raw)
+    new_config = {**b.config, "cwd": str(target.parent / "workspace"), "effort": "high"}
+    response = b.call("native", new_config, "thread/start", {
+        "cwd": new_config["cwd"], "model": new_config["model"],
+        **b.call("permission_selection", new_config)})
+    return state, target, response["thread"]["id"]
+
+
+def adopt_workspace(b, capsys, target, thread_id):
+    return monitor_cli(b, capsys, "adopt-workspace", "--analysis-config", str(target),
+                       "--mr", "1", "--thread-id", thread_id)
+
+
+def test_workspace_adoption_cli_preserves_history_restarts_bootstrap_and_is_idempotent(boundary, capsys):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    old = state.get("mrs", "1")
+    audit = {bucket: state.all(bucket) for bucket in ["events", "attempts", "cases", "operations", "notes"]}
+    native_before = len(b.native)
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 0, output.err
+    assert json.loads(output.out)["thread_id"] == tid
+    data = json.loads(b.path.read_text())
+    assert data["analysis_config"] == str(target)
+    assert not set(data) & {"cwd", "model", "effort"}
+    current = state.get("mrs", "1")
+    assert (current["thread_id"], current["generation"]) == (tid, 5)
+    assert current["bootstrap_verified"] is False and current["human_continuation_verified"] is False
+    assert current["previous_conversations"][0]["thread_id"] == old["thread_id"]
+    assert current["previous_conversations"][0]["human_continuation_verified"] is True
+    for bucket in ["events", "cases", "operations", "notes"]:
+        assert state.all(bucket) == audit[bucket]
+    assert all(state.get("attempts", a["id"]) == a for a in audit["attempts"])
+    assert len(state.all("attempts")) == len(audit["attempts"]) + 1
+    assert not any(r.get("method") in {"thread/start", "turn/start", "thread/settings/update"}
+                   for r in b.native[native_before:])
+    with pytest.raises(RuntimeError, match="binding changed"):
+        with state.atomic():
+            state.put("meta", "stale_callback", True)
+    b.config = b.call("config", b.path)
+    fresh = b.state()
+    with fresh.atomic():
+        current.update(bootstrap_verified=True, human_continuation_verified=True, generation=7)
+        fresh.put("mrs", "1", current)
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 0, output.err
+    assert json.loads(output.out)["changed"] is False
+    assert fresh.get("mrs", "1") == current
+    assert fresh.get("meta", "workspace_adoption")["state"] == "completed"
+    # A future head event receives the standing contract in the new chat, not
+    # a tool output inherited from the old conversation's bootstrap proof.
+    with fresh.atomic():
+        current.update(bootstrap_verified=False, human_continuation_verified=False)
+        fresh.put("mrs", "1", current)
+        b.call("add_event", fresh, current, to_head=current["head"], reason="head")
+    b.call("dispatch", b.config, b.path, fresh, b.api(), 1, b.module["MonitorGate"](b.config))
+    request = [r["params"] for r in b.native if r.get("method") == "turn/start"][-1]
+    assert request["threadId"] == tid and request["effort"] == "high"
+    assert "Standing task explicitly approved" in request["input"][0]["text"]
+    assert "toolOutput" not in request
+    fresh.db.close()
+    state.db.close()
+
+
+@pytest.mark.parametrize("obstacle, message", [
+    ("owner", "owner"), ("hold", "hold"), ("pending", "pending"),
+    ("other_chat", "other mapped"), ("effect", "public effects"),
+    ("diagnostic", "diagnostic attempts"), ("busy", "idle native"),
+    ("diagnostic_accepted", "completed native diagnostic"),
+    ("unproved_creation", "conversation/diagnostic attempts"),
+    ("unproved_diagnostic", "conversation/diagnostic attempts"),
+    ("used", "already has turns"), ("missing_inventory", "archived or absent"),
+])
+def test_workspace_adoption_refuses_unsafe_candidate_without_cutover(boundary, capsys, obstacle, message):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    with state.atomic():
+        current = state.get("mrs", "1")
+        if obstacle == "owner": current["owner"] = {"turn_id": "busy-owner"}
+        if obstacle == "hold": current["case_id"] = "human-question"
+        state.put("mrs", "1", current)
+        if obstacle == "pending":
+            event = state.get("events", "1:old-event")
+            event["state"] = "pending"
+            state.put("events", "1:old-event", event)
+        if obstacle == "other_chat": state.put("mrs", "2", {"iid": 2, "thread_id": "another-chat"})
+        if obstacle == "effect": state.put("operations", "1:uncertain", {"state": "uncertain"})
+        if obstacle == "diagnostic": state.put("attempts", "uncertain", {"kind": "pilot_check", "state": "uncertain"})
+        if obstacle == "diagnostic_accepted":
+            state.put("attempts", "incomplete", {"kind": "pilot_check", "state": "accepted",
+                "thread_id": current["thread_id"], "turn_id": "unproved-diagnostic"})
+        if obstacle == "unproved_creation":
+            identifier = b.call("id")
+            state.put("attempts", identifier, {"id": identifier, "kind": "conversation",
+                "state": "unstarted", "thread_id": current["thread_id"]})
+        if obstacle == "unproved_diagnostic":
+            identifier = b.call("id")
+            state.put("attempts", identifier, {"id": identifier, "kind": "pilot_check", "state": "unstarted"})
+    if obstacle == "busy": b.threads[tid]["status"] = {"type": "active"}
+    if obstacle == "used":
+        b.threads[tid]["preview"] = "existing user input"
+        b.turns[tid] = [{"id": "other-turn", "status": "completed"}]
+    if obstacle == "missing_inventory": b.threads[tid]["archived"] = True
+    before = b.path.read_bytes(), Path(b.config["state_file"]).read_bytes()
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1 and message in output.err
+    assert (b.path.read_bytes(), Path(b.config["state_file"]).read_bytes()) == before
+    state.db.close()
+
+
+def test_workspace_adoption_retains_definitely_deferred_historical_creation(boundary, capsys):
+    b = boundary
+    state = b.state()
+    def defer():
+        raise b.module["MonitorDeferred"]("fixture definitely unsubmitted creation")
+    with pytest.raises(b.module["MonitorDeferred"]):
+        b.call("ensure_thread", {**b.config, "_native_guard": defer}, state, b.mr())
+    attempt = state.all("attempts")[0]
+    assert attempt["kind"] == "conversation" and attempt["state"] == "unstarted"
+    assert state.get("mrs", "1")["creation_attempt"] is None
+    assert not b.threads
+    prepared, target, tid = workspace_candidate(b, capsys)
+    assert prepared.get("mrs", "1")["creation_attempt"] != attempt["id"]
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 0, output.err
+    assert prepared.get("attempts", attempt["id"]) == attempt
+    prepared.db.close()
+    state.db.close()
+
+
+def test_workspace_adoption_rejects_workspace_symlink_into_writable_state(boundary, capsys):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    workspace = target.parent / "workspace"
+    workspace.rmdir()
+    workspace.symlink_to(Path(b.config["state_file"]).parent, target_is_directory=True)
+    b.threads[tid]["cwd"] = str(workspace.resolve())
+    before = b.path.read_bytes(), Path(b.config["state_file"]).read_bytes()
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1 and "outside agent-writable state" in output.err
+    assert (b.path.read_bytes(), Path(b.config["state_file"]).read_bytes()) == before
+    state.db.close()
+
+
+def test_workspace_adoption_retains_operator_confirmed_diagnostic_absence(boundary, capsys):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    original = b.respond
+    def no_submission(method, params):
+        if method == "turn/start": raise TimeoutError("fixture diagnostic not submitted")
+        return original(method, params)
+    b.respond = no_submission
+    code, output = monitor_cli(b, capsys, "pilot", "--mr", "1", "--verify")
+    assert code == 1
+    b.respond = original
+    attempt = next(a for a in state.all("attempts") if a["kind"] == "pilot_check")
+    assert attempt["state"] == "uncertain" and "turn_id" not in attempt
+    code, output = monitor_cli(b, capsys, "recover", "--attempt", attempt["id"],
+        "--confirm-no-diagnostic", "--acknowledge-duplicate-risk")
+    assert code == 0, output.err
+    absent = state.get("attempts", attempt["id"])
+    assert absent["state"] == "unstarted" and absent["duplicate_risk_acknowledged"] is True
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 0, output.err
+    assert state.get("attempts", attempt["id"]) == absent
+    state.db.close()
+
+
+@pytest.mark.parametrize("phase, receipt_phase", [("prepared", "prepared"), ("bound", "bound"), ("renamed", "bound")])
+def test_workspace_adoption_recovers_interrupted_cutover_and_blocks_open_callbacks(boundary, capsys, phase, receipt_phase):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    original_native, original_replace = b.respond, os.replace
+    def stopped_native(method, params):
+        if (method == "thread/read" and params["threadId"] == tid
+                and state.get("meta", "workspace_adoption") is not None):
+            raise RuntimeError("fixture native outage after barrier")
+        return original_native(method, params)
+    def stopped_replace(source, destination):
+        if Path(destination) == b.path:
+            if phase == "renamed": original_replace(source, destination)
+            raise OSError("fixture stopped at config rename")
+        return original_replace(source, destination)
+    if phase == "prepared": b.respond = stopped_native
+    else: b.monkeypatch.setattr(os, "replace", stopped_replace)
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1
+    assert state.get("meta", "workspace_adoption")["state"] == receipt_phase
+    with pytest.raises(RuntimeError, match="adoption is pending"):
+        with state.atomic(): state.put("meta", "stale_callback", True)
+    with pytest.raises(RuntimeError): b.state()
+    b.respond = original_native
+    b.monkeypatch.setattr(os, "replace", original_replace)
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 0, output.err
+    assert state.get("meta", "workspace_adoption")["state"] == "completed"
+    assert state.get("mrs", "1")["generation"] == 5
+    state.db.close()
+
+
+def test_workspace_adoption_blocks_old_chat_observed_active_after_prepared_barrier(boundary, capsys):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    identity = state.get("meta", "identity")
+    old = state.get("mrs", "1")
+    raw = b.path.read_bytes()
+    external = b.respond
+    observed = []
+    def activated(method, params):
+        response = copy.deepcopy(external(method, params))
+        if (method == "thread/read" and params["threadId"] == old["thread_id"]
+                and state.get("meta", "workspace_adoption") is not None):
+            observed.append(response["thread"]["status"]["type"])
+            b.threads[old["thread_id"]]["status"] = {"type": "active"}
+        return response
+    b.respond = activated
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1 and "idle native" in output.err
+    assert observed == ["idle", "active"]
+    assert state.get("meta", "workspace_adoption")["state"] == "prepared"
+    assert state.get("meta", "identity") == identity
+    assert state.get("mrs", "1") == old
+    assert b.path.read_bytes() == raw
+    assert not [r for r in b.native if r.get("method") == "turn/start"]
+    state.db.close()
+
+
+@pytest.mark.parametrize("change, message", [("base", "configuration changed"),
+    ("toml", "configuration changed"), ("busy", "idle native")])
+def test_workspace_adoption_pending_recovery_revalidates_inputs(boundary, capsys, change, message):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    original_replace = os.replace
+    def stop(source, destination):
+        if Path(destination) == b.path: raise OSError("fixture interruption")
+        return original_replace(source, destination)
+    b.monkeypatch.setattr(os, "replace", stop)
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1
+    b.monkeypatch.setattr(os, "replace", original_replace)
+    if change == "base":
+        data = json.loads(b.path.read_text())
+        data["cycle_seconds"] += 1
+        b.path.write_text(json.dumps(data))
+    if change == "toml": target.write_text('model = "gpt-6.1-sol"\nmodel_reasoning_effort = "low"\n')
+    if change == "busy": b.threads[tid]["status"] = {"type": "active"}
+    before = b.path.read_bytes()
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1 and message in output.err
+    assert b.path.read_bytes() == before
+    assert state.get("meta", "workspace_adoption")["state"] == "bound"
+    state.db.close()
+
+
+def test_workspace_adoption_recovery_refuses_receipt_config_injection(boundary, capsys):
+    b = boundary
+    state, target, tid = workspace_candidate(b, capsys)
+    original_replace = os.replace
+    def stop(source, destination):
+        if Path(destination) == b.path: raise OSError("fixture interruption")
+        return original_replace(source, destination)
+    b.monkeypatch.setattr(os, "replace", stop)
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1
+    b.monkeypatch.setattr(os, "replace", original_replace)
+    receipt = state.get("meta", "workspace_adoption")
+    injected = json.loads(receipt["new_json"])
+    injected["state_file"] = str(b.path.parent / "attacker.sqlite3")
+    receipt["new_json"] = json.dumps(injected, ensure_ascii=False, indent=2) + "\n"
+    # Simulate a corrupted agent-writable receipt, not a second production writer.
+    with state.atomic(workspace_adoption=True): state.put("meta", "workspace_adoption", receipt)
+    before = b.path.read_bytes()
+    code, output = adopt_workspace(b, capsys, target, tid)
+    assert code == 1 and "receipt was altered" in output.err
+    assert b.path.read_bytes() == before
+    assert state.get("meta", "workspace_adoption")["state"] == "bound"
+    state.db.close()
 
 
 def pilot_control(b, capsys, action, payload):

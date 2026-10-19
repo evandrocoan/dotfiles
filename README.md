@@ -690,6 +690,55 @@ bounds. The default model is `gpt-6.1-sol` with `xhigh`. The selected MCP server
 directly, checks its HTTPS origin and project, and never copies the token into tasks or units.
 An unavailable server/credential/model is a visible failure, not a reason to change permissions.
 
+To keep analysis settings in one place, store this private mode-`0600` file at
+`~/.local/share/codex-session-stats/config.toml`:
+
+```toml
+model = "gpt-6.1-sol"
+model_reasoning_effort = "xhigh"
+workspace = "workspace"
+```
+
+The monitor loads this file explicitly through `analysis_config` in its base JSON; it is not a
+Codex project `.codex/config.toml`. `workspace` is optional and defaults to the sibling
+`workspace/`. Relative paths resolve from the TOML directory; absolute paths and `~` are also
+accepted. The directory must already exist and stay outside the agent-writable state. The TOML
+must be owned, private and outside that state; unknown keys are rejected. JSON `cwd`, `model`
+and `effort` cannot coexist with `analysis_config`. Changing this path after initialization is
+rejected by the stored binding checks; editing it alone does not move existing chats. The adoption
+procedure below switches an existing JSON-only setup to this TOML.
+
+For an existing monitor, create a new MR conversation directly in that workspace first. Keep
+the old conversation available. Once the exact new ID is idle and empty, adopt it explicitly,
+replacing the example MR and ID:
+
+```bash
+codex-session-stats monitor-gitlab adopt-workspace \
+  --analysis-config "$HOME/.local/share/codex-session-stats/config.toml" \
+  --mr 34 --thread-id NEW_CONVERSATION_ID
+```
+
+Adoption never creates a conversation or starts a model. It refuses other mapped chats, pending
+reviews, owners, human holds, uncertain effects and unfinished diagnostic attempts. Codex omits
+empty previews from its active listing. For that initial state, the monitor checks the exact
+persistent ID/workspace, empty preview and history, and a complete archived listing. It rejects
+archived candidates and incomplete responses. Automatic first input also requires the mapped
+MR's exact accepted creation attempt and unverified bootstrap. After initialization, ordinary
+active-list validation applies. No extra model turn is started just to make a chat appear.
+It preserves the old chat metadata and historical events, cases and attempts, increments the
+generation, and starts the new chat's bootstrap and human-continuation indicators afresh. The next
+review receives its standing instructions there. The base JSON keeps its existing path and other
+settings; its three analysis fields become one `analysis_config` reference. No permission/rule
+change, app restart, GitLab publication or timer activation is part of this command.
+
+Do not edit the base JSON or analysis TOML during adoption. The poll lock serializes monitor
+operator runs, while a durable SQLite barrier blocks ordinary callbacks, including connections
+opened before adoption. If interrupted, repeat the same command: its receipt reconciles only the
+inspected old/new configuration and binding. Changed files or an unavailable/used candidate stop
+recovery for inspection. A completed repeat preserves subsequent generations and verification
+flags. The file replacement includes sync/read-back checks; it is not an atomic comparison with
+an unrelated editor's write.
+
 `preflight`, an eligible real `poll`, and `pilot` automatically register missing rules under
 `[permissions.codex-session-stats-gitlab-monitor]` in the selected `codex_home/config.toml`.
 They use Codex's native configuration editor with a version check. A matching profile causes
@@ -740,8 +789,9 @@ writing its data inside the allowed state root. Existing stdin input remains sup
 manual use. Payloads never grant ownership or replace native provenance checks.
 
 State lives separately at `~/.local/state/codex-session-stats/gitlab-monitor.sqlite3`.
-It binds the project, workspace and native endpoint; changing that binding requires a deliberately
-separate state file. Preserve the state when updating or restarting. Removing it discards
+It binds the project, workspace and native endpoint. Only the explicit `adopt-workspace` operation
+above changes the workspace binding in place; other binding changes require deliberately separate
+state. Preserve the state when updating or restarting. Removing it discards
 deduplication, MR/chat mappings and human holds and can duplicate work. Never edit Codex runtime
 databases to recover this monitor. `status` is offline and shows events, generations, holds,
 incomplete scans and uncertain operations; it does not initialize a database.

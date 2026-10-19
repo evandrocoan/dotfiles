@@ -2322,6 +2322,48 @@ def monitor_default_config(project_url: str, project_id: int, server: str) -> di
     }
 
 
+def monitor_analysis_settings(path: Path, state_dir: Path) -> dict:
+    """Read the monitor's small analysis TOML, outside its writable state."""
+    import stat
+    import tomllib
+    try:
+        monitor_trusted_control_path(path, state_dir, private=True)
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(descriptor, "rb") as stream:
+            metadata = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid()
+                    or metadata.st_nlink != 1 or metadata.st_mode & 0o077):
+                raise RuntimeError("expected an owned private regular file")
+            raw = stream.read(65537)
+        if len(raw) > 65536:
+            raise RuntimeError("file exceeds 64 KiB")
+        settings = tomllib.loads(raw.decode("utf-8"))
+        required = {"model", "model_reasoning_effort"}
+        if not required <= set(settings) or set(settings) - required - {"workspace"}:
+            raise RuntimeError("expected model, model_reasoning_effort and optional workspace")
+        if (not isinstance(settings["model"], str)
+                or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", settings["model"])):
+            raise RuntimeError("invalid model")
+        if settings["model_reasoning_effort"] not in {
+                "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}:
+            raise RuntimeError("invalid model_reasoning_effort")
+        workspace = settings.get("workspace", "workspace")
+        if not isinstance(workspace, str) or not workspace.strip():
+            raise RuntimeError("invalid workspace: expected a nonempty path")
+        workspace = Path(workspace).expanduser()
+        if not workspace.is_absolute():
+            workspace = path.parent / workspace
+        workspace = workspace.resolve()
+        if not workspace.is_dir():
+            raise RuntimeError("workspace directory does not exist")
+        if workspace.is_relative_to(state_dir):
+            raise RuntimeError("workspace must be outside agent-writable state")
+        return {"cwd": str(workspace), "model": settings["model"],
+                "effort": settings["model_reasoning_effort"]}
+    except (OSError, RuntimeError, ValueError, TypeError) as error:
+        raise RuntimeError(f"invalid analysis configuration: {error}") from error
+
+
 def monitor_config(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("version") != 1:
@@ -2343,6 +2385,18 @@ def monitor_config(path: Path) -> dict:
             or any(type(d) is not int or not 0 <= d <= 6 for d in data["weekdays"])):
         raise RuntimeError("invalid weekdays")
     ZoneInfo(data["timezone"])
+    if "analysis_config" in data:
+        if any(key in data for key in ("model", "effort", "cwd")):
+            raise RuntimeError("duplicate analysis settings: use only analysis_config, without model/effort/cwd")
+        reference = data["analysis_config"]
+        if not isinstance(reference, str) or not reference:
+            raise RuntimeError("invalid analysis configuration path")
+        target = Path(reference).expanduser()
+        if not target.is_absolute():
+            target = path.parent / target
+        target = Path(os.path.abspath(target))
+        data.update(monitor_analysis_settings(target, Path(data["state_file"]).expanduser().resolve().parent))
+        data["analysis_config"] = str(target)
     for name in ("codex_home", "cwd", "socket", "state_file"):
         if name == "socket":
             data["_socket_alias"] = str(Path(data[name]).expanduser().absolute())
@@ -2359,12 +2413,18 @@ class MonitorState:
 
     BUCKETS = {"meta", "mrs", "notes", "events", "attempts", "operations", "cases"}
 
-    def __init__(self, config: dict, *, readonly: bool = False, offline_endpoint=False):
+    def __init__(self, config: dict, *, readonly: bool = False, offline_endpoint=False,
+                 workspace_adoption=False):
         self.config = config
+        self.ready = False
+        self.expected = {"schema": 1, "binding": {key: config[key] for key in
+            ("gitlab_url", "project_id", "project_path", "socket", "cwd")}}
         path = Path(config["state_file"])
+        if workspace_adoption and not path.is_file():
+            raise RuntimeError("workspace adoption requires existing monitor state")
         if path.exists() and (path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077):
             raise RuntimeError("monitor database must be a private regular file")
-        if not readonly:
+        if not readonly and not workspace_adoption:
             path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             try:
                 descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -2375,7 +2435,7 @@ class MonitorState:
                 os.close(descriptor)
         self.db = sqlite3.connect(f"file:{quote(str(path), safe='/')}?mode={'ro' if readonly else 'rw'}",
                                   uri=True, isolation_level=None, timeout=10)
-        if not readonly:
+        if not readonly and not workspace_adoption:
             with self.atomic():
                 for bucket in sorted(self.BUCKETS):
                     self.db.execute(f"CREATE TABLE IF NOT EXISTS {bucket} (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
@@ -2394,17 +2454,35 @@ class MonitorState:
                 and isinstance(actual, dict) and actual.get("schema") == 1):
             # Diagnostic only: retain the historical endpoint instead of rebinding it.
             expected["binding"]["socket"] = actual.get("binding", {}).get("socket")
-        if actual != expected:
+        adoption = self.get("meta", "workspace_adoption")
+        if adoption is not None and not isinstance(adoption, dict):
+            self.db.close()
+            raise RuntimeError("invalid workspace adoption receipt")
+        pending = adoption is not None and adoption.get("state") != "completed"
+        recovering = (workspace_adoption and pending and expected in
+                      [adoption.get("old_identity"), adoption.get("new_identity")]
+                      and actual in [adoption.get("old_identity"), adoption.get("new_identity")])
+        if actual != expected and not recovering:
             self.db.close()
             raise RuntimeError("monitor database belongs to another project, endpoint or schema")
+        if pending and not workspace_adoption:
+            self.db.close()
+            raise RuntimeError("workspace adoption is pending; repeat the exact adopt-workspace command")
+        self.ready = True
 
-    def atomic(self):
+    def atomic(self, *, workspace_adoption=False):
         from contextlib import contextmanager
 
         @contextmanager
         def transaction():
             self.db.execute("BEGIN IMMEDIATE")
             try:
+                if self.ready and not workspace_adoption:
+                    adoption = self.get("meta", "workspace_adoption")
+                    if adoption is not None and adoption.get("state") != "completed":
+                        raise RuntimeError("workspace adoption is pending; repeat the exact adopt-workspace command")
+                    if self.get("meta", "identity") != self.expected:
+                        raise RuntimeError("monitor workspace binding changed; reopen state with current configuration")
                 yield
             except BaseException:
                 self.db.rollback()
@@ -2430,6 +2508,207 @@ class MonitorState:
             raise RuntimeError("unknown monitor state bucket")
         return [json.loads(row[0]) for row in self.db.execute(
             f"SELECT value FROM {bucket} WHERE key LIKE ? ORDER BY key", (prefix + "%",))]
+
+
+def monitor_operator_file(path: Path, state_dir: Path) -> tuple[bytes, tuple]:
+    import stat
+    monitor_trusted_control_path(path, state_dir, private=True)
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as stream:
+        metadata = os.fstat(stream.fileno())
+        if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid()
+                or metadata.st_mode & 0o077 or metadata.st_nlink != 1):
+            raise RuntimeError("operator configuration changed type, ownership, mode or link count")
+        raw = stream.read(65537)
+    if len(raw) > 65536:
+        raise RuntimeError("operator configuration exceeds 64 KiB")
+    signature = (metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns)
+    return raw, signature
+
+
+def monitor_workspace_record(old: dict, thread_id: str, attempt_id: str, config: dict) -> dict:
+    record = json.loads(json.dumps(old))
+    historical = {key: old.get(key) for key in ("thread_id", "creation_attempt", "generation",
+        "bootstrap_verified", "human_continuation_verified")}
+    historical.update({key: config[key] for key in ("cwd", "model", "effort")})
+    record.setdefault("previous_conversations", []).append(historical)
+    record.update(thread_id=thread_id, creation_attempt=attempt_id,
+                  generation=old["generation"] + 1, bootstrap_verified=False,
+                  human_continuation_verified=False)
+    return record
+
+
+def monitor_workspace_idle(state: MonitorState, iid: int):
+    record = state.get("mrs", str(iid))
+    if not record or not record.get("thread_id"):
+        raise RuntimeError("workspace adoption requires an existing mapped MR")
+    if any(m.get("thread_id") for m in state.all("mrs") if m["iid"] != iid):
+        raise RuntimeError("other mapped conversations must be handled before changing the workspace")
+    if any(m.get("owner") or m.get("case_id") or m.get("delivery_conflict") for m in state.all("mrs")):
+        raise RuntimeError("workspace adoption cannot replace an owner, human hold or conflict")
+    if any(e["state"] not in {"reviewed", "superseded", "suppressed"} for e in state.all("events")):
+        raise RuntimeError("workspace adoption requires all pending delivery/review work to finish")
+    if any(o["state"] not in {"confirmed", "abandoned_no_effect"} for o in state.all("operations")):
+        raise RuntimeError("workspace adoption requires reconciliation of public effects")
+    creation_ids = {m.get("creation_attempt") for m in state.all("mrs")}
+    for attempt in state.all("attempts"):
+        if attempt.get("kind") == "dispatch":
+            continue
+        if attempt["state"] in {"attempting", "uncertain"}:
+            raise RuntimeError("workspace adoption requires reconciliation of conversation/diagnostic attempts")
+        if attempt["state"] == "unstarted":
+            valid_id = isinstance(attempt.get("id"), str) and re.fullmatch(r"[a-f0-9-]{36}", attempt["id"])
+            absent_creation = (valid_id and attempt.get("kind") == "conversation"
+                               and not attempt.get("thread_id") and not attempt.get("turn_id")
+                               and attempt.get("id") not in creation_ids)
+            absent_diagnostic = (valid_id and attempt.get("kind") in {"pilot_check", "pilot_socket_check"}
+                                 and not attempt.get("turn_id")
+                                 and attempt.get("duplicate_risk_acknowledged") is True)
+            if not (absent_creation or absent_diagnostic):
+                raise RuntimeError("workspace adoption requires reconciliation of conversation/diagnostic attempts")
+    return record
+
+
+def monitor_workspace_native(state: MonitorState, old_config: dict, new_config: dict, old_id: str, new_id: str):
+    if old_id == new_id or not re.fullmatch(r"[a-f0-9-]{36}", new_id):
+        raise RuntimeError("workspace adoption requires the exact new conversation ID")
+    for config, thread_id in ((old_config, old_id), (new_config, new_id)):
+        thread = monitor_thread(config, thread_id)
+        if thread["status"]["type"] not in {"idle", "notLoaded"}:
+            raise RuntimeError("workspace adoption requires idle native conversations")
+        thread = monitor_thread(config, thread_id, active_inventory=True, allow_empty=thread_id == new_id)
+        if thread["status"]["type"] not in {"idle", "notLoaded"}:
+            raise RuntimeError("workspace adoption requires idle native conversations")
+    if monitor_turns(new_config, new_id):
+        raise RuntimeError("new workspace conversation already has turns; inspect before adoption")
+    diagnostics = [a for a in state.all("attempts") if a.get("thread_id") == old_id
+                   and a.get("kind") in {"pilot_check", "pilot_socket_check"} and a["state"] == "accepted"]
+    if diagnostics:
+        finished = {t["id"] for t in monitor_turns(old_config, old_id)
+                    if t["status"] in {"completed", "failed", "interrupted"}}
+        if any(a.get("turn_id") not in finished for a in diagnostics):
+            raise RuntimeError("workspace adoption requires completed native diagnostic attempts")
+
+
+def monitor_adopt_workspace(config: dict, path: Path, analysis: Path, iid: int, thread_id: str) -> dict:
+    """Adopt an explicitly created chat; never create/retry a native conversation here."""
+    analysis = Path(os.path.abspath(analysis.expanduser()))
+    state_dir = Path(config["state_file"]).parent
+    settings = monitor_analysis_settings(analysis, state_dir)
+    monitor_permission_definition({**config, **settings})
+    analysis_raw, _ = monitor_operator_file(analysis, state_dir)
+    raw, signature = monitor_operator_file(path, state_dir)
+    state = MonitorState(config, workspace_adoption=True)
+    try:
+        receipt = state.get("meta", "workspace_adoption")
+        if receipt is None:
+            original = json.loads(raw)
+            if "analysis_config" in original:
+                raise RuntimeError("analysis configuration is already selected; inspect existing adoption")
+            old = monitor_workspace_idle(state, iid)
+            monitor_workspace_native(state, config, {**config, **settings}, old["thread_id"], thread_id)
+            updated = {key: value for key, value in original.items() if key not in {"cwd", "model", "effort"}}
+            updated["analysis_config"] = str(analysis)
+            new_raw = (json.dumps(updated, ensure_ascii=False, indent=2) + "\n").encode()
+            identity = state.get("meta", "identity")
+            receipt = {"id": monitor_id(), "state": "prepared", "iid": iid,
+                "thread_id": thread_id, "analysis_config": str(analysis),
+                "analysis_sha256": hashlib.sha256(analysis_raw).hexdigest(),
+                "old_json": raw.decode(), "new_json": new_raw.decode(),
+                "old_identity": identity,
+                "new_identity": {"schema": 1, "binding": {**identity["binding"], "cwd": settings["cwd"]}},
+                "old_mr": old}
+            receipt["new_mr"] = monitor_workspace_record(old, thread_id, receipt["id"], config)
+            with state.atomic(workspace_adoption=True):
+                if (state.get("meta", "workspace_adoption") is not None
+                        or monitor_workspace_idle(state, iid) != old
+                        or monitor_operator_file(path, state_dir) != (raw, signature)
+                        or monitor_operator_file(analysis, state_dir)[0] != analysis_raw):
+                    raise RuntimeError("workspace adoption inputs changed before preparation")
+                state.put("meta", "workspace_adoption", receipt)
+
+        # State is writable by the agent. Re-derive the sole permitted config edit
+        # from explicit operator arguments and the current private JSON, not arbitrary receipt bytes.
+        if (not isinstance(receipt, dict) or receipt.get("iid") != iid
+                or receipt.get("thread_id") != thread_id
+                or receipt.get("analysis_config") != str(analysis)
+                or receipt.get("state") not in {"prepared", "bound", "completed"}
+                or not re.fullmatch(r"[a-f0-9-]{36}", str(receipt.get("id", "")))):
+            raise RuntimeError("workspace adoption receipt/arguments mismatch")
+        old_raw, new_raw = receipt["old_json"].encode(), receipt["new_json"].encode()
+        old_data, new_data = json.loads(old_raw), json.loads(new_raw)
+        allowed = {key: value for key, value in old_data.items() if key not in {"cwd", "model", "effort"}}
+        allowed["analysis_config"] = str(analysis)
+        if ("analysis_config" in old_data or new_data != allowed
+                or new_raw != (json.dumps(allowed, ensure_ascii=False, indent=2) + "\n").encode()
+                or raw not in {old_raw, new_raw}
+                or hashlib.sha256(analysis_raw).hexdigest() != receipt["analysis_sha256"]):
+            raise RuntimeError("workspace adoption configuration changed or receipt was altered")
+        new_config = {**config, **settings}
+        old_config = {**config, **{key: old_data[key] for key in ("cwd", "model", "effort")}}
+        old_config["cwd"] = str(Path(old_config["cwd"]).expanduser().resolve())
+        binding = {key: config[key] for key in ("gitlab_url", "project_id", "project_path", "socket")}
+        old_identity = {"schema": 1, "binding": {**binding, "cwd": old_config["cwd"]}}
+        new_identity = {"schema": 1, "binding": {**binding, "cwd": settings["cwd"]}}
+        if (receipt["old_identity"] != old_identity or receipt["new_identity"] != new_identity
+                or receipt["old_mr"].get("iid") != iid
+                or receipt["new_mr"] != monitor_workspace_record(
+                    receipt["old_mr"], thread_id, receipt["id"], old_config)):
+            raise RuntimeError("workspace adoption binding/snapshot was altered")
+        if receipt["state"] == "completed":
+            current = state.get("mrs", str(iid))
+            if (raw != new_raw or state.get("meta", "identity") != new_identity
+                    or current.get("thread_id") != thread_id
+                    or current["generation"] < receipt["new_mr"]["generation"]):
+                raise RuntimeError("completed workspace adoption no longer matches current state")
+            return {"adopted": True, "changed": False, "iid": iid, "thread_id": thread_id}
+
+        monitor_workspace_native(state, old_config, new_config, receipt["old_mr"]["thread_id"], thread_id)
+        if receipt["state"] == "prepared":
+            with state.atomic(workspace_adoption=True):
+                if (raw != old_raw or state.get("meta", "workspace_adoption") != receipt
+                        or state.get("meta", "identity") != old_identity
+                        or monitor_workspace_idle(state, iid) != receipt["old_mr"]
+                        or state.get("attempts", receipt["id"]) is not None):
+                    raise RuntimeError("workspace adoption state changed before binding")
+                state.put("meta", "identity", new_identity)
+                state.put("mrs", str(iid), receipt["new_mr"])
+                state.put("attempts", receipt["id"], {"id": receipt["id"], "iid": iid,
+                    "kind": "conversation", "state": "accepted", "thread_id": thread_id,
+                    "operator_adopted": True})
+                receipt["state"] = "bound"
+                state.put("meta", "workspace_adoption", receipt)
+        if (state.get("meta", "identity") != new_identity
+                or state.get("mrs", str(iid)) != receipt["new_mr"]):
+            raise RuntimeError("workspace adoption bound state changed")
+        if raw == old_raw:
+            temporary = path.with_name(f".{path.name}.{monitor_id()}.tmp")
+            try:
+                with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as stream:
+                    stream.write(new_raw)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                if (monitor_operator_file(path, state_dir) != (raw, signature)
+                        or monitor_operator_file(analysis, state_dir)[0] != analysis_raw):
+                    raise RuntimeError("workspace adoption configuration changed before replacement")
+                os.replace(temporary, path)
+            finally:
+                temporary.unlink(missing_ok=True)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+        with state.atomic(workspace_adoption=True):
+            if (state.get("meta", "workspace_adoption") != receipt
+                    or monitor_operator_file(path, state_dir)[0] != new_raw
+                    or monitor_operator_file(analysis, state_dir)[0] != analysis_raw):
+                raise RuntimeError("workspace adoption configuration changed before completion")
+            receipt["state"] = "completed"
+            state.put("meta", "workspace_adoption", receipt)
+        return {"adopted": True, "changed": True, "iid": iid, "thread_id": thread_id,
+                "previous_thread_id": receipt["old_mr"]["thread_id"], "cwd": settings["cwd"]}
+    finally:
+        state.db.close()
 
 
 def monitor_native(config: dict, method: str, params: dict) -> dict:
@@ -2781,6 +3060,7 @@ def monitor_effective_notes(state: MonitorState, event: dict) -> list:
 def monitor_ensure_thread(config: dict, state: MonitorState, mr: dict) -> str:
     iid = mr["iid"]
     selection = monitor_permission_selection(config)
+    selection["config"]["model_reasoning_effort"] = config["effort"]
     with state.atomic():
         record = state.get("mrs", str(iid)) or {"iid": iid, "head": mr["sha"],
             "first_head": mr["sha"], "sequence": 0, "generation": 0, "owner": None,
@@ -2834,30 +3114,66 @@ def monitor_turns(config: dict, thread_id: str) -> list:
         if cursor:
             params["cursor"] = cursor
         result = monitor_native(config, "thread/turns/list", params)
+        if (not isinstance(result.get("data"), list) or "nextCursor" not in result
+                or not (result["nextCursor"] is None
+                        or isinstance(result["nextCursor"], str) and result["nextCursor"])):
+            raise RuntimeError("invalid native history page/cursor; completeness is unverified")
         turns.extend(result["data"])
-        cursor = result.get("nextCursor")
+        cursor = result["nextCursor"]
         if cursor is None:
             return turns
     raise RuntimeError("native thread history exceeds configured page bound")
 
 
-def monitor_thread(config: dict, thread_id: str, *, active_inventory=False) -> dict:
+def monitor_thread_listed(config: dict, thread_id: str, *, archived: bool) -> bool:
+    cursor = None
+    for _ in range(config["max_history_pages"]):
+        params = {"archived": archived, "cwd": config["cwd"], "limit": 100, "modelProviders": [],
+            "sourceKinds": ["cli", "vscode", "exec", "appServer", "subAgent", "subAgentReview",
+                            "subAgentCompact", "subAgentThreadSpawn", "subAgentOther", "unknown"]}
+        if cursor:
+            params["cursor"] = cursor
+        result = monitor_native(config, "thread/list", params)
+        if (not isinstance(result.get("data"), list) or "nextCursor" not in result
+                or not (result["nextCursor"] is None
+                        or isinstance(result["nextCursor"], str) and result["nextCursor"])
+                or any(not isinstance(t, dict) or not isinstance(t.get("id"), str) or not t["id"]
+                       for t in result["data"])):
+            raise RuntimeError("invalid native inventory page/cursor; completeness is unverified")
+        if any(t["id"] == thread_id for t in result["data"]):
+            return True
+        cursor = result["nextCursor"]
+        if cursor is None:
+            return False
+    raise RuntimeError("native conversation inventory exceeds configured page bound")
+
+
+def monitor_pending_thread(state: MonitorState, iid: int, thread_id: str) -> bool:
+    record = state.get("mrs", str(iid)) or {}
+    attempt_id = record.get("creation_attempt")
+    attempt = state.get("attempts", attempt_id) if isinstance(attempt_id, str) else None
+    return bool(record.get("iid") == iid and record.get("thread_id") == thread_id
+        and record.get("bootstrap_verified", False) is False and attempt
+        and attempt.get("id") == attempt_id and attempt.get("kind") == "conversation"
+        and attempt.get("state") == "accepted" and attempt.get("iid") == iid
+        and attempt.get("thread_id") == thread_id)
+
+
+def monitor_thread(config: dict, thread_id: str, *, active_inventory=False, allow_empty=False) -> dict:
     thread = monitor_native(config, "thread/read", {"threadId": thread_id, "includeTurns": False})["thread"]
     if thread.get("id") != thread_id or thread.get("cwd") != config["cwd"]:
         raise RuntimeError("native conversation identity/workspace mismatch")
     if active_inventory:
-        cursor = None
-        for _ in range(config["max_history_pages"]):
-            params = {"archived": False, "cwd": config["cwd"], "limit": 100, "sourceKinds": []}
-            if cursor:
-                params["cursor"] = cursor
-            result = monitor_native(config, "thread/list", params)
-            if any(t["id"] == thread_id for t in result["data"]):
-                return thread
-            cursor = result.get("nextCursor")
-            if cursor is None:
-                raise RuntimeError("mapped conversation is archived or absent; explicit recovery required")
-        raise RuntimeError("native active inventory exceeds configured page bound")
+        if monitor_thread_listed(config, thread_id, archived=False):
+            return thread
+        # Native active listings omit empty previews. Only an inspected/operator
+        # candidate or this MR's accepted pending creation may precede its first input.
+        if (allow_empty and thread.get("ephemeral") is False and thread.get("preview") == ""
+                and thread.get("status", {}).get("type") in {"idle", "notLoaded"}
+                and not monitor_turns(config, thread_id)
+                and not monitor_thread_listed(config, thread_id, archived=True)):
+            return thread
+        raise RuntimeError("mapped conversation is archived or absent; explicit recovery required")
     return thread
 
 
@@ -3063,7 +3379,11 @@ def monitor_dispatch(config: dict, path: Path, state: MonitorState, api: Monitor
     gate.check()
     thread_id = monitor_ensure_thread(config, state, mr)
     gate.check()
-    thread = monitor_thread(config, thread_id, active_inventory=True)
+    thread = monitor_thread(config, thread_id)
+    if thread["status"]["type"] not in {"idle", "notLoaded"}:
+        return "native_busy"
+    thread = monitor_thread(config, thread_id, active_inventory=True,
+                            allow_empty=monitor_pending_thread(state, iid, thread_id))
     status = thread["status"]["type"]
     if status not in {"idle", "notLoaded"}:
         return "native_busy"
@@ -3139,7 +3459,9 @@ def monitor_hold_check(config: dict, path: Path, state: MonitorState, api: Monit
     if any(e["reasons"] != ["pilot_hold"] and e["state"] in {
             "pending", "attempting", "accepted", "uncertain", "claimed"} for e in events):
         raise RuntimeError("pilot cannot acquire ordinary or mixed review work")
-    pilots = [e for e in events if "pilot_hold" in e["reasons"]]
+    previous_ids = {p["thread_id"] for p in record.get("previous_conversations", [])}
+    pilots = [e for e in events if "pilot_hold" in e["reasons"] and not (
+        e["state"] == "reviewed" and (state.get("attempts", e.get("attempt_id", "")) or {}).get("thread_id") in previous_ids)]
     if len(pilots) > 1:
         raise RuntimeError("multiple pilot events require operator inspection")
     if pilots:
@@ -3160,7 +3482,8 @@ def monitor_hold_check(config: dict, path: Path, state: MonitorState, api: Monit
             raise RuntimeError("pilot head changed; inspect before retrying")
     if record["head"] != mr["sha"]:
         raise RuntimeError("pilot head changed; inspect before retrying")
-    thread = monitor_thread(config, record["thread_id"], active_inventory=True)
+    thread = monitor_thread(config, record["thread_id"], active_inventory=True,
+                            allow_empty=monitor_pending_thread(state, iid, record["thread_id"]))
     if thread["status"]["type"] not in {"idle", "notLoaded"}:
         raise RuntimeError("pilot requires an idle native conversation")
     if not pilots:
@@ -3581,6 +3904,7 @@ def monitor_reconcile(config: dict, state: MonitorState, iid: int):
     thread_id = record["thread_id"]
     turns = monitor_turns(config, thread_id)
     for attempt in [a for a in state.all("attempts") if a.get("iid") == iid and a.get("kind") == "dispatch"
+                    and a.get("thread_id") == thread_id
                     and a["state"] in {"attempting", "uncertain", "accepted"}]:
         candidates = [t for t in turns if t["id"] in {attempt.get("turn_id"), attempt.get("conflicting_turn_id")}]
         if not attempt.get("turn_id"):
@@ -3615,7 +3939,8 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
     record = state.get("mrs", str(iid))
     if attempt["kind"] == "conversation":
         thread_id = payload.get("thread_id")
-        if attempt["state"] not in {"attempting", "uncertain"} or record.get("thread_id"):
+        if (attempt["state"] not in {"attempting", "uncertain"} or record.get("thread_id")
+                or record.get("creation_attempt") != attempt["id"]):
             raise RuntimeError("conversation recovery requires its uncertain/attempting creation record")
         if payload.get("confirm_no_conversation"):
             if thread_id:
@@ -3631,12 +3956,14 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
             return {"creation_retry_allowed": True, "warning": "operator confirmed absence; an unnoticed existing chat may duplicate"}
         if not thread_id:
             raise RuntimeError("inspect and bind --thread-id, or explicitly --confirm-no-conversation after inspection")
-        monitor_thread(config, thread_id, active_inventory=True)
+        monitor_thread(config, thread_id, active_inventory=True, allow_empty=True)
         with state.atomic():
             current = state.get("mrs", str(iid))
-            if current.get("thread_id") or any(m["iid"] != iid and m.get("thread_id") == thread_id
-                                               for m in state.all("mrs")):
-                raise RuntimeError("conversation mapping changed or thread already belongs to another MR")
+            current_attempt = state.get("attempts", attempt["id"])
+            if (current.get("thread_id") or current.get("creation_attempt") != attempt["id"]
+                    or current_attempt != attempt or current_attempt["state"] not in {"attempting", "uncertain"}
+                    or any(m["iid"] != iid and m.get("thread_id") == thread_id for m in state.all("mrs"))):
+                raise RuntimeError("conversation creation mapping changed or thread already belongs to another MR")
             current["thread_id"] = thread_id
             attempt.update({"thread_id": thread_id, "state": "accepted", "operator_recovered": True})
             state.put("mrs", str(iid), current)
@@ -3669,12 +3996,15 @@ def monitor_recover(config: dict, state: MonitorState, payload: dict):
         return {"diagnostic_absence_recorded": True}
     if attempt["kind"] != "dispatch":
         raise RuntimeError("unsupported recovery attempt")
+    if attempt.get("thread_id") != record.get("thread_id"):
+        raise RuntimeError("historical conversation attempt cannot recover the current mapping")
     event = state.get("events", f"{iid}:{attempt['event_id']}")
     if (not event or event.get("attempt_id") != attempt["id"]
             or attempt["state"] not in {"attempting", "uncertain", "accepted", "claimed"}):
         raise RuntimeError("recovery requires the event's current eligible attempt; old recovery cannot release new work")
     monitor_reconcile(config, state, iid)
-    thread = monitor_thread(config, record["thread_id"], active_inventory=True)
+    thread = monitor_thread(config, record["thread_id"], active_inventory=True,
+                            allow_empty=monitor_pending_thread(state, iid, record["thread_id"]))
     if thread["status"]["type"] not in {"idle", "notLoaded"}:
         raise RuntimeError("native conversation is busy; do not retry")
     with state.atomic():
@@ -3874,6 +4204,10 @@ def monitor_main() -> int:
     configure.add_argument("--project-url", required=True)
     configure.add_argument("--project-id", type=positive_integer, required=True)
     configure.add_argument("--mcp-server", default="gitlab")
+    adopt = commands.add_parser("adopt-workspace", help="explicitly adopt one already-created workspace conversation")
+    adopt.add_argument("--analysis-config", type=Path, required=True)
+    adopt.add_argument("--mr", type=positive_integer, required=True)
+    adopt.add_argument("--thread-id", required=True)
     launch = commands.add_parser("launch-app", help="start the closed GUI with one native server shared by the monitor")
     launch.add_argument("--app", type=Path, required=True)
     launch.add_argument("--codex", type=Path, required=True)
@@ -3936,11 +4270,14 @@ def monitor_main() -> int:
                 raise RuntimeError("application launch unexpectedly returned")
             if arguments.action not in {"status", "poll"}:
                 monitor_shared_owner(config)
-            if arguments.action in {"pilot", "recover"}:
+            if arguments.action in {"pilot", "recover", "adopt-workspace"}:
                 lock_descriptor = monitor_acquire_lock(config)
                 if lock_descriptor is None:
                     raise RuntimeError("poll/pilot/recovery already running; inspect it before operator recovery")
-            if arguments.action == "status":
+            if arguments.action == "adopt-workspace":
+                result = monitor_adopt_workspace(config, path, arguments.analysis_config,
+                                                arguments.mr, arguments.thread_id)
+            elif arguments.action == "status":
                 exists = Path(config["state_file"]).exists()
                 result = {"configured": True, "initialized": exists,
                           "project_id": config["project_id"], "mrs": [],
@@ -4037,14 +4374,16 @@ def monitor_main() -> int:
                         current_mr = state.get("mrs", str(mr["iid"]))
                         if current_mr.get("case_id") or current_mr.get("owner"):
                             raise RuntimeError("pilot diagnostics cannot run over a human hold or owned review")
-                        thread = monitor_thread(config, thread_id, active_inventory=True)
+                        thread = monitor_thread(config, thread_id, active_inventory=True,
+                            allow_empty=monitor_pending_thread(state, mr["iid"], thread_id))
                         if thread["status"]["type"] not in {"idle", "notLoaded"}:
                             raise RuntimeError("pilot diagnostic requires an idle native conversation")
                         monitor_prepare_thread(config, thread_id)
                         kind = "pilot_socket_check" if arguments.diagnose_socket else "pilot_check"
                         with state.atomic():
                             attempts = [a for a in state.all("attempts")
-                                        if a.get("iid") == mr["iid"] and a.get("kind") == kind]
+                                        if a.get("iid") == mr["iid"] and a.get("kind") == kind
+                                        and a.get("thread_id") == thread_id]
                             if attempts:
                                 raise RuntimeError("pilot verification already attempted; inspect its recorded turn")
                             attempt = {"id": monitor_id(), "iid": mr["iid"], "kind": kind,
