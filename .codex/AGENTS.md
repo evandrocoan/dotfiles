@@ -18,6 +18,13 @@ may have changed; a turn boundary alone does not require another full reread.
 Project instructions may refine global workflow assumptions, but must not relax
 global safety, authorization, workspace-scope, or destructive-action boundaries.
 
+When SSH works in the user's terminal but fails in the agent, inspect `ssh -G <host>`, the inherited
+`SSH_AUTH_SOCK`, and active agent sockets (`ss -xl` on Linux) before reporting missing access.
+A stale keyring socket can coexist with a working GNOME GCR agent. Check that the socket belongs
+to the same user and use `ssh-add -l` to verify the expected public-key fingerprint, then select
+the existing agent with a process-scoped socket override for the authorized connection. A
+`BatchMode` rejection alone does not establish that credentials are unavailable.
+
 ### Local agent history
 
 When a user asks to identify, retrieve, or summarize a prior agent chat, inspect
