@@ -1,5 +1,5 @@
 [Unit]
-Description=Drain GitLab review queue and check the configured polling schedule
+Description=Wake the GitLab FIFO consumer every 15 minutes
 
 [Timer]
 OnCalendar=*-*-* *:00/15:00

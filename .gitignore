@@ -21,6 +21,11 @@
 !install-ia-skills-windows.ps1
 !.nojekyll
 
+!/architecture/
+!/architecture/README.md
+!/architecture/gitlab-monitor-work-ownership.md
+!/architecture/gitlab-monitor-simple-queue.md
+
 !/implementation-plans/
 !/implementation-plans/README.md
 !/implementation-plans/active/

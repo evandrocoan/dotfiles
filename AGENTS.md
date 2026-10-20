@@ -69,6 +69,19 @@ optional package must fail only the operation that needs it, with an actionable 
 Apply the same isolation to future command-specific dependencies so adding one feature does not
 break the rest of the standalone CLI.
 
+### GitLab monitor work ownership
+
+Preserve the [simple queue contract](architecture/gitlab-monitor-simple-queue.md). One durable
+FIFO and one consumer own all repositories, keyed by authenticated GitLab repository ID plus MR
+IID. Every configured reviewer runs in order after success or any terminal failure; no quota
+classifier or fallback mode. Agents return domain proposals; only the monitor journals, publishes
+and confirms effects. Unknown execution cannot release serial capacity. Human requests retain
+actual native source, bounded scope and sufficient-answer holds. Only completed actual code review
+advances the code checkpoint. Use fresh state and lazily created chats; predecessor chats/state
+remain outside the consumer without migration or instruction updates. Earlier sessions created by
+this consumer remain valid original human/hold sources. Preserve exact native input/result identity,
+concern consolidation, immutable publication identities and whole-discussion resolution checks.
+
 ### Systemd user services
 
 Installed via `cp -rv ~/scripts/install/* ~/.config/` followed by

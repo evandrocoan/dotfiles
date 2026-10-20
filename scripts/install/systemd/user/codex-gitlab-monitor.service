@@ -1,12 +1,20 @@
 [Unit]
-Description=Observe GitLab merge requests for native Codex review
+Description=Consume the shared GitLab MR review FIFO
 After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=10
 
 [Service]
-Type=oneshot
+Type=simple
 WorkingDirectory=%h
-ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab tick
-TimeoutStartSec=5min
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab serve
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
 UMask=0077
 StandardOutput=journal
 StandardError=journal
+
+[Install]
+WantedBy=default.target
