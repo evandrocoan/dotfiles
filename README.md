@@ -19,6 +19,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
+    - [Codex Linux desktop sidebar patch](#codex-linux-desktop-sidebar-patch)
     - [Repository tests](#repository-tests)
       - [Shared skill tests](#shared-skill-tests)
     - [Update the repository with an isolated pull](#update-the-repository-with-an-isolated-pull)
@@ -845,6 +846,50 @@ original bundle beside the asset with a `.codex-empty-header-original` suffix. T
 change, run `node ~/scripts/codex-vscode-history-fix/patch-empty-header.cjs --restore` and reload
 the window. If an update changes the bundle layout, inspect the new version and adapt the patcher
 and test before retrying.
+
+
+### Codex Linux desktop sidebar patch
+
+[The desktop sidebar patcher](scripts/codex-desktop-sidebar-fix/patch.cjs) removes the inline
+archive and pin/unpin buttons from chat rows, including pinned chats, so those controls cannot
+intercept a click intended to select a chat. Context menus retain their archive and pin actions;
+other row actions remain available. This patch targets the Linux desktop app, independently of
+the VS Code extension patches above. It uses the existing Node.js runtime without npm packages.
+
+Apply and verify it after installing or updating the **desktop app**:
+
+```text
+sudo node ~/scripts/codex-desktop-sidebar-fix/patch.cjs --apply
+node ~/scripts/codex-desktop-sidebar-fix/patch.cjs --check
+node --test ~/scripts/codex-desktop-sidebar-fix/test.cjs
+```
+
+Exit and reopen the desktop app normally to load the change. The script does not restart it.
+The default archive is `/usr/lib/chatgpt/resources/app.asar`; use `--app-asar FILE` for another
+installation. Writes require permission to replace the archive in its containing directory.
+
+The patcher recognizes the inspected sidebar bundle by its full SHA-256 hash, changes only
+same-length code fragments and their ASAR integrity hashes, and validates a temporary archive
+before replacing the installed one. It saves only the original sidebar asset beside the archive
+with the suffix `.codex-sidebar-original`; repeated application preserves that backup. It needs
+space for a temporary copy of the full archive during application or restoration. Unsupported,
+partially patched or corrupt bundles are rejected before replacement. After an update changes
+the bundle, inspect the new code and adapt the patcher and tests before retrying.
+
+To undo the patch, run:
+
+```text
+sudo node ~/scripts/codex-desktop-sidebar-fix/patch.cjs --restore
+```
+
+Then exit and reopen the app normally. Restoration checks the saved asset and preserves other
+archive contents. Chats and application settings are not modified.
+
+The local tests execute the installed sidebar action and pin-indicator functions with a controlled
+rendering runtime, then check archive application, integrity, repeat application and byte-exact
+restoration in temporary files. They require a supported desktop installation and are separate
+from the portable repository CI gate; they do not launch or visually verify the desktop app.
+For another test installation, set `CODEX_DESKTOP_TEST_ASAR` to its archive path.
 
 
 ### Repository tests

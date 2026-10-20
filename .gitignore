@@ -162,6 +162,9 @@
 !/scripts/codex-vscode-history-fix/
 !/scripts/codex-vscode-history-fix/*.cjs
 
+!/scripts/codex-desktop-sidebar-fix/
+!/scripts/codex-desktop-sidebar-fix/*.cjs
+
 /scripts/check_*_playwright.py
 !/scripts/install/
 !/scripts/install/**
