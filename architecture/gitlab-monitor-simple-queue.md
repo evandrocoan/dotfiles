@@ -50,6 +50,22 @@ remain pending. One dedicated singleton process lock protects the consumer. The 
 boundaries, while inventory HTTP runs outside SQLite transactions within the bounded cycle. Producers enqueue
 transactionally and cannot interrupt the consumer. There is no competing reservation machine.
 
+Unstarted automatic code/discussion events for the same authenticated repository and MR share
+one pending representative at the oldest FIFO position, targeting the latest admitted head and
+current discussions. Preserve every original source/key and admission kind/head. Retain absorbed
+event records with an explicit administrative outcome and link to their representative; this is
+neither completed review nor publication. Repeated original admission remains idempotent.
+
+Enqueue and reservation coalesce in one write transaction. Flatten all contributing admissions
+when selecting the target; only an actual code event for that head can authorize a code checkpoint
+after completed review. A discussion at another head cannot fabricate code provenance. Models
+receive one current review context and a real contributing source, without notification history.
+Unfinished human/noneligible work and incompatible reviewer policies divide chronological segments
+of outstanding same-MR work; completed historical requests are retained outside those segments.
+Prior execution/history, results, waits, effects and held jobs cannot be absorbed. Reservation
+freezes membership durably; later arrivals form subsequent work even if the current round retries.
+Existing pending events are consolidated through normal consumer controls, without migration.
+
 Each job binds authenticated repository ID, MR IID, mapped chat, immutable source, requested work,
 internal epoch and exact native execution attempt. Persist exact automatic input before native
 start and prove its acknowledgment or reconcile that exact delivery. Acceptance is not review.
@@ -221,6 +237,7 @@ tests after replacement protections pass. Never edit native databases or runtime
 | Invariant | Owner | Required evidence |
 | --- | --- | --- |
 | Durable FIFO and capacity | Jobs, consumer, locks | Competing processes, restart, immediate progression |
+| Automatic event grouping | `MonitorQueue` enqueue/reserve coalescing and original admissions | `test_codex_gitlab_coalescing.py`: FIFO, frozen work, barriers, repeat/restart, concurrent transactions; sanitized pending-event artifact replay |
 | Exact native/result identity | Result collector and dispatch journal | Stale A vs B, altered input/result, no mutating legacy calls |
 | Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |
 | Safe effects and progress | Batch application and publication journal | Partial batch, lost read-back, reply+resolve races, honest checkpoint |
@@ -238,7 +255,10 @@ metadata, actual editing/command behavior, read-only intake and original-chat ho
 The default fresh store is `~/.local/state/codex-session-stats-queue/queue.sqlite3`, outside the
 predecessor writable directory and native state. Private immutable inputs are adjacent to it.
 `scripts/tests/test_codex_gitlab_queue.py` exercises real SQLite/worker/CLI/locks with fixture native
-transports and local HTTP. The relay suite retains process/Unix peer/cancellation protection;
+transports and local HTTP. `scripts/tests/test_codex_gitlab_coalescing.py` also consumes a sanitized
+captured automatic-event sequence through enqueue/reservation; this is a partial artifact replay, not a recorded native
+session or end-to-end replay.
+The relay suite retains process/Unix peer/cancellation protection;
 project tests cover normalized list identity and removal. Installed native-binary local-provider
 probes established fresh Codex creation/cold-resume instructions and Claude background source/final
 identity.

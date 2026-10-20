@@ -634,8 +634,12 @@ remain separately searchable.
 
 `codex-session-stats monitor-gitlab` uses one durable FIFO and one periodic consumer for all
 configured GitLab repositories. Each configured reviewer runs in order after either success or
-any terminal failure. There is no credit classifier or fallback mode. Publication starts only
-after every enabled reviewer has finished, with at least one valid complete review. All failures
+any terminal failure. Unstarted automatic events for the same MR share one pending round at the
+first event's FIFO position, using the latest admitted commit and current discussions. Original
+events remain visible with an administrative coalescing outcome; that outcome does not claim a
+completed review. Human requests and already-started work remain separate. There is no credit
+classifier or fallback mode. Publication starts only after every enabled reviewer has finished,
+with at least one valid complete review. All failures
 remain visible; an entirely failed round waits for the configured interval before retrying.
 
 The monitor handles queue administration, comments, replies, resolutions and authenticated

@@ -1,0 +1,41 @@
+{
+  "capture_kind": "recorded-artifact",
+  "boundary": "MonitorQueue.enqueue/reserve",
+  "sanitized_fields": [
+    "repository_id",
+    "head",
+    "notes",
+    "source_key"
+  ],
+  "repository_id": 11,
+  "iid": 78,
+  "events": [
+    {
+      "kind": "code",
+      "head": "0000000000000000000000000000000000000001",
+      "source": {
+        "origin": "automatic",
+        "head": "0000000000000000000000000000000000000001"
+      },
+      "source_key": "captured-event-45"
+    },
+    {
+      "kind": "discussion",
+      "head": "0000000000000000000000000000000000000001",
+      "source": {
+        "origin": "automatic",
+        "notes": "captured-notes-57"
+      },
+      "source_key": "captured-event-57"
+    },
+    {
+      "kind": "discussion",
+      "head": "0000000000000000000000000000000000000001",
+      "source": {
+        "origin": "automatic",
+        "notes": "captured-notes-59"
+      },
+      "source_key": "captured-event-59"
+    }
+  ]
+}

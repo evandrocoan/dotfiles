@@ -73,7 +73,9 @@ break the rest of the standalone CLI.
 
 Preserve the [simple queue contract](architecture/gitlab-monitor-simple-queue.md). One durable
 FIFO and one consumer own all repositories, keyed by authenticated GitLab repository ID plus MR
-IID. Every configured reviewer runs in order after success or any terminal failure; no quota
+IID. Coalesce unstarted automatic work per MR at its oldest FIFO position, preserving original
+event lineage and freezing membership at reservation. Human work and previously issued work remain
+separate. Every configured reviewer runs in order after success or any terminal failure; no quota
 classifier or fallback mode. Agents return domain proposals; only the monitor journals, publishes
 and confirms effects. Unknown execution cannot release serial capacity. Human requests retain
 actual native source, bounded scope and sufficient-answer holds. Only completed actual code review

@@ -2958,6 +2958,54 @@ class MonitorQueue:
         if cursor.rowcount != 1:
             raise RuntimeError('job identity changed')
 
+    @staticmethod
+    def admission(job):
+        return job.get('admission',{'kind':job['kind'],'head':job['head'],'source':job['source']})
+
+    def _coalesce(self, allowed_repositories):
+        """Called only inside enqueue/reserve's write transaction, before reservation freezes work."""
+        groups = {}
+        effects = {e.get('job_id') for e in self.effects()}
+        held = {r['hold'].get('job_id') for r in self.mrs() if r.get('hold')}
+        rows = [self.decode(row) for row in self.db.execute(
+            "SELECT * FROM jobs WHERE state!='completed' ORDER BY sequence")]
+        for job in rows:
+            key = (job['repository_id'],job['iid'])
+            eligible = (job['repository_id'] in allowed_repositories and job['state']=='pending'
+                and job['kind'] in {'code','discussion'} and job['source'].get('origin')=='automatic'
+                and not job['stages'] and job['batch'] is None and job['prepared'] is None
+                and job['wait_reason'] is None and not job['retry_at'] and job['outcome'] is None
+                and not any(job.get(k) for k in ('rounds','workspace','answers','questions',
+                    'needs_round_reset','validation_error','resumed_from','coalescing_frozen'))
+                and job['id'] not in effects and job['id'] not in held)
+            previous = groups.get(key)
+            if not eligible:
+                groups.pop(key,None)
+                continue
+            if previous is None or previous['reviewers']!=job['reviewers']:
+                groups[key] = job
+                continue
+            # Flatten contributing admissions, not effective representatives. Otherwise a
+            # later discussion could forget code that was absorbed in an earlier transaction.
+            members = [previous,*[self.job(i) for i in previous.get('coalesced_jobs',[])],
+                       job,*[self.job(i) for i in job.get('coalesced_jobs',[])]]
+            members.sort(key=lambda value:value['sequence'])
+            latest = members[-1]
+            head = self.admission(latest)['head']
+            codes = [m for m in members if self.admission(m)['kind']=='code'
+                     and self.admission(m)['head']==head]
+            previous.setdefault('admission',self.admission(previous))
+            previous.update(kind='code' if codes else 'discussion',head=head,context=latest['context'],
+                target_event=(codes[-1] if codes else latest)['id'],
+                coalesced_jobs=[m['id'] for m in members if m['id']!=previous['id']])
+            self.save(previous)
+            for member in members:
+                if member['id']==previous['id'] or member.get('coalesced_into')==previous['id']:
+                    continue
+                member.update(state='completed',outcome='coalesced; not reviewed',
+                    coalesced_into=previous['id'],completed_at=member.get('completed_at',mq_stamp()))
+                self.save(member)
+
     def enqueue(self, repository, iid, *, source_key, kind, head, source, context,
                 prepared=None, reviewers=None):
         if kind not in {'code', 'discussion', 'human', 'intake', 'presentation'}:
@@ -2968,7 +3016,10 @@ class MonitorQueue:
             existing = self.db.execute('SELECT * FROM jobs WHERE source_key=?', (source_key,)).fetchone()
             if existing:
                 saved = self.decode(existing)
-                if (saved['repository_id'], saved['iid'], saved['kind'], saved['source']) != (repository, iid, kind, source):
+                original = self.admission(saved)
+                if ((saved['repository_id'],saved['iid'],original['kind'],original['source']) !=
+                        (repository,iid,kind,source) or source.get('origin')=='automatic'
+                        and kind in {'code','discussion'} and original['head']!=head):
                     raise RuntimeError('repeated source identity changed')
                 return saved
             job = {'id': monitor_id(), 'epoch': self.epoch, 'repository_id': repository, 'iid': iid,
@@ -2980,11 +3031,13 @@ class MonitorQueue:
                 (job['id'], source_key, repository, iid, 'pending', json.dumps(job, ensure_ascii=False)))
             job['sequence'] = cursor.lastrowid
             self.save(job)
-            return job
+            self._coalesce({repository})
+            return self.job(job['id'])
 
     def reserve(self, allowed_repositories, now=None):
         now = mq_stamp() if now is None else now
         with self.atomic():
+            self._coalesce(allowed_repositories)
             active = self.jobs('running')
             if active:
                 return active[0]
@@ -3004,7 +3057,7 @@ class MonitorQueue:
                 if blockers and not (job['kind']=='intake' and record.get('hold')
                                      and all(j['wait_reason']=='human' for j in blockers)):
                     continue
-                job.update(state='running', resumed_from=job['wait_reason'], wait_reason=None)
+                job.update(state='running', resumed_from=job['wait_reason'], wait_reason=None,coalescing_frozen=True)
                 self.save(job)
                 return job
         return None
@@ -3075,6 +3128,11 @@ class MonitorQueue:
                 if (job['kind'] != 'code' or result is None or result['head'] != job['head']
                         or self.mr(job['repository_id'],job['iid']).get('hold')):
                     raise RuntimeError('only actual completed code review advances checkpoint')
+                if job.get('coalesced_jobs') and not any(
+                        self.admission(member)['kind']=='code' and self.admission(member)['head']==job['head']
+                        and self.admission(member)['source'].get('origin')=='automatic'
+                        for member in [job,*[self.job(i) for i in job['coalesced_jobs']]]):
+                    raise RuntimeError('only actual admitted code provenance advances checkpoint')
                 record = self.mr(job['repository_id'], job['iid'])
                 record['reviewed_head'] = job['head']
                 self.put_mr(record)
@@ -3453,7 +3511,8 @@ def mq_input(queue, job, stage, context):
         '--mr',str(job['iid'])])
     data = {'read_command':read_command, 'reviewer': stage['reviewer'], 'kind': job['kind'], 'context': context,
         'workspace':job['workspace'],
-        'original_source': job['source'], 'answers':job.get('answers',[]),
+        'original_source': queue.admission(queue.job(job.get('target_event',job['id'])))['source'],
+        'answers':job.get('answers',[]),
         'previous_rounds':job.get('rounds',[])[-1:], 'validation_error':job.get('validation_error'),
         'question_history':queue.mr(job['repository_id'],job['iid']).get('hold_history',[]), 'prior_stages': job['stages'][:-1],
         'hold': queue.mr(job['repository_id'], job['iid']).get('hold'),
@@ -4682,7 +4741,7 @@ def mq_step(config,queue):
         if context['mr']['state'] != 'opened':
             queue.finish(job,'MR closed or merged')
             return True
-        if context['head'] != job['head'] and job['kind']=='code':
+        if context['head'] != job['head'] and (job['kind']=='code' or job.get('coalesced_jobs')):
             queue.finish(job,'superseded by a new head')
             return True
         mq_verify_job_sources(scoped,queue,job)
@@ -5135,7 +5194,8 @@ def mq_main():
 
 
 def mq_job_status(job):
-    fields = ('id','sequence','repository_id','iid','kind','head','state','wait_reason','retry_at','outcome','validation_error')
+    fields = ('id','sequence','repository_id','iid','kind','head','state','wait_reason','retry_at','outcome','validation_error',
+        'admission','coalesced_jobs','coalesced_into','target_event')
     return {**{k:job.get(k) for k in fields},'reviewers':job['reviewers'],
         'source':{k:job['source'].get(k) for k in ('origin','provider','session','source_id','turn_id')},
         'stages':[{k:stage.get(k) for k in ('id','reviewer','state','session','turn_id','delivery','error')} for stage in job['stages']]}
