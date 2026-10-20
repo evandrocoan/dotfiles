@@ -2,7 +2,8 @@
 
 ## Keep CI orchestration thin
 
-Define each check once in a repository-owned executable contract, then invoke it from both local development and CI.
+Apply [Keep job orchestration readable](../SKILL.md#keep-job-orchestration-readable) to the job
+and its scripts. Define each containerized check once in a repository-owned executable contract.
 The contract can be a one-shot Compose service, a strict shell wrapper, or both.
 
 Any auxiliary service dependency created for a CI job must be declared and started

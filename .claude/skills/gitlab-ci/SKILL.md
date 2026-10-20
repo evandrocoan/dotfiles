@@ -33,6 +33,30 @@ check, an incomplete check, and a skipped check.
    create a pipeline, retry a job, cancel work, or mutate remote GitLab state unless the user
    explicitly authorizes that action.
 
+## Keep job orchestration readable
+
+Before adding or extending a job, compare the closest existing jobs and their resolved templates.
+Match both their inheritance and where they keep executable logic. Reusing `extends` or anchors
+alone does not preserve the repository's pattern if comparable jobs invoke versioned scripts.
+
+- Keep pipeline configuration and short orchestration calls in YAML. Extract substantial
+  procedural logic, such as fixture setup, assertions, parsing, or control flow, into a cohesive
+  repository-owned script or existing task entry point. Nested shell strings and heredocs that
+  obscure reading, linting, or local execution are extraction signals, even for a single job.
+- Reuse the repository's script locations and invocation conventions. Local validation and CI
+  should invoke the same implementation with explicit inputs. Moving a long shell block into
+  another YAML file, anchor, or hidden job alone does not make it independently executable.
+- Keep simple commands inline when extraction adds only indirection. Decide by readability,
+  testability, and the surrounding conventions, not a fixed line count. Do not introduce a generic
+  framework or new template layer solely to shorten YAML.
+- Preserve the execution contract when extracting: interpreter, working directory, inputs,
+  failure propagation, cleanup, output paths, and runtime restrictions. Keep existing template
+  responsibilities in their owner. For containers, verify how the script reaches the runtime;
+  do not add dependencies or package test-only code in a published image merely to relocate it.
+- Validate the extracted entry point through its actual invocation, including relevant negative
+  cases. Check that the job still runs it, changes to its source select the affected jobs where
+  path filters apply, and required checks and publication gates remain intact.
+
 ## Route to the relevant reference
 
 - Read [pipeline-design.md](references/pipeline-design.md) before changing `workflow`, `rules`,
