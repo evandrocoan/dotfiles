@@ -174,6 +174,24 @@ use `test-quality` for executable validation, `documentation` for durable docume
 `dependency-decisions` for dependency choices, and the relevant delivery or infrastructure skill
 when those concerns are in scope.
 
+## Choose plan boundaries before extending scope
+
+Before offering to update an existing plan, compare the new work's observable outcome and
+acceptance criteria with that plan's delivery objective. A problem discovered during delivery
+can be a separate objective that blocks it; discovery in the same chat, a shared repository, or
+a dependency does not make it part of that plan.
+
+Use [plan boundaries and orchestration](references/persistent-plans.md#plan-boundaries-and-orchestration)
+to distinguish a revised route for the same objective, a separate delivery, coordination across
+plans, and accumulated history. Apply that check at initial scoping and when a continuation adds
+an objective or exposes several independently closable workstreams. Propose the appropriate
+separation then, rather than waiting for the user to notice an unwieldy plan. Keep a coherent
+delivery together even when it spans components or repositories.
+
+Recommend separate plans and an orchestrator only where their distinct contracts or coordination
+justify them. They remain subject to the user's plan choice; a declined plan leaves a separately
+scoped task or dependency, not a reason to absorb unrelated work into another plan.
+
 ## Establish the execution contract
 
 For a formal plan, record these elements before implementation. For a direct route, establish the
@@ -321,8 +339,10 @@ append a chronological diary. Update it only when status, scope, evidence, depen
 validation obligations, blockers, or the chosen execution route materially changes.
 
 At the end of a phase or before a material continuation, reconcile the active plan instead of
-adding another account of the attempt. Replace obsolete "current" headings and steps with the
-live outcome, next action, prerequisites, blockers, and closure state. Summarize a completed
+adding another account of the attempt. Check whether its growth comes from stale execution detail
+or distinct delivery objectives, using the boundary check above. Replace obsolete "current"
+headings and steps with the live outcome, next action, prerequisites, blockers, and closure state.
+Summarize a completed
 attempt by its verdict, material limitations, and pointers to preserved evidence. Use the
 authoritative CI, test, replay, issue, or review artifact for detailed protocols, transcripts, and
 per-run reviews when retention is needed.
@@ -383,7 +403,9 @@ Replan immediately when:
 - validation demonstrates that the chosen implementation violates an invariant;
 - cost, quota, or operational state makes the remaining validation predictably wasteful.
 
-Before a material replan of a selected plan, ask about any new plan or review action the earlier
+Before a material replan, apply **Choose plan boundaries before extending scope**; a newly
+discovered objective may need a separate task or plan rather than an extension of the current one.
+For a selected plan, ask about any new plan or review action the earlier
 choice did not cover. A declined new action does not revive it as a mandatory gate. Preserve
 completed work and hold affected execution for revised proposal approval on either route or another
 independent prerequisite. If a formal plan remains selected, update

@@ -90,6 +90,82 @@ concise lowercase hyphenated task slug. Keep one
 active file for one delivery objective; do not create a new file for every retry or replanning
 event.
 
+## Plan boundaries and orchestration
+
+Choose boundaries by the result each workstream must deliver and the evidence that can close it,
+not by its file count, repository, chat, or number of decisions. A distinct objective has a useful
+result and acceptance criteria of its own, even when another delivery depends on it. Different
+owners, consumers, or release paths are evidence of a possible boundary, not automatic reasons
+to split. Several components that must change together to deliver one coherent result can remain
+in one plan.
+
+| Situation | Planning treatment |
+| --- | --- |
+| The outcome is unchanged; investigation changes the implementation route. | Revise the existing plan within its objective. |
+| New work has its own deliverable and acceptance criteria. | Propose a separate plan, or a separately scoped task if no plan is chosen; link any actual dependency. |
+| Several deliveries need coordinated sequencing or shared integration acceptance. | Propose a short orchestrator that links their owners and governs that coordination. |
+| Workstreams are independent. | Keep them separate without adding an orchestrator merely to collect them. |
+| One objective has accumulated completed attempts, logs, or repeated reviews. | Condense its current contract and retain evidence through its authoritative sources; size alone does not justify splitting it. |
+
+For example, a deployment blocked by a defect in a shared CI image does not make maintaining that
+image part of the deployment's functional scope. Record which image result the deployment
+actually requires. If another correction removes the blocker, the image improvement need not
+remain a prerequisite. Conversely, an API change and its required client update can share one
+plan when their acceptance is a single compatible behavior.
+
+Reassess boundaries when new objectives appear, closure criteria become independent, or a plan
+starts collecting unrelated deliveries. Do not use an arbitrary line limit or wait for the user
+to request a split. Apply the entrypoint's process-choice and proposal-approval rules to the
+recommended structure before affected implementation.
+
+### Keep an orchestrator focused on coordination
+
+Use the established plan lifecycle for a chosen orchestrator. Its delivery objective is the
+combined outcome and its integration acceptance, distinct from each child plan's implementation.
+Retain the lifecycle, user-choice, approval, and selected-review fields required for every chosen
+plan. For its work content, keep only:
+
+- the combined outcome and scope;
+- relative links to the authoritative child plans or task owners and the result required from each;
+- dependency edges with their concrete prerequisites, necessary ordering, and integration checks;
+- concise status and blocker projections derived from those owners; and
+- the next coordination action and criteria for closing the combined delivery.
+
+An orchestrator is an execution plan, not a new architecture authority or a catalog of every
+active plan. Child plans own their implementation details, decisions within their scope,
+validation evidence, and closure. The orchestrator owns only coordination and integration
+obligations; link to child content instead of copying steps, findings, review histories, or
+matrices. Reconcile a status projection against its owner before relying on it.
+
+Distinguish required dependencies from optional improvements. A discovered issue blocks only the
+outcome that actually needs its result. Do not serialize independent work or invent a release
+gate merely because tasks share an orchestrator; applicable concurrency constraints still hold.
+Completed children do not prove integration acceptance. Close the orchestrator only when its own
+required results and integration checks are satisfied; a blocked child holds only its dependent
+coordination steps. Each child retains its own lifecycle.
+
+### Separate existing work without losing obligations
+
+When the user chooses separation, assign each current outcome, decision, prerequisite, unresolved
+item, and validation obligation to one authoritative owner. Preserve approvals with their original
+scope; moving text does not approve a new objective or its implementation. Keep item meanings
+stable and qualify identifiers when different plans use the same labels.
+
+Move implementation detail into the appropriate child or retain it in the original focused plan,
+then replace the old location with the necessary link and dependency. The original composite
+plan may become the orchestrator when it already owns the combined outcome; otherwise keep it
+focused and create the selected coordinator. Do not retain two complete current contracts for the
+same work or mark unfinished work complete because it moved.
+
+Separate this redistribution from history cleanup. Preserve current obligations in their owners
+and decisive results through evidence links; keep detailed historical measurements, costs, and
+run records in their existing evidence sources. Use the entrypoint's optional evidence-file rule
+only when concise findings need a home. Do not move the oversized plan wholesale into a second
+maintained history document or leave a current requirement only in an archive. Check the resulting
+owners and links together so no decision, dependency, or acceptance condition disappears.
+
+## Close and locate plans
+
 When using the default lifecycle, close a successfully completed plan by moving the same file,
 after its final conformance verdict passes, to:
 

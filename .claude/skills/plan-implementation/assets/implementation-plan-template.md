@@ -7,6 +7,10 @@ Recommend this full template for high-risk or architecture-governed work; honor 
 detail, including a shorter plan. Use `compact-implementation-plan-template.md` for local work or
 for a qualifying **Bounded additive external action**. A **Routine external editorial correction**
 uses the compact template only when another persistence trigger applies, as defined in `SKILL.md`.
+Scope this template to one delivery objective. Apply
+[plan boundaries and orchestration](../references/persistent-plans.md#plan-boundaries-and-orchestration)
+before adding a separate objective; for an orchestrator, use that reference's coordination-only
+contents instead of copying child implementation sections.
 
 ## Outcome
 

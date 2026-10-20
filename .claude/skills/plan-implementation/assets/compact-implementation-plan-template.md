@@ -10,6 +10,10 @@ correction** with a persistence trigger in `SKILL.md`.
 For high risk, recommend `implementation-plan-template.md`; use this shorter format if the user
 prefers it. A chosen plan does not also select a full audit or second pass.
 Delete the conditional external-action section for local work.
+Scope this template to one delivery objective. Apply
+[plan boundaries and orchestration](../references/persistent-plans.md#plan-boundaries-and-orchestration)
+before adding a separate objective; for an orchestrator, use that reference's coordination-only
+contents instead of copying child implementation sections.
 
 ## Outcome and scope
 
