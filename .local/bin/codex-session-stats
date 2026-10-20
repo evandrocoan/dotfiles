@@ -3896,13 +3896,26 @@ def mq_claude_records(config, session):
 
 def mq_claude_final(records, source):
     """Follow one native input through tool results; group split blocks of its final message."""
-    chain = {source['uuid']:(set(),set())}
+    chain = {source['uuid']:(set(),None)}
     finals, seals, parents, positions = {}, [], {}, {}
+    messages, call_messages, returned, closed = {}, {}, set(), set()
+    def descends(node,ancestor):
+        while node in chain:
+            if node==ancestor:return True
+            node=parents.get(node)
+        return False
     for position,record in enumerate(records):
         parent = chain.get(record.get('parentUuid'))
-        if record.get('uuid')==source['uuid'] or parent is None:
+        if parent is None:
             continue
-        pending, seen = map(set,parent)
+        node = record.get('uuid')
+        if not isinstance(node,str) or not node:
+            if record.get('type') in {'user','assistant'}:
+                raise RuntimeError('invalid Claude native record identity')
+            continue
+        if node in chain:
+            raise RuntimeError('duplicate Claude native record identity')
+        seen, last_message = set(parent[0]), parent[1]
         kind = record.get('type')
         message = record.get('message',{})
         content = message.get('content',[])
@@ -3912,37 +3925,48 @@ def mq_claude_final(records, source):
                 continue
             identities = [c.get('tool_use_id') for c in content]
             if (any(not isinstance(i,str) or not i for i in identities)
-                    or len(set(identities))!=len(identities) or not set(identities)<=pending):
+                    or len(set(identities))!=len(identities) or not set(identities)<=seen):
                 continue
-            pending.difference_update(identities)
+            if set(identities)&returned:
+                raise RuntimeError('duplicate Claude tool result identity')
+            returned.update(identities)
         elif kind=='assistant':
             if not isinstance(content,list) or any(not isinstance(c,dict) for c in content):
-                continue
+                raise RuntimeError('invalid Claude assistant content')
+            identity = message.get('id')
+            if not isinstance(identity,str) or not identity:
+                raise RuntimeError('invalid Claude assistant message identity')
+            if identity in closed:
+                raise RuntimeError('Claude message blocks after continuation')
+            group = messages.get(identity)
+            if group and not descends(record.get('parentUuid'),group['first']):
+                raise RuntimeError('ambiguous Claude message ownership')
             calls = [c.get('id') for c in content if c.get('type')=='tool_use']
             if (any(not isinstance(i,str) or not i for i in calls)
-                    or len(set(calls))!=len(calls) or set(calls)&seen):
-                continue
-            pending.update(calls); seen.update(calls)
+                    or len(set(calls))!=len(calls)):
+                raise RuntimeError('invalid Claude tool call identity')
+            if set(calls)&call_messages.keys():
+                raise RuntimeError('reused Claude tool call identity')
+            if last_message and last_message!=identity:
+                closed.add(last_message)
+            group = messages.setdefault(identity,{'first':record['uuid'],'calls':set()})
+            group['calls'].update(calls)
+            call_messages.update((call,identity) for call in calls)
+            seen.update(calls); last_message = identity
             if record.get('isApiErrorMessage') or message.get('stop_reason')=='end_turn':
-                identity = message.get('id')
-                if not isinstance(identity,str) or not identity or pending:
+                # Return authentication uses only actual ancestry. Completion also includes
+                # sibling calls from each participating native message, credited once.
+                required = set().union(*(messages[call_messages[call]]['calls'] for call in seen))
+                if required-returned:
                     continue
                 finals.setdefault(identity,[]).append(record)
-        if record.get('uuid'):
-            if record['uuid'] in chain:
-                raise RuntimeError('duplicate Claude native record identity')
-            chain[record['uuid']] = (pending,seen)
-            parents[record['uuid']] = record.get('parentUuid')
-            positions[record['uuid']] = position
+        chain[node] = (seen,last_message)
+        parents[node] = record.get('parentUuid')
+        positions[node] = position
         if kind=='system' and record.get('subtype')=='turn_duration':
             seals.append(record['uuid'])
     if len(finals)>1:
         raise RuntimeError('ambiguous Claude terminal result')
-    def descends(node,ancestor):
-        while node in chain:
-            if node==ancestor:return True
-            node=parents.get(node)
-        return False
     result = {'sealed':bool(seals)}
     if finals:
         blocks = next(iter(finals.values()))

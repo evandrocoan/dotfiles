@@ -14,8 +14,9 @@ from test_codex_gitlab_periodic import quiet_scan
 FIXTURES = Path(__file__).parent/'fixtures'
 
 
-def captured_claude(m, tmp_path, monkeypatch, *, records=None, state='running'):
-    artifact=json.loads((FIXTURES/'gitlab-claude-tool-transcript.json').read_text())
+def captured_claude(m, tmp_path, monkeypatch, *, records=None, state='running',
+                    artifact_name='gitlab-claude-tool-transcript.json'):
+    artifact=json.loads((FIXTURES/artifact_name).read_text())
     rows=copy.deepcopy(artifact['records'] if records is None else records)
     session=rows[0]['sessionId'];source=next(r for r in rows if r.get('uuid')==artifact['registered_source_uuid'])
     config={'claude_home':str(tmp_path/'claude'),'cwd':str(tmp_path),'max_response_bytes':2**20}
