@@ -1,20 +1,15 @@
 [Unit]
 Description=Consume the shared GitLab MR review FIFO
 After=network.target
-StartLimitIntervalSec=60
-StartLimitBurst=10
 
 [Service]
-Type=simple
+Type=oneshot
 WorkingDirectory=%h
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab serve
-Restart=on-failure
-RestartSec=5s
+ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab tick
+TimeoutStartSec=14min
+KillMode=process
 TimeoutStopSec=15s
 UMask=0077
 StandardOutput=journal
 StandardError=journal
-
-[Install]
-WantedBy=default.target

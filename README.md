@@ -632,7 +632,7 @@ remain separately searchable.
 
 #### Automatic GitLab MR review
 
-`codex-session-stats monitor-gitlab` uses one durable FIFO and one continuous consumer for all
+`codex-session-stats monitor-gitlab` uses one durable FIFO and one periodic consumer for all
 configured GitLab repositories. Each configured reviewer runs in order after either success or
 any terminal failure. There is no credit classifier or fallback mode. Publication starts only
 after every enabled reviewer has finished, with at least one valid complete review. All failures
@@ -720,7 +720,7 @@ creates registered background sessions with Remote Control; its native
 results and questions remain there, including earlier sessions owned by this new consumer.
 The first inventory reviews the current head of each open MR and reads existing public concerns.
 
-Before switching from the predecessor, stop its timer/service and let its native reviews finish.
+Before switching from the predecessor, let its native reviews finish, then stop its timer/service.
 Then initialize the fresh queue and check access without sending a review or public comment:
 
 ```bash
@@ -730,19 +730,40 @@ codex-session-stats monitor-gitlab preflight --check-only
 codex-session-stats monitor-gitlab status
 ```
 
-Install the continuous service and its existing 15-minute wake timer:
+Install the oneshot service and its 15-minute timer. When updating a continuous installation,
+first stop the timer and disable the old service's login startup without stopping its process:
+
+```bash
+systemctl --user stop codex-gitlab-monitor.timer
+systemctl --user disable codex-gitlab-monitor.service
+```
+
+Then install and load the unit before stopping the old process. Its scoped `KillMode=process`
+preserves native background reviewers when the monitor exits:
 
 ```bash
 cp ~/scripts/install/systemd/user/codex-gitlab-monitor.service ~/.config/systemd/user/
 cp ~/scripts/install/systemd/user/codex-gitlab-monitor.timer ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now codex-gitlab-monitor.service codex-gitlab-monitor.timer
+systemctl --user stop codex-gitlab-monitor.service
+systemctl --user enable --now codex-gitlab-monitor.timer
 ```
 
-The consumer checks the TOML polling interval and window. Running reviews, human requests and
-recovery can finish after 22:00. Unchanged polling and idle coordination make no model calls.
-`tick` only records a wake request and never interrupts current work. Service failure restarts the
-consumer, which reconnects to registered work rather than starting duplicate model turns.
+Each trigger runs one bounded cycle and exits. It first handles registered work, completion,
+timeout and ready publication, then performs limited intake and starts eligible work. Claude and
+Codex continue independently between triggers; the next cycle reconnects to the saved execution.
+Completion, timeout and human-answer pickup normally wait until the next 15-minute trigger.
+The TOML interval/window governs automatic inventory; existing work and recovery can proceed after
+22:00. A failed cycle leaves its saved state for the next trigger. An inactive service between
+triggers is normal; keep the timer enabled. No resident monitor or scan helper is required.
+HTTP operations respect the cycle's total deadline even with slowly arriving data. The unit also
+has a 14-minute final timeout; its process-only stop policy preserves native reviewers for recovery.
+
+Run `codex-session-stats monitor-gitlab tick` for an immediate cycle. Concurrent invocations return
+`cycle: busy` without disturbing the active cycle. Budget exhaustion preserves ready work for the
+next cycle instead of recording a failed reviewer. Preflight checks Claude login, the exact native
+workspace trust and its mixed session inventory. The standard Claude home uses its normal native
+preferences; an explicitly configured custom home keeps its separate preferences.
 
 Use the new MR chat normally for an explicit additional request after completion. The monitor
 reads the actual native source and bounded action assessment, then queues it without fabricating

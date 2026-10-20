@@ -7,10 +7,12 @@ from pathlib import Path
 import queue
 import shlex
 import shutil
+import signal
 import socket
 import subprocess
 import sys
 import threading
+import time
 import uuid
 
 import pytest
@@ -239,6 +241,9 @@ class Provider(http.server.BaseHTTPRequestHandler):
         assert self.path.split('?')[0]=='/v1/messages',self.path
         self.server.requests.append(data)
         index=len(self.server.requests)-1
+        if index==0 and hasattr(self.server,'release'):
+            self.server.entered.set()
+            assert self.server.release.wait(35),'fixture provider was never released'
         tool=index<len(self.server.steps)
         if tool:
             name,value=self.server.steps[index]
@@ -258,6 +263,193 @@ class Provider(http.server.BaseHTTPRequestHandler):
     def reply(self,raw,kind):
         self.send_response(200);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(raw)))
         self.end_headers();self.wfile.write(raw)
+
+
+def stop_fixture_supervisor(home,unit=None):
+    roster=home/'daemon'/'roster.json'
+    if not roster.is_file():return
+    pid=json.loads(roster.read_text())['supervisorPid']
+    proc=Path(f'/proc/{pid}')
+    if not proc.exists():return
+    assert proc.stat().st_uid==os.getuid()
+    assert ('CLAUDE_CONFIG_DIR='+str(home)).encode() in (proc/'environ').read_bytes().split(b'\0')
+    if unit:assert unit in (proc/'cgroup').read_text()
+    os.kill(pid,signal.SIGTERM)
+
+
+def test_native_claude_background_ack_and_final(native_workspace,monkeypatch):
+    m,c,roots,main,script,expected=native_workspace
+    c.update(claude_bin=shutil.which('claude'),native_timeout=15)
+    assert c['claude_bin']
+    home=Path(c['claude_home'])
+    (home/'.claude.json').write_text(json.dumps({'projects':{c['cwd']:{'hasTrustDialogAccepted':True}}}))
+    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Provider)
+    server.requests=[];server.steps=[]
+    worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
+    for key in list(os.environ):
+        if key.startswith(('ANTHROPIC_','CLAUDE_','CODEX_')):monkeypatch.delenv(key)
+    for key,value in dict(ANTHROPIC_API_KEY='fixture-only',
+        ANTHROPIC_BASE_URL=f'http://127.0.0.1:{server.server_port}',
+        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1',DISABLE_AUTOUPDATER='1',
+        HTTP_PROXY='http://127.0.0.1:9',HTTPS_PROXY='http://127.0.0.1:9',NO_PROXY='127.0.0.1,localhost').items():
+        monkeypatch.setenv(key,value)
+    name='disposable-background-'+str(uuid.uuid4())
+    args=m['mq_claude_arguments'](c,'Disposable background fixture.',name)
+    settings_index=args.index('--settings')+1
+    settings=json.loads(args[settings_index])
+    settings['env']={key:os.environ[key] for key in ('ANTHROPIC_API_KEY','ANTHROPIC_BASE_URL',
+        'HTTP_PROXY','HTTPS_PROXY','NO_PROXY','CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC')}
+    settings['apiKeyHelper']=shlex.join([sys.executable,'-c','print("fixture-only")'])
+    args[settings_index]=json.dumps(settings)
+    # API-key fixtures cannot expose subscription Remote Control; retain actual --bg.
+    index=args.index('--remote-control');del args[index:index+2]
+    native=None
+    try:
+        output=m['mq_claude_command'](c,args)
+        deadline=time.monotonic()+35
+        while time.monotonic()<deadline:
+            matches=[a for a in m['mq_claude_agents'](c) if a['name']==name and a['cwd']==c['cwd']]
+            assert len(matches)<=1
+            if matches:
+                native=matches[0]
+                stage={'background_id':native['id'],'session':native['sessionId'],'name':name,'input':args[1]}
+                observed=m['mq_claude_observe'](c,stage)
+                if observed['terminal']:break
+            time.sleep(.2)
+        else:pytest.fail('background acknowledgment/final did not arrive: '+output)
+        assert observed.get('text')=='native fixture complete',observed
+        assert server.requests
+        assert 'Disposable background fixture.' in json.dumps(server.requests[0]['messages'])
+        for auxiliary in server.requests[1:]:
+            assert 'Assistant message tail' in json.dumps(auxiliary['messages'])
+            assert 'native fixture complete' in json.dumps(auxiliary['messages'])
+    finally:
+        if native:m['mq_claude_stop'](c,native)
+        stop_fixture_supervisor(home)
+        server.shutdown();server.server_close();worker.join(5)
+
+
+def test_native_untrusted_background_is_rejected_before_creation(native_workspace):
+    m,c,roots,main,script,expected=native_workspace
+    c.update(claude_bin=shutil.which('claude'),native_timeout=15)
+    home=Path(c['claude_home']);(home/'.claude.json').write_text('{}')
+    name='must-not-start-'+str(uuid.uuid4())
+    # The same untrusted directory permits read-only inventory; its trust rejection is launch-specific.
+    before=m['mq_claude_agents'](c)
+    with pytest.raises(m['MonitorClaudeError']) as rejected:
+        m['mq_claude_command'](c,['--bg','Never execute this fixture.','--name',name])
+    assert rejected.value.operation=='launch' and rejected.value.not_started
+    assert rejected.value.returncode==1
+    assert 'Workspace not trusted.' in str(rejected.value)
+    assert m['mq_claude_agents'](c)==before
+    assert not (home/'jobs').exists()
+
+
+@pytest.mark.parametrize('interrupt',[False,True,'timeout'])
+def test_native_background_survives_oneshot_exit_and_main_interruption(native_workspace,tmp_path,interrupt):
+    m,c,roots,main,script,expected=native_workspace
+    c.update(claude_bin=shutil.which('claude'),native_timeout=15)
+    assert c['claude_bin']
+    home=Path(c['claude_home'])
+    (home/'.claude.json').write_text(json.dumps({'projects':{c['cwd']:{'hasTrustDialogAccepted':True}}}))
+    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Provider)
+    server.requests=[];server.steps=[];server.release=threading.Event();server.entered=threading.Event()
+    worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
+    name='oneshot-native-'+str(uuid.uuid4());unit=name+'.service'
+    args=m['mq_claude_arguments'](c,'Disposable background fixture.',name)
+    index=args.index('--remote-control');del args[index:index+2]
+    index=args.index('--settings')+1;settings=json.loads(args[index])
+    settings.update(apiKeyHelper=shlex.join([sys.executable,'-c','print("fixture-only")']),env={
+        'ANTHROPIC_BASE_URL':f'http://127.0.0.1:{server.server_port}',
+        'HTTP_PROXY':'http://127.0.0.1:9','HTTPS_PROXY':'http://127.0.0.1:9',
+        'NO_PROXY':'127.0.0.1,localhost','CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1'})
+    args[index]=json.dumps(settings)
+    payload=tmp_path/'launch.json';payload.write_text(json.dumps({'config':c,'args':args}))
+    marker=tmp_path/'accepted';entry=tmp_path/'launch.py'
+    entry.write_text('''import json,runpy,sys,time
+from pathlib import Path
+m=runpy.run_path(sys.argv[1])
+v=json.loads(Path(sys.argv[2]).read_text())
+marker=Path(sys.argv[3])
+if marker.exists():
+    saved=json.loads(marker.read_text())
+    matches=[a for a in m['mq_claude_agents'](v['config']) if a['id']==saved['id']]
+    assert len(matches)==1 and matches[0]['sessionId']==saved['sessionId']
+    marker.with_suffix('.resumed').write_text(saved['sessionId'])
+else:
+    m['mq_claude_command'](v['config'],v['args'])
+    name=v['args'][v['args'].index('--name')+1]
+    matches=[a for a in m['mq_claude_agents'](v['config']) if a['name']==name]
+    assert len(matches)==1
+    marker.write_text(json.dumps(matches[0]))
+    if sys.argv[4]=='interrupt':time.sleep(40)
+''')
+    env=dict(os.environ,XDG_RUNTIME_DIR=f'/run/user/{os.getuid()}',
+        DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{os.getuid()}/bus')
+    env={k:v for k,v in env.items() if not k.startswith(('ANTHROPIC_','CLAUDE_','CODEX_'))}
+    native=None;supervisor=None
+    try:
+        launched=subprocess.run(['systemd-run','--user','--quiet','--no-block','--unit='+unit,
+            '--property=Type=oneshot','--property=KillMode=process',
+            '--property=TimeoutStartSec='+('8s' if interrupt=='timeout' else '60'),
+            sys.executable,str(entry),m['__file__'],str(payload),str(marker),
+            'interrupt' if interrupt else 'normal'],env=env,capture_output=True,text=True,timeout=10)
+        assert launched.returncode==0,launched.stderr
+        deadline=time.monotonic()+20
+        while not marker.exists() and time.monotonic()<deadline:time.sleep(.1)
+        assert marker.exists(),'oneshot did not acknowledge native launch'
+        assert server.entered.wait(10),'background worker never reached local provider'
+        roster=json.loads((home/'daemon'/'roster.json').read_text())
+        supervisor=roster['supervisorPid']
+        assert unit in Path(f'/proc/{supervisor}/cgroup').read_text()
+        if interrupt is True:
+            killed=subprocess.run(['systemctl','--user','kill','--kill-whom=main','--signal=SIGTERM',unit],
+                env=env,capture_output=True,text=True,timeout=10)
+            assert killed.returncode==0,killed.stderr
+        deadline=time.monotonic()+10
+        while time.monotonic()<deadline:
+            state=subprocess.run(['systemctl','--user','show',unit,'--property=SubState','--value'],
+                env=env,capture_output=True,text=True,timeout=5)
+            if state.stdout.strip() in {'dead','failed'}:break
+            time.sleep(.1)
+        else:pytest.fail('oneshot main remained running')
+        if interrupt=='timeout':
+            result=subprocess.run(['systemctl','--user','show',unit,'--property=Result','--value'],
+                env=env,capture_output=True,text=True,timeout=5)
+            assert result.stdout.strip()=='timeout',result.stdout
+        assert Path(f'/proc/{supervisor}').exists()
+        matches=[a for a in m['mq_claude_agents'](c) if a['name']==name]
+        assert len(matches)==1;native=matches[0]
+        stage={'background_id':native['id'],'session':native['sessionId'],'name':name,'input':args[1]}
+        assert not m['mq_claude_observe'](c,stage)['terminal']
+        restarted=subprocess.run(['systemctl','--user','start','--no-block',unit],env=env,
+            capture_output=True,text=True,timeout=10)
+        assert restarted.returncode==0,restarted.stderr
+        resumed=marker.with_suffix('.resumed');deadline=time.monotonic()+15
+        while not resumed.exists() and time.monotonic()<deadline:time.sleep(.1)
+        assert resumed.is_file() and resumed.read_text()==native['sessionId']
+        assert json.loads((home/'daemon'/'roster.json').read_text())['supervisorPid']==supervisor
+        server.release.set()
+        deadline=time.monotonic()+20
+        while time.monotonic()<deadline:
+            observed=m['mq_claude_observe'](c,stage)
+            if observed['terminal']:break
+            time.sleep(.1)
+        assert observed.get('text')=='native fixture complete',observed
+        assert [a['sessionId'] for a in m['mq_claude_agents'](c) if a['name']==name]==[native['sessionId']]
+    finally:
+        server.release.set()
+        roster_path=home/'daemon'/'roster.json'
+        if supervisor is None and roster_path.is_file():
+            supervisor=json.loads(roster_path.read_text())['supervisorPid']
+        if native is None and supervisor and Path(f'/proc/{supervisor}').exists():
+            matches=[a for a in m['mq_claude_agents'](c) if a['name']==name]
+            if matches:native=matches[0]
+        if native:m['mq_claude_stop'](c,native)
+        stop_fixture_supervisor(home,unit)
+        cleaned=subprocess.run(['systemctl','--user','stop',unit],env=env,capture_output=True,text=True,timeout=10)
+        assert cleaned.returncode==0,cleaned.stderr
+        server.shutdown();server.server_close();worker.join(5)
 
 
 @pytest.mark.parametrize('mode',['review','unavailable','intake'])

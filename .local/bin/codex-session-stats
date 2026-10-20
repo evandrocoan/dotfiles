@@ -2458,7 +2458,7 @@ def monitor_native(config: dict, method: str, params: dict, *, followup=None) ->
 
     async def exchange():
         async with unix_connect(config["socket"], compression=None,
-                open_timeout=config["native_timeout"], close_timeout=3,
+                open_timeout=mq_io_timeout(config,"native_timeout"), close_timeout=3,
                 max_size=config["max_response_bytes"], max_queue=32) as socket:
             monitor_shared_peer(config, socket)
             await socket.send(json.dumps({"id": 1, "method": "initialize", "params": {
@@ -2494,10 +2494,13 @@ def monitor_native(config: dict, method: str, params: dict, *, followup=None) ->
             return await followup(request, response) if followup else response
 
     async def bounded():
-        return await asyncio.wait_for(exchange(), config["native_timeout"])
+        timeout = mq_io_timeout(config,"native_timeout")
+        return await asyncio.wait_for(exchange(),timeout)
     try:
         return asyncio.run(bounded())
     except (OSError, TimeoutError, WebSocketException) as error:
+        if mq_expired(config):
+            raise MonitorCycleYield('cycle ended during native RPC; reconcile delivery',issued=True) from error
         diagnostic = f"{type(error).__name__}, errno={getattr(error, 'errno', None)}"
         raise RuntimeError(f"native {method} transport failed or timed out ({diagnostic}); reconcile before retry") from error
 
@@ -2532,7 +2535,7 @@ class MonitorGitLab:
         self.opener = urllib.request.build_opener(NoRedirect)
         self.last_date = None
         self.last_headers = {}
-        self.guard = guard
+        self.guard = guard or config.get("_io_guard")
 
     def get(self, route: str):
         import urllib.error
@@ -2544,16 +2547,19 @@ class MonitorGitLab:
         request = urllib.request.Request(self.base + route, headers={
             "PRIVATE-TOKEN": self._token, "Accept": "application/json"})
         try:
-            with self.opener.open(request, timeout=self.config["http_timeout"]) as response:
-                body = response.read(self.config["max_response_bytes"] + 1)
-                if len(body) > self.config["max_response_bytes"]:
-                    raise RuntimeError("GitLab response exceeds configured byte bound")
-                self.last_date = response.headers.get("Date")
-                self.last_headers = response.headers
-                return json.loads(body)
+            with mq_http_deadline(self.config):
+                with self.opener.open(request, timeout=mq_io_timeout(self.config,"http_timeout")) as response:
+                    body = response.read(self.config["max_response_bytes"] + 1)
+                    if len(body) > self.config["max_response_bytes"]:
+                        raise RuntimeError("GitLab response exceeds configured byte bound")
+                    self.last_date = response.headers.get("Date")
+                    self.last_headers = response.headers
+                    return json.loads(body)
         except urllib.error.HTTPError as error:
             raise RuntimeError(f"GitLab GET rejected (HTTP {error.code}); no redirect followed") from error
-        except urllib.error.URLError as error:
+        except (urllib.error.URLError,OSError) as error:
+            if mq_expired(self.config):
+                raise MonitorCycleYield('cycle ended during GitLab read') from error
             raise RuntimeError("GitLab GET transport failed") from error
 
     def project(self):
@@ -2576,11 +2582,11 @@ class MonitorGitLab:
             raise RuntimeError("authenticated merge request identity mismatch")
         return result
 
-    def pages(self, route: str):
+    def pages(self, route: str, *, start_page=1):
         from urllib.parse import urlsplit, urljoin, parse_qs
         endpoint = self.base + route.split("?", 1)[0]
         separator = "&" if "?" in route else "?"
-        for page in range(1, self.config["max_pages"] + 1):
+        for page in range(start_page, self.config["max_pages"] + 1):
             data = self.get(f"{route}{separator}per_page=100&page={page}")
             if not isinstance(data, list) or any(not isinstance(item, dict) for item in data):
                 raise RuntimeError("invalid GitLab paginated response")
@@ -2599,6 +2605,70 @@ class MonitorGitLab:
             if final:
                 return
         raise MonitorDeferred("note_or_inventory_page_cap")
+
+
+class MonitorCycleYield(Exception):
+    """Normal bounded-cycle completion, never a reviewer or publication failure."""
+    def __init__(self,message,*,issued=False):
+        super().__init__(message)
+        self.issued = issued
+
+
+def mq_expired(config):
+    import time
+    return '_cycle_deadline' in config and time.monotonic()>=config['_cycle_deadline']
+
+
+def mq_http_deadline(config,*,issued=False):
+    from contextlib import contextmanager
+    @contextmanager
+    def bounded():
+        if '_cycle_deadline' not in config:
+            yield
+            return
+        import signal
+        import threading
+        import time
+        mq_budget(config)
+        if threading.current_thread() is not threading.main_thread():
+            raise RuntimeError('bounded periodic HTTP requires the consumer main thread')
+        previous = signal.getsignal(signal.SIGALRM)
+        timer = signal.getitimer(signal.ITIMER_REAL)
+        started = time.monotonic()
+        def expired(signum,frame):
+            raise MonitorCycleYield('HTTP wall-clock cycle deadline',issued=issued)
+        signal.signal(signal.SIGALRM,expired)
+        try:
+            signal.setitimer(signal.ITIMER_REAL,max(.000001,config['_cycle_deadline']-started))
+            yield
+        finally:
+            signal.setitimer(signal.ITIMER_REAL,0)
+            signal.signal(signal.SIGALRM,previous)
+            if timer[0]:
+                signal.setitimer(signal.ITIMER_REAL,max(.000001,timer[0]-(time.monotonic()-started)),timer[1])
+    return bounded()
+
+
+def mq_io_timeout(config, key):
+    import time
+    timeout = config[key]
+    if '_cycle_deadline' in config:
+        remaining = config['_cycle_deadline'] - time.monotonic()
+        if remaining <= 0:
+            raise MonitorCycleYield('cycle budget exhausted')
+        timeout = min(timeout, remaining)
+    return timeout
+
+
+def mq_budget(config):
+    if mq_expired(config):
+        raise MonitorCycleYield('cycle budget exhausted')
+
+
+class MonitorClaudeError(RuntimeError):
+    def __init__(self, operation, message, *, not_started=False, returncode=None):
+        super().__init__('Claude CLI ' + operation + ' failed: ' + message)
+        self.operation, self.not_started, self.returncode = operation, not_started, returncode
 
 
 class MonitorNativeRejected(RuntimeError):
@@ -2685,20 +2755,25 @@ def monitor_assign_app_project(config: dict, thread_id: str):
         raise RuntimeError("Codex app did not acknowledge the requested chat/project assignment")
 
 
-def monitor_turns(config: dict, thread_id: str) -> list:
+def monitor_turn_page(config, thread_id, cursor=None):
+    params = {"threadId": thread_id, "limit": 100, "itemsView": "notLoaded", "sortDirection": "desc"}
+    if cursor:
+        params["cursor"] = cursor
+    result = monitor_native(config, "thread/turns/list", params)
+    if (not isinstance(result.get("data"), list) or "nextCursor" not in result
+            or not (result["nextCursor"] is None
+                    or isinstance(result["nextCursor"], str) and result["nextCursor"])):
+        raise RuntimeError("invalid native history page/cursor; completeness is unverified")
+    return result
+
+
+def monitor_turns(config: dict, thread_id: str, *, stop_ids=()) -> list:
     turns, cursor = [], None
     for _ in range(config["max_history_pages"]):
-        params = {"threadId": thread_id, "limit": 100, "itemsView": "notLoaded", "sortDirection": "desc"}
-        if cursor:
-            params["cursor"] = cursor
-        result = monitor_native(config, "thread/turns/list", params)
-        if (not isinstance(result.get("data"), list) or "nextCursor" not in result
-                or not (result["nextCursor"] is None
-                        or isinstance(result["nextCursor"], str) and result["nextCursor"])):
-            raise RuntimeError("invalid native history page/cursor; completeness is unverified")
+        result = monitor_turn_page(config, thread_id, cursor)
         turns.extend(result["data"])
         cursor = result["nextCursor"]
-        if cursor is None:
+        if cursor is None or stop_ids and set(stop_ids).issubset(t['id'] for t in turns):
             return turns
     raise RuntimeError("native thread history exceeds configured page bound")
 
@@ -3292,14 +3367,20 @@ def mq_human_assessment(result, source, hold=None):
     return scope
 
 
-def mq_git_metadata(roots):
+def mq_git_metadata(roots,*,config=None):
     import subprocess
     environment = {k:v for k,v in os.environ.items() if not k.startswith('GIT_')}
     environment['LC_ALL'] = 'C'
     result = []
     for root in roots:
-        probe = subprocess.run(['git','-C',root,'rev-parse','--path-format=absolute',
-            '--git-dir','--git-common-dir'],capture_output=True,text=True,env=environment,timeout=15)
+        timeout = min(15,mq_io_timeout(config,'native_timeout')) if config else 15
+        try:
+            probe = subprocess.run(['git','-C',root,'rev-parse','--path-format=absolute',
+                '--git-dir','--git-common-dir'],capture_output=True,text=True,env=environment,timeout=timeout)
+        except subprocess.TimeoutExpired as failure:
+            if config and mq_expired(config):
+                raise MonitorCycleYield('cycle ended reading Git metadata') from failure
+            raise RuntimeError('workspace Git metadata probe timed out') from failure
         if probe.returncode:
             if 'not a git repository' in probe.stderr:
                 continue
@@ -3321,7 +3402,7 @@ def mq_workspace(config, queue, job):
         roots = project['roots'] if project else [config['cwd']]
         snapshot = {'project_id':project['id'] if project else None,
             'project_name':project['name'] if project else None,'cwd':roots[0],
-            'roots':roots,'git_metadata':mq_git_metadata(roots)}
+            'roots':roots,'git_metadata':mq_git_metadata(roots,config=config)}
         with queue.atomic():
             queue.check_running(job)
             job['workspace'] = snapshot
@@ -3478,10 +3559,16 @@ def mq_codex_dispatch(config, queue, job, stage):
     if thread['status']['type'] != 'idle':
         raise RuntimeError('mapped Codex chat is not idle; no model input sent')
     mq_verify_codex_context(config,queue.mr(job['repository_id'],job['iid']),thread,session)
-    mq_update_stage(queue, job, stage['id'], session=session, delivery='sending')
-    started = monitor_native(config, 'turn/start', {'threadId': session,
-        'clientUserMessageId': stage['id'], 'input': [{'type':'text','text':stage['input']}],
-        'approvalPolicy':'never', 'model': config['model'], 'effort': config['effort'], 'permissions': MQ_PERMISSION_PROFILE})
+    mq_update_stage(queue, job, stage['id'], session=session, delivery='sending',
+        review_deadline=mq_stamp()+config['review_timeout_seconds'])
+    try:
+        started = monitor_native(config, 'turn/start', {'threadId': session,
+            'clientUserMessageId': stage['id'], 'input': [{'type':'text','text':stage['input']}],
+            'approvalPolicy':'never', 'model': config['model'], 'effort': config['effort'], 'permissions': MQ_PERMISSION_PROFILE})
+    except MonitorCycleYield as yielded:
+        if not yielded.issued:
+            mq_update_stage(queue,job,stage['id'],delivery='prepared')
+        raise
     mq_update_stage(queue, job, stage['id'], turn_id=started['turn']['id'], delivery='accepted')
 
 
@@ -3505,7 +3592,7 @@ def mq_codex_items(config, session, turn):
 
 
 def mq_codex_observe(config, stage):
-    turns = monitor_turns(config, stage['session'])
+    turns = monitor_turns(config, stage['session'],stop_ids=[stage['turn_id']] if stage.get('turn_id') else [])
     matches = []
     for turn in turns:
         if stage.get('turn_id') and turn['id'] != stage['turn_id']:
@@ -3539,66 +3626,141 @@ def mq_codex_observe(config, stage):
     return {'terminal':True,'text':finals[0]['text'],'anchor':finals[0]['id'],'turn_id':turn['id']}
 
 
+def mq_claude_environment(config):
+    environment = dict(os.environ)
+    if Path(config['claude_home']).resolve() == (Path.home()/'.claude').resolve():
+        # Setting even the default directory changes Claude's preferences-file selection.
+        environment.pop('CLAUDE_CONFIG_DIR', None)
+    else:
+        environment['CLAUDE_CONFIG_DIR'] = config['claude_home']
+    return environment
+
+
 def mq_claude_command(config, arguments):
     import subprocess
     import tempfile
-    environment = dict(os.environ)
-    environment['CLAUDE_CONFIG_DIR'] = config['claude_home']
-    # Native Bun can truncate long help/JSON output on a pipe: collect regular files.
+    operation = 'launch' if arguments[0] == '--bg' else arguments[0]
+    timeout = mq_io_timeout(config,'native_timeout')
     with tempfile.TemporaryFile(mode='w+') as output, tempfile.TemporaryFile(mode='w+') as errors:
-        completed = subprocess.run([config['claude_bin'], *arguments], cwd=config['cwd'], env=environment,
-            stdin=subprocess.DEVNULL, stdout=output, stderr=errors, text=True,
-            timeout=config['native_timeout'])
+        try:
+            completed = subprocess.run([config['claude_bin'], *arguments], cwd=config['cwd'],
+                env=mq_claude_environment(config), stdin=subprocess.DEVNULL, stdout=output,
+                stderr=errors, text=True, timeout=timeout)
+        except OSError as failure:
+            raise MonitorClaudeError(operation,str(failure),not_started=operation=='launch') from failure
+        except subprocess.TimeoutExpired as failure:
+            if mq_expired(config):
+                raise MonitorCycleYield('cycle ended during Claude command',issued=operation in {'launch','stop'}) from failure
+            raise MonitorClaudeError(operation,'command timed out; reconcile native execution') from failure
         output.seek(0); errors.seek(0)
         stdout, stderr = output.read(), errors.read()
     if completed.returncode:
-        raise RuntimeError('Claude CLI failed: ' + (stderr.strip() or stdout.strip())[:2000])
+        message = (stderr.strip() or stdout.strip())[:2000]
+        rejection = f"Workspace not trusted. Run `claude` in {config['cwd']} once and accept the trust prompt, then retry."
+        raise MonitorClaudeError(operation,message,returncode=completed.returncode,
+            not_started=operation=='launch' and completed.returncode==1 and message==rejection)
     return stdout
+
+def mq_claude_preflight(config):
+    auth = json.loads(mq_claude_command(config,['auth','status','--json']))
+    if not auth.get('loggedIn'):
+        raise RuntimeError('Claude is not authenticated; use claude auth login')
+    environment = mq_claude_environment(config)
+    preferences = (Path(environment['CLAUDE_CONFIG_DIR'])/'.claude.json' if environment.get('CLAUDE_CONFIG_DIR')
+                   else Path.home()/'.claude.json')
+    saved = json.loads(preferences.read_text()) if preferences.is_file() else {}
+    if not saved.get('projects',{}).get(config['cwd'],{}).get('hasTrustDialogAccepted'):
+        raise RuntimeError('Claude workspace is not trusted in '+str(preferences)+'; open claude in '+config['cwd'])
+    mq_claude_agents(config)
 
 
 def mq_claude_agents(config):
     data = json.loads(mq_claude_command(config, ['agents','--json','--all']))
-    if not isinstance(data, list) or any(not isinstance(i, dict) or not isinstance(i.get('id'), str)
-                                      or not isinstance(i.get('sessionId'), str) for i in data):
+    if not isinstance(data,list):
         raise RuntimeError('invalid Claude background inventory')
-    return data
-
+    backgrounds = []
+    for item in data:
+        if not isinstance(item,dict) or item.get('kind') not in {'interactive','background'}:
+            raise RuntimeError('invalid Claude session kind')
+        if item['kind']=='interactive':
+            continue
+        if any(not isinstance(item.get(k),str) or not item[k] for k in ('id','sessionId','name','cwd','state')):
+            raise RuntimeError('invalid Claude background identity')
+        backgrounds.append(item)
+    if (len({a['id'] for a in backgrounds})!=len(backgrounds)
+            or len({a['sessionId'] for a in backgrounds})!=len(backgrounds)):
+        raise RuntimeError('ambiguous Claude background inventory')
+    return backgrounds
 
 def mq_claude_dispatch(config, queue, job, stage):
     name = config['project_path'].split('/')[-1] + f" !{job['iid']} — Claude · " + stage['id']
-    mq_update_stage(queue, job, stage['id'], name=name, delivery='sending')
+    mq_update_stage(queue, job, stage['id'], name=name, delivery='sending',
+        review_deadline=mq_stamp()+config['review_timeout_seconds'])
     arguments = mq_claude_arguments(config,stage['input'],name)
     if config.get('claude_model'):
         arguments += ['--model',config['claude_model']]
     if config.get('claude_effort'):
         arguments += ['--effort',config['claude_effort']]
-    mq_claude_command(config, arguments)
+    try:
+        mq_claude_command(config, arguments)
+    except MonitorCycleYield as yielded:
+        if not yielded.issued:
+            mq_update_stage(queue,job,stage['id'],delivery='prepared')
+        raise
     mq_claude_accept(config, queue, job, stage)
 
 
 def mq_claude_accept(config, queue, job, stage):
-    matches = [a for a in mq_claude_agents(config) if a.get('name') == stage.get('name')
-               and a.get('cwd') == config['cwd'] and a.get('kind') == 'background']
-    if len(matches) > 1:
+    matches = [a for a in mq_claude_agents(config) if a['name']==stage.get('name') and a['cwd']==config['cwd']]
+    if len(matches)>1:
         raise RuntimeError('ambiguous Claude native dispatch acknowledgment')
     if not matches:
         return None
     native = matches[0]
-    if any(r['repository_id']!=job['repository_id'] or r['iid']!=job['iid'] for r in queue.mrs()
-           if native['sessionId'] in mq_owned_sessions(r)):
-        raise RuntimeError('Claude session already belongs to another MR')
-    if stage.get('session') and stage['session'] != native['sessionId']:
-        raise RuntimeError('Claude native session changed')
-    mq_update_stage(queue, job, stage['id'], session=native['sessionId'], background_id=native['id'], delivery='accepted')
+    if (stage.get('session') and stage['session']!=native['sessionId']
+            or stage.get('background_id') and stage['background_id']!=native['id']):
+        raise RuntimeError('Claude native identity changed')
     with queue.atomic():
-        record = queue.mr(job['repository_id'], job['iid'])
+        queue.check_running(job)
+        if any(r['repository_id']!=job['repository_id'] or r['iid']!=job['iid'] for r in queue.mrs()
+               if native['sessionId'] in mq_owned_sessions(r)):
+            raise RuntimeError('Claude session already belongs to another MR')
+        stage.update(session=native['sessionId'],background_id=native['id'],delivery='accepted')
+        record = queue.mr(job['repository_id'],job['iid'])
         previous = record['chats'].get('claude')
-        if previous and previous != native['sessionId']:
-            record.setdefault('claude_history', []).append(previous)
+        if previous and previous!=native['sessionId'] and previous not in record.get('claude_history',[]):
+            record.setdefault('claude_history',[]).append(previous)
         record.setdefault('claude_contexts',{})[native['sessionId']] = config['cwd']
         record['chats']['claude'] = native['sessionId']
         queue.put_mr(record)
+        queue.save(job)
     return native
+
+def mq_legacy_claude_rejection(config,job,stage):
+    """Normalize the original wrapper's saved negative acknowledgment, not missing inventory."""
+    rejection = f"Workspace not trusted. Run `claude` in {config['cwd']} once and accept the trust prompt, then retry."
+    name = config['project_path'].split('/')[-1]+f" !{job['iid']} — Claude · "+stage['id']
+    if (stage.get('error')!={'message':'Claude CLI failed: '+rejection}
+            or stage.get('name')!=name or stage.get('delivery')!='sending'
+            or any(stage.get(k) for k in ('session','background_id','turn_id'))):
+        return None
+    import shutil
+    executable = shutil.which(config['claude_bin'])
+    if not executable:
+        return None
+    path = Path(executable)
+    resolved = path.resolve(strict=True)
+    # The old attempt did not save operation/version fields. Only the unchanged, natively
+    # verified installed version can authenticate its launch-only trust diagnostic.
+    if any(p.lstat().st_ctime>stage['started_at'] for p in (path,resolved)):
+        return None
+    if mq_claude_command(config,['--version']).strip()!='2.1.289 (Claude Code)':
+        return None
+    st = resolved.stat()
+    return {'message':rejection,'operation':'launch','not_started':True,
+        'evidence':{'basis':'original exact launch-only trust rejection; unchanged native executable',
+            'version':'2.1.289','executable':str(resolved),'device':st.st_dev,'inode':st.st_ino,
+            'ctime_ns':st.st_ctime_ns,'size':st.st_size}}
 
 
 def mq_claude_records(config, session):
@@ -3629,7 +3791,8 @@ def mq_claude_records(config, session):
 
 def mq_claude_observe(config, stage):
     matches = [a for a in mq_claude_agents(config) if a['id'] == stage.get('background_id')
-               and a['sessionId'] == stage['session'] and a.get('name') == stage.get('name')]
+               and a['sessionId'] == stage['session'] and a.get('name') == stage.get('name')
+               and a.get('cwd') == config['cwd']]
     if len(matches) != 1:
         return {'terminal':False,'unknown':True}
     native = matches[0]
@@ -3674,12 +3837,11 @@ def mq_claude_observe(config, stage):
 
 
 def mq_claude_stop(config, native):
-    if native.get('state') not in {'failed','stopped','done'}:
-        mq_claude_command(config, ['stop', native['id']])
-        settled = next((a for a in mq_claude_agents(config) if a['id'] == native['id']), None)
-        if settled is None or settled.get('state') not in {'failed','stopped','done'}:
-            raise RuntimeError('Claude worker termination is not yet confirmed')
-
+    if native['state'] not in {'failed','stopped','done'}:
+        mq_claude_command(config,['stop',native['id']])
+    settled = next((a for a in mq_claude_agents(config) if a['id']==native['id']
+        and all(a[k]==native[k] for k in ('sessionId','name','cwd'))),None)
+    return bool(settled and settled['state'] in {'failed','stopped','done'})
 
 def mq_verify_input(queue,stage):
     target = queue.path.parent / 'inputs' / (stage['id']+'.json')
@@ -3947,11 +4109,18 @@ def mq_send(api, method, route, payload):
     request = urllib.request.Request(api.base + route, method=method,
         data=json.dumps(payload,ensure_ascii=False).encode(), headers={
             'PRIVATE-TOKEN':api._token,'Accept':'application/json','Content-Type':'application/json'})
-    with api.opener.open(request,timeout=api.config['http_timeout']) as response:
-        raw = response.read(api.config['max_response_bytes']+1)
-        if len(raw) > api.config['max_response_bytes']:
-            raise RuntimeError('publication response exceeds byte bound; reconcile delivery')
-        return json.loads(raw)
+    timeout = mq_io_timeout(api.config,'http_timeout')
+    try:
+        with mq_http_deadline(api.config,issued=True):
+            with api.opener.open(request,timeout=timeout) as response:
+                raw = response.read(api.config['max_response_bytes']+1)
+                if len(raw) > api.config['max_response_bytes']:
+                    raise RuntimeError('publication response exceeds byte bound; reconcile delivery')
+                return json.loads(raw)
+    except OSError as failure:
+        if mq_expired(api.config):
+            raise MonitorCycleYield('cycle ended after possible public send',issued=True) from failure
+        raise
 
 
 def mq_readback(config, queue, effect, context):
@@ -4006,6 +4175,7 @@ def mq_apply(config, queue, job, verify_source):
             mq_resolution(api,queue,job,planned['assessment'],context,explanation)
         # Exact already-public findings are reused even after a fresh monitor start.
         receipt = mq_readback(config,queue,planned,context) if planned['kind'] != 'resolve' else None
+        mq_budget(config)
         effect = dict(planned)
         with queue.atomic():
             queue.check_running(job)
@@ -4018,6 +4188,7 @@ def mq_apply(config, queue, job, verify_source):
         if receipt:
             continue
         route = f"/projects/{job['repository_id']}/merge_requests/{job['iid']}/discussions"
+        sent = False
         try:
             if effect['kind'] == 'finding':
                 mq_send(api,'POST',route,{'body':effect['body'],'position':effect['position']})
@@ -4025,6 +4196,7 @@ def mq_apply(config, queue, job, verify_source):
                 mq_send(api,'POST',route+'/'+effect['discussion']+'/notes',{'body':effect['body']})
             else:
                 mq_send(api,'PUT',route+'/'+effect['discussion'],{'resolved':True})
+            sent = True
             observed = mq_context(config,job['iid'],with_diff=False)
             receipt = (mq_resolution_receipt(queue,job,effect,observed) if effect['kind']=='resolve'
                        else mq_readback(config,queue,effect,observed))
@@ -4034,6 +4206,13 @@ def mq_apply(config, queue, job, verify_source):
                 queue.check_running(job)
                 effect.update(state='confirmed',**receipt)
                 queue.put_effect(effect)
+        except MonitorCycleYield as yielded:
+            if not sent and not yielded.issued:
+                with queue.atomic():
+                    queue.check_running(job)
+                    effect['state'] = 'prepared'
+                    queue.put_effect(effect)
+            raise
         except Exception as error:
             with queue.atomic():
                 queue.check_running(job)
@@ -4129,59 +4308,116 @@ def mq_combined_source(job):
             'mixed':any(s.get('mixed') for s in sources),'automated':any(s.get('automated') for s in sources)}
 
 
+def mq_rotated_sources(queue,key,values,identity):
+    first = queue.meta(key)
+    index = next((i for i,v in enumerate(values) if identity(v)==first),0)
+    ordered = values[index:]+values[:index]
+    for position,value in enumerate(ordered):
+        following = ordered[(position+1)%len(ordered)]
+        with queue.atomic():queue.set_meta(key,identity(following))
+        yield value
+
+
 def mq_human_candidates(config,queue,record):
-    sessions = list(dict.fromkeys([*record.get('codex_contexts',{}),record['chats'].get('codex')]))
-    for session in filter(None,sessions):
+    codex = list(dict.fromkeys([*record.get('codex_contexts',{}),record['chats'].get('codex')]))
+    claude = list(dict.fromkeys([*record.get('claude_history',[]),record['chats'].get('claude')]))
+    sessions = [('codex',s) for s in codex if s]+[('claude',s) for s in claude if s]
+    key = f"human_next_session:{record['repository_id']}:{record['iid']}"
+    for provider,session in mq_rotated_sources(queue,key,sessions,lambda v:':'.join(v)):
+        try:
+            yield from mq_session_candidates(config,queue,record,provider,session)
+        except (OSError,RuntimeError,ValueError,KeyError) as failure:
+            mq_diagnostic(queue,'human_session_error:'+provider+':'+session,failure)
+
+
+def mq_session_candidates(config,queue,record,provider,session):
+    if provider=='codex':
         native = monitor_native(config,'thread/read',{'threadId':session,'includeTurns':False})['thread']
-        for turn in reversed(monitor_turns(config,session)):
-            if turn['status'] == 'inProgress':
+        for turn in mq_intake_turns(config,queue,session):
+            seen = 'human:'+session+':'+turn
+            try:
+                items = mq_codex_items(config,session,turn)
+            except (OSError,RuntimeError,ValueError,KeyError) as failure:
+                mq_diagnostic(queue,'human_source_error:'+session+':'+turn,failure)
                 continue
-            seen = 'human:'+session+':'+turn['id']
-            if queue.meta(seen):
-                continue
-            items = mq_codex_items(config,session,turn['id'])
             inputs = [i for i in items if i.get('type') == 'userMessage']
             texts = [t for i in inputs for t in mq_texts(i.get('content'))[0]]
             if not inputs or not texts:
                 continue
             automatic = mq_registered_source(queue,texts,[i.get('clientId') for i in inputs])
-            source = {'origin':'human','provider':'codex','session':session,'turn_id':turn['id'],
+            source = {'origin':'human','provider':'codex','session':session,'turn_id':turn,
                 'source_id':inputs[0]['id'],'texts':texts,'cwd':native['cwd'],'project_id':native.get('projectId'),
                 'mixed':len(inputs)!=1 or any(mq_texts(i.get('content'))[1] for i in inputs) or mq_automatic_items(items),
                 'automated':automatic}
             finals = [i for i in items if i.get('type') == 'agentMessage' and i.get('phase') == 'final_answer']
             yield seen,source,finals[0]['text'] if len(finals)==1 else None
-    sessions = list(dict.fromkeys([*record.get('claude_history',[]),record['chats'].get('claude')]))
-    for session in filter(None,sessions):
-        records = mq_claude_records(config,session)
-        for index,row in enumerate(records):
-            if row.get('type') != 'user' or row.get('isMeta') or not row.get('uuid'):
+        return
+    records = mq_claude_records(config,session)
+    users = [(i,r) for i,r in enumerate(records) if r.get('type')=='user' and not r.get('isMeta')
+             and r.get('uuid') and not queue.meta('human:'+session+':'+r['uuid'])]
+    for index,row in mq_rotated_sources(queue,'human_next_source:'+session,users,lambda v:v[1]['uuid']):
+        texts,mixed = mq_texts(row.get('message',{}).get('content'))
+        if not texts:
+            continue
+        seen = 'human:'+session+':'+row['uuid']
+        if queue.meta(seen):
+            continue
+        source = {'origin':'human','provider':'claude','session':session,'source_id':row['uuid'],
+            'texts':texts,'cwd':row['cwd'],'mixed':mixed,'automated':mq_registered_source(queue,texts)}
+        chain,finals,terminal = {row['uuid']},[],False
+        for later in records[index+1:]:
+            if later.get('parentUuid') not in chain or later.get('type') == 'user':
                 continue
-            texts,mixed = mq_texts(row.get('message',{}).get('content'))
-            if not texts:
-                continue
-            seen = 'human:'+session+':'+row['uuid']
-            if queue.meta(seen):
-                continue
-            source = {'origin':'human','provider':'claude','session':session,'source_id':row['uuid'],
-                'texts':texts,'cwd':row['cwd'],'mixed':mixed,'automated':mq_registered_source(queue,texts)}
-            chain,finals,terminal = {row['uuid']},[],False
-            for later in records[index+1:]:
-                if later.get('parentUuid') not in chain or later.get('type') == 'user':
-                    continue
-                if later.get('uuid'):
-                    chain.add(later['uuid'])
-                if later.get('type') == 'assistant':
-                    if later.get('isApiErrorMessage'):
-                        terminal = True
-                    elif later.get('message',{}).get('stop_reason') == 'end_turn':
-                        finals.append(later); terminal = True
-                elif later.get('type') == 'system' and later.get('subtype') == 'turn_duration':
+            if later.get('uuid'):
+                chain.add(later['uuid'])
+            if later.get('type') == 'assistant':
+                if later.get('isApiErrorMessage'):
                     terminal = True
-            if terminal:
-                text = '\n'.join(c['text'] for c in finals[0]['message']['content'] if c.get('type')=='text') if len(finals)==1 else None
-                yield seen,source,text
+                elif later.get('message',{}).get('stop_reason') == 'end_turn':
+                    finals.append(later); terminal = True
+            elif later.get('type') == 'system' and later.get('subtype') == 'turn_duration':
+                terminal = True
+        if terminal:
+            text = '\n'.join(c['text'] for c in finals[0]['message']['content'] if c.get('type')=='text') if len(finals)==1 else None
+            yield seen,source,text
 
+
+def mq_intake_turns(config,queue,session):
+    # Save each page before reading its items. A slow source rotates on the next cycle;
+    # a slow later page never prevents processing the latest completed turn first.
+    key = 'human_history:'+session
+    state = queue.meta(key) or {'cursor':None,'pages':0,'pending':[],'final':False}
+    refresh = state['pages'] and queue.meta('human_refresh:'+session) is not False
+    if state['pages']:
+        with queue.atomic():queue.set_meta('human_refresh:'+session,not refresh)
+    if refresh:
+        # New answers arrive at the head even while an old continuation is stalled.
+        # Keep that short refresh separate from the durable historical cursor/pending IDs.
+        page = monitor_turn_page(config,session)
+        latest = [t['id'] for t in page['data'] if t['status']!='inProgress'
+                  and not queue.meta('human:'+session+':'+t['id'])]
+        for turn in mq_rotated_sources(queue,'human_latest_turn:'+session,latest,lambda t:t):
+            yield turn
+        state = queue.meta(key) or state
+    while True:
+        mq_budget(config)
+        if not state['pending']:
+            if state['final'] or state['pages'] >= config['max_history_pages']:
+                with queue.atomic():queue.set_meta(key,None)
+                if not state['final']:
+                    raise RuntimeError('native thread history exceeds configured page bound')
+                return
+            page = monitor_turn_page(config,session,state['cursor'])
+            state.update(cursor=page['nextCursor'],pages=state['pages']+1,final=page['nextCursor'] is None,
+                pending=[t['id'] for t in page['data'] if t['status']!='inProgress'])
+            with queue.atomic():queue.set_meta(key,state)
+            continue
+        turn = state['pending'].pop(0)
+        with queue.atomic():queue.set_meta(key,state)
+        if not queue.meta('human:'+session+':'+turn):
+            yield turn
+        # A sufficient answer may have yielded while verifying its question order.
+        state = queue.meta(key) or {'cursor':None,'pages':0,'pending':[],'final':False}
 
 def mq_reset_round(queue,job,reason):
     with queue.atomic():
@@ -4200,7 +4436,16 @@ def mq_accept_answer(config,queue,record,source,result):
         return False
     mq_verify_source(config,queue,source,record['repository_id'],record['iid'])
     mq_human_assessment(result,source,hold)
-    mq_answer_after_question(config,queue,source,hold)
+    try:
+        mq_answer_after_question(config,queue,source,hold)
+    except MonitorCycleYield:
+        if source['provider']=='codex':
+            key = 'human_history:'+source['session']
+            state = queue.meta(key) or {'cursor':None,'pages':0,'pending':[],'final':False}
+            if source['turn_id'] not in state['pending']:
+                state['pending'].append(source['turn_id'])
+            with queue.atomic():queue.set_meta(key,state)
+        raise
     with queue.atomic():
         current = queue.mr(record['repository_id'],record['iid'])
         if current.get('hold') != hold:
@@ -4249,28 +4494,44 @@ def mq_intake(config,queue,record):
 
 
 def mq_inventory(config,queue):
-    # One bounded helper, one global budget; rotate the first repository for fairness.
     projects = mq_repositories(config)
     first = queue.meta('inventory_next_repository')
     index = next((i for i,p in enumerate(projects) if p['id']==first),0)
     ordered = projects[index:]+projects[:index]
-    with queue.atomic():
-        queue.set_meta('inventory_next_repository',projects[(index+1)%len(projects)]['id'])
     count = 0
     for project in ordered:
+        with queue.atomic():
+            position = projects.index(project)
+            queue.set_meta('inventory_next_repository',projects[(position+1)%len(projects)]['id'])
+        key = 'inventory_cursor:'+str(project['id'])
+        cursor = queue.meta(key) or {'page':1,'pending':[],'final':False}
         try:
             scoped = mq_repository(config,project['id'])
-            api = MonitorGitLab(scoped,guard=config.get('_io_guard'))
+            api = MonitorGitLab(scoped)
             api.project()
             route = f"/projects/{project['id']}/merge_requests?state=opened&order_by=created_at&sort=asc"
-            for page,final in api.pages(route):
-                for summary in page:
-                    count += 1
-                    if count > config['max_mrs']:
-                        raise MonitorDeferred('global MR inventory cap')
+            while True:
+                mq_budget(config)
+                if not cursor['pending']:
+                    if cursor['final']:
+                        with queue.atomic():queue.set_meta(key,None)
+                        break
+                    page,final = next(api.pages(route,start_page=cursor['page']))
+                    cursor = {'page':cursor['page']+1,'pending':[int(row['iid']) for row in page],'final':final}
+                    with queue.atomic():queue.set_meta(key,cursor)
+                    if not cursor['pending']:
+                        continue
+                if count>=config['max_mrs']:
+                    raise MonitorCycleYield('MR inventory cycle cap')
+                mq_budget(config)
+                iid = cursor['pending'].pop(0)
+                # Advance before bounded I/O: a persistently slow MR cannot hide later MRs.
+                with queue.atomic():queue.set_meta(key,cursor)
+                count += 1
+                try:
                     mq_admit(config,project['id'])
-                    context = mq_context(scoped,int(summary['iid']),with_diff=False)
-                    if context['mr']['state'] != 'opened':
+                    context = mq_context(scoped,iid,with_diff=False)
+                    if context['mr']['state']!='opened':
                         continue
                     record = queue.mr(project['id'],context['iid'])
                     owned = [e for e in queue.effects() if e['repository_id']==project['id'] and e['iid']==context['iid']]
@@ -4279,9 +4540,9 @@ def mq_inventory(config,queue):
                     signature = monitor_digest([{k:n[k] for k in ('id','discussion','revision','author_id')} for n in notes])
                     fresh_start = 'observed_notes' not in record
                     generation = record.get('observation_generation',0)+1
-                    changed = record.get('observed_head') != context['head'] or record.get('observed_notes') != signature or fresh_start
+                    changed = record.get('observed_head')!=context['head'] or record.get('observed_notes')!=signature or fresh_start
                     if changed:
-                        code = record.get('observed_head') != context['head'] or fresh_start
+                        code = record.get('observed_head')!=context['head'] or fresh_start
                         source = {'origin':'automatic','head':context['head']} if code else {'origin':'automatic','notes':signature}
                         queue.enqueue(project['id'],context['iid'],
                             source_key=f"observation:{project['id']}:{context['iid']}:{generation}:{context['head']}:{signature}",
@@ -4290,12 +4551,16 @@ def mq_inventory(config,queue):
                             mq_admit(config,project['id'])
                             fresh = queue.mr(project['id'],context['iid'])
                             fresh.update(observed_head=context['head'],observed_notes=signature,
-                                         observation_generation=generation,title=context['mr']['title'])
+                                observation_generation=generation,title=context['mr']['title'])
                             queue.put_mr(fresh)
-        except MonitorDeferred:
-            raise
+                except (OSError,RuntimeError,ValueError) as failure:
+                    mq_diagnostic(queue,f"inventory_error:{project['id']}:{iid}",failure)
+        except MonitorDeferred as failure:
+            mq_diagnostic(queue,'inventory_error:'+str(project['id']),failure)
+            with queue.atomic():queue.set_meta(key,None)
         except (OSError,RuntimeError,ValueError) as failure:
             mq_diagnostic(queue,'inventory_error:'+str(project['id']),failure)
+    return True
 
 
 def mq_question(queue,job,stage,result):
@@ -4361,10 +4626,19 @@ def mq_step(config,queue):
         mq_verify_input(queue,stage)
         if stage['delivery']=='prepared':
             return mq_launch_stage(scoped,queue,job,stage)
+        expired = mq_stamp() >= stage.get('review_deadline',stage['started_at']+config['review_timeout_seconds'])
+        if expired and not stage.get('cancel_requested_at'):
+            mq_update_stage(queue,job,stage['id'],cancel_requested_at=mq_stamp())
         if stage['reviewer']=='claude':
-            if not stage.get('session'):
-                if mq_claude_accept(scoped,queue,job,stage) is None:
-                    return False
+            # Also repairs an interrupted old acknowledgment/ownership registration.
+            if mq_claude_accept(scoped,queue,job,stage) is None:
+                rejection = mq_legacy_claude_rejection(scoped,job,stage)
+                if rejection:
+                    queue.stage_end(job,stage['id'],error=rejection,terminal=True)
+                    return True
+                if expired:
+                    mq_diagnostic(queue,'consumer_error','review timeout; exact Claude delivery remains unacknowledged')
+                return False
             observed = mq_claude_observe(scoped,stage)
         else:
             observed = mq_codex_observe(scoped,stage)
@@ -4372,8 +4646,9 @@ def mq_step(config,queue):
         if updates:
             mq_update_stage(queue,job,stage['id'],**updates)
         if not observed['terminal']:
-            if mq_stamp()-stage['started_at'] > config['review_timeout_seconds']:
-                mq_cancel_stage(scoped,stage)
+            if expired and mq_cancel_stage(scoped,stage):
+                queue.stage_end(job,stage['id'],error={'message':'review timed out; exact native execution stopped'},terminal=True)
+                return True
             return False
         result,error = None,observed.get('error')
         if error is None:
@@ -4496,11 +4771,13 @@ def mq_launch_stage(config,queue,job,stage):
         else:
             mq_codex_dispatch(config,queue,job,stage)
     except (OSError,RuntimeError) as failure:
-        if stage['delivery']=='prepared' or isinstance(failure,(FileNotFoundError,MonitorNativeRejected)):
+        if stage['delivery']=='prepared' or isinstance(failure,MonitorNativeRejected) or (
+                isinstance(failure,MonitorClaudeError) and failure.not_started):
             queue.stage_end(job,stage['id'],error={'message':str(failure)},terminal=True)
         else:
             # An issued native input with lost acknowledgment is not a known failed execution.
-            mq_update_stage(queue,job,stage['id'],error={'message':str(failure)})
+            mq_update_stage(queue,job,stage['id'],error={'message':str(failure),
+                **({'operation':failure.operation,'returncode':failure.returncode} if isinstance(failure,MonitorClaudeError) else {})})
     return True
 
 
@@ -4510,14 +4787,14 @@ def mq_automatic_items(items):
 
 
 def mq_cancel_stage(config,stage):
-    if stage['reviewer'] == 'claude' and stage.get('background_id'):
+    if stage['reviewer']=='claude' and stage.get('background_id'):
         native = next((a for a in mq_claude_agents(config) if a['id']==stage['background_id']
-                       and a['sessionId']==stage['session'] and a.get('name')==stage.get('name')),None)
-        if native:
-            mq_claude_stop(config,native)
-    elif stage['reviewer']=='codex' and stage.get('turn_id'):
+            and a['sessionId']==stage['session'] and a['name']==stage.get('name') and a['cwd']==config['cwd']),None)
+        return bool(native and mq_claude_stop(config,native))
+    if stage['reviewer']=='codex' and stage.get('turn_id'):
         monitor_native(config,'turn/interrupt',{'threadId':stage['session'],'turnId':stage['turn_id']})
-
+        return bool(mq_codex_observe(config,stage).get('terminal'))
+    return False
 
 def mq_verify_public_sources(config,queue,job):
     mq_verify_job_sources(config,queue,job)
@@ -4537,14 +4814,30 @@ def mq_verify_public_sources(config,queue,job):
 def mq_answer_after_question(config,queue,source,hold):
     if source['provider']==hold['provider'] and source['session']==hold['session']:
         if source['provider']=='codex':
-            turns = monitor_turns(config,source['session'])
-            ids = [t['id'] for t in turns]
-            if (source['turn_id'] not in ids or hold['turn_id'] not in ids
-                    or ids.index(source['turn_id']) >= ids.index(hold['turn_id'])):
-                raise RuntimeError('answer must follow its native question')
             items = mq_codex_items(config,source['session'],hold['turn_id'])
             if not any(i.get('id')==hold['native_anchor'] and hold['question'] in i.get('text','') for i in items):
                 raise RuntimeError('question native anchor changed')
+            # Only these exact native IDs matter. Retain cursor/order evidence across
+            # bounded ticks, and reread original source/question items on every use.
+            key = 'human_answer_order:'+monitor_digest(json.dumps([source,hold],sort_keys=True))
+            proof = queue.meta(key) or {'cursor':None,'pages':0,'answer_seen':False,'done':False}
+            while not proof['done']:
+                if proof['pages'] >= config['max_history_pages']:
+                    with queue.atomic():queue.set_meta(key,None)
+                    raise RuntimeError('native question order exceeds configured page bound')
+                page = monitor_turn_page(config,source['session'],proof['cursor'])
+                for turn in page['data']:
+                    if turn['id']==hold['turn_id']:
+                        if not proof['answer_seen'] or source['turn_id']==hold['turn_id']:
+                            raise RuntimeError('answer must follow its native question')
+                        proof['done'] = True
+                        break
+                    if turn['id']==source['turn_id']:
+                        proof['answer_seen'] = True
+                proof.update(cursor=page['nextCursor'],pages=proof['pages']+1)
+                if not proof['done'] and page['nextCursor'] is None:
+                    raise RuntimeError('answer must follow its native question')
+                with queue.atomic():queue.set_meta(key,proof)
         else:
             records = mq_claude_records(config,source['session'])
             ids = [r.get('uuid') for r in records]
@@ -4583,73 +4876,84 @@ def mq_diagnostic(queue,key,error):
         queue.set_meta(key,{'at':mq_stamp(),'error':str(error)[:3000]})
 
 
-def mq_scan(path, *, inventory=False):
-    config = mq_config(Path(path))
-    lock = mq_lock(config,'scan')
-    queue = MonitorQueue(config)
+def mq_scan(config,queue):
+    import time
+    # Separate limited portions keep both human intake and inventory moving across ticks.
+    remaining = max(0,config['_cycle_deadline']-time.monotonic())
+    intake = {**config,'_cycle_deadline':time.monotonic()+remaining/3}
+    intake['_io_guard'] = lambda:mq_budget(intake)
+    intake['_native_guard'] = lambda:mq_budget(intake)
+    records = [r for r in queue.mrs() if r['repository_id'] in {p['id'] for p in mq_repositories(config)}]
+    first = queue.meta('intake_next_mr')
+    index = next((i for i,r in enumerate(records) if [r['repository_id'],r['iid']]==first),0)
+    ordered = records[index:]+records[:index]
     try:
-        gate = MonitorGate(config)
-        if inventory:
-            config['_io_guard'] = gate.check
-            mq_inventory(config,queue)
+        for record in ordered:
+            mq_budget(intake)
             with queue.atomic():
-                queue.set_meta('last_inventory',mq_stamp())
-        # Read-only intake continues outside automatic polling hours.
-        for record in queue.mrs():
-            if record['repository_id'] not in {p['id'] for p in mq_repositories(config)}:
-                continue
+                following = records[(records.index(record)+1)%len(records)]
+                queue.set_meta('intake_next_mr',[following['repository_id'],following['iid']])
             try:
-                mq_intake(mq_repository(config,record['repository_id']),queue,record)
+                mq_intake(mq_repository(intake,record['repository_id']),queue,record)
             except (OSError,RuntimeError,ValueError) as failure:
                 mq_diagnostic(queue,f"intake_error:{record['repository_id']}:{record['iid']}",failure)
-        with queue.atomic():
-            queue.set_meta('last_scan',mq_stamp())
-    except (OSError,RuntimeError,ValueError) as failure:
-        mq_diagnostic(queue,'scan_error',failure)
-    finally:
-        queue.close()
-        os.close(lock)
+    except MonitorCycleYield:
+        pass
+    due = mq_stamp()-(queue.meta('last_inventory') or 0)>=config['interval_minutes']*60
+    if monitor_is_open(config) and due:
+        inventory = {**config,'_cycle_deadline':time.monotonic()+max(0,config['_cycle_deadline']-time.monotonic())/2}
+        inventory['_io_guard'] = lambda:mq_budget(inventory)
+        inventory['_native_guard'] = lambda:mq_budget(inventory)
+        try:
+            if mq_inventory(inventory,queue):
+                with queue.atomic():queue.set_meta('last_inventory',mq_stamp())
+        except MonitorCycleYield:
+            pass
+        except (OSError,RuntimeError,ValueError) as failure:
+            mq_diagnostic(queue,'scan_error',failure)
+    with queue.atomic():queue.set_meta('last_scan',mq_stamp())
 
 
-def mq_serve(path, *, once=False):
-    import multiprocessing
+def mq_drain(config,queue):
+    # Only ready transitions. Never wait for external execution or drain indefinitely.
+    seen = config.setdefault('_observed_attempts',set())
+    for _ in range(64):
+        mq_budget(config)
+        active = queue.jobs('running')
+        if active and any(s['state']=='running' and s['id'] in seen for s in active[0]['stages']):
+            return
+        progress = mq_consume(config,queue)
+        active = queue.jobs('running')
+        if active and any(s['state']=='running' for s in active[0]['stages']):
+            seen.update(s['id'] for s in active[0]['stages'] if s['state']=='running')
+            return
+        if not progress:
+            return
+
+
+def mq_tick(path):
     import time
-    config = mq_config(path)
-    consumer = mq_lock(config,'consumer')
-    queue = MonitorQueue(config)
-    helper,started,last_helper = None,0,0
+    config = mq_config(Path(path))
     try:
-        while True:
-            config = mq_config(path)
-            if str(queue.path) != config['queue_file']:
-                raise RuntimeError('queue location changed; restart the consumer')
-            if helper and not helper.is_alive():
-                helper.join()
-                helper = None
-            elif helper and time.monotonic()-started > config['cycle_seconds']+config['http_timeout']+5:
-                # This helper only reads remote/native data and commits short queue transactions.
-                helper.terminate()
-                helper.join(5)
-                if helper.is_alive():
-                    raise RuntimeError('bounded scan helper did not stop')
-                helper = None
-                mq_diagnostic(queue,'scan_error','scan exceeded configured cycle budget')
-            if helper is None and time.monotonic()-last_helper >= 10:
-                inventory = monitor_is_open(config) and mq_stamp()-(queue.meta('last_inventory') or 0) >= config['interval_minutes']*60
-                helper = multiprocessing.get_context('spawn').Process(target=mq_scan,args=(str(path),),kwargs={'inventory':inventory})
-                helper.start()
-                started = last_helper = time.monotonic()
-            progress = mq_consume(config,queue)
-            if once:
-                return {'consumer':'checked','progress':progress}
-            if not progress:
-                time.sleep(2)
+        consumer = mq_lock(config,'consumer')
+    except BlockingIOError:
+        return {'cycle':'busy','writes_performed':False}
+    queue = None
+    try:
+        queue = MonitorQueue(config)
+        config['_cycle_deadline'] = time.monotonic()+config['cycle_seconds']
+        config['_io_guard'] = lambda:mq_budget(config)
+        config['_native_guard'] = lambda:mq_budget(config)
+        # Existing terminal work/publications/next reviewer precede potentially slow intake.
+        mq_drain(config,queue)
+        mq_scan(config,queue)
+        mq_drain(config,queue)
+        return {'cycle':'checked','queue_file':config['queue_file']}
+    except MonitorCycleYield:
+        return {'cycle':'checked','yielded':'cycle budget','queue_file':config['queue_file']}
     finally:
-        if helper:
-            helper.join(1)
-            if helper.is_alive():
-                helper.terminate(); helper.join(5)
-        queue.close()
+        if queue is not None:
+            queue.close()
         os.close(consumer)
 
 
@@ -4733,9 +5037,7 @@ def mq_main():
     setup.add_argument('--mcp-server',default='gitlab')
     setup.add_argument('--analysis-config',type=Path,help='new analysis TOML; default beside JSON')
     commands.add_parser('initialize',help='initialize a fresh queue; never read predecessor state/chats')
-    commands.add_parser('tick',help='enqueue a wake request without interrupting the consumer')
-    serve = commands.add_parser('serve',help='run the single continuous consumer and bounded scanner')
-    serve.add_argument('--once',action='store_true',help='one consumer step, for diagnostics')
+    commands.add_parser('tick',help='perform one bounded queue cycle and exit')
     commands.add_parser('status',help='read fresh persisted queue state offline')
     commands.add_parser('instructions',help='print the shared reviewer result contract')
     preflight = commands.add_parser('preflight',help='read-only account, project and permission checks')
@@ -4781,17 +5083,14 @@ def mq_main():
             if arguments.action=='launch-app':
                 extra = arguments.app_args[1:] if arguments.app_args[:1]==['--'] else arguments.app_args
                 monitor_launch_app(config,path,arguments.app,arguments.codex,extra)
-            elif arguments.action=='serve':
-                result = mq_serve(path,once=arguments.once)
+            elif arguments.action=='tick':
+                result = mq_tick(path)
             elif arguments.action=='status':
                 result = mq_status(config)
-            elif arguments.action in {'initialize','tick'}:
+            elif arguments.action=='initialize':
                 queue = MonitorQueue(config)
                 try:
-                    with queue.atomic():
-                        if arguments.action=='tick':
-                            queue.set_meta('wake',mq_stamp())
-                    result = {'initialized':True,'queue_file':config['queue_file'],'queued_wakeup':arguments.action=='tick'}
+                    result = {'initialized':True,'queue_file':config['queue_file']}
                 finally:
                     queue.close()
             elif arguments.action=='snapshot':
@@ -4826,9 +5125,7 @@ def mq_main():
                         if project['id'] != config['codex_project_binding']['id']:
                             raise RuntimeError('configured native project identity changed')
                 if 'claude' in config['reviewers']:
-                    auth = json.loads(mq_claude_command(config,['auth','status','--json']))
-                    if not auth.get('loggedIn'):
-                        raise RuntimeError('Claude is not authenticated; use claude auth login')
+                    mq_claude_preflight(config)
                 result = {'ready':True,'reviewers':config['reviewers'],'parallel':1,'writes_performed':False}
         print(json.dumps(result,ensure_ascii=False,indent=2))
         return 0

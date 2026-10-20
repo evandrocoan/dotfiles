@@ -1,0 +1,37 @@
+{
+  "capture_kind": "recorded-artifact",
+  "client_version": "2.1.289",
+  "operation": [
+    "agents",
+    "--json",
+    "--all"
+  ],
+  "sanitized_fields": [
+    "id",
+    "sessionId",
+    "cwd",
+    "name",
+    "pid",
+    "startedAt"
+  ],
+  "response": [
+    {
+      "pid": 0,
+      "cwd": "recorded-interactive-cwd",
+      "kind": "interactive",
+      "startedAt": 0,
+      "sessionId": "recorded-interactive-sessionId",
+      "name": "recorded-interactive-name",
+      "status": "idle"
+    },
+    {
+      "id": "recorded-background-id",
+      "cwd": "recorded-background-cwd",
+      "kind": "background",
+      "startedAt": 0,
+      "sessionId": "recorded-background-sessionId",
+      "name": "recorded-background-name",
+      "state": "stopped"
+    }
+  ]
+}

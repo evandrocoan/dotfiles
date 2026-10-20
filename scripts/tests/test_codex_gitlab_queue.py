@@ -686,15 +686,15 @@ def test_cli_initialize_tick_and_status_leave_predecessor_untouched(flow):
         assert process.returncode==0,process.stderr
         return json.loads(process.stdout)
     assert cli('initialize')['initialized']
-    assert cli('tick')['queued_wakeup']
     assert cli('status')['parallel']==1
     assert legacy.read_bytes()==b'untouched predecessor bytes'
     descriptor=flow.m['mq_lock'](flow.config,'consumer')
     try:
         denied=subprocess.run([sys.executable,str(CLI),'monitor-gitlab','--config',str(flow.config_path),'serve','--once'],
             text=True,capture_output=True,timeout=10)
-        assert denied.returncode==1 and 'temporarily unavailable' in denied.stderr
-        assert cli('tick')['queued_wakeup']
+        assert denied.returncode==2 and 'invalid choice' in denied.stderr
+        assert cli('tick')=={'cycle':'busy','writes_performed':False}
+        assert cli('status')['parallel']==1
     finally:
         os.close(descriptor)
 

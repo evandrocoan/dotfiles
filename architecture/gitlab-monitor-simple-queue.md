@@ -47,7 +47,7 @@ Claude retains its existing native session history. One consumer still owns all 
 Jobs have three states: pending, running and completed, ordered by one global sequence across
 all repositories. Pending jobs can carry a wait reason and retry time. Settle superseded unsent code revisions without model work; preserve independent human requests and scope. Commits arriving during work
 remain pending. One dedicated singleton process lock protects the consumer. The consumer lock also excludes operator recovery/cutover; short SQLite transactions protect state
-boundaries, while inventory HTTP runs outside that lock. Producers enqueue
+boundaries, while inventory HTTP runs outside SQLite transactions within the bounded cycle. Producers enqueue
 transactionally and cannot interrupt the consumer. There is no competing reservation machine.
 
 Each job binds authenticated repository ID, MR IID, mapped chat, immutable source, requested work,
@@ -184,12 +184,22 @@ runtime instruction replacement. Verify creation and cold-resume model input wit
 binary and a local fixture provider. Saved settings alone do not prove instruction inclusion.
 No production model turns or artificial public writes are validation evidence.
 
-The existing systemd service runs the continuous consumer with process-failure restart. The
-worker owns next_inventory_due from current TOML cadence/window; the 15-minute timer only wakes a
-stopped service. Running work and recovery may finish outside the inventory window. Exactly one
-bounded inventory helper owns the shared budget and its own SQLite connection, outside the
-operator lock. Its results pass fresh admission checks. Slow inventory cannot block native
-terminal observation, batch settlement or next-job progression. Idle coordination uses no model.
+Each 15-minute systemd trigger runs one bounded queue cycle and exits, using a oneshot service
+without automatic restart or a resident scan helper. The current TOML cadence/window governs
+automatic inventory. A singleton cycle lock and durable running job preserve serial capacity between
+processes. Ready native reconciliation, timeout handling, reviewer progression and batch settlement
+precede bounded inventory; persisted intake continuation prevents starvation of later sources.
+This continuation includes sessions, native sources and history pages within the same MR.
+Alternate recent-page refresh with historical continuation and retain the exact native
+question/answer order proof across cycles. HTTP has a wall-clock deadline for the entire operation,
+backed by a finite unit timeout.
+Normal budget exhaustion saves progress without recording reviewer failure or discarding a batch.
+Native reviewers outlive the cycle under the unit's scoped process-only stop policy; deadline expiry alone
+never proves termination. Completion and human-answer observation occur on subsequent triggers,
+including outside inventory hours. Immediate progression means within a ready
+bounded cycle rather than continuous polling. Queue identity, holds, publication ownership and
+reviewed checkpoints remain unchanged. Scheduling updates retain the current queue and chat sources;
+they do not repeat the predecessor-to-fresh-consumer transition. Idle coordination uses no model.
 
 Current configuration removal denies new observation, enqueue, reservation, operation intent and
 native start, including from stale cached config. Already-issued sends retain bounded receipt/
@@ -214,7 +224,7 @@ tests after replacement protections pass. Never edit native databases or runtime
 | Exact native/result identity | Result collector and dispatch journal | Stale A vs B, altered input/result, no mutating legacy calls |
 | Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |
 | Safe effects and progress | Batch application and publication journal | Partial batch, lost read-back, reply+resolve races, honest checkpoint |
-| Scheduling and removal | Worker inventory and current config gates | Successive due inventories, slow inventory vs completion, removal after send |
+| Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
 | Shared editable workspace | Round snapshot and native launch policy | Same roots across reviewers/restart, linked Git metadata, read-only intake, original-chat answers |
 
