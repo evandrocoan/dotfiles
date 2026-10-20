@@ -25,6 +25,18 @@ to the same user and use `ssh-add -l` to verify the expected public-key fingerpr
 the existing agent with a process-scoped socket override for the authorized connection. A
 `BatchMode` rejection alone does not establish that credentials are unavailable.
 
+When Kubernetes RBAC denies `exec`, port-forwarding, or proxy access in a service's namespace,
+check the relevant permissions in application namespaces already within the task's scope before
+reporting that authorized service diagnostics are unavailable. Where both pod access and the
+target service operation are authorized, prefer an existing suitable client pod in an allowed
+namespace and connect through the target Service's cluster DNS name, subject to NetworkPolicy
+and service authentication. Keep diagnostic commands read-only whether using an existing or
+temporary client pod. If a temporary client pod is needed and its creation is authorized, use
+an image already declared or approved for the task and verify cleanup. Do not expand permissions
+or use another workload's credentials to gain additional access. Network reachability does not
+authorize the target operation. If no permitted route works or the diagnostic query fails or
+returns incomplete output, report the observed limitation and leave the affected result unknown.
+
 ### Local agent history
 
 When a user asks to identify, retrieve, or summarize a prior agent chat, inspect
