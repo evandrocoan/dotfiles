@@ -644,8 +644,9 @@ other MRs can continue. A missing receipt never authorizes blindly sending again
 
 Requirements: Linux, Python 3.11+, the existing Poetry environment, and the existing GitLab MCP
 credential in Codex configuration for the selected HTTPS origin. Native Codex access also requires
-the already installed optional `websockets` package and the existing named monitor permission
-profile. Unrelated commands, help and offline status do not import that package. Claude uses the
+the already installed optional `websockets` package. The reviewer permission profile is supplied
+per chat; no global permission-profile installation is needed. Unrelated commands, help and
+offline status do not import that package. Claude uses the
 installed, signed-in CLI and its subscription through background mode with Remote Control; no new
 inference API key is configured. Run `claude auth login` when its existing login needs renewal.
 
@@ -678,16 +679,25 @@ interval_minutes = 15
 
 Use `reviewers = ["codex", "claude"]` for the reverse order, or a single item to enable just one.
 Optional `claude_model` and `claude_effort` (`low`, `medium`, `high`, `xhigh`, `max`) pass explicit CLI settings; otherwise Claude
-inherits its own settings. Optional `review_timeout_seconds` defaults to 1800. A timed-out known
+inherits its own model and effort settings. Optional `review_timeout_seconds` defaults to 1800. A timed-out known
 execution is interrupted and observed before the next reviewer starts. Existing single-project
 `project_id`/`project_path` settings are also accepted instead of `projects`. Both forms share the
 same FIFO, keyed by repository ID plus MR IID. New jobs snapshot their reviewer order.
 
-A named Codex project supplies its ordered folders and primary directory. Bind a new installation
-by name with `select-project --name NAME`; an existing binding is retained. Without a named
-project, `workspace` selects the local directory relative to the TOML. The queue does not create
-worktrees or assume that a local checkout has the MR head: reviewers receive the authenticated
-GitLab diff and a read-only exact-SHA file reader.
+A named Codex project supplies its ordered folders and primary directory to both reviewers.
+Bind a new installation by name with `select-project --name NAME`; an existing binding is retained.
+Each new round reads the current project folders and saves one list for both reviewers, including
+across restarts. Add or remove folders in Codex; the next round follows that change automatically.
+Without a named project, `workspace` selects the local directory relative to the TOML.
+
+During admitted reviews, both models can run commands, edit files, switch branches and run tests
+without command approvals in these folders and their necessary shared Git metadata. Claude uses
+the same primary directory plus `--add-dir` for the others. The model chooses the repository,
+branch and test command and must preserve pre-existing work and verify the actual MR revision.
+The monitor does not map repositories to folders or prepare checkouts. The authenticated GitLab
+diff and read-only exact-SHA file reader remain available. Queue/native state stays protected;
+intake launches remain read-only. These launch settings do not serialize manual turns you start
+directly in either app.
 
 For Codex, close the ordinary app normally and open **Codex Monitor** from the applications menu.
 The [desktop entry](.local/share/applications/codex-monitor.desktop) uses the existing
@@ -702,7 +712,9 @@ codex-session-stats monitor-gitlab launch-app \
 Fresh work uses a separate private queue, by default under
 `~/.local/state/codex-session-stats-queue/queue.sqlite3`. Predecessor databases and chats are never
 imported, changed or read for new human requests. New Codex chats are created lazily per MR in the
-configured project. Claude creates registered background sessions with Remote Control; its native
+configured project. Folder or shared-instruction changes use a fresh Codex chat, preserving
+earlier consumer chats as answer surfaces without updating their loaded instructions. Claude
+creates registered background sessions with Remote Control; its native
 results and questions remain there, including earlier sessions owned by this new consumer.
 The first inventory reviews the current head of each open MR and reads existing public concerns.
 

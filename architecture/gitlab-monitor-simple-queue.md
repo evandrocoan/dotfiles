@@ -10,7 +10,37 @@ results; the script handles admission, publication, read-back and recovery. Pres
 repository identity, human requests and holds admitted by this consumer, actual reviewed progress
 and publication provenance. Start with fresh monitor state and newly created MR chats. Leave
 predecessor chats and state untouched: no import, adoption, relocation or instruction update.
-No additional queue/MCP server, dependency, credential route or permission expansion.
+No additional queue/MCP server, dependency or credential route.
+
+**Workspace execution amendment:** Reviewers may execute commands, edit files, change
+branches and run tests in the configured workspace folders and their necessary shared Git
+metadata, without per-command approval. The monitor supplies the same durable workspace snapshot
+to every reviewer in a round; the model chooses the repository, checkout and commands. Refresh
+the named Codex project's folders only for a new round. Preserve original chat contexts and human
+sources across fresh-chat creation when folders or shared instructions change. Consumer intake
+remains read-only; direct manual app turns follow
+the shared semantic instructions and are outside the consumer's launch serialization. Reviewers
+do not receive the consumer's native control socket or state-write capability. Global defaults,
+publication ownership, queue capacity and provenance protections remain unchanged.
+
+Persist canonical ordered roots, primary directory, native project identity and actual Git
+metadata paths before the first launch/input. A restart or later reviewer uses that same snapshot.
+An archived round retains its original snapshot; only its successor resolves the live project
+again. A same-name replacement project does not inherit authorization. Historical saved folder
+lists do not prevent reading the current live list or authenticate a source against changed roots.
+
+Codex selects a distinct thread-local permissions profile at creation, resume and turn start;
+resume explicitly supplies the round's roots. Claude receives the same primary/additional
+directories, scoped native Edit/Write rules and command sandbox settings without inherited hooks
+or unrelated writable directories. Preserve intended model/effort and subscription credentials.
+No unsandboxed retry is enabled. The immutable input remains readable without adding the queue
+directory as a writable workspace. Necessary linked-worktree Git metadata may be outside the
+configured roots; this exception does not include the main checkout's source directory.
+
+Register original contexts for every Codex session created by this consumer, retaining older
+sessions after chat rotation. Source authentication and pre-publication checks use that original
+context. This registry neither adopts predecessor sessions nor updates loaded instructions.
+Claude retains its existing native session history. One consumer still owns all public effects.
 
 ## One queue and one consumer
 
@@ -67,8 +97,8 @@ native session identity and authenticated original input/results; no fabricated 
 in for Claude review. Historical Codex chats remain outside the new consumer. Results/questions stay in the reviewer's own
 native app: Claude Remote Control or the Codex MR chat. Register fresh Claude sessions per review
 when needed, preserving their source history and sufficient-answer routing with distinct original
-source and execution identities; do not run an extra Codex model solely for presentation. Inherited model settings remain
-unless the user explicitly configures overrides. No new credential or permission route.
+source and execution identities; do not run an extra Codex model solely for presentation. Inherited model and effort settings remain
+unless the user explicitly configures overrides. No new credential route.
 
 ## Stage barrier and consolidated publication
 
@@ -147,8 +177,8 @@ when no input was issued or its native execution is proven terminal.
 
 ## Instructions and scheduling
 
-One concise common instruction producer initializes newly created chats. Preserve those chat IDs
-and source bytes through subsequent rounds. Do not update loaded historical chats or depend on
+One concise common instruction producer initializes newly created chats. Preserve original chat
+IDs and source bytes when later rounds require fresh chats. Do not update loaded historical chats or depend on
 runtime instruction replacement. Verify creation and cold-resume model input with the installed
 binary and a local fixture provider. Saved settings alone do not prove instruction inclusion.
 No production model turns or artificial public writes are validation evidence.
@@ -172,8 +202,9 @@ native execution is terminal before starting conflicting work. Existing public G
 remain authoritative input to the new review. The first inventory queues one review of the current
 head of every open MR; it does not claim any previous reviewed checkpoint. Do not replay historical source messages as new
 human authorization. Accept single-repository and list config through one normalized reader,
-without a preliminary configuration migration. New Codex chats are created lazily, once per MR, using
-the configured Codex project. Remove superseded queue producers and their implementation-specific
+without a preliminary configuration migration. New Codex chats are created lazily per MR using
+the configured Codex project, with fresh chats when folders or shared instructions change.
+Remove superseded queue producers and their implementation-specific
 tests after replacement protections pass. Never edit native databases or runtime history directly.
 
 | Invariant | Owner | Required evidence |
@@ -184,15 +215,22 @@ tests after replacement protections pass. Never edit native databases or runtime
 | Safe effects and progress | Batch application and publication journal | Partial batch, lost read-back, reply+resolve races, honest checkpoint |
 | Scheduling and removal | Worker inventory and current config gates | Successive due inventories, slow inventory vs completion, removal after send |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
+| Shared editable workspace | Round snapshot and native launch policy | Same roots across reviewers/restart, linked Git metadata, read-only intake, original-chat answers |
 
 The standalone CLI owns `MonitorQueue`, the ordered worker and one shared instruction producer.
+
+`mq_workspace` owns round snapshots; `mq_permission_profile` and `mq_claude_arguments` supply
+native execution policies. `mq_codex_context` retains original source contexts. Workspace adapter
+and installed-client probes are in `scripts/tests/test_codex_gitlab_workspace.py` and
+`scripts/tests/test_codex_gitlab_workspace_native.py`, covering shared roots, restart, linked
+metadata, actual editing/command behavior, read-only intake and original-chat hold answers.
 The default fresh store is `~/.local/state/codex-session-stats-queue/queue.sqlite3`, outside the
 predecessor writable directory and native state. Private immutable inputs are adjacent to it.
 `scripts/tests/test_codex_gitlab_queue.py` exercises real SQLite/worker/CLI/locks with fixture native
 transports and local HTTP. The relay suite retains process/Unix peer/cancellation protection;
 project tests cover normalized list identity and removal. Installed native-binary local-provider
 probes established fresh Codex creation/cold-resume instructions and Claude background source/final
-identity. The selected written-plan review passed; no separate implementation review was selected.
+identity.
 Fixtures do not prove production model quality or Desktop rendering. Subscription/account/project
 preflight is read-only. Public effects and production model turns were excluded from validation.
 Explicit inspection/recovery remains for delivery ambiguity.

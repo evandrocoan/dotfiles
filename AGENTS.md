@@ -82,6 +82,13 @@ remain outside the consumer without migration or instruction updates. Earlier se
 this consumer remain valid original human/hold sources. Preserve exact native input/result identity,
 concern consolidation, immutable publication identities and whole-discussion resolution checks.
 
+Each round snapshots the current named Codex project's ordered folders and necessary shared Git
+metadata once for both reviewers and recovery. The model chooses repositories, branches and tests;
+the monitor must not maintain checkout mappings or a command catalog. Admitted reviews can execute
+and edit there without command approvals; intake remains read-only. Use thread/launch-local
+permissions, protect monitor/native state, and retain original consumer chat contexts when fresh
+chats are needed after folder/instruction changes. Do not update loaded historical instructions.
+
 ### Systemd user services
 
 Installed via `cp -rv ~/scripts/install/* ~/.config/` followed by

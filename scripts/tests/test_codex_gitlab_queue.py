@@ -228,6 +228,8 @@ def flow(module,tmp_path,monkeypatch):
                claude_home=str(tmp_path/'claude'),queue_file=str(tmp_path/'queue'/'queue.sqlite3'),reviewers=['claude','codex'])
     config_path.write_text(json.dumps(raw)); config_path.chmod(0o600)
     config = m['mq_config'](config_path)
+    Path(config['codex_home']).mkdir()
+    (Path(config['codex_home'])/'config.toml').write_text('')
     context = {'repository_id':11,'iid':82,'head':'a'*40,'actor_id':7,
         'mr':{'iid':82,'project_id':11,'state':'opened','sha':'a'*40,'title':'MR',
               'diff_refs':{'head_sha':'a'*40,'base_sha':'b'*40,'start_sha':'c'*40}},
@@ -243,11 +245,14 @@ def flow(module,tmp_path,monkeypatch):
             raise AssertionError(route)
     def native(c,method,params,**kwargs):
         if method=='thread/start':
-            identity=str(uuid.uuid4()); chats[identity]={'id':identity,'cwd':c['cwd'],'projectId':None,'status':{'type':'idle'}}
+            identity=str(uuid.uuid4()); chats[identity]={'id':identity,'cwd':c['cwd'],
+                'projectId':params.get('projectId'),'status':{'type':'idle'},
+                'environments':[{'environmentId':'local','cwd':c['cwd'],
+                                 'runtimeWorkspaceRoots':params.get('runtimeWorkspaceRoots',[c['cwd']])}]}
             turns[identity]=[]
-            return {'thread':chats[identity], 'activePermissionProfile':{'id':m['MONITOR_PERMISSION_PROFILE'],'extends':':read-only'}}
+            return {'thread':chats[identity], 'activePermissionProfile':{'id':m['MQ_PERMISSION_PROFILE'],'extends':':read-only'}}
         if method in {'thread/resume','thread/read'}: return {'thread':chats[params['threadId']],
-            'activePermissionProfile':{'id':m['MONITOR_PERMISSION_PROFILE'],'extends':':read-only'}}
+            'activePermissionProfile':{'id':m['MQ_PERMISSION_PROFILE'],'extends':':read-only'}}
         if method=='thread/name/set': return {}
         if method=='turn/start':
             launched.append('codex'); t=str(uuid.uuid4()); result=results['codex']
@@ -288,8 +293,6 @@ def flow(module,tmp_path,monkeypatch):
     monkeypatch.setitem(m,'mq_context',lambda *a,**kw:copy.deepcopy(context))
     monkeypatch.setitem(m,'monitor_native',native)
     monkeypatch.setitem(m,'mq_claude_command',claude)
-    monkeypatch.setitem(m,'monitor_ensure_permissions',lambda *a,**kw:{'checked':True})
-    monkeypatch.setitem(m,'mq_native_selection',lambda *a,**kw:{'permissions':m['MONITOR_PERMISSION_PROFILE'],'config':{}})
     monkeypatch.setitem(m,'mq_send',send)
     q=m['MonitorQueue'](config)
     class Flow:
@@ -345,6 +348,7 @@ def human_turn(flow,text,*,mixed=False,automatic=False):
     record=flow.q.mr(11,82);session=record['chats'].get('codex')
     if not session:
         session=str(uuid.uuid4());record['chats']['codex']=session
+        record['codex_context']={'cwd':flow.config['cwd'],'project_id':None,'roots':[flow.config['cwd']]}
         flow.chats[session]={'id':session,'cwd':flow.config['cwd'],'projectId':None,'status':{'type':'idle'}}
         flow.turns[session]=[]
         with flow.q.atomic(): flow.q.put_mr(record)
