@@ -1,0 +1,52 @@
+{
+  "capture_kind": "recorded-artifact",
+  "boundary": "monitor_thread_source_roots cold thread/read and persisted native context",
+  "sanitized_fields": [
+    "path",
+    "cwd",
+    "workspace roots"
+  ],
+  "thread": {
+    "id": "01a15a86-8dbd-7b31-ad72-cd9625e52716",
+    "projectId": "01a11deb-1302-79c2-84f8-1ed3f52f0661",
+    "cwd": "/workspace/source-0",
+    "environments": null,
+    "status": {
+      "type": "notLoaded"
+    },
+    "createdAt": 1792520129
+  },
+  "rollout": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "session_id": "01a15a86-8dbd-7b31-ad72-cd9625e52716",
+        "id": "01a15a86-8dbd-7b31-ad72-cd9625e52716",
+        "cwd": "/workspace/source-0",
+        "runtime_workspace_roots": [
+          "/workspace/source-0",
+          "/workspace/source-1",
+          "/workspace/source-2",
+          "/workspace/source-3",
+          "/workspace/source-4"
+        ]
+      }
+    },
+    {
+      "type": "turn_context",
+      "payload": {
+        "turn_id": "01a15a86-96ac-7c43-9917-22954a5e22d6",
+        "cwd": "/workspace/source-0",
+        "workspace_roots": [
+          "/workspace/source-0",
+          "/workspace/source-1",
+          "/workspace/source-2",
+          "/workspace/source-3",
+          "/workspace/source-4"
+        ]
+      }
+    }
+  ],
+  "native_home_mode": 448,
+  "native_rollout_mode": 436
+}

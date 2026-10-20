@@ -2270,13 +2270,55 @@ def monitor_thread_context(config: dict, thread_id: str) -> dict:
         "cwd": binding["roots"][0], "project_id": binding["id"], "roots": binding["roots"]})
 
 
+def monitor_cold_roots(config, thread):
+    path = Path(thread.get('path') or '')
+    home = Path(config['codex_home']).resolve()
+    if (not path.is_absolute() or path.resolve() != path or not any(
+            path.is_relative_to(home / folder) for folder in ('sessions','archived_sessions'))):
+        raise RuntimeError('native cold context path is outside protected history')
+    import stat
+    monitor_private(home,directory=True)
+    with os.fdopen(os.open(path,os.O_RDONLY | os.O_NOFOLLOW),'rb') as stream:
+        metadata = os.fstat(stream.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid!=os.getuid():
+            raise RuntimeError('native cold context must be an owned regular file')
+        raw = stream.read(config['max_response_bytes']+1)
+    if len(raw)>config['max_response_bytes']:
+        raise RuntimeError('native cold context exceeds configured bound')
+    metadata, latest = [], None
+    for line in raw.splitlines():
+        row = json.loads(line)
+        if not isinstance(row,dict):
+            raise RuntimeError('invalid native cold context record')
+        if row.get('type')=='session_meta':
+            metadata.append(row.get('payload'))
+        elif row.get('type')=='turn_context':
+            latest = row.get('payload')
+            if not isinstance(latest,dict):
+                raise RuntimeError('invalid latest native cold context')
+    if (len(metadata)!=1 or not isinstance(metadata[0],dict)
+            or metadata[0].get('id')!=thread['id'] or metadata[0].get('cwd')!=thread['cwd']):
+        raise RuntimeError('native cold context identity mismatch')
+    if latest is None:
+        raise RuntimeError('latest native cold context is missing')
+    context = latest
+    roots = context.get('workspace_roots')
+    if (context.get('cwd')!=thread['cwd'] or not isinstance(roots,list) or not roots
+            or any(not isinstance(r,str) for r in roots)):
+        raise RuntimeError('native cold workspace roots are unavailable or changed')
+    return roots
+
+
 def monitor_thread_source_roots(config: dict, thread: dict) -> list:
     environments = thread.get("environments")
-    if (not isinstance(environments, list) or len(environments) != 1
+    if environments is None and thread.get('status',{}).get('type')=='notLoaded':
+        roots = monitor_cold_roots(config,thread)
+    elif (not isinstance(environments, list) or len(environments) != 1
             or not isinstance(environments[0], dict) or environments[0].get("environmentId") != "local"
             or environments[0].get("cwd") != thread.get("cwd")):
         raise RuntimeError("native project workspace environment is unavailable or ambiguous")
-    roots = environments[0].get("runtimeWorkspaceRoots")
+    else:
+        roots = environments[0].get("runtimeWorkspaceRoots")
     if not isinstance(roots, list) or any(not isinstance(r, str) for r in roots):
         raise RuntimeError("native project workspace roots are unavailable")
     hosting = set()
@@ -3121,7 +3163,7 @@ class MonitorQueue:
             self.check_running(job)
             if any(s['state'] == 'running' for s in job['stages']):
                 raise RuntimeError('native execution must terminate before completion')
-            if any(e.get('job_id') == job['id'] and e['state'] != 'confirmed' for e in self.effects()):
+            if any(e.get('job_id') == job['id'] and e['state'] not in {'confirmed','cancelled'} for e in self.effects()):
                 raise RuntimeError('uncertain effects prohibit completion')
             if reviewed:
                 result = self.review_result(job)
@@ -3843,9 +3885,87 @@ def mq_claude_records(config, session):
                 if not raw.endswith('\n'):
                     break  # Native append still in progress, never evidence of completion.
                 raise RuntimeError('malformed native Claude transcript')
+            if not isinstance(item,dict):
+                raise RuntimeError('malformed native Claude record')
             if item.get('sessionId') == session and not item.get('isSidechain'):
+                if item.get('type') in {'user','assistant'} and not isinstance(item.get('message'),dict):
+                    raise RuntimeError('malformed native Claude message')
                 records.append(item)
     return records
+
+
+def mq_claude_final(records, source):
+    """Follow one native input through tool results; group split blocks of its final message."""
+    chain = {source['uuid']:(set(),set())}
+    finals, seals, parents, positions = {}, [], {}, {}
+    for position,record in enumerate(records):
+        parent = chain.get(record.get('parentUuid'))
+        if record.get('uuid')==source['uuid'] or parent is None:
+            continue
+        pending, seen = map(set,parent)
+        kind = record.get('type')
+        message = record.get('message',{})
+        content = message.get('content',[])
+        if kind=='user':
+            if (not isinstance(content,list) or not content or any(
+                    not isinstance(c,dict) or c.get('type')!='tool_result' for c in content)):
+                continue
+            identities = [c.get('tool_use_id') for c in content]
+            if (any(not isinstance(i,str) or not i for i in identities)
+                    or len(set(identities))!=len(identities) or not set(identities)<=pending):
+                continue
+            pending.difference_update(identities)
+        elif kind=='assistant':
+            if not isinstance(content,list) or any(not isinstance(c,dict) for c in content):
+                continue
+            calls = [c.get('id') for c in content if c.get('type')=='tool_use']
+            if (any(not isinstance(i,str) or not i for i in calls)
+                    or len(set(calls))!=len(calls) or set(calls)&seen):
+                continue
+            pending.update(calls); seen.update(calls)
+            if record.get('isApiErrorMessage') or message.get('stop_reason')=='end_turn':
+                identity = message.get('id')
+                if not isinstance(identity,str) or not identity or pending:
+                    continue
+                finals.setdefault(identity,[]).append(record)
+        if record.get('uuid'):
+            if record['uuid'] in chain:
+                raise RuntimeError('duplicate Claude native record identity')
+            chain[record['uuid']] = (pending,seen)
+            parents[record['uuid']] = record.get('parentUuid')
+            positions[record['uuid']] = position
+        if kind=='system' and record.get('subtype')=='turn_duration':
+            seals.append(record['uuid'])
+    if len(finals)>1:
+        raise RuntimeError('ambiguous Claude terminal result')
+    def descends(node,ancestor):
+        while node in chain:
+            if node==ancestor:return True
+            node=parents.get(node)
+        return False
+    result = {'sealed':bool(seals)}
+    if finals:
+        blocks = next(iter(finals.values()))
+        anchor = blocks[-1]['uuid']
+        if any(positions[seal]<positions[anchor] and any(descends(seal,b['uuid']) for b in blocks)
+               for seal in seals):
+            raise RuntimeError('Claude final has blocks after completion')
+        result.update(anchor=anchor,sealed=any(descends(seal,anchor) for seal in seals))
+        if any(r.get('isApiErrorMessage') for r in blocks):
+            result['error'] = {'message':next((r.get('error') for r in blocks if r.get('error')),'native Claude error')}
+        else:
+            result['text'] = '\n'.join(c['text'] for r in blocks for c in r['message']['content']
+                if c.get('type')=='text' and isinstance(c.get('text'),str))
+    return result
+
+
+def mq_claude_url(records, stage):
+    if sum(r.get('type')=='user' and r.get('message',{}).get('content')==stage.get('input')
+           for r in records)!=1:
+        return None
+    return next((r['url'] for r in reversed(records) if r.get('type')=='system'
+        and r.get('subtype')=='bridge_status' and isinstance(r.get('url'),str)
+        and re.fullmatch(r'https://claude\.ai/code/session_[A-Za-z0-9_-]+',r['url'])),None)
 
 
 def mq_claude_observe(config, stage):
@@ -3856,43 +3976,28 @@ def mq_claude_observe(config, stage):
         return {'terminal':False,'unknown':True}
     native = matches[0]
     records = mq_claude_records(config, stage['session'])
+    url = mq_claude_url(records,stage)
+    link = {'remote_url':url} if url else {}
     sources = [r for r in records if r.get('type') == 'user' and r.get('message',{}).get('content') == stage['input']]
     if len(sources) > 1:
         raise RuntimeError('duplicate Claude original source')
+    ended = native.get('state') in {'failed','stopped','done'}
     if not sources:
-        if native.get('state') in {'failed','stopped','done'}:
-            return {'terminal':True,'error':{'message':'Claude ended without its registered source'}}
-        return {'terminal':False}
+        if ended:
+            return {'terminal':True,'error':{'message':'Claude ended without its registered source'},**link}
+        return {'terminal':False,**link}
     source = sources[0]
-    chain = {source['uuid']}
-    finals = []
-    for record in records:
-        if record.get('uuid') == source['uuid']:
-            continue
-        if record.get('parentUuid') not in chain:
-            continue
-        if record.get('type') == 'user':
-            continue  # Later human input cannot settle this registered dispatch.
-        if record.get('uuid'):
-            chain.add(record['uuid'])
-        if record.get('type') == 'assistant':
-            message = record.get('message', {})
-            if record.get('isApiErrorMessage') or message.get('stop_reason') == 'end_turn':
-                finals.append(record)
-    if len(finals) > 1:
-        raise RuntimeError('ambiguous Claude terminal result')
-    if not finals:
-        if native.get('state') in {'failed','stopped','done'}:
-            return {'terminal':True,'error':{'message':'Claude interrupted before a final result'}}
-        return {'terminal':False}
-    final = finals[0]
-    result = {'terminal':True,'anchor':final['uuid'],'source_id':source['uuid']}
-    if final.get('isApiErrorMessage'):
-        result['error'] = {'message': final.get('error') or 'native Claude error'}
-    else:
-        result['text'] = '\n'.join(c['text'] for c in final['message'].get('content',[]) if c.get('type') == 'text')
-    # Native end_turn ends model work; keep its idle Remote Control available to the user.
-    return result
+    try:
+        final = mq_claude_final(records,source)
+    except RuntimeError as failure:
+        if ended:return {'terminal':True,'error':{'message':str(failure)},**link}
+        raise
+    complete = final.get('text','').strip() or final.get('error')
+    if not complete or not (final['sealed'] or ended):
+        if ended:
+            return {'terminal':True,'error':{'message':'Claude interrupted before a final result'},**link}
+        return {'terminal':False,**link}
+    return {'terminal':True,'source_id':source['uuid'],**{k:v for k,v in final.items() if k!='sealed'},**link}
 
 
 def mq_claude_stop(config, native):
@@ -4423,22 +4528,9 @@ def mq_session_candidates(config,queue,record,provider,session):
             continue
         source = {'origin':'human','provider':'claude','session':session,'source_id':row['uuid'],
             'texts':texts,'cwd':row['cwd'],'mixed':mixed,'automated':mq_registered_source(queue,texts)}
-        chain,finals,terminal = {row['uuid']},[],False
-        for later in records[index+1:]:
-            if later.get('parentUuid') not in chain or later.get('type') == 'user':
-                continue
-            if later.get('uuid'):
-                chain.add(later['uuid'])
-            if later.get('type') == 'assistant':
-                if later.get('isApiErrorMessage'):
-                    terminal = True
-                elif later.get('message',{}).get('stop_reason') == 'end_turn':
-                    finals.append(later); terminal = True
-            elif later.get('type') == 'system' and later.get('subtype') == 'turn_duration':
-                terminal = True
-        if terminal:
-            text = '\n'.join(c['text'] for c in finals[0]['message']['content'] if c.get('type')=='text') if len(finals)==1 else None
-            yield seen,source,text
+        final = mq_claude_final(records[index+1:],row)
+        if final['sealed']:
+            yield seen,source,final.get('text') if not final.get('error') else None
 
 
 def mq_intake_turns(config,queue,session):
@@ -4483,6 +4575,13 @@ def mq_reset_round(queue,job,reason):
         queue.check_running(job)
         if any(s['state']=='running' for s in job['stages']):
             raise RuntimeError('cannot reset a nonterminal native round')
+        if any(e.get('job_id')==job['id'] and e['state'] not in {'prepared','confirmed','cancelled'}
+               for e in queue.effects()):
+            raise RuntimeError('unsettled public effect prohibits round reset')
+        for effect in queue.effects():
+            if effect.get('job_id')==job['id'] and effect['state']=='prepared':
+                effect.update(state='cancelled',cancelled_reason=reason)
+                queue.put_effect(effect)
         job.setdefault('rounds',[]).append({'reason':reason,'stages':job['stages'],'batch':job['batch'],
                                           'workspace':job.get('workspace')})
         job.update(stages=[],batch=None,outcome=None,needs_round_reset=False,workspace=None)
@@ -4701,7 +4800,7 @@ def mq_step(config,queue):
             observed = mq_claude_observe(scoped,stage)
         else:
             observed = mq_codex_observe(scoped,stage)
-        updates = {k:v for k,v in observed.items() if k in {'anchor','turn_id','source_id'}}
+        updates = {k:v for k,v in observed.items() if k in {'anchor','turn_id','source_id','remote_url'}}
         if updates:
             mq_update_stage(queue,job,stage['id'],**updates)
         if not observed['terminal']:
@@ -4806,9 +4905,9 @@ def mq_step(config,queue):
         except (RuntimeError,ValueError) as error:
             with queue.atomic():
                 queue.check_running(job)
-                job.update(validation_error=str(error),outcome='retry')
+                job.update(validation_error=str(error),last_error={'at':mq_stamp(),'error':str(error)[:3000]})
                 queue.save(job)
-            queue.park(job,'all_failed',retry_at=mq_stamp()+config['interval_minutes']*60)
+            queue.park(job,'retry',retry_at=mq_stamp()+config['interval_minutes']*60)
             return True
     try:
         if mq_apply(scoped,queue,job,lambda:mq_verify_public_sources(scoped,queue,job)):
@@ -5022,7 +5121,7 @@ def mq_status(config):
     queue = MonitorQueue(config,readonly=True)
     try:
         return {'queue_file':config['queue_file'],'initialized':True,'reviewers':config['reviewers'],
-            'parallel':1,'projects':mq_repositories(config),'jobs':[mq_job_status(j) for j in queue.jobs()],
+            'parallel':1,'projects':mq_repositories(config),'jobs':[mq_job_status(j,config) for j in queue.jobs()],
             'mrs':queue.mrs(),
             'diagnostics':{r['key']:json.loads(r['value']) for r in queue.db.execute(
                 "SELECT key,value FROM metadata WHERE key LIKE '%error%' OR key IN ('last_inventory','last_scan','wake')")}}
@@ -5067,7 +5166,7 @@ def mq_recover(config,identifier):
             raise RuntimeError('recover accepts only a job awaiting public-effect read-back')
         scoped = mq_repository(config,job['repository_id'])
         context = mq_context(scoped,job['iid'],with_diff=False)
-        uncertain = [e for e in queue.effects() if e.get('job_id')==identifier and e['state']!='confirmed']
+        uncertain = [e for e in queue.effects() if e.get('job_id')==identifier and e['state'] not in {'prepared','confirmed','cancelled'}]
         receipts = [(effect,(mq_resolution_receipt(queue,job,effect,context) if effect['kind']=='resolve'
                             else mq_readback(scoped,queue,effect,context))) for effect in uncertain]
         if any(receipt is None for effect,receipt in receipts):
@@ -5193,12 +5292,22 @@ def mq_main():
         return 1
 
 
-def mq_job_status(job):
+def mq_job_status(job, config=None):
+    def stage_status(stage):
+        value = {k:stage.get(k) for k in ('id','reviewer','state','session','turn_id','delivery','error','name','remote_url')}
+        if config and stage['reviewer']=='claude' and stage.get('session') and not value['remote_url']:
+            try:
+                value['remote_url'] = mq_claude_url(mq_claude_records(config,stage['session']),stage)
+            except (OSError,RuntimeError,ValueError) as error:
+                value['remote_url_error'] = str(error)[:300]
+        return value
     fields = ('id','sequence','repository_id','iid','kind','head','state','wait_reason','retry_at','outcome','validation_error',
-        'admission','coalesced_jobs','coalesced_into','target_event')
+        'admission','coalesced_jobs','coalesced_into','target_event','last_error')
     return {**{k:job.get(k) for k in fields},'reviewers':job['reviewers'],
         'source':{k:job['source'].get(k) for k in ('origin','provider','session','source_id','turn_id')},
-        'stages':[{k:stage.get(k) for k in ('id','reviewer','state','session','turn_id','delivery','error')} for stage in job['stages']]}
+        'stages':[stage_status(stage) for stage in job['stages']],
+        'rounds':[{'reason':r['reason'],'stages':[stage_status(stage) for stage in r['stages']]}
+                  for r in job.get('rounds',[])]}
 
 
 def mq_consume(config,queue):
@@ -5207,14 +5316,18 @@ def mq_consume(config,queue):
     except (OSError,RuntimeError,ValueError) as failure:
         mq_diagnostic(queue,'consumer_error',failure)
         active = queue.jobs('running')
-        if active and not any(s['state']=='running' for s in active[0]['stages']):
+        if active:
             job = active[0]
-            uncertain = any(e.get('job_id')==job['id'] and e['state']!='confirmed' for e in queue.effects())
-            if uncertain:
-                queue.park(job,'effect_unknown')
-            else:
-                mq_reset_round(queue,job,'recover terminal work: '+str(failure)[:1000])
-                queue.park(job,'retry',retry_at=mq_stamp()+config['interval_minutes']*60)
+            with queue.atomic():
+                queue.check_running(job)
+                job['last_error'] = {'at':mq_stamp(),'error':str(failure)[:3000]}
+                queue.save(job)
+            if not any(s['state']=='running' for s in job['stages']):
+                uncertain = any(e.get('job_id')==job['id'] and e['state'] not in {'prepared','confirmed','cancelled'}
+                                for e in queue.effects())
+                queue.park(job,'effect_unknown' if uncertain else 'retry',
+                    retry_at=0 if uncertain else mq_stamp()+config['interval_minutes']*60)
+                return True  # Parking terminal work is progress; visit other MRs this cycle.
         # Unknown native work retains capacity. A known terminal failure never starves other MRs.
         return False
 

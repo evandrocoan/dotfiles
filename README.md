@@ -641,6 +641,15 @@ completed review. Human requests and already-started work remain separate. There
 classifier or fallback mode. Publication starts only after every enabled reviewer has finished,
 with at least one valid complete review. All failures
 remain visible; an entirely failed round waits for the configured interval before retrying.
+Operation failures preserve completed reviewer stages, the workspace snapshot and publication
+progress, then retry the pending operation on the existing cadence. Persistent failures leave the
+MR waiting while other MRs proceed. An incomplete GitLab diff remains deferred before review;
+retry does not claim that missing context was reviewed.
+
+`status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
+include their native `name`, `session` and actual `remote_url` when available; open that URL to
+find the Remote Control conversation. Older registered sessions can supply missing links through
+read-only native history lookup. Missing link metadata does not block the rest of the status.
 
 The monitor handles queue administration, comments, replies, resolutions and authenticated
 read-back. Reviewers return proposals rather than publishing. Uncertain native execution keeps

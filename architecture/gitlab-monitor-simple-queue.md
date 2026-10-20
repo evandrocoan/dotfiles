@@ -39,7 +39,12 @@ configured roots; this exception does not include the main checkout's source dir
 
 Register original contexts for every Codex session created by this consumer, retaining older
 sessions after chat rotation. Source authentication and pre-publication checks use that original
-context. This registry neither adopts predecessor sessions nor updates loaded instructions.
+context. A cold native read may omit live environments: only an exact notLoaded/null response
+uses the protected native rollout's authenticated session metadata and latest persisted turn
+context. The native home must remain private/owned; native rollout file modes are preserved,
+with bounded no-symlink reads of an owned regular file. Missing latest turn context is rejected. Changed or malformed latest context never falls back to older matching roots. Loaded
+ambiguous context remains rejected; verification never resumes the chat for inspection.
+This registry neither adopts predecessor sessions nor updates loaded instructions.
 Claude retains its existing native session history. One consumer still owns all public effects.
 
 ## One queue and one consumer
@@ -111,7 +116,13 @@ publish. Reviewer stages are fields of one job, not another queue or capacity au
 Claude execution uses the existing signed-in background CLI with Remote Control. Preserve its
 native session identity and authenticated original input/results; no fabricated Codex turn stands
 in for Claude review. Historical Codex chats remain outside the new consumer. Results/questions stay in the reviewer's own
-native app: Claude Remote Control or the Codex MR chat. Register fresh Claude sessions per review
+native app: Claude Remote Control or the Codex MR chat. One shared Claude collector follows
+only the registered input's native ancestry. Exclusively tool-result continuations require matching
+ancestral tool-call identities; actual human/mixed input cuts that ancestry. Split final blocks
+belong to one native message ID and require readable, completed output; an intermediate thinking
+block is not a final result. Human sufficient-answer intake uses the same traversal. Retain the
+actual native bridge URL for status, with bounded read-only enrichment of older registered
+sessions; no guessed links or historical-state migration. Register fresh Claude sessions per review
 when needed, preserving their source history and sufficient-answer routing with distinct original
 source and execution identities; do not run an extra Codex model solely for presentation.
 When the monitor configuration omits `claude_model`, use `claude-opus-5-5`; an explicit value
@@ -188,8 +199,15 @@ context mismatch. Never re-resolve or reopen automatically.
 A possibly delivered send requires exact marker/body/actor/context reconciliation. Missing
 read-back is not proof of non-delivery and cannot authorize a blind retry. Park ambiguity locally
 for inspection. An entirely failed round or failed terminal consumer operation uses the configured interval before
-retrying, without an error-cause/quota classifier. Unknown public effects require explicit read-back
-recovery. Reconnect to still-running work; an unavailable reviewer is recorded as a failure only
+retrying, without an error-cause/quota classifier. Operation retries preserve completed stages,
+immutable inputs, workspace, batch and confirmed receipts. Batch construction/validation errors
+remain visible without regenerating completed reviews. Only explicit changed-context,
+sufficient-answer or all-reviewers-failed handling creates a successor round. Prepared effects
+proven unsent remain retryable. If their context is invalidated, retain them as cancelled, without
+fabricating a public receipt; cancelled effects do not block administrative completion or count
+as publication. Possibly-issued effects prevent round reset and retain inspection holds. Parking terminal
+work counts as progress so repeated failures cannot starve later MRs in a bounded cycle.
+Unknown public effects require explicit read-back recovery. Reconnect to still-running work; an unavailable reviewer is recorded as a failure only
 when no input was issued or its native execution is proven terminal.
 
 ## Instructions and scheduling
@@ -238,6 +256,7 @@ tests after replacement protections pass. Never edit native databases or runtime
 | --- | --- | --- |
 | Durable FIFO and capacity | Jobs, consumer, locks | Competing processes, restart, immediate progression |
 | Automatic event grouping | `MonitorQueue` enqueue/reserve coalescing and original admissions | `test_codex_gitlab_coalescing.py`: FIFO, frozen work, barriers, repeat/restart, concurrent transactions; sanitized pending-event artifact replay |
+| Operation recovery | Native collectors, cold context normalization, consumer retry/status | `test_codex_gitlab_recovery.py`: sanitized native artifacts, retry/restart without relaunch, two-failure tick progress, prepared/confirmed effects, source/context denials and historical URLs |
 | Exact native/result identity | Result collector and dispatch journal | Stale A vs B, altered input/result, no mutating legacy calls |
 | Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |
 | Safe effects and progress | Batch application and publication journal | Partial batch, lost read-back, reply+resolve races, honest checkpoint |

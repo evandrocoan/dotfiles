@@ -275,7 +275,9 @@ def flow(module,tmp_path,monkeypatch):
         rows=[{'type':'user','uuid':src,'sessionId':session,'cwd':c['cwd'],'message':{'content':args[1]}}]
         rows.append({'type':'assistant','uuid':final,'parentUuid':src,'sessionId':session,
             'isApiErrorMessage':isinstance(result,Exception),'error':str(result),
-            'message':{'stop_reason':'end_turn','content':[{'type':'text','text':str(result) if isinstance(result,Exception) else rendered(result)}]}})
+            'message':{'id':'message-'+final,'stop_reason':'end_turn','content':[{'type':'text','text':str(result) if isinstance(result,Exception) else rendered(result)}]}})
+        rows.append({'type':'system','subtype':'turn_duration','uuid':str(uuid.uuid4()),
+            'parentUuid':final,'sessionId':session})
         root=Path(c['claude_home'])/'projects'/'fixture';root.mkdir(parents=True,exist_ok=True)
         (root/(session+'.jsonl')).write_text(''.join(json.dumps(r)+'\n' for r in rows))
         return '{}'
@@ -788,7 +790,7 @@ def test_terminal_consumer_io_failure_releases_slot_with_preserved_retry(flow,mo
     flow.q.reserve({11})
     def failed(*args): raise RuntimeError('repository temporarily unavailable')
     monkeypatch.setitem(flow.m,'mq_step',failed)
-    assert flow.m['mq_consume'](flow.config,flow.q) is False
+    assert flow.m['mq_consume'](flow.config,flow.q) is True
     saved=flow.q.job(first['id'])
     assert saved['state']=='pending' and saved['wait_reason']=='retry' and saved['retry_at']>0
     assert flow.q.reserve({11})['id']==second['id']
@@ -829,7 +831,8 @@ def test_original_claude_question_session_can_answer_after_fresh_execution(flow)
     rows=[{'type':'user','uuid':source_id,'parentUuid':hold['native_anchor'],'sessionId':session_s,
            'cwd':flow.config['cwd'],'message':{'content':text}},
           {'type':'assistant','uuid':anchor,'parentUuid':source_id,'sessionId':session_s,
-           'message':{'stop_reason':'end_turn','content':[{'type':'text','text':rendered(answer)}]}}]
+           'message':{'id':'message-'+anchor,'stop_reason':'end_turn','content':[{'type':'text','text':rendered(answer)}]}},
+          {'type':'system','subtype':'turn_duration','uuid':str(uuid.uuid4()),'parentUuid':anchor,'sessionId':hold['session']}]
     with target.open('a') as stream:
         for row in rows: stream.write(json.dumps(row)+'\n')
     flow.m['mq_intake'](flow.config,flow.q,record)

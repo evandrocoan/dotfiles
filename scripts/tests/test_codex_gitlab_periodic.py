@@ -364,7 +364,8 @@ def test_old_session_cannot_hide_sufficient_answer_in_later_claude_session(flow,
     rows=[{'type':'user','uuid':source,'parentUuid':hold['native_anchor'],'sessionId':hold['session'],
         'cwd':flow.config['cwd'],'message':{'content':text}},
         {'type':'assistant','uuid':final,'parentUuid':source,'sessionId':hold['session'],
-         'message':{'stop_reason':'end_turn','content':[{'type':'text','text':rendered(answer)}]}}]
+         'message':{'id':'message-'+final,'stop_reason':'end_turn','content':[{'type':'text','text':rendered(answer)}]}},
+        {'type':'system','subtype':'turn_duration','uuid':str(uuid.uuid4()),'parentUuid':final,'sessionId':hold['session']}]
     with target.open('a') as stream:
         for row in rows:stream.write(json.dumps(row)+'\n')
     old=str(uuid.uuid4());record=flow.q.mr(11,82)
