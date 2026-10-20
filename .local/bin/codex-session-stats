@@ -3740,7 +3740,7 @@ def mq_claude_environment(config):
 def mq_claude_command(config, arguments):
     import subprocess
     import tempfile
-    operation = 'launch' if arguments[0] == '--bg' else arguments[0]
+    operation = arguments[0]
     timeout = mq_io_timeout(config,'native_timeout')
     with tempfile.TemporaryFile(mode='w+') as output, tempfile.TemporaryFile(mode='w+') as errors:
         try:
@@ -3748,31 +3748,23 @@ def mq_claude_command(config, arguments):
                 env=mq_claude_environment(config), stdin=subprocess.DEVNULL, stdout=output,
                 stderr=errors, text=True, timeout=timeout)
         except OSError as failure:
-            raise MonitorClaudeError(operation,str(failure),not_started=operation=='launch') from failure
+            raise MonitorClaudeError(operation,str(failure),not_started=False) from failure
         except subprocess.TimeoutExpired as failure:
             if mq_expired(config):
-                raise MonitorCycleYield('cycle ended during Claude command',issued=operation in {'launch','stop'}) from failure
+                raise MonitorCycleYield('cycle ended during Claude command',issued=operation=='stop') from failure
             raise MonitorClaudeError(operation,'command timed out; reconcile native execution') from failure
         output.seek(0); errors.seek(0)
         stdout, stderr = output.read(), errors.read()
     if completed.returncode:
         message = (stderr.strip() or stdout.strip())[:2000]
-        rejection = f"Workspace not trusted. Run `claude` in {config['cwd']} once and accept the trust prompt, then retry."
-        raise MonitorClaudeError(operation,message,returncode=completed.returncode,
-            not_started=operation=='launch' and completed.returncode==1 and message==rejection)
+        raise MonitorClaudeError(operation,message,returncode=completed.returncode)
     return stdout
 
 def mq_claude_preflight(config):
     auth = json.loads(mq_claude_command(config,['auth','status','--json']))
     if not auth.get('loggedIn'):
         raise RuntimeError('Claude is not authenticated; use claude auth login')
-    environment = mq_claude_environment(config)
-    preferences = (Path(environment['CLAUDE_CONFIG_DIR'])/'.claude.json' if environment.get('CLAUDE_CONFIG_DIR')
-                   else Path.home()/'.claude.json')
-    saved = json.loads(preferences.read_text()) if preferences.is_file() else {}
-    if not saved.get('projects',{}).get(config['cwd'],{}).get('hasTrustDialogAccepted'):
-        raise RuntimeError('Claude workspace is not trusted in '+str(preferences)+'; open claude in '+config['cwd'])
-    mq_claude_agents(config)
+    mq_service_identity(config)
 
 
 def mq_claude_agents(config):
@@ -3793,40 +3785,319 @@ def mq_claude_agents(config):
         raise RuntimeError('ambiguous Claude background inventory')
     return backgrounds
 
-def mq_claude_dispatch(config, queue, job, stage):
-    name = config['project_path'].split('/')[-1] + f" !{job['iid']} — Claude · " + stage['id']
-    mq_update_stage(queue, job, stage['id'], name=name, delivery='sending',
-        review_deadline=mq_stamp()+config['review_timeout_seconds'])
-    arguments = mq_claude_arguments(config,stage['input'],name)
-    if config.get('claude_model'):
-        arguments += ['--model',config['claude_model']]
-    if config.get('claude_effort'):
-        arguments += ['--effort',config['claude_effort']]
+def mq_service_environment(config):
+    environment = mq_claude_environment(config)
+    runtime = environment.setdefault('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}')
+    environment.setdefault('DBUS_SESSION_BUS_ADDRESS','unix:path='+runtime+'/bus')
+    return environment
+
+
+def mq_service_command(config, arguments):
+    import subprocess
     try:
-        mq_claude_command(config, arguments)
+        result = subprocess.run(arguments,env=mq_service_environment(config),stdin=subprocess.DEVNULL,
+            capture_output=True,text=True,timeout=mq_io_timeout(config,'native_timeout'))
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError('systemd command timed out; reconcile the registered unit') from error
+    if result.returncode:
+        raise RuntimeError('systemd command failed: '+result.stderr.strip()[:2000])
+    return result.stdout
+
+
+def mq_service_show(config, unit=None):
+    fields = ('LoadState','ActiveState','SubState','InvocationID','ControlGroup','Result',
+              'ExecMainCode','ExecMainStatus') if unit else ('ControlGroup','UserspaceTimestampMonotonic')
+    output = mq_service_command(config,['systemctl','--user','show',*([unit] if unit else []),
+                                       *['--property='+key for key in fields]])
+    return dict(line.split('=',1) for line in output.splitlines() if '=' in line)
+
+
+def mq_service_identity(config):
+    manager = mq_service_show(config)
+    if not manager.get('ControlGroup') or not manager.get('UserspaceTimestampMonotonic'):
+        raise RuntimeError('user systemd manager identity unavailable')
+    return {'boot':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+            'manager':manager['UserspaceTimestampMonotonic'],'root':manager['ControlGroup']}
+
+
+def mq_service_write(path, value):
+    """Publish execution evidence durably, independently of the queue transaction."""
+    temporary = path.with_name(path.name+'.'+monitor_id())
+    try:
+        with os.fdopen(os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'w') as stream:
+            json.dump(value,stream); stream.flush(); os.fsync(stream.fileno())
+        os.replace(temporary,path)
+        descriptor = os.open(path.parent,os.O_DIRECTORY)
+        try:os.fsync(descriptor)
+        finally:os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def mq_print_manifest(config, stage):
+    path = Path(config['queue_file']).parent/'executions'/stage['id']/'manifest.json'
+    monitor_private(path.parent,directory=True); monitor_private(path)
+    manifest = json.loads(path.read_text())
+    if (manifest['stage']!=stage['id'] or manifest['session']!=stage['session']
+            or manifest['input_digest']!=monitor_digest(stage['input']) or manifest['cwd']!=config['cwd']
+            or monitor_digest(path.read_text())!=stage['manifest_digest']
+            or manifest['unit']!=stage['unit'] or manifest['identity']!=stage['service_identity']
+            or manifest['cgroup']!=manifest['identity']['root']+'/app.slice/'+manifest['unit']):
+        raise RuntimeError('Claude execution manifest changed')
+    return path,manifest
+
+
+def mq_cgroup_empty(group):
+    path = Path('/sys/fs/cgroup')/group.lstrip('/')
+    if not group.startswith('/') or '..' in Path(group).parts:
+        raise RuntimeError('invalid execution cgroup')
+    try:
+        events = dict(line.split() for line in (path/'cgroup.events').read_text().splitlines())
+    except FileNotFoundError:
+        return not path.exists()
+    if events.get('populated') not in {'0','1'}:
+        raise RuntimeError('cgroup population evidence unavailable')
+    return events['populated']=='0'  # Kernel includes every descendant, not only cgroup.procs.
+
+
+def mq_print_receipt(config, path, manifest):
+    monitor_private(path.parent,directory=True); monitor_private(path)
+    invocation = os.environ.get('INVOCATION_ID')
+    group = Path('/proc/self/cgroup').read_text().strip()
+    current = mq_service_show(config,manifest['unit'])
+    if (not invocation or current.get('InvocationID')!=invocation
+            or group!='0::'+manifest['cgroup'] or mq_service_identity(config)!=manifest['identity']):
+        raise RuntimeError('recorder is not in its registered service invocation')
+    value = {'manifest_digest':monitor_digest(path.read_text()),'invocation':invocation,
+        'identity':manifest['identity'],'cgroup':manifest['cgroup'],
+        'result':os.environ.get('SERVICE_RESULT'),'exit_code':os.environ.get('EXIT_CODE'),
+        'exit_status':os.environ.get('EXIT_STATUS')}
+    for name in ('stdout','stderr'):
+        target = path.parent/name
+        monitor_private(target)
+        if target.stat().st_size>manifest['max_output_bytes']:
+            value[name+'_digest'] = None
+        else:
+            with target.open('rb') as stream:value[name+'_digest']=hashlib.file_digest(stream,'sha256').hexdigest()
+    mq_service_write(path.with_name('receipt.json'),value)
+
+
+def mq_print_execution(config, stage):
+    path,manifest = mq_print_manifest(config,stage)
+    identity = mq_service_identity(config)
+    rebooted = identity['boot']!=manifest['identity']['boot']
+    current = ({'ActiveState':'inactive','LoadState':'not-found'} if rebooted else
+               mq_service_show(config,manifest['unit']))
+    receipt_path = path.with_name('receipt.json')
+    receipt = None
+    if receipt_path.exists():
+        monitor_private(receipt_path)
+        receipt = json.loads(receipt_path.read_text())
+        if (receipt['manifest_digest']!=monitor_digest(path.read_text())
+                or receipt['identity']!=manifest['identity'] or receipt['cgroup']!=manifest['cgroup']
+                or not re.fullmatch('[a-f0-9]{32}',receipt.get('invocation',''))):
+            raise RuntimeError('Claude service receipt identity changed')
+    if rebooted and receipt is None:
+        return {'terminal':True,'error':{'message':'host reboot interrupted the registered Claude execution'}}
+    invocation = current.get('InvocationID') or (receipt or {}).get('invocation')
+    if (stage.get('invocation') and invocation and stage['invocation']!=invocation
+            or receipt and current.get('InvocationID') and receipt['invocation']!=current['InvocationID']
+            or current.get('ControlGroup') and current['ControlGroup']!=manifest['cgroup']):
+        raise RuntimeError('Claude service invocation changed')
+    evidence = {'invocation':invocation} if invocation else {}
+    if current.get('ActiveState') not in {'inactive','failed'} or not (rebooted or mq_cgroup_empty(manifest['cgroup'])):
+        return {'terminal':False,**evidence}
+    if not invocation:
+        return {'terminal':False,'unknown':True}
+    if receipt is None:
+        # Retained failed units provide exact terminal evidence even if the recorder failed.
+        if current.get('LoadState')!='loaded' or current.get('ActiveState')!='failed':
+            return {'terminal':False,'unknown':True,**evidence}
+        return {'terminal':True,'error':{'message':'Claude service failed without completion receipt: '+
+            current.get('Result','unknown')},**evidence}
+    if receipt['result']!='success' or receipt['exit_code']!='exited' or receipt['exit_status']!='0':
+        return {'terminal':True,'error':{'message':'Claude service '+str(receipt['result'])+
+            ' ('+str(receipt['exit_code'])+' '+str(receipt['exit_status'])+')'},**evidence}
+    # A failed recorder/cancellation must not turn a successful main exit into success.
+    if current.get('LoadState')=='loaded' and current.get('Result') not in {'success',''}:
+        return {'terminal':True,'error':{'message':'Claude service '+current['Result']},**evidence}
+    for name in ('stdout','stderr'):
+        target = path.parent/name; monitor_private(target)
+        if target.stat().st_size>config['max_response_bytes']:
+            return {'terminal':True,'error':{'message':'Claude '+name+' exceeds configured bound'},**evidence}
+        if hashlib.sha256(target.read_bytes()).hexdigest()!=receipt[name+'_digest']:
+            return {'terminal':True,'error':{'message':'Claude captured '+name+' changed'},**evidence}
+    return {'terminal':True,**evidence}
+
+
+def mq_print_final(config, stage):
+    path,_ = mq_print_manifest(config,stage)
+    raw = path.with_name('stdout').read_text()
+    if not raw.endswith('\n'):
+        raise RuntimeError('incomplete Claude output stream')
+    events = [json.loads(line) for line in raw.splitlines()]
+    if any(not isinstance(e,dict) for e in events):
+        raise RuntimeError('invalid Claude output stream')
+    results = [e for e in events if e.get('type')=='result']
+    if len(results)!=1 or events[-1]!=results[0]:
+        raise RuntimeError('missing or ambiguous Claude terminal envelope')
+    result = results[0]
+    if any(e.get('session_id')!=stage['session'] for e in events if e.get('type') in {'assistant','result'}):
+        raise RuntimeError('Claude output session changed')
+    if result.get('subtype')!='success' or result.get('is_error') is not False:
+        raise RuntimeError('Claude terminal error: '+str(result.get('subtype')))
+    main = [e for e in events if e.get('type')=='assistant' and e.get('parent_tool_use_id') is None]
+    if not main:
+        raise RuntimeError('missing Claude main final')
+    for event in main:
+        message = event.get('message')
+        if (not isinstance(message,dict) or not isinstance(message.get('id'),str)
+                or not message['id'] or not isinstance(message.get('content'),list)):
+            raise RuntimeError('malformed Claude assistant message')
+        for block in message['content']:
+            if (not isinstance(block,dict) or not isinstance(block.get('type'),str)
+                    or block['type']=='text' and not isinstance(block.get('text'),str)):
+                raise RuntimeError('malformed Claude assistant content block')
+    message = main[-1]['message']['id']
+    first = next(i for i,e in enumerate(main) if e['message']['id']==message)
+    group = main[first:]
+    if any(e['message']['id']!=message for e in group):
+        raise RuntimeError('Claude final message identity was reused')
+    texts = [c['text'] for e in group for c in e['message']['content'] if c.get('type')=='text']
+    if (not texts or result.get('result')!=texts[-1]
+            or any(c.get('type')=='tool_use' for e in group for c in e['message']['content'])):
+        raise RuntimeError('Claude final blocks disagree with terminal envelope')
+    records = mq_claude_records(config,stage['session'])
+    sources = [r for r in records if r.get('type')=='user' and r.get('message',{}).get('content')==stage['input']]
+    if len(sources)!=1 or stage.get('source_id') and sources[0]['uuid']!=stage['source_id']:
+        raise RuntimeError('Claude registered native input changed or is ambiguous')
+    source = sources[0]
+    native_ids = [r.get('uuid') for r in records]
+    if native_ids.count(source['uuid'])!=1 or source.get('cwd')!=config['cwd']:
+        raise RuntimeError('Claude original native input identity changed')
+    ids = [e.get('uuid') for e in group]
+    if len(set(ids))!=len(ids) or any(not isinstance(i,str) or not i for i in ids):
+        raise RuntimeError('duplicate or missing Claude final block identity')
+    previous = native_ids.index(source['uuid'])
+    for event in group:
+        matches = [r for r in records if r.get('uuid')==event['uuid']]
+        if len(matches)!=1:
+            raise RuntimeError('Claude native final identity changed')
+        native = matches[0]; index = native_ids.index(native['uuid'])
+        if (index<=previous or native.get('type')!='assistant' or native.get('isApiErrorMessage')
+                or native['message'].get('id')!=message
+                or native['message'].get('content')!=event['message']['content']
+                or native['message'].get('stop_reason')!='end_turn'):
+            raise RuntimeError('Claude native final content changed')
+        previous = index
+    if stage.get('final_ids') and stage['final_ids']!=ids:
+        raise RuntimeError('Claude final group identity changed')
+    return {'source_id':source['uuid'],'anchor':ids[-1],'final_ids':ids,'text':'\n'.join(texts)}
+
+
+def mq_print_observe(config, stage):
+    observed = mq_print_execution(config,stage)
+    if not observed['terminal'] or observed.get('error'):
+        return observed
+    try:
+        return {**observed,**mq_print_final(config,stage)}
+    except (OSError,RuntimeError,ValueError,KeyError,TypeError) as error:
+        return {**observed,'error':{'message':str(error)}}
+
+
+def mq_print_dispatch(config, queue, job, stage):
+    import shutil
+    import uuid
+    executable = shutil.which(config['claude_bin'])
+    if not executable:
+        raise MonitorClaudeError('launch','Claude executable missing',not_started=True)
+    identity = mq_service_identity(config)
+    root = queue.path.parent/'executions'/stage['id']
+    root.parent.mkdir(mode=0o700,exist_ok=True); monitor_private(root.parent,directory=True)
+    root.mkdir(mode=0o700,exist_ok=True); monitor_private(root,directory=True)
+    session = str(uuid.uuid4())
+    unit = 'codex-mr-claude-'+stage['id']+'.service'
+    deadline = mq_stamp()+config['review_timeout_seconds']
+    manifest = {'stage':stage['id'],'job':job['id'],'epoch':job['epoch'],'session':session,
+        'input_digest':monitor_digest(stage['input']),'cwd':config['cwd'],'workspace':job['workspace'],
+        'deadline':deadline,'max_output_bytes':config['max_response_bytes'],'unit':unit,'identity':identity,'cgroup':identity['root']+'/app.slice/'+unit}
+    path = root/'manifest.json'
+    if path.exists():
+        monitor_private(path)
+        saved = json.loads(path.read_text())
+        if any(saved.get(k)!=manifest[k] for k in ('stage','job','epoch','input_digest','cwd','workspace','unit','identity')):
+            raise RuntimeError('prepared Claude execution manifest changed')
+        manifest = saved; session = saved['session']; deadline = saved['deadline']
+    else:
+        mq_service_write(path,manifest)
+    for filename in ('stdout','stderr'):
+        target = root/filename
+        descriptor = os.open(target,os.O_WRONLY|os.O_CREAT|os.O_NOFOLLOW,0o600);os.close(descriptor)
+        monitor_private(target)
+        if target.stat().st_size:raise RuntimeError('prepared Claude execution already has output')
+    name = config['project_path'].split('/')[-1]+f" !{job['iid']} — Claude · "+stage['id']
+    arguments = mq_claude_arguments(config,stage['input'],name)
+    options = ['--session-id',session]
+    if config.get('claude_model'):options += ['--model',config['claude_model']]
+    if config.get('claude_effort'):options += ['--effort',config['claude_effort']]
+    arguments[-2:-2] = options
+    def quote(value):
+        return '"'+str(value).replace('\\','\\\\').replace('"','\\"').replace('%','%%').replace('$','$$')+'"'
+    recorder = ' '.join(quote(v) for v in [sys.executable,str(Path(__file__).resolve()),
+        'monitor-gitlab','record-claude-exit','--manifest',str(path)])
+    command = ['systemd-run','--user','--quiet','--no-block','--expand-environment=no','--unit='+unit,
+        '--slice=app.slice','--property=Type=exec','--property=Restart=no',
+        '--property=RuntimeMaxSec='+str(config['review_timeout_seconds']),
+        '--property=TimeoutStopSec=15','--property=KillMode=control-group','--property=UMask=0077',
+        '--property=StandardOutput=append:'+str(root/'stdout'),
+        '--property=StandardError=append:'+str(root/'stderr'),'--property=ExecStopPost='+recorder,
+        '--working-directory='+config['cwd']]
+    environment = mq_service_environment(config)
+    reserved = {'INVOCATION_ID','JOURNAL_STREAM','SERVICE_RESULT','EXIT_CODE','EXIT_STATUS','SYSTEMD_EXEC_PID'}
+    command += ['--setenv='+k for k in environment if k not in reserved and re.fullmatch('[A-Za-z_][A-Za-z0-9_]*',k)]
+    command += ['--',executable,*arguments]
+    mq_io_timeout(config,'native_timeout')
+    mq_update_stage(queue,job,stage['id'],transport='print',session=session,unit=unit,
+        native_home=config['claude_home'],service_identity=identity,manifest_digest=monitor_digest(path.read_text()),name=name,delivery='sending',review_deadline=deadline)
+    try:
+        mq_service_command(config,command)
     except MonitorCycleYield as yielded:
-        if not yielded.issued:
-            mq_update_stage(queue,job,stage['id'],delivery='prepared')
+        if not yielded.issued:mq_update_stage(queue,job,stage['id'],delivery='prepared')
         raise
-    mq_claude_accept(config, queue, job, stage)
+    except FileNotFoundError as error:
+        raise MonitorClaudeError('launch',str(error),not_started=True) from error
+    mq_claude_accept(config,queue,job,stage)
+
+
+def mq_claude_dispatch(config, queue, job, stage):
+    return mq_print_dispatch(config,queue,job,stage)
 
 
 def mq_claude_accept(config, queue, job, stage):
-    matches = [a for a in mq_claude_agents(config) if a['name']==stage.get('name') and a['cwd']==config['cwd']]
-    if len(matches)>1:
-        raise RuntimeError('ambiguous Claude native dispatch acknowledgment')
-    if not matches:
-        return None
-    native = matches[0]
-    if (stage.get('session') and stage['session']!=native['sessionId']
-            or stage.get('background_id') and stage['background_id']!=native['id']):
-        raise RuntimeError('Claude native identity changed')
+    if stage.get('transport')=='print':
+        observed = mq_print_execution(config,stage)
+        if not observed.get('invocation') and not observed['terminal']:
+            return None
+        native = {'sessionId':stage['session']}
+        updates = {'delivery':'accepted'}
+        if observed.get('invocation'):updates['invocation']=observed['invocation']
+    else:
+        matches = [a for a in mq_claude_agents(config) if a['name']==stage.get('name') and a['cwd']==config['cwd']]
+        if len(matches)>1:
+            raise RuntimeError('ambiguous Claude native dispatch acknowledgment')
+        if not matches:
+            return None
+        native = matches[0]
+        if (stage.get('session') and stage['session']!=native['sessionId']
+                or stage.get('background_id') and stage['background_id']!=native['id']):
+            raise RuntimeError('Claude native identity changed')
+        updates = {'session':native['sessionId'],'background_id':native['id'],'delivery':'accepted'}
     with queue.atomic():
         queue.check_running(job)
         if any(r['repository_id']!=job['repository_id'] or r['iid']!=job['iid'] for r in queue.mrs()
                if native['sessionId'] in mq_owned_sessions(r)):
             raise RuntimeError('Claude session already belongs to another MR')
-        stage.update(session=native['sessionId'],background_id=native['id'],delivery='accepted')
+        stage.update(**updates)
         record = queue.mr(job['repository_id'],job['iid'])
         previous = record['chats'].get('claude')
         if previous and previous!=native['sessionId'] and previous not in record.get('claude_history',[]):
@@ -3983,16 +4254,9 @@ def mq_claude_final(records, source):
     return result
 
 
-def mq_claude_url(records, stage):
-    if sum(r.get('type')=='user' and r.get('message',{}).get('content')==stage.get('input')
-           for r in records)!=1:
-        return None
-    return next((r['url'] for r in reversed(records) if r.get('type')=='system'
-        and r.get('subtype')=='bridge_status' and isinstance(r.get('url'),str)
-        and re.fullmatch(r'https://claude\.ai/code/session_[A-Za-z0-9_-]+',r['url'])),None)
-
-
 def mq_claude_observe(config, stage):
+    if stage.get('transport')=='print':
+        return mq_print_observe(config,stage)
     matches = [a for a in mq_claude_agents(config) if a['id'] == stage.get('background_id')
                and a['sessionId'] == stage['session'] and a.get('name') == stage.get('name')
                and a.get('cwd') == config['cwd']]
@@ -4000,28 +4264,26 @@ def mq_claude_observe(config, stage):
         return {'terminal':False,'unknown':True}
     native = matches[0]
     records = mq_claude_records(config, stage['session'])
-    url = mq_claude_url(records,stage)
-    link = {'remote_url':url} if url else {}
     sources = [r for r in records if r.get('type') == 'user' and r.get('message',{}).get('content') == stage['input']]
     if len(sources) > 1:
         raise RuntimeError('duplicate Claude original source')
     ended = native.get('state') in {'failed','stopped','done'}
     if not sources:
         if ended:
-            return {'terminal':True,'error':{'message':'Claude ended without its registered source'},**link}
-        return {'terminal':False,**link}
+            return {'terminal':True,'error':{'message':'Claude ended without its registered source'}}
+        return {'terminal':False}
     source = sources[0]
     try:
         final = mq_claude_final(records,source)
     except RuntimeError as failure:
-        if ended:return {'terminal':True,'error':{'message':str(failure)},**link}
+        if ended:return {'terminal':True,'error':{'message':str(failure)}}
         raise
     complete = final.get('text','').strip() or final.get('error')
     if not complete or not (final['sealed'] or ended):
         if ended:
-            return {'terminal':True,'error':{'message':'Claude interrupted before a final result'},**link}
-        return {'terminal':False,**link}
-    return {'terminal':True,'source_id':source['uuid'],**{k:v for k,v in final.items() if k!='sealed'},**link}
+            return {'terminal':True,'error':{'message':'Claude interrupted before a final result'}}
+        return {'terminal':False}
+    return {'terminal':True,'source_id':source['uuid'],**{k:v for k,v in final.items() if k!='sealed'}}
 
 
 def mq_claude_stop(config, native):
@@ -4107,14 +4369,14 @@ def mq_claude_arguments(config, text, name):
             'Bash('+str(Path(__file__).resolve())+' monitor-gitlab --config '+config['_config_path']+' snapshot *)'])
     settings['permissions'] = {'deny':[kind+'(/'+p+'/**)' for p in protected for kind in ('Edit','Write')]
         +[kind+'(/'+p+')' for p in protected for kind in ('Edit','Write')]}
-    arguments = ['--bg',text,'--name',name,'--remote-control',name,
+    arguments = ['--print','--verbose','--output-format','stream-json','--name',name,
         '--append-system-prompt',mq_instructions(),'--permission-mode','dontAsk',
         '--tools','Read,Grep,Glob,Bash,Edit,Write' if writable else 'Read,Grep,Glob,Bash',
         '--setting-sources','','--settings',json.dumps(settings),
         '--strict-mcp-config','--mcp-config','{"mcpServers":{}}']
     if len(workspace['roots']) > 1:
         arguments.extend(['--add-dir',*workspace['roots'][1:]])
-    return [*arguments,'--allowedTools',*allowed]
+    return [*arguments,'--allowedTools',*allowed,'--',text]
 
 
 def mq_position(context, position):
@@ -4824,7 +5086,7 @@ def mq_step(config,queue):
             observed = mq_claude_observe(scoped,stage)
         else:
             observed = mq_codex_observe(scoped,stage)
-        updates = {k:v for k,v in observed.items() if k in {'anchor','turn_id','source_id','remote_url'}}
+        updates = {k:v for k,v in observed.items() if k in {'anchor','turn_id','source_id','final_ids','invocation'}}
         if updates:
             mq_update_stage(queue,job,stage['id'],**updates)
         if not observed['terminal']:
@@ -4969,6 +5231,13 @@ def mq_automatic_items(items):
 
 
 def mq_cancel_stage(config,stage):
+    if stage['reviewer']=='claude' and stage.get('transport')=='print':
+        observed = mq_print_execution(config,stage)
+        if observed['terminal']:return True
+        if observed.get('invocation'):
+            mq_service_command(config,['systemctl','--user','stop','--no-block',stage['unit']])
+            return mq_print_execution(config,stage)['terminal']
+        return False
     if stage['reviewer']=='claude' and stage.get('background_id'):
         native = next((a for a in mq_claude_agents(config) if a['id']==stage['background_id']
             and a['sessionId']==stage['session'] and a['name']==stage.get('name') and a['cwd']==config['cwd']),None)
@@ -5222,6 +5491,8 @@ def mq_main():
     commands.add_parser('tick',help='perform one bounded queue cycle and exit')
     commands.add_parser('status',help='read fresh persisted queue state offline')
     commands.add_parser('instructions',help='print the shared reviewer result contract')
+    recorder = commands.add_parser('record-claude-exit',help=argparse.SUPPRESS)
+    recorder.add_argument('--manifest',required=True,type=Path)
     preflight = commands.add_parser('preflight',help='read-only account, project and permission checks')
     preflight.add_argument('--check-only',action='store_true')
     snapshot = commands.add_parser('snapshot',help='read exact authenticated MR/file context; no queue mutation')
@@ -5241,6 +5512,11 @@ def mq_main():
     arguments = parser.parse_args(sys.argv[2:])
     try:
         path = Path(os.path.abspath(arguments.config.expanduser()))
+        if arguments.action=='record-claude-exit':
+            monitor_private(arguments.manifest)
+            manifest = json.loads(arguments.manifest.read_text())
+            mq_print_receipt({'claude_home':str(Path.home()/'.claude'),'native_timeout':10},arguments.manifest,manifest)
+            return 0
         if arguments.action=='instructions':
             print(mq_instructions()); return 0
         if arguments.action=='configure':
@@ -5317,20 +5593,26 @@ def mq_main():
 
 
 def mq_job_status(job, config=None):
-    def stage_status(stage):
-        value = {k:stage.get(k) for k in ('id','reviewer','state','session','turn_id','delivery','error','name','remote_url')}
-        if config and stage['reviewer']=='claude' and stage.get('session') and not value['remote_url']:
-            try:
-                value['remote_url'] = mq_claude_url(mq_claude_records(config,stage['session']),stage)
-            except (OSError,RuntimeError,ValueError) as error:
-                value['remote_url_error'] = str(error)[:300]
+    def stage_status(stage, workspace=None):
+        import shlex
+        value = {k:stage.get(k) for k in ('id','reviewer','state','session','turn_id','delivery','error','name','unit')}
+        if config and stage['reviewer']=='claude' and stage.get('session'):
+            workspace = workspace or {'cwd':config['cwd']}
+            native_home = stage.get('native_home',config['claude_home'])
+            command = [config['claude_bin'],'--resume',stage['session']]
+            if Path(native_home).resolve()!=(Path.home()/'.claude').resolve():
+                command = ['env','CLAUDE_CONFIG_DIR='+native_home,*command]
+            else:
+                command = ['env','-u','CLAUDE_CONFIG_DIR',*command]
+            value['resume_command'] = 'cd -- '+shlex.quote(workspace['cwd'])+' && '+shlex.join(command)
+        value['result'] = stage.get('result')
         return value
     fields = ('id','sequence','repository_id','iid','kind','head','state','wait_reason','retry_at','outcome','validation_error',
         'admission','coalesced_jobs','coalesced_into','target_event','last_error')
     return {**{k:job.get(k) for k in fields},'reviewers':job['reviewers'],
         'source':{k:job['source'].get(k) for k in ('origin','provider','session','source_id','turn_id')},
-        'stages':[stage_status(stage) for stage in job['stages']],
-        'rounds':[{'reason':r['reason'],'stages':[stage_status(stage) for stage in r['stages']]}
+        'stages':[stage_status(stage,job.get('workspace')) for stage in job['stages']],
+        'rounds':[{'reason':r['reason'],'stages':[stage_status(stage,r.get('workspace')) for stage in r['stages']]}
                   for r in job.get('rounds',[])]}
 
 

@@ -221,11 +221,13 @@ def flow(module,tmp_path,monkeypatch):
     """Actual worker/adapters and SQLite; simulated native wire/provider, zero remote writes."""
     import json
     import uuid
+    import sys
+    from gitlab_print_service_fixture import PrintService
     m = module['mq_step'].__globals__
     config_path = tmp_path/'config.json'
     raw = m['monitor_default_config']('https://gitlab.example.test/team/repo',11,'gitlab')
     raw.update(cwd=str(tmp_path),codex_home=str(tmp_path/'codex'),state_file=str(tmp_path/'old'/'old.sqlite3'),
-               claude_home=str(tmp_path/'claude'),queue_file=str(tmp_path/'queue'/'queue.sqlite3'),reviewers=['claude','codex'])
+               claude_bin=sys.executable,claude_home=str(tmp_path/'claude'),queue_file=str(tmp_path/'queue'/'queue.sqlite3'),reviewers=['claude','codex'])
     config_path.write_text(json.dumps(raw)); config_path.chmod(0o600)
     config = m['mq_config'](config_path)
     Path(config['codex_home']).mkdir()
@@ -267,12 +269,12 @@ def flow(module,tmp_path,monkeypatch):
         raise AssertionError(method)
     def claude(c,args):
         if args[:2]==['agents','--json']: return json.dumps(claude_agents)
-        assert args[0]=='--bg'
-        launched.append('claude'); session=str(uuid.uuid4()); src=str(uuid.uuid4()); final=str(uuid.uuid4())
+        assert args[0] in {'--bg','--print'}
+        launched.append('claude'); session=args[args.index('--session-id')+1] if args[0]=='--print' else str(uuid.uuid4()); src=str(uuid.uuid4()); final=str(uuid.uuid4())
         name=args[args.index('--name')+1]
         claude_agents.append({'id':session[:8],'sessionId':session,'name':name,'cwd':c['cwd'],'kind':'background','state':'running'})
         result=results['claude']
-        rows=[{'type':'user','uuid':src,'sessionId':session,'cwd':c['cwd'],'message':{'content':args[1]}}]
+        rows=[{'type':'user','uuid':src,'sessionId':session,'cwd':c['cwd'],'message':{'content':args[-1] if args[0]=='--print' else args[1]}}]
         rows.append({'type':'assistant','uuid':final,'parentUuid':src,'sessionId':session,
             'isApiErrorMessage':isinstance(result,Exception),'error':str(result),
             'message':{'id':'message-'+final,'stop_reason':'end_turn','content':[{'type':'text','text':str(result) if isinstance(result,Exception) else rendered(result)}]}})
@@ -295,11 +297,16 @@ def flow(module,tmp_path,monkeypatch):
     monkeypatch.setitem(m,'mq_context',lambda *a,**kw:copy.deepcopy(context))
     monkeypatch.setitem(m,'monitor_native',native)
     monkeypatch.setitem(m,'mq_claude_command',claude)
+    service=PrintService(config,lambda c,args:m['mq_claude_command'](c,args))
+    monkeypatch.setitem(m,'mq_service_command',service.command)
+    monkeypatch.setitem(m,'mq_service_identity',lambda c:service.identity.copy())
+    monkeypatch.setitem(m,'mq_cgroup_empty',lambda group:not service.populated)
     monkeypatch.setitem(m,'mq_send',send)
     q=m['MonitorQueue'](config)
     class Flow:
         pass
     f=Flow(); f.m=m;f.q=q;f.config=config;f.context=context;f.results=results
+    f.service=service
     f.launched=launched;f.sends=sends;f.chats=chats;f.turns=turns;f.items=items;f.raw=raw;f.config_path=config_path
     def drain(limit=20):
         for _ in range(limit):

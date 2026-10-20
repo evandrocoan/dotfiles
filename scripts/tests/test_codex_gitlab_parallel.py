@@ -55,7 +55,7 @@ def test_recorded_mr7_parallel_final_is_collected(module,tmp_path,monkeypatch,st
     config,stage,rows,path=captured_claude(m,tmp_path,monkeypatch,state=state,artifact_name=ARTIFACT)
     before=path.read_bytes();actual=m['mq_claude_observe'](config,stage)
     assert actual=={'terminal':True,'source_id':SOURCE,'anchor':FINAL,
-        'text':'Captured parallel review result.','remote_url':'https://claude.ai/code/session_CAPTURED_PARALLEL'}
+        'text':'Captured parallel review result.'}
     assert len(rows)==294 and path.read_bytes()==before
 
 
@@ -165,22 +165,22 @@ def test_parallel_human_intake_requires_exact_descendant_seal(flow,tmp_path,monk
 
 def test_recorded_mr7_result_survives_restart_and_next_reviewer_receives_proposals(flow,monkeypatch):
     f=flow;f.results['claude']=domain(actions=[finding('parallel-concern')])
-    original=f.m['mq_claude_command'];captured=artifact()
-    def transport(config,args):
-        response=original(config,args)
-        if args[0]=='--bg':
-            native=json.loads(original(config,['agents','--json']))[-1]
-            rows=copy.deepcopy(captured['records'])
-            for row in rows:
-                if 'sessionId' in row:row['sessionId']=native['sessionId']
-                row['cwd']=config['cwd']
-                if row.get('uuid')==SOURCE:row['message']['content']=args[1]
-                if row.get('uuid')==FINAL:row['message']['content']=[{'type':'text','text':rendered(f.results['claude'])}]
-            path=Path(config['claude_home'])/'projects'/'fixture'/(native['sessionId']+'.jsonl')
-            path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
-        return response
-    monkeypatch.setitem(f.m,'mq_claude_command',transport)
-    job=enqueue(f);assert f.m['mq_step'](f.config,f.q);assert f.m['mq_step'](f.config,f.q)
+    captured=artifact()
+    job=enqueue(f);assert f.m['mq_step'](f.config,f.q)
+    # Previously issued background stages retain their actual transport and ancestry.
+    saved=f.q.job(job['id']);stage=saved['stages'][0]
+    rows=copy.deepcopy(captured['records'])
+    for row in rows:
+        if 'sessionId' in row:row['sessionId']=stage['session']
+        row['cwd']=f.config['cwd']
+        if row.get('uuid')==SOURCE:row['message']['content']=stage['input']
+        if row.get('uuid')==FINAL:row['message']['content']=[{'type':'text','text':rendered(f.results['claude'])}]
+    path=Path(f.config['claude_home'])/'projects'/'fixture'/(stage['session']+'.jsonl')
+    path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
+    with f.q.atomic():
+        stage.pop('transport');stage['background_id']=stage['session'][:8]
+        f.q.save(saved)
+    assert f.m['mq_step'](f.config,f.q)
     saved=copy.deepcopy(f.q.job(job['id']));first=saved['stages'][0]
     assert first['state']=='succeeded' and first['result']==f.results['claude']
     assert first['anchor']==FINAL and first['source_id']==SOURCE

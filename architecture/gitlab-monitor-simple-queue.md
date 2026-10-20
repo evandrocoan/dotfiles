@@ -113,18 +113,31 @@ interrupt that exact execution and prove termination before starting another, pr
 capacity. Human questions retain their sufficient-answer hold; they are not authorization to
 publish. Reviewer stages are fields of one job, not another queue or capacity authority.
 
-Claude execution uses the existing signed-in background CLI with Remote Control. Preserve its
-native session identity and authenticated original input/results; no fabricated Codex turn stands
-in for Claude review. Historical Codex chats remain outside the new consumer. Results/questions stay in the reviewer's own
-native app: Claude Remote Control or the Codex MR chat. One shared Claude collector follows
-only the registered input's native ancestry. Exclusively tool-result continuations require matching
-ancestral tool-call identities; actual human/mixed input cuts that ancestry. Split final blocks
-belong to one native message ID and require readable, completed output; an intermediate thinking
-block is not a final result. Human sufficient-answer intake uses the same traversal. Retain the
-actual native bridge URL for status, with bounded read-only enrichment of older registered
-sessions; no guessed links or historical-state migration. Register fresh Claude sessions per review
-when needed, preserving their source history and sufficient-answer routing with distinct original
-source and execution identities; do not run an extra Codex model solely for presentation.
+New Claude stages use a finite signed-in CLI process in print stream-JSON mode, owned by a
+transient user systemd service. Preserve native session history and an explicit session UUID for
+later CLI resume; no Remote Control, browser accompaniment or idle-chat supervisor is required.
+The monitor persists launch identity and immutable input before issuing the service. An atomic
+service receipt binds the invocation and captured output; terminal unit evidence and an empty
+exact execution cgroup, including descendants, establish termination. Receipt appearance alone
+cannot release capacity. Retained receipt/cgroup evidence survives successful-unit collection;
+unit absence alone never proves non-launch or completion. Reconcile lost acknowledgments without
+issuing another execution. A reboot proves interruption of unfinished execution, preserving a
+previously recorded valid result. Failure and timeout continue the configured reviewer sequence.
+
+The official output stream identifies the final main message and all its split blocks by native
+UUID. Authenticate the original native input and those exact blocks again before publication;
+the terminal envelope's text identifies its trailing text block, not the complete split response.
+Later human turns cannot replace the captured final. Results and readable questions remain in
+native history and monitor status, which supplies a command to resume the original CLI context.
+Desktop import is not part of this contract. Historical Codex chats remain outside the consumer.
+
+Already issued background stages retain their original collection/cancellation and result
+revalidation until settled; new launches cannot select that transport. Human intake retains the
+shared native ancestry collector: only tool results with matching ancestral call identities can
+continue an input, human/mixed input cuts that ancestry, and split final blocks belong to one
+completed native message. Register fresh Claude executions when needed, preserving original
+source/question identities and sufficient-answer routing. Do not edit or migrate native history,
+or run an extra Codex model solely for presentation.
 When the monitor configuration omits `claude_model`, use `claude-opus-5-5`; an explicit value
 takes precedence. Omitted effort retains Claude's own effort settings. No new credential route.
 
@@ -228,8 +241,9 @@ Alternate recent-page refresh with historical continuation and retain the exact 
 question/answer order proof across cycles. HTTP has a wall-clock deadline for the entire operation,
 backed by a finite unit timeout.
 Normal budget exhaustion saves progress without recording reviewer failure or discarding a batch.
-Native reviewers outlive the cycle under the unit's scoped process-only stop policy; deadline expiry alone
-never proves termination. Completion and human-answer observation occur on subsequent triggers,
+Native reviewers outlive the bounded cycle. Claude print services independently own their
+execution and runtime limit; the monitor unit retains its process-only stop policy for existing
+issued reviewers. Deadline expiry alone never proves termination. Completion and human-answer observation occur on subsequent triggers,
 including outside inventory hours. Immediate progression means within a ready
 bounded cycle rather than continuous polling. Queue identity, holds, publication ownership and
 reviewed checkpoints remain unchanged. Scheduling updates retain the current queue and chat sources;
@@ -256,7 +270,8 @@ tests after replacement protections pass. Never edit native databases or runtime
 | --- | --- | --- |
 | Durable FIFO and capacity | Jobs, consumer, locks | Competing processes, restart, immediate progression |
 | Automatic event grouping | `MonitorQueue` enqueue/reserve coalescing and original admissions | `test_codex_gitlab_coalescing.py`: FIFO, frozen work, barriers, repeat/restart, concurrent transactions; sanitized pending-event artifact replay |
-| Operation recovery | Native collectors, cold context normalization, consumer retry/status | `test_codex_gitlab_recovery.py`: sanitized native artifacts, retry/restart without relaunch, two-failure tick progress, prepared/confirmed effects, source/context denials and historical URLs |
+| Operation recovery | Native collectors, cold context normalization, consumer retry/status | `test_codex_gitlab_recovery.py`: sanitized native artifacts, retry/restart without relaunch, two-failure tick progress, prepared/confirmed effects, source/context denials and CLI resume commands |
+| Finite Claude execution | Transient service, receipt and stream collector | `test_codex_gitlab_print.py` and installed-client fixtures: native identities, split finals, lost acknowledgment, live descendants, timeout and resume |
 | Exact native/result identity | Result collector and dispatch journal | Stale A vs B, altered input/result, no mutating legacy calls |
 | Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |
 | Safe effects and progress | Batch application and publication journal | Partial batch, lost read-back, reply+resolve races, honest checkpoint |

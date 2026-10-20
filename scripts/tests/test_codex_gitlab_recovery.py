@@ -37,7 +37,7 @@ def test_recorded_tool_chain_and_split_final_are_collected_without_stopping_remo
     assert actual['terminal'] is True and actual['text']=='Captured final review text.'
     assert actual['anchor']=='37ff9ce3-a30c-4a6d-9c8d-172b00d0b78f'
     assert actual['source_id']=='cce5519b-9edd-4c9a-bcfe-263acbdd9c50'
-    assert actual['remote_url']=='https://claude.ai/code/session_CAPTURED'
+    assert 'remote_url' not in actual
     assert path.read_text()==''.join(json.dumps(row)+'\n' for row in rows)
 
 
@@ -228,7 +228,7 @@ def test_cold_read_after_real_dispatch_does_not_repeat_review(project,monkeypatc
 
 
 @pytest.mark.parametrize('malformed',['malformed\n','null\n','{"type":"user","sessionId":"11111111-1111-4111-8111-111111111111","message":null}\n'])
-def test_status_recovers_historical_url_readonly_and_survives_missing_metadata(flow,tmp_path,monkeypatch,malformed):
+def test_status_uses_cli_resume_without_reading_historical_web_metadata(flow,tmp_path,monkeypatch,malformed):
     config,stage,rows,path=captured_claude(flow.m,tmp_path,monkeypatch)
     config.update(flow.config);config['claude_home']=str(tmp_path/'claude')
     job=enqueue(flow);active=flow.q.reserve({11})
@@ -236,12 +236,12 @@ def test_status_recovers_historical_url_readonly_and_survives_missing_metadata(f
     with flow.q.atomic():flow.q.save(active)
     before=copy.deepcopy(flow.q.job(job['id']));raw=path.read_bytes()
     status=flow.m['mq_status'](config)
-    assert status['jobs'][0]['rounds'][0]['stages'][0]['remote_url']=='https://claude.ai/code/session_CAPTURED'
+    assert stage['session'] in status['jobs'][0]['rounds'][0]['stages'][0]['resume_command']
     assert flow.q.job(job['id'])==before and path.read_bytes()==raw
     path.write_text(malformed)
     status=flow.m['mq_status'](config)
-    assert status['jobs'][0]['rounds'][0]['stages'][0]['remote_url'] is None
-    assert status['jobs'][0]['rounds'][0]['stages'][0]['remote_url_error']
+    assert 'remote_url' not in status['jobs'][0]['rounds'][0]['stages'][0]
+    assert stage['session'] in status['jobs'][0]['rounds'][0]['stages'][0]['resume_command']
     assert flow.q.job(job['id'])==before
 
 

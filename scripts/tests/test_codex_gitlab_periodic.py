@@ -47,12 +47,12 @@ def test_native_default_and_custom_preferences_environment(module,tmp_path,monke
     assert captured.get('CLAUDE_CONFIG_DIR')==(str(home.resolve()) if custom else None)
 
 
-def test_post_launch_missing_inventory_never_releases_serial_capacity(flow,monkeypatch):
-    original=flow.m['mq_claude_command']
+def test_post_launch_missing_service_inventory_never_releases_serial_capacity(flow,monkeypatch):
+    original=flow.m['mq_service_command']
     def command(c,args):
-        if args[0]=='agents':raise FileNotFoundError('inventory disappeared after accepted launch')
+        if args[0]=='systemctl':raise FileNotFoundError('service inventory unavailable after launch')
         return original(c,args)
-    monkeypatch.setitem(flow.m,'mq_claude_command',command)
+    monkeypatch.setitem(flow.m,'mq_service_command',command)
     job=enqueue(flow)
     flow.m['mq_step'](flow.config,flow.q)
     saved=flow.q.job(job['id'])
@@ -76,13 +76,12 @@ def test_successive_ticks_resume_same_stage_then_advance_and_exit(flow,monkeypat
 def test_ticks_with_active_reviewer_do_not_wait_or_start_another(flow,monkeypatch):
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
     flow.m['mq_tick'](flow.config_path)
-    original=flow.m['mq_claude_records']
-    monkeypatch.setitem(flow.m,'mq_claude_records',lambda *a:[])
+    flow.service.populated=True
     flow.m['mq_tick'](flow.config_path)
     flow.m['mq_tick'](flow.config_path)
     assert flow.launched==['claude']
     assert flow.q.job(job['id'])['stages'][0]['state']=='running'
-    monkeypatch.setitem(flow.m,'mq_claude_records',original)
+    flow.service.populated=False
     flow.m['mq_tick'](flow.config_path)
     assert flow.launched==['claude','codex']
 
@@ -93,11 +92,15 @@ def test_expired_owned_reviewer_only_progresses_after_stop_confirmation(flow,mon
     flow.m['mq_tick'](flow.config_path)
     job=flow.q.job(job['id']);stage=job['stages'][0]
     flow.m['mq_update_stage'](flow.q,job,stage['id'],review_deadline=1)
-    monkeypatch.setitem(flow.m,'mq_claude_records',lambda *a:[])
+    flow.service.populated=True
+    original=flow.m['mq_service_command']
     stopped=[]
-    def stop(c,native):
-        stopped.append(native['sessionId']);return stop_confirmed
-    monkeypatch.setitem(flow.m,'mq_claude_stop',stop)
+    def stop(c,args):
+        if args[:3]==['systemctl','--user','stop']:
+            stopped.append(stage['session'])
+            if not stop_confirmed:return ''
+        return original(c,args)
+    monkeypatch.setitem(flow.m,'mq_service_command',stop)
     flow.m['mq_tick'](flow.config_path)
     saved=flow.q.job(job['id'])
     assert stopped==[stage['session']]
@@ -127,13 +130,14 @@ def test_acceptance_and_mr_ownership_commit_together(flow,monkeypatch):
     monkeypatch.setitem(flow.m,'mq_claude_accept',lambda *a:None)
     job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
     job=flow.q.job(job['id']);stage=job['stages'][0]
-    assert stage['session'] is None
+    assert stage['session'] and stage['delivery']=='sending'
     monkeypatch.setitem(flow.m,'mq_claude_accept',original)
     put=flow.q.put_mr
     monkeypatch.setattr(flow.q,'put_mr',lambda r:(_ for _ in ()).throw(InterruptedError('registration crash')))
     with pytest.raises(InterruptedError):original(flow.config,flow.q,job,stage)
     saved=flow.q.job(job['id'])
-    assert saved['stages'][0]['session'] is None
+    assert saved['stages'][0]['session']==stage['session']
+    assert saved['stages'][0]['delivery']=='sending'
     assert flow.q.mr(11,82)['chats']=={}
     monkeypatch.setattr(flow.q,'put_mr',put)
     original(flow.config,flow.q,saved,saved['stages'][0])
@@ -154,14 +158,14 @@ def test_existing_accepted_registration_is_repaired_idempotently(flow,monkeypatc
 
 def test_budget_before_launch_preserves_prepared_attempt(flow,monkeypatch):
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
-    original=flow.m['mq_claude_command']
+    original=flow.m['mq_service_command']
     def yield_before(c,args):raise flow.m['MonitorCycleYield']('before spawn')
-    monkeypatch.setitem(flow.m,'mq_claude_command',yield_before)
+    monkeypatch.setitem(flow.m,'mq_service_command',yield_before)
     result=flow.m['mq_tick'](flow.config_path)
     saved=flow.q.job(job['id']);attempt=saved['stages'][0]['id']
     assert result['yielded'] and saved['stages'][0]['delivery']=='prepared'
     assert saved['stages'][0]['state']=='running' and flow.launched==[]
-    monkeypatch.setitem(flow.m,'mq_claude_command',original)
+    monkeypatch.setitem(flow.m,'mq_service_command',original)
     flow.m['mq_tick'](flow.config_path)
     assert flow.q.job(job['id'])['stages'][0]['id']==attempt
     assert flow.launched==['claude']
@@ -216,6 +220,11 @@ def test_original_launch_only_trust_rejection_requires_unchanged_identity(flow,t
     job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
     job=flow.q.job(job['id']);stage=job['stages'][0]
     message=f"Claude CLI failed: Workspace not trusted. Run `claude` in {flow.config['cwd']} once and accept the trust prompt, then retry."
+    # Arrange a previously issued legacy attempt; new launches never use this transport.
+    with flow.q.atomic():
+        for key in ('transport','unit','manifest_digest','service_identity','session','background_id','invocation'):
+            stage.pop(key,None)
+        flow.q.save(job)
     flow.m['mq_update_stage'](flow.q,job,stage['id'],error={'message':message})
     monkeypatch.setitem(flow.m,'mq_claude_agents',lambda *a:[])
     monkeypatch.setitem(flow.m,'mq_claude_command',lambda *a:'new version' if changed=='version' else '2.1.289 (Claude Code)\n')
@@ -277,24 +286,23 @@ def test_malformed_inventory_cannot_authorize_execution(module,monkeypatch,bad):
     with pytest.raises(RuntimeError):m['mq_claude_agents']({})
 
 
-@pytest.mark.parametrize('trusted',[False,True])
-def test_preflight_uses_same_native_preferences_as_launch(module,tmp_path,monkeypatch,trusted):
-    m=module['mq_step'].__globals__;home=tmp_path/'client';home.mkdir()
-    config={'cwd':str(tmp_path/'workspace'),'claude_home':str(home)}
-    (home/'.claude.json').write_text(json.dumps({'projects':{config['cwd']:{'hasTrustDialogAccepted':trusted}}}))
-    operations=[]
+@pytest.mark.parametrize('logged_in',[False,True])
+def test_print_preflight_checks_login_and_manager_without_background_inventory(module,tmp_path,monkeypatch,logged_in):
+    m=module['mq_step'].__globals__;operations=[]
     def command(c,args):
-        operations.append(args[0]);return json.dumps({'loggedIn':True}) if args[0]=='auth' else '[]'
+        operations.append(args[0]);assert args==['auth','status','--json']
+        return json.dumps({'loggedIn':logged_in})
     monkeypatch.setitem(m,'mq_claude_command',command)
-    if trusted:
-        m['mq_claude_preflight'](config)
-        assert operations==['auth','agents']
+    monkeypatch.setitem(m,'mq_service_identity',lambda c:operations.append('manager'))
+    if logged_in:
+        m['mq_claude_preflight']({})
+        assert operations==['auth','manager']
     else:
-        with pytest.raises(RuntimeError,match='not trusted'):m['mq_claude_preflight'](config)
+        with pytest.raises(RuntimeError,match='not authenticated'):m['mq_claude_preflight']({})
         assert operations==['auth']
 
 
-@pytest.mark.parametrize('operation,issued',[('--bg',True),('agents',False),('stop',True)])
+@pytest.mark.parametrize('operation,issued',[('agents',False),('stop',True)])
 def test_command_timeout_at_cycle_deadline_yields_with_delivery_evidence(module,tmp_path,monkeypatch,operation,issued):
     m=module['mq_step'].__globals__
     def timeout(argv,**kw):raise subprocess.TimeoutExpired(argv,kw['timeout'])
@@ -426,6 +434,10 @@ def test_recorded_mixed_inventory_artifact_preserves_native_acceptance(flow,monk
     monkeypatch.setitem(flow.m,'mq_claude_command',command)
     job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
     saved=flow.q.job(job['id']);stage=saved['stages'][0]
+    with flow.q.atomic():
+        stage.pop('transport');stage['background_id']=stage['session'][:8];stage['delivery']='sending'
+        flow.q.save(saved)
+    flow.m['mq_claude_accept'](flow.config,flow.q,saved,stage)
     assert stage['delivery']=='accepted' and stage['session']
     assert flow.q.mr(11,82)['chats']['claude']==stage['session']
     flow.drain()

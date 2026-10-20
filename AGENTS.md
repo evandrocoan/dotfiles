@@ -79,7 +79,9 @@ separate. Every configured reviewer runs in order after success or any terminal 
 classifier or fallback mode. Agents return domain proposals; only the monitor journals, publishes
 and confirms effects. Unknown execution cannot release serial capacity. Human requests retain
 actual native source, bounded scope and sufficient-answer holds. Only completed actual code review
-advances the code checkpoint. Use fresh state and lazily created chats; predecessor chats/state
+advances the code checkpoint. New Claude stages use finite print CLI services, with exact native
+stream identities and service/cgroup termination proof; idle sessions retain history without a
+process. Existing issued background stages and native human intake retain their original sources. Use fresh state and lazily created chats; predecessor chats/state
 remain outside the consumer without migration or instruction updates. Earlier sessions created by
 this consumer remain valid original human/hold sources. Preserve exact native input/result identity,
 concern consolidation, immutable publication identities and whole-discussion resolution checks.

@@ -647,9 +647,9 @@ MR waiting while other MRs proceed. An incomplete GitLab diff remains deferred b
 retry does not claim that missing context was reviewed.
 
 `status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
-include their native `name`, `session` and actual `remote_url` when available; open that URL to
-find the Remote Control conversation. Older registered sessions can supply missing links through
-read-only native history lookup. Missing link metadata does not block the rest of the status.
+include their native `name`, `session`, saved result or error, and a copyable `resume_command`
+to open the conversation later in the CLI using its original directory and native history.
+Saved conversations do not keep an idle process or require a browser connection.
 
 The monitor handles queue administration, comments, replies, resolutions and authenticated
 read-back. Reviewers return proposals rather than publishing. Uncertain native execution keeps
@@ -661,8 +661,9 @@ credential in Codex configuration for the selected HTTPS origin. Native Codex ac
 the already installed optional `websockets` package. The reviewer permission profile is supplied
 per chat; no global permission-profile installation is needed. Unrelated commands, help and
 offline status do not import that package. Claude uses the
-installed, signed-in CLI and its subscription through background mode with Remote Control; no new
-inference API key is configured. Run `claude auth login` when its existing login needs renewal.
+installed, signed-in CLI and its subscription in finite print mode under the existing user systemd
+manager; no new inference API key is configured. Run `claude auth login` when its existing login
+needs renewal.
 
 For a new installation, create private JSON connection settings and an adjacent analysis TOML:
 
@@ -712,7 +713,7 @@ branch and test command and must preserve pre-existing work and verify the actua
 The monitor does not map repositories to folders or prepare checkouts. The authenticated GitLab
 diff and read-only exact-SHA file reader remain available. Queue/native state stays protected;
 intake launches remain read-only. These launch settings do not serialize manual turns you start
-directly in either app.
+directly in the Codex app or Claude CLI.
 
 For Codex, close the ordinary app normally and open **Codex Monitor** from the applications menu.
 The [desktop entry](.local/share/applications/codex-monitor.desktop) uses the existing
@@ -729,8 +730,11 @@ Fresh work uses a separate private queue, by default under
 imported, changed or read for new human requests. New Codex chats are created lazily per MR in the
 configured project. Folder or shared-instruction changes use a fresh Codex chat, preserving
 earlier consumer chats as answer surfaces without updating their loaded instructions. Claude
-creates registered background sessions with Remote Control; its native
-results and questions remain there, including earlier sessions owned by this new consumer.
+runs a finite CLI command for each stage and saves its native session. There is no web
+accompaniment or process kept alive for an idle chat. The installed Linux app does not import
+these automated sessions; use the CLI. `status` shows the result/question, session ID and a
+copyable `resume_command` that opens the original directory and native home. Answer there normally;
+earlier sessions owned by this consumer remain valid answer surfaces.
 The first inventory reviews the current head of each open MR and reads existing public concerns.
 
 Before switching from the predecessor, let its native reviews finish, then stop its timer/service.
@@ -752,7 +756,8 @@ systemctl --user disable codex-gitlab-monitor.service
 ```
 
 Then install and load the unit before stopping the old process. Its scoped `KillMode=process`
-preserves native background reviewers when the monitor exits:
+preserves already issued reviewers when the monitor exits. New Claude executions use transient
+user services created automatically; no extra unit file or timer needs installation:
 
 ```bash
 cp ~/scripts/install/systemd/user/codex-gitlab-monitor.service ~/.config/systemd/user/
@@ -774,9 +779,14 @@ has a 14-minute final timeout; its process-only stop policy preserves native rev
 
 Run `codex-session-stats monitor-gitlab tick` for an immediate cycle. Concurrent invocations return
 `cycle: busy` without disturbing the active cycle. Budget exhaustion preserves ready work for the
-next cycle instead of recording a failed reviewer. Preflight checks Claude login, the exact native
-workspace trust and its mixed session inventory. The standard Claude home uses its normal native
-preferences; an explicitly configured custom home keeps its separate preferences.
+next cycle instead of recording a failed reviewer. Preflight checks Claude login and the user
+systemd manager. The standard Claude home uses its normal native preferences; an explicitly
+configured custom home keeps its separate preferences. Each Claude service has a runtime limit
+and stops its descendants on failure or timeout. The next cycle confirms termination before
+starting Codex; missing or ambiguous execution evidence retains the occupied slot. Existing
+issued background reviews finish through their original reader, without restarting or migrating
+them. The private `executions` directory beside the queue retains stdout, stderr and completion
+evidence; status includes the exact service unit for `systemctl --user status UNIT` diagnostics.
 
 Use the new MR chat normally for an explicit additional request after completion. The monitor
 reads the actual native source and bounded action assessment, then queues it without fabricating

@@ -48,7 +48,7 @@ def project(flow, monkeypatch):
             return {'content':[{'type':'text','text':json.dumps(result)}]}
         return native(config,method,params,**kwargs)
     def cli(config, args):
-        if args[0] == '--bg':
+        if args[0] == '--print':
             f.claude_wire.append((config['cwd'],args[:]))
         return claude(config,args)
     monkeypatch.setitem(f.m,'monitor_native',wire)
