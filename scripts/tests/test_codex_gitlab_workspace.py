@@ -67,6 +67,22 @@ def additional(args):
     return args[start:end]
 
 
+@pytest.mark.parametrize('model,expected',[(None,'claude-opus-5-5'),('claude-sonnet-5-5','claude-sonnet-5-5')])
+def test_claude_default_and_toml_override_reach_native_cli(project,model,expected):
+    f=project
+    analysis=f.config_path.parent/'analysis.toml'
+    if model is not None:
+        with analysis.open('a') as stream:stream.write('claude_model='+json.dumps(model)+'\n')
+    loaded=f.m['mq_config'](f.config_path)
+    f.config.clear();f.config.update(loaded)
+    enqueue(f);f.drain()
+    args=f.claude_wire[0][1]
+    assert args.count('--model')==1
+    assert args[args.index('--model')+1]==expected
+    assert f.q.jobs()[0]['state']=='completed'
+    assert f.sends==[]
+
+
 def test_same_five_roots_reach_both_real_dispatchers_without_global_writes(project):
     f=project
     config_before=f.config_path.read_bytes()

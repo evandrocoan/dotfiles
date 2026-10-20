@@ -3049,6 +3049,7 @@ def mq_config(path, *, diagnostic=False):
     if queue_path.is_relative_to(legacy.parent) or queue_path.is_relative_to(Path(config['codex_home'])):
         raise RuntimeError('fresh queue must be outside predecessor/agent-writable and native state')
     config['claude_home'] = str(Path(config.get('claude_home', '~/.claude')).expanduser().resolve())
+    config.setdefault('claude_model','claude-opus-5-5')
     config.setdefault('review_timeout_seconds',1800)
     if type(config['review_timeout_seconds']) is not int or config['review_timeout_seconds'] < 1:
         raise RuntimeError('review_timeout_seconds must be a positive integer')

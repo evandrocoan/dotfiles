@@ -678,8 +678,9 @@ interval_minutes = 15
 ```
 
 Use `reviewers = ["codex", "claude"]` for the reverse order, or a single item to enable just one.
-Optional `claude_model` and `claude_effort` (`low`, `medium`, `high`, `xhigh`, `max`) pass explicit CLI settings; otherwise Claude
-inherits its own model and effort settings. Optional `review_timeout_seconds` defaults to 1800. A timed-out known
+Optional `claude_model` defaults to `claude-opus-5-5`; an explicit value overrides this default.
+Optional `claude_effort` (`low`, `medium`, `high`, `xhigh`, `max`) passes an explicit CLI setting;
+when omitted, Claude inherits its own effort settings. Optional `review_timeout_seconds` defaults to 1800. A timed-out known
 execution is interrupted and observed before the next reviewer starts. Existing single-project
 `project_id`/`project_path` settings are also accepted instead of `projects`. Both forms share the
 same FIFO, keyed by repository ID plus MR IID. New jobs snapshot their reviewer order.

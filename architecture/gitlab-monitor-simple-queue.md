@@ -97,8 +97,9 @@ native session identity and authenticated original input/results; no fabricated 
 in for Claude review. Historical Codex chats remain outside the new consumer. Results/questions stay in the reviewer's own
 native app: Claude Remote Control or the Codex MR chat. Register fresh Claude sessions per review
 when needed, preserving their source history and sufficient-answer routing with distinct original
-source and execution identities; do not run an extra Codex model solely for presentation. Inherited model and effort settings remain
-unless the user explicitly configures overrides. No new credential route.
+source and execution identities; do not run an extra Codex model solely for presentation.
+When the monitor configuration omits `claude_model`, use `claude-opus-5-5`; an explicit value
+takes precedence. Omitted effort retains Claude's own effort settings. No new credential route.
 
 ## Stage barrier and consolidated publication
 
