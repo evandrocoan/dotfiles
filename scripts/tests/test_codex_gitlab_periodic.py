@@ -69,7 +69,8 @@ def test_successive_ticks_resume_same_stage_then_advance_and_exit(flow,monkeypat
         result=flow.tick()
         assert result['cycle']=='checked'
         assert flow.launched==expected
-    assert flow.q.job(job['id'])['state']=='completed'
+    assert flow.q.job(job['id'])['state']==('pending' if first_failure else 'completed')
+    assert flow.q.job(job['id'])['wait_reason']==('reviewer_retry' if first_failure else None)
     assert flow.q.mr(11,82)['reviewed_head']=='a'*40
 
 
@@ -438,7 +439,9 @@ def test_recorded_mixed_inventory_artifact_preserves_native_acceptance(flow,monk
     assert flow.q.mr(11,82)['chats']['claude']==stage['session']
     flow.drain()
     assert consumed==[capture['operation']]
-    assert flow.q.job(job['id'])['state']=='completed'
+    saved=flow.q.job(job['id'])
+    assert [s['state'] for s in saved['stages']]==['failed','succeeded']
+    assert saved['wait_reason']=='reviewer_retry' and saved['review_attempt']['reviewers']==['claude']
     assert flow.launched==['claude','codex'] and flow.sends==[]
 
 

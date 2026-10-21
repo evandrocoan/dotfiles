@@ -348,11 +348,11 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
     try:
         job=f.q.enqueue(11,82,source_key='native-print',kind='code',head='a'*40,
             source={'origin':'automatic'},context=f.context)
-        assert m['mq_step'](f.config,f.q)
+        assert m['mq_consume'](f.config,f.q)
         stage=f.q.job(job['id'])['stages'][0]
         deadline=time.monotonic()+40
         while time.monotonic()<deadline:
-            m['mq_step'](f.config,f.q)
+            m['mq_consume'](f.config,f.q)
             saved=f.q.job(job['id'])
             if saved['stages'][0]['state']!='running':break
             time.sleep(.1)

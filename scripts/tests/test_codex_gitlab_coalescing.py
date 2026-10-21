@@ -251,7 +251,7 @@ def test_failed_group_retries_without_recreating_absorbed_work(flow,monkeypatch)
     automatic(flow.q,'comments',kind='discussion',context=flow.context)
     flow.results.update(claude=RuntimeError('terminal'),codex=RuntimeError('terminal'));flow.drain()
     failed=flow.q.job(first['id'])
-    assert failed['wait_reason']=='all_failed' and len(failed['coalesced_jobs'])==1
+    assert failed['wait_reason']=='reviewer_retry' and len(failed['coalesced_jobs'])==1
     assert flow.q.mr(11,82)['reviewed_head'] is None and len(flow.q.jobs('pending'))==1
     monkeypatch.setitem(flow.m,'mq_stamp',lambda:failed['retry_at']+1)
     flow.results.update(claude=domain(),codex=domain());flow.drain()

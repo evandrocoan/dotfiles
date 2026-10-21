@@ -405,7 +405,7 @@ sys.stdin.readline();child.stdin.close();child.wait(timeout=15)
                 failed=queue.job(job['id'])['stages'][0]
                 assert failed['state']=='failed' and failed['delivery']=='prepared'
                 m['mq_consume'](config,queue)
-                waiting=queue.job(job['id']);assert waiting['wait_reason']=='all_failed'
+                waiting=queue.job(job['id']);assert waiting['wait_reason']=='reviewer_retry'
                 stamp=m['mq_stamp']
                 monkeypatch.setitem(m,'mq_stamp',lambda:waiting['retry_at']+1)
                 try:assert m['mq_consume'](config,queue)
@@ -421,7 +421,7 @@ sys.stdin.readline();child.stdin.close();child.wait(timeout=15)
                 if queue.job(job['id'])['state']=='running':time.sleep(.1)
             saved=queue.job(job['id'])
             if context_change:
-                assert saved['state']=='pending' and saved['wait_reason']=='all_failed',saved
+                assert saved['state']=='pending' and saved['wait_reason']=='reviewer_retry',saved
                 assert not gl.posts and not queue.effects()
                 assert queue.mr(11,82)['reviewed_head'] is None
                 reason='head changed' if context_change=='head' else 'native input changed or became mixed'
@@ -430,10 +430,12 @@ sys.stdin.readline();child.stdin.close();child.wait(timeout=15)
                     assert 'Explain the review only; do not publish.' in json.dumps(provider.requests[2]['input'])
                 return
             assert saved['state']=='completed',(saved,queue.meta('consumer_error'),provider.requests[-1:])
+            assert 'The operator already selected model/effort for this stage' in json.dumps(provider.requests)
+            assert 'do not offer upgrades/downgrades' in json.dumps(provider.requests)
             assert len(gl.posts)==1 and queue.effects()[0]['state']=='confirmed'
-            assert saved['stages'][0]['state']=='succeeded' and saved['stages'][0].get('finish_intent')
+            assert saved['stages'][-1]['state']=='succeeded' and saved['stages'][-1].get('finish_intent')
             assert queue.mr(11,82)['reviewed_head']=='a'*40
-            assert 'csm-review' not in saved['stages'][0]['summary']
+            assert 'csm-review' not in saved['stages'][-1]['summary']
         finally:
             errors.flush();errors.seek(0);(tmp_path/'native.stderr').write_text(errors.read())
             (tmp_path/'requests.json').write_text(json.dumps(provider.requests,indent=2))

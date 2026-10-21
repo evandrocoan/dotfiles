@@ -60,6 +60,9 @@ all repositories. Pending jobs can carry a wait reason and retry time. Settle su
 remain pending. One dedicated singleton process lock protects the consumer. The consumer lock also excludes operator recovery/cutover; short SQLite transactions protect state
 boundaries, while inventory HTTP runs outside SQLite transactions within the bounded cycle. Producers enqueue
 transactionally and cannot interrupt the consumer. There is no competing reservation machine.
+Selective reviewer retries move the same job's scheduling sequence to the tail, retaining its
+original sequence and immutable admission/source. New arrivals follow that position. Repeated
+requeue is transactional and idempotent; a pending retry is not enqueued again.
 
 Unstarted automatic code/discussion events for the same authenticated repository and MR share
 one pending representative at the oldest FIFO position, targeting the latest admitted head and
@@ -109,20 +112,34 @@ code checkpoint; human and discussion work cannot fabricate one.
 ## Ordered reviewer stages
 
 An admitted job snapshots its ordered nonempty unique list of enabled reviewers. Every configured
-reviewer runs once in that order, including after an earlier success or failure. One reviewer is
+reviewer runs in the first attempt in that order, including after an earlier success or failure. One reviewer is
 valid. There is no fallback mode, quota classifier or success-based skipping. Record each result
 or failure honestly and continue to the next reviewer after the preceding execution is terminal.
 A failed stage never contributes reviewed coverage. At least one complete valid review of the
 exact target head is required before advancing a code checkpoint. Publication during an active
 review does not depend on that reviewer or a later reviewer ultimately succeeding.
 
+After all reviewers in an attempt terminate, only reviewers whose latest review failed return to
+the tail of the same FIFO, eligible after the configured interval. Successful reviewers are not
+rerun. A subsequent failed attempt follows the same rule. Keep the same job, exact head, frozen
+workspace, all stage IDs/results and public-operation identities. Each attempt records its reviewer
+subset and stage boundary. A sufficient-answer or protocol full reset clears those attempt bounds
+together with the stages; selective retry never performs that reset.
+
 Authentication, network, credits, invalid output and other terminal failures all follow the same
 continuation rule. Preserve partial evidence and confirmed receipts, but do not call a failed
-stage a successful review. If every reviewer fails, retain unfinished work for bounded retry with
-a visible reason. Unknown execution is still running rather than a proven failure: reconcile or
+stage a successful review. A failed review remains pending for a later attempt with a visible
+reason, even if another reviewer succeeded. Unknown execution is still running rather than a proven failure: reconcile or
 interrupt that exact execution and prove termination before starting another, preserving serial
 capacity. Human questions retain their sufficient-answer hold; they are not authorization to
 publish. Reviewer stages are fields of one job, not another queue or capacity authority.
+
+The consumer also re-admits its previously completed partial-success review jobs once through this
+same transition. Administrative, explanation, superseded and closed outcomes do not reopen.
+Retain existing checkpoints and completion history. A valid successful review can advance the
+normal code checkpoint before requeue; interrupted settlement is recovered through the same
+completed-job check. Revalidate repository admission, native human scope, current head and open
+state before launching the retry. Original human holds and uncertain sends remain authoritative.
 
 New Claude stages use a finite signed-in CLI process in print stream-JSON mode, owned by a
 transient user systemd service. Preserve native session history and an explicit session UUID for
@@ -162,7 +179,7 @@ actual discussions, not line grouping or mandatory concern/disposition inventori
 
 Every configured reviewer must reach proven termination before job completion, except that a
 human question or uncertain effect preserves its hold before the next mutable stage. A successful
-first stage never skips the second. An entirely failed round waits for a bounded retry; no failed
+first stage never skips the second. Failed reviewers wait for a selective retry; no failed
 stage contributes coverage. The monitor neither regenerates a final consolidated batch nor
 publishes historical saved proposals on behalf of a new round.
 
@@ -225,8 +242,8 @@ concern from every author. Human disagreement alone cannot resolve a discussion.
 context mismatch. Never re-resolve or reopen automatically.
 
 A possibly delivered send requires exact marker/body/actor/context reconciliation. Missing
-read-back is not proof of non-delivery and cannot authorize a blind retry. Park ambiguity for read-back without discarding it. An entirely failed round or failed terminal
-consumer operation uses the configured interval before retrying, without a quota classifier.
+read-back is not proof of non-delivery and cannot authorize a blind retry. Park ambiguity for read-back without discarding it. Selective reviewer retries and failed terminal
+consumer operations use the configured interval before retrying, without a quota classifier.
 Retries preserve completed stages, immutable inputs, workspace and confirmed receipts. Proven
 unsent prepared effects may be cancelled with a reason; they never become fabricated receipts.
 Possibly issued effects prevent reset until reconciled. Parking terminal work counts as progress,
@@ -240,6 +257,13 @@ IDs and source bytes when later rounds require fresh chats. Do not update loaded
 runtime instruction replacement. Verify creation and cold-resume model input with the installed
 binary and a local fixture provider. Saved settings alone do not prove instruction inclusion.
 No production model turns or artificial public writes are validation evidence.
+
+For monitor-dispatched stages the configured model and effort, including intentionally inherited
+client settings, are already the operator's sufficient selection. Shared instructions and exact
+stage input carry this delegation; native launch uses that stage's selection. Do not introduce
+model-choice holds before admitted work. Existing native holds still require their real sufficient
+answers; manual chats and domain-question policy are unchanged. New instruction versions must not
+change how older compact human assessments are authenticated and read.
 
 Each 15-minute systemd trigger runs one bounded queue cycle and exits, using a oneshot service
 without automatic restart or a resident scan helper. The current TOML cadence/window governs
@@ -287,6 +311,7 @@ cutover. New work uses fresh instructions without moving, migrating or rewriting
 | Durable FIFO and capacity | Jobs, consumer, locks | Competing processes, restart, immediate progression |
 | Automatic event grouping | `MonitorQueue` enqueue/reserve coalescing and original admissions | `test_codex_gitlab_coalescing.py`: FIFO, frozen work, barriers, repeat/restart, concurrent transactions; sanitized pending-event artifact replay |
 | Operation recovery | Native collectors, cold context normalization, consumer retry/status | `test_codex_gitlab_recovery.py`: sanitized native artifacts, retry/restart without relaunch, two-failure tick progress, prepared/confirmed effects, source/context denials and CLI resume commands |
+| Selective reviewer retry | `MonitorQueue` attempt bounds, transactional tail move and worker settlement | `test_codex_gitlab_retries.py`: both orders, interval/FIFO/restart, partial-success backfill, native questions, reset interruption, old-call denial, receipt reuse and checkpoint guards |
 | Finite Claude execution | Transient service, receipt and stream collector | `test_codex_gitlab_print.py` and installed-client fixtures: native identities, split finals, lost acknowledgment, live descendants, timeout and resume |
 | Exact native/result identity | Scoped MCP authentication, result collector and dispatch journal | `test_codex_gitlab_tools_native.py`: installed clients, real SDK/stdio, local model/GitLab fixtures, first-turn connection, no real inference/publication |
 | Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |

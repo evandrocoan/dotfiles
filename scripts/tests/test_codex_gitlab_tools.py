@@ -252,7 +252,8 @@ def test_unknown_send_keeps_capacity_then_parks_and_readback_never_resends(activ
         assert f.q.job(f.job)['wait_reason'] is None
         assert f.q.next_reviewer(f.q.job(f.job))=='claude'
         f.drain()
-        assert f.q.job(f.job)['state']=='completed'
+        assert f.q.job(f.job)['wait_reason']=='reviewer_retry'
+        assert f.q.job(f.job)['review_attempt']['reviewers']==['codex']
         assert f.launched==['codex','claude','codex','claude'] and len(f.sends)==1
 
 

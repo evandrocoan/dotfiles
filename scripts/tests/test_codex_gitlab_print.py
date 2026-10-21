@@ -86,7 +86,8 @@ def test_terminal_service_failure_always_continues_next_reviewer(flow,failure):
     saved=f.q.job(job['id'])
     assert [s['state'] for s in saved['stages']]==['failed','succeeded']
     assert failure in saved['stages'][0]['error']['message']
-    assert f.launched==['claude','codex'] and saved['state']=='completed'
+    assert f.launched==['claude','codex'] and saved['wait_reason']=='reviewer_retry'
+    assert saved['review_attempt']['reviewers']==['claude']
 
 
 def test_lost_launch_acknowledgment_reconciles_same_invocation_once(flow,monkeypatch):

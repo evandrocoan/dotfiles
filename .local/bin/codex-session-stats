@@ -2866,7 +2866,8 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 3
+MQ_INSTRUCTIONS_VERSION = 4
+MQ_COMPACT_ASSESSMENT_VERSION = 3
 
 
 def mq_reviewers(value):
@@ -3117,9 +3118,8 @@ class MonitorQueue:
             self.check_running(job)
             if any(s['state'] == 'running' for s in job['stages']):
                 raise RuntimeError('previous reviewer execution is not terminal')
-            count = sum(s.get('purpose')!='question' for s in job['stages'])
             expected = ([job['pending_question']['reviewer']] if purpose=='question'
-                        and job.get('pending_question') else job['reviewers'][count:])
+                        and job.get('pending_question') else [self.next_reviewer(job)])
             if not expected or reviewer != expected[0]:
                 raise RuntimeError('reviewer order changed')
             stage = {'id': monitor_id(), 'reviewer': reviewer, 'state': 'running',
@@ -3145,8 +3145,41 @@ class MonitorQueue:
     def next_reviewer(self, job):
         if any(s['state'] == 'running' for s in job['stages']):
             return None
-        index = sum(s.get('purpose')!='question' for s in job['stages'])
-        return job['reviewers'][index] if index < len(job['reviewers']) else None
+        attempt = job.get('review_attempt', {'start':0,'reviewers':job['reviewers']})
+        index = sum(s.get('purpose')!='question' for s in job['stages'][attempt['start']:])
+        return attempt['reviewers'][index] if index < len(attempt['reviewers']) else None
+
+    def requeue_failed(self, job):
+        """Move the same admitted job to the tail, retrying only missing review coverage."""
+        with self.atomic():
+            if self.job(job['id']) != job or job['epoch'] != self.epoch:
+                raise RuntimeError('stale retry job')
+            if (job['kind'] not in {'code','discussion','human'}
+                    or job['state'] not in {'running','completed'}
+                    or job['state']=='completed' and job['outcome']!='reviewed'
+                    or any(s['state']=='running' for s in job['stages'])
+                    or self.next_reviewer(job) is not None or job.get('pending_question')
+                    or self.mr(job['repository_id'],job['iid']).get('hold')):
+                return False
+            if any(e['repository_id']==job['repository_id'] and e['iid']==job['iid']
+                   and e['state'] not in {'confirmed','cancelled'} for e in self.effects()):
+                return False
+            latest = {s['reviewer']:s for s in job['stages'] if s.get('purpose')!='question'}
+            failed = [r for r in job['reviewers'] if r in latest and latest[r]['state']=='failed']
+            if not failed:
+                return False
+            old = job['sequence']
+            position = self.db.execute('SELECT COALESCE(MAX(sequence),0)+1 FROM jobs').fetchone()[0]
+            self.db.execute('UPDATE jobs SET sequence=? WHERE id=? AND sequence=?', (position,job['id'],old))
+            job.setdefault('original_sequence',old)
+            if job['state']=='completed':
+                job.setdefault('completion_history',[]).append(
+                    {'outcome':job['outcome'],'completed_at':job.pop('completed_at')})
+            job.update(sequence=position,state='pending',outcome=None,wait_reason='reviewer_retry',
+                retry_at=mq_stamp()+self.config['interval_minutes']*60,
+                review_attempt={'start':len(job['stages']),'reviewers':failed},coalescing_frozen=True)
+            self.save(job)
+            return True
 
     def review_result(self, job):
         if self.next_reviewer(job) is not None or any(s['state'] == 'running' for s in job['stages']):
@@ -3327,6 +3360,10 @@ def mq_instructions():
 project commands. Choose the repository, branches, context and tests from the supplied workspace;
 preserve existing work and verify exact SHAs before claiming test coverage. Do not delegate,
 commit, reset, clean, stash or create worktrees unless explicitly requested.
+For these monitor-dispatched stages, the operator has already selected the configured model and
+thinking effort, including intentionally inherited client settings. Treat that selection as pinned
+for this work: do not offer upgrades/downgrades or ask for model/effort confirmation. Proceed with
+the admitted work. This delegation does not answer domain questions or change human-source rules.
 Use gitlab_review tools to read the MR/files/discussions and publish actionable findings inline,
 reply to comments, and resolve evidenced fixes or bot false positives. These tools belong to the
 monitor and handle its journal and confirmations. Do not use other credentials, write monitor or
@@ -3554,6 +3591,7 @@ def mq_input(queue, job, stage, context):
     data = {'url':context['mr'].get('web_url') or queue.config['gitlab_url']+'/'+job['repository_path']
             +'/-/merge_requests/'+str(job['iid']),
         'head':job['head'],'kind':'presentation' if stage.get('purpose')=='question' else job['kind'],
+        'model_selection':stage.get('model_selection'),
         'workspace':job['workspace'],
         'original_source':queue.admission(queue.job(job.get('target_event',job['id'])))['source'],
         'answers':job.get('answers',[]),'scope':job.get('scope'),
@@ -3572,6 +3610,8 @@ def mq_input(queue, job, stage, context):
             os.fsync(stream.fileno())
     return ('Registered GitLab MR work: '+data['url']+'. Read the immutable input file '
         +str(target)+' (SHA-256 '+hashlib.sha256(encoded).hexdigest()+'). '
+        'The operator already selected model/effort for this stage: '+json.dumps(data['model_selection'])+'. '
+        'Proceed without asking to change model/effort. '
         'Use gitlab_review tools and investigate this exact head in the supplied workspace. '
         'Intake/presentation is read-only. End with a readable summary; intake uses csm-assessment. '
         'Dispatch marker: '+stage['id']+'.')
@@ -4771,6 +4811,7 @@ def mq_reset_round(queue,job,reason):
         job.setdefault('rounds',[]).append({'reason':reason,'stages':job['stages'],'batch':job['batch'],
                                           'workspace':job.get('workspace')})
         job.update(stages=[],batch=None,outcome=None,needs_round_reset=False,workspace=None)
+        job.pop('review_attempt',None)
         queue.save(job)
 
 
@@ -4820,7 +4861,7 @@ def mq_intake(config,queue,record):
             try:
                 if '```csm-assessment' in text:
                     result = mq_parse_assessment(text,context,source)
-                elif record.get('instruction_versions',{}).get(source['session'],0)<MQ_INSTRUCTIONS_VERSION:
+                elif record.get('instruction_versions',{}).get(source['session'],0)<MQ_COMPACT_ASSESSMENT_VERSION:
                     result = mq_parse_result(text,record['repository_id'],record['iid'],context['head'])
             except (RuntimeError,ValueError):
                 result = None
@@ -5395,7 +5436,12 @@ def mq_adopt_tools(queue,job):
 
 
 def mq_step(config,queue):
-    job = queue.reserve({p['id'] for p in mq_repositories(config)})
+    # Re-admit partial successes from this consumer only; source IDs and checkpoints stay put.
+    allowed = {p['id'] for p in mq_repositories(config)}
+    for completed in queue.jobs('completed'):
+        if completed['repository_id'] in allowed:
+            queue.requeue_failed(completed)
+    job = queue.reserve(allowed)
     if job is None:
         return False
     enabled = job['repository_id'] in {p['id'] for p in mq_repositories(config)}
@@ -5469,13 +5515,16 @@ def mq_step(config,queue):
         if mq_release_answer(scoped,queue,job):
             return True
     if job.get('resumed_from')=='all_failed' and job['outcome']=='retry':
-        mq_reset_round(queue,job,'bounded reviewer retry')
-    if not job['stages']:
+        if queue.requeue_failed(job):return True
+        mq_reset_round(queue,job,'bounded intake retry')
+    attempt_start = job.get('review_attempt',{}).get('start',0)
+    if not job['stages'][attempt_start:]:
         context = mq_context(scoped,job['iid'],with_diff=False)
         if context['mr']['state'] != 'opened':
             queue.finish(job,'MR closed or merged')
             return True
-        if context['head'] != job['head'] and (job['kind']=='code' or job.get('coalesced_jobs')):
+        if context['head'] != job['head'] and (job['kind']=='code' or job.get('coalesced_jobs')
+                                             or job.get('review_attempt')):
             queue.finish(job,'superseded by a new head')
             return True
         mq_verify_job_sources(scoped,queue,job)
@@ -5524,6 +5573,7 @@ def mq_step(config,queue):
         return True
     result = queue.review_result(job)
     if result is None:
+        if queue.requeue_failed(job):return True
         with queue.atomic():
             queue.check_running(job)
             job['outcome'] = 'retry'
@@ -5541,13 +5591,24 @@ def mq_step(config,queue):
             return True
         if current['head']!=job['head'] or current['mr']['state']!='opened':
             queue.finish(job,'context changed; completed publications preserved',reviewed=False)
-        else:queue.finish(job,'reviewed',reviewed=job['kind']=='code')
+        else:
+            queue.finish(job,'reviewed',reviewed=job['kind']=='code')
+            queue.requeue_failed(job)
         return True
     raise RuntimeError('unsupported review protocol')
 
 
 def mq_launch_stage(config,queue,job,stage):
     if job.get('protocol')=='tools':config = mq_workspace_config(config,job)
+    if 'model_selection' not in stage:
+        choice = ({'model':config['model'],'effort':config['effort']} if stage['reviewer']=='codex'
+                  else {'model':config.get('claude_model'),'effort':config.get('claude_effort')})
+        mq_update_stage(queue,job,stage['id'],model_selection=choice)
+    choice = stage['model_selection']
+    config = {**config,**({'model':choice['model'],'effort':choice['effort']} if stage['reviewer']=='codex'
+                        else {'claude_model':choice['model'],'claude_effort':choice['effort']})}
+    if stage['reviewer']=='claude' and choice['effort'] is None:
+        config.pop('claude_effort',None)
     if not stage['input']:
         text = mq_input(queue,job,stage,job['context'])
         mq_update_stage(queue,job,stage['id'],input=text)
@@ -5965,7 +6026,7 @@ def mq_job_status(job, config=None):
         value['result'] = stage.get('result')
         return value
     fields = ('id','sequence','repository_id','iid','kind','head','state','wait_reason','retry_at','outcome','validation_error',
-        'admission','coalesced_jobs','coalesced_into','target_event','last_error')
+        'admission','coalesced_jobs','coalesced_into','target_event','last_error','original_sequence','review_attempt')
     return {**{k:job.get(k) for k in fields},'reviewers':job['reviewers'],
         'source':{k:job['source'].get(k) for k in ('origin','provider','session','source_id','turn_id')},
         'stages':[stage_status(stage,job.get('workspace')) for stage in job['stages']],

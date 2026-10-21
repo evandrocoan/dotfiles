@@ -77,7 +77,10 @@ IID. Coalesce unstarted automatic work per MR at its oldest FIFO position, prese
 event lineage and freezing membership at reservation. Human work and previously issued work remain
 separate. Every configured reviewer runs in order after success or any terminal failure; no quota
 classifier or fallback mode. Agents investigate the MR link and publish during review through
-round-bound monitor tools; only the monitor journals, sends and confirms effects. No final JSON
+round-bound monitor tools. After an attempt, only failed reviewers return to the FIFO tail with
+the configured interval; successful stages remain completed. The configured model/effort is already
+the operator's selection for dispatched work. Real questions retain their native answer holds;
+only the monitor journals, sends and confirms effects. No final JSON
 review or all-reviewer publication barrier. Unknown execution cannot release serial capacity. Human requests retain
 actual native source, bounded scope and sufficient-answer holds. Only completed actual code review
 advances the code checkpoint. New Claude stages use finite print CLI services, with exact native

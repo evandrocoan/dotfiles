@@ -434,7 +434,7 @@ def test_worker_runs_both_and_settles_actual_coverage(flow,first_failure,second_
     assert flow.launched==['claude','codex']
     saved=flow.q.job(job['id'])
     assert [s['state'] for s in saved['stages']]==['failed' if f else 'succeeded' for f in [first_failure,second_failure]]
-    assert saved['state']==('pending' if first_failure and second_failure else 'completed')
+    assert saved['state']==('pending' if first_failure or second_failure else 'completed')
     assert flow.q.mr(11,82)['reviewed_head']==(None if first_failure and second_failure else 'a'*40)
     assert flow.sends==[]
 
@@ -708,7 +708,9 @@ def test_unknown_public_delivery_readback_recovers_without_second_send(flow,monk
     result=flow.m['mq_recover'](flow.config,job['id'])
     assert result['reconciled'] and len(flow.sends)==1
     flow.drain()
-    assert flow.q.job(job['id'])['state']=='completed' and len(flow.sends)==1
+    saved=flow.q.job(job['id'])
+    assert saved['wait_reason']=='reviewer_retry' and len(flow.sends)==1
+    assert saved['review_attempt']['reviewers']==['codex']
 
 
 def test_missing_public_readback_never_authorizes_resend(flow,monkeypatch):

@@ -1,0 +1,11 @@
+{
+  "boundary": "Partial provider terminal text and readable question; not a native session replay",
+  "claude_result": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": true,
+    "result": "You've hit your session limit · resets 12:30pm (America/Sao_Paulo)",
+    "stop_reason": "stop_sequence"
+  },
+  "codex_question": "Para revisar este MR documental e suas discussões, recomendo gpt-6.1-sol com esforço medium: é suficiente para o escopo atual e reduz o custo em relação ao xhigh. Qual opção você prefere? Se escolher a troca, ajuste o modelo e o esforço no cliente antes de responder.\n\n1. Trocar para gpt-6.1-sol com esforço medium (recomendado).\n2. Manter gpt-6.1-sol com esforço xhigh.\n\nVocê também pode indicar outro modelo e esforço em texto livre."
+}

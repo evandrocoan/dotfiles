@@ -785,6 +785,11 @@ Completion, timeout and human-answer pickup normally wait until the next 15-minu
 The TOML interval/window governs automatic inventory; existing work and recovery can proceed after
 22:00. A failed cycle leaves its saved state for the next trigger. An inactive service between
 triggers is normal; keep the timer enabled. No resident monitor or scan helper is required.
+After all configured reviewers run, only reviewers that failed return to the end of the same
+queue, waiting at least the configured interval before another attempt. Successful reviewers do
+not repeat. This also covers earlier partial successes in the current queue; questions and
+unconfirmed publications keep their existing holds. Model and effort are already selected by
+the monitor configuration, without an additional model-choice question in each review.
 HTTP operations respect the cycle's total deadline even with slowly arriving data. The unit also
 has a 14-minute final timeout; its process-only stop policy preserves native reviewers for recovery.
 
