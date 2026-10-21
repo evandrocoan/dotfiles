@@ -5,12 +5,18 @@ The fresh consumer is installed; predecessor state and chats remain untouched an
 
 ## Decision and scope
 
-The monitor owns one durable FIFO and one supervised consumer. Agents review and return domain
-results; the script handles admission, publication, read-back and recovery. Preserve existing
-repository identity, human requests and holds admitted by this consumer, actual reviewed progress
-and publication provenance. Start with fresh monitor state and newly created MR chats. Leave
-predecessor chats and state untouched: no import, adoption, relocation or instruction update.
-No additional queue/MCP server, dependency or credential route.
+The monitor owns one durable FIFO and one supervised consumer. Admitted reviewers receive the
+MR link and frozen workspace, obtain context on demand, investigate and publish during native
+execution through scoped tools. The monitor owns admission, public-operation journaling,
+authenticated read-back and recovery; it does not judge semantic duplicates or choose between
+reviewers. No final JSON review report or all-reviewer publication barrier is required.
+
+Preserve repository identity, human requests and holds admitted by this consumer, actual reviewed
+progress and publication provenance. The original fresh-queue cutover left predecessor state and
+chats untouched. Subsequent tool adoption retains this consumer's queue and original sources.
+New chats receive current instructions; never rewrite loaded historical instructions. The optional
+official MCP SDK supplies a client-launched stdio transport, not another queue, scanning service or
+credential route. Codex and Claude use the same round-bound tools with per-launch approvals.
 
 **Workspace execution amendment:** Reviewers may execute commands, edit files, change
 branches and run tests in the configured workspace folders and their necessary shared Git
@@ -76,25 +82,29 @@ internal epoch and exact native execution attempt. Persist exact automatic input
 start and prove its acknowledgment or reconcile that exact delivery. Acceptance is not review.
 Unknown native execution retains the running slot; elapsed time is not evidence of termination.
 
-The agent returns a versioned domain result in the actual native final message: proposed comments,
-replies or resolutions with evidence, actual reviewed head, concerns, a question or an outcome.
-It never selects generations, events, reservation identifiers, execution tokens or receipts.
-All former agent mutating CLI payloads fail safely; no delayed command can obtain another turn's
-authority. Read-only snapshot/status remain available. Bind collection to the exact job/attempt/
-native turn and re-read native source, context, epoch and job authority before accepting results.
-A stale result cannot settle a successor. Persist the validated batch before its first send;
-publication keys are stable domain identities, never action-list positions. Preserve prior results
-and receipts in every continuation. The agent's final must not claim publication before read-back.
-A question result cannot also contain public effects.
+Reviewers use task-sized read, finding, reply and resolve operations. The helper derives job,
+stage, epoch, source and public-operation identities; models supply only domain arguments.
+Authenticate each call through the native client's private MCP metadata, exact registered native
+input and current running stage. Codex checks session/turn/user input; Claude checks exact tool
+call arguments, original-input ancestry and live service invocation. A copied identifier alone
+never grants authority. Former agent administration commands remain rejected.
 
-Native terminal status plus a valid result starts application of the saved domain batch. Keep
-the job running and the global slot occupied until all intended public effects are confirmed or
-explicitly settled and the outcome is recorded. Only then complete the job and progress immediately.
-Unknown public delivery moves the unfinished job to pending with an inspection wait only when
-the native execution is proven terminal; do not mark that job completed or advance its checkpoint.
-Its MR remains blocked, while other MRs may proceed. Preserve
-only the head actually reviewed by completed code-event work; human work never fabricates a code
-event or advances the automatic code checkpoint.
+A short work lock serializes consumer transitions and tool calls without holding SQLite writes
+across network operations. The cycle lock remains separate, so native tools can run after the
+periodic consumer exits. A busy helper returns a retry indication before any send.
+
+Finish and ask-human signals are provisional. Finish requires a compatible successful native
+final and no uncertainty or question before it contributes actual reviewed coverage. An
+interrupted or timed-out finish cannot advance a checkpoint. Ask-human fences mutable calls
+immediately; only its readable native final establishes the anchored hold. Persist an interrupted
+question for a read-only presentation after exact native termination. Recover intent/result/hold
+handoffs before another reviewer or protocol cutover. Never invent an anchor or sufficient answer.
+
+Unknown public delivery fences that MR while active native execution retains global capacity.
+After exact termination, park the job without completing it; other MRs may proceed. Subsequent
+cycles and explicit recovery perform read-back only. Confirmation resumes the remaining reviewer
+sequence without replaying completed stages. Only completed actual code-event review advances a
+code checkpoint; human and discussion work cannot fabricate one.
 
 ## Ordered reviewer stages
 
@@ -103,7 +113,8 @@ reviewer runs once in that order, including after an earlier success or failure.
 valid. There is no fallback mode, quota classifier or success-based skipping. Record each result
 or failure honestly and continue to the next reviewer after the preceding execution is terminal.
 A failed stage never contributes reviewed coverage. At least one complete valid review of the
-exact target head is required before applying results or advancing a code checkpoint.
+exact target head is required before advancing a code checkpoint. Publication during an active
+review does not depend on that reviewer or a later reviewer ultimately succeeding.
 
 Authentication, network, credits, invalid output and other terminal failures all follow the same
 continuation rule. Preserve partial evidence and confirmed receipts, but do not call a failed
@@ -125,7 +136,7 @@ issuing another execution. A reboot proves interruption of unfinished execution,
 previously recorded valid result. Failure and timeout continue the configured reviewer sequence.
 
 The official output stream identifies the final main message and all its split blocks by native
-UUID. Authenticate the original native input and those exact blocks again before publication;
+UUID. Authenticate the original native input and those exact blocks during completion/question collection;
 the terminal envelope's text identifies its trailing text block, not the complete split response.
 Later human turns cannot replace the captured final. Results and readable questions remain in
 native history and monitor status, which supplies a command to resume the original CLI context.
@@ -141,37 +152,32 @@ or run an extra Codex model solely for presentation.
 When the monitor configuration omits `claude_model`, use `claude-opus-5-5`; an explicit value
 takes precedence. Omitted effort retains Claude's own effort settings. No new credential route.
 
-## Stage barrier and consolidated publication
+## Publication during ordered reviews
 
-A successful stage is not job completion. Every configured reviewer must have run to a terminal
-result or failure before publication or completion. Earlier success never skips a later reviewer;
-earlier failure never cancels one. With at least one valid successful review, use actual successful
-coverage and record every failure. If none succeeds, no publication or checkpoint advance occurs.
-An unresolved human question, unsafe public operation or unknown native execution still prevents
-settlement; these safety boundaries do not classify a failed reviewer as successful.
+Each reviewer reads actual current discussions and earlier readable summaries. It can publish
+findings, supplement a concern or resolve an evidenced fix while reviewing. Confirmed effects
+survive later failure. Repetition of an identical operation reuses its receipt; different defects
+on one line remain separate. Semantic duplication and disagreement are model judgments over
+actual discussions, not line grouping or mandatory concern/disposition inventories.
 
-Pass earlier complete/partial findings and prior receipts to the next reviewer. The last successful
-reviewer returns one consolidated batch, explicitly disposing of each earlier proposed concern
-as retained, duplicate or rejected with evidence, or uncertain. Use semantic concern keys rather
-than array positions. Duplicate concerns publish once. An unresolved conflict/uncertain concern
-holds the affected work for a human decision; a later evidenced outstanding concern vetoes an
-earlier resolution. The monitor verifies disposition coverage and retains the evidence/history;
-it never chooses an LLM winner or unions conflicting resolve proposals mechanically. When a later
-reviewer fails, use the last complete successful consolidated result after every enabled reviewer
-has run, and label the actual coverage and failures. Persist the chosen consolidated
-batch before the first send. No reviewer-stage success alone grants public effects.
+Every configured reviewer must reach proven termination before job completion, except that a
+human question or uncertain effect preserves its hold before the next mutable stage. A successful
+first stage never skips the second. An entirely failed round waits for a bounded retry; no failed
+stage contributes coverage. The monitor neither regenerates a final consolidated batch nor
+publishes historical saved proposals on behalf of a new round.
 
 ## Human input and questions
 
 Observe actual native human turns in mapped MR chats. Authenticate exact source text and its
-terminal final result; do not infer source from the latest runtime turn. A human domain request
-must contain an explicit semantic action assessment, exact text basis and bounded effect/
-discussion scope. Register it to that original source and enqueue it. The consumer can apply its
-prepared domain result only when still current and within scope; otherwise continue that same
-registered request after capacity is available: in the same Codex chat or an explicitly registered
-fresh Claude execution. Keep its original native source/question identity and record the
-source-to-execution relationship before dispatch; copied history never grants human authority. Its continuation is human work,
-not an automatic code event and not a new permission grant.
+terminal assessment; do not infer source from the latest runtime turn. A compact fenced
+`csm-assessment` classifies action, sufficient answer or explanation, with bounded effects and
+actual discussion IDs. The reader binds the exact original text internally, rather than asking
+the model to reproduce administrative identity or a complete proposed publication batch.
+An explicit post-completion action enters the same FIFO as new human work. Read-only intake can
+recover a missing assessment; its automatic continuation is never itself human authorization.
+Before mutable dispatch, preserve the original source, assessment and scope. The old assessment
+reader remains available only for original historical sources. Human work never becomes an
+automatic code event or a new permission grant.
 
 Question marks, trailing-w, explanations, preferences, registered automation and mixed input do
 not admit mutable human work. Plain answers/explanations produce no job. Native user-channel
@@ -201,27 +207,31 @@ authenticated read-back. Publication identity is independent of retries/executio
 confirmed effects after repeated results, restart and partial batches. Recheck admission and
 context at send boundaries; no new effects on closed/merged MRs.
 
+GitLab authenticates repository/MR identity, current refs and changed-file metadata. Missing diff
+bodies remain visible and do not block admission. The reviewer chooses a checkout and investigates
+exact objects. For inline validation, the helper can read only the selected file from existing
+Git objects at the authenticated base/start/head within frozen workspace roots. It does not fetch,
+change refs/index/branches or maintain checkout mappings. Disable external diff/textconv and
+validate exact paths, commit objects and patch coordinates. Missing or unprovable objects reject
+that inline operation; never substitute working-tree content. This on-demand rule replaces the
+previous pending proposal to acquire every complete diff before dispatch.
+
 Resolve is a compound domain operation: first explain, confirm the exact explanation, then
 revalidate and resolve. The comparison may account only for that exact confirmed explanation
-created by this batch, whose no-concern disposition is recorded. Every other note, revision,
+created by this operation, whose no-concern disposition is recorded. Every other note, revision,
 author, concern and head must remain unchanged. Never relax the whole fingerprint to accommodate
 our reply. Require a verified fix or authenticated bot false positive and disposition of every
 concern from every author. Human disagreement alone cannot resolve a discussion. Read-back with changed context remains visibly unsettled; ordinary recovery cannot discard the
 context mismatch. Never re-resolve or reopen automatically.
 
 A possibly delivered send requires exact marker/body/actor/context reconciliation. Missing
-read-back is not proof of non-delivery and cannot authorize a blind retry. Park ambiguity locally
-for inspection. An entirely failed round or failed terminal consumer operation uses the configured interval before
-retrying, without an error-cause/quota classifier. Operation retries preserve completed stages,
-immutable inputs, workspace, batch and confirmed receipts. Batch construction/validation errors
-remain visible without regenerating completed reviews. Only explicit changed-context,
-sufficient-answer or all-reviewers-failed handling creates a successor round. Prepared effects
-proven unsent remain retryable. If their context is invalidated, retain them as cancelled, without
-fabricating a public receipt; cancelled effects do not block administrative completion or count
-as publication. Possibly-issued effects prevent round reset and retain inspection holds. Parking terminal
-work counts as progress so repeated failures cannot starve later MRs in a bounded cycle.
-Unknown public effects require explicit read-back recovery. Reconnect to still-running work; an unavailable reviewer is recorded as a failure only
-when no input was issued or its native execution is proven terminal.
+read-back is not proof of non-delivery and cannot authorize a blind retry. Park ambiguity for read-back without discarding it. An entirely failed round or failed terminal
+consumer operation uses the configured interval before retrying, without a quota classifier.
+Retries preserve completed stages, immutable inputs, workspace and confirmed receipts. Proven
+unsent prepared effects may be cancelled with a reason; they never become fabricated receipts.
+Possibly issued effects prevent reset until reconciled. Parking terminal work counts as progress,
+so persistent failures cannot starve other MRs. A native reviewer is failed only when no input was
+issued or exact termination is proven.
 
 ## Instructions and scheduling
 
@@ -234,13 +244,13 @@ No production model turns or artificial public writes are validation evidence.
 Each 15-minute systemd trigger runs one bounded queue cycle and exits, using a oneshot service
 without automatic restart or a resident scan helper. The current TOML cadence/window governs
 automatic inventory. A singleton cycle lock and durable running job preserve serial capacity between
-processes. Ready native reconciliation, timeout handling, reviewer progression and batch settlement
+processes. Ready native reconciliation, timeout handling, reviewer progression and effect reconciliation
 precede bounded inventory; persisted intake continuation prevents starvation of later sources.
 This continuation includes sessions, native sources and history pages within the same MR.
 Alternate recent-page refresh with historical continuation and retain the exact native
 question/answer order proof across cycles. HTTP has a wall-clock deadline for the entire operation,
 backed by a finite unit timeout.
-Normal budget exhaustion saves progress without recording reviewer failure or discarding a batch.
+Normal budget exhaustion saves progress without recording reviewer failure or discarding confirmed effects.
 Native reviewers outlive the bounded cycle. Claude print services independently own their
 execution and runtime limit; the monitor unit retains its process-only stop policy for existing
 issued reviewers. Deadline expiry alone never proves termination. Completion and human-answer observation occur on subsequent triggers,
@@ -266,15 +276,21 @@ the configured Codex project, with fresh chats when folders or shared instructio
 Remove superseded queue producers and their implementation-specific
 tests after replacement protections pass. Never edit native databases or runtime history directly.
 
+The tool-route update pauses scheduling while replacing installed source. Collect already-issued
+legacy native executions through their original reader; never issue another legacy report input.
+Archive saved proposals as history and cancel proven-unsent prepared effects through consumer
+controls. Preserve existing holds and confirmed/uncertain journals; reconcile uncertainty before
+cutover. New work uses fresh instructions without moving, migrating or rewriting old chats.
+
 | Invariant | Owner | Required evidence |
 | --- | --- | --- |
 | Durable FIFO and capacity | Jobs, consumer, locks | Competing processes, restart, immediate progression |
 | Automatic event grouping | `MonitorQueue` enqueue/reserve coalescing and original admissions | `test_codex_gitlab_coalescing.py`: FIFO, frozen work, barriers, repeat/restart, concurrent transactions; sanitized pending-event artifact replay |
 | Operation recovery | Native collectors, cold context normalization, consumer retry/status | `test_codex_gitlab_recovery.py`: sanitized native artifacts, retry/restart without relaunch, two-failure tick progress, prepared/confirmed effects, source/context denials and CLI resume commands |
 | Finite Claude execution | Transient service, receipt and stream collector | `test_codex_gitlab_print.py` and installed-client fixtures: native identities, split finals, lost acknowledgment, live descendants, timeout and resume |
-| Exact native/result identity | Result collector and dispatch journal | Stale A vs B, altered input/result, no mutating legacy calls |
+| Exact native/result identity | Scoped MCP authentication, result collector and dispatch journal | `test_codex_gitlab_tools_native.py`: installed clients, real SDK/stdio, local model/GitLab fixtures, first-turn connection, no real inference/publication |
 | Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |
-| Safe effects and progress | Batch application and publication journal | Partial batch, lost read-back, reply+resolve races, honest checkpoint |
+| Safe effects and progress | Scoped tools and publication journal | `test_codex_gitlab_tools.py`: live publication, immutable receipts, source/context denials, partial sends, whole-discussion resolution, honest checkpoint |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
 | Shared editable workspace | Round snapshot and native launch policy | Same roots across reviewers/restart, linked Git metadata, read-only intake, original-chat answers |

@@ -1,0 +1,40 @@
+{
+  "provenance": {
+    "captured": "2026-10-21",
+    "boundary": "Partial durable-state excerpts from fixture merge requests !81 and !82; no native transcript or HTTP replay.",
+    "sanitization": "Retained actual uncertain disposition and error/state. Replaced journal identifiers, body, paths, SHAs and actor with fixture values."
+  },
+  "uncertainty": {
+    "dispositions": [
+      {
+        "key": "fixture-uncertain-finding",
+        "disposition": "uncertain",
+        "evidence": "Incerteza registrada: a evidência disponível não estabelece se a validação do cenário fictício é executada. Nenhum achado confirmado foi publicado."
+      }
+    ],
+    "last_error": "unresolved reviewer disagreement requires a human decision"
+  },
+  "unknown_effect": {
+    "kind": "finding",
+    "state": "unknown",
+    "error": "HTTPError",
+    "discussion": null,
+    "target_discussion": null,
+    "key": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "job_id": "fixture-original-job",
+    "repository_id": 11,
+    "iid": 82,
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "position": {
+      "position_type": "text",
+      "base_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "start_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "old_path": "x.py",
+      "new_path": "x.py",
+      "new_line": 1
+    },
+    "body": "Recorded finding.\n\n<!-- csmq:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee -->",
+    "actor_id": 7
+  }
+}

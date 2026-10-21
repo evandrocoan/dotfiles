@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import assessment, domain, flow, module, rendered
+from test_codex_gitlab_queue import assessment, domain, flow, module, rendered, compact
 from test_codex_gitlab_recovery import FIXTURES, captured_claude, enqueue, finding
 
 
@@ -179,20 +179,21 @@ def test_recorded_mr7_result_survives_restart_and_next_reviewer_receives_proposa
     path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
     with f.q.atomic():
         stage.pop('transport');stage['background_id']=stage['session'][:8]
+        stage.pop('protocol');saved.pop('protocol')
         f.q.save(saved)
-    assert f.m['mq_step'](f.config,f.q)
+    assert f.step()
     saved=copy.deepcopy(f.q.job(job['id']));first=saved['stages'][0]
     assert first['state']=='succeeded' and first['result']==f.results['claude']
     assert first['anchor']==FINAL and first['source_id']==SOURCE
     assert f.launched==['claude'] and f.sends==[]
     reopened=f.m['MonitorQueue'](f.config)
     try:
-        assert f.m['mq_step'](f.config,reopened)
+        assert f.step(reopened)
         current=reopened.job(job['id'])
         assert current['stages'][0]==first and current['stages'][1]['reviewer']=='codex'
         assert current['stages'][1]['state']=='running' and f.launched==['claude','codex']
         immutable=json.loads((reopened.path.parent/'inputs'/(current['stages'][1]['id']+'.json')).read_text())
-        assert immutable['prior_stages'][0]['result']['actions']==[finding('parallel-concern')]
+        assert immutable['prior_reviewers'][0]['summary']==rendered(f.results['claude'])
         assert reopened.mr(11,82)['reviewed_head'] is None and f.sends==[]
     finally:reopened.close()
 
@@ -205,7 +206,7 @@ def append_answer(f,hold,*,mixed=False):
         if 'sessionId' in row:row['sessionId']=hold['session']
         row['cwd']=f.config['cwd']
         if row.get('uuid')==SOURCE:row['message']['content']=text;row['parentUuid']=hold['native_anchor']
-        if row.get('uuid')==FINAL:row['message']['content']=[{'type':'text','text':rendered(answer)}]
+        if row.get('uuid')==FINAL:row['message']['content']=[{'type':'text','text':compact(answer)}]
         if mixed and row.get('uuid')=='ef17ebbf-8412-48d6-afb5-743dcf10c901':
             row['message']['content'].append({'type':'text','text':'A different human request'})
     path=next((Path(f.config['claude_home'])/'projects').glob('*/'+hold['session']+'.jsonl'))

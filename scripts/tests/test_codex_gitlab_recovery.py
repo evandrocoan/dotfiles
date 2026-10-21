@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import assessment, domain, flow, module, rendered
+from test_codex_gitlab_queue import assessment, domain, flow, module, rendered, compact
 from test_codex_gitlab_workspace import project
 from test_codex_gitlab_periodic import quiet_scan
 
@@ -94,7 +94,7 @@ def test_sufficient_human_answer_with_tool_results_releases_only_original_hold(f
         if row['uuid']==artifact['registered_source_uuid']:
             row['message']['content']=text;row['parentUuid']=hold['native_anchor']
         if row.get('uuid')=='37ff9ce3-a30c-4a6d-9c8d-172b00d0b78f':
-            row['message']['content']=[{'type':'text','text':rendered(answer)}]
+            row['message']['content']=[{'type':'text','text':compact(answer)}]
     path=next((Path(flow.config['claude_home'])/'projects').glob('*/'+hold['session']+'.jsonl'))
     with path.open('a') as stream:
         for row in rows:stream.write(json.dumps(row)+'\n')
@@ -159,29 +159,24 @@ def enqueue(f,key='one',iid=82):
 
 
 def completed_stages(f):
-    for _ in range(4):assert f.m['mq_step'](f.config,f.q)
+    for _ in range(4):assert f.step()
     job=f.q.jobs('running')[0]
     assert [s['state'] for s in job['stages']]==['succeeded','succeeded']
     return copy.deepcopy(job)
 
 
-@pytest.mark.parametrize('boundary',['context','batch_project'])
-def test_operation_retry_and_restart_preserve_completed_reviews(flow,monkeypatch,boundary):
+def test_operation_retry_and_restart_preserve_completed_reviews(flow,monkeypatch):
     job=enqueue(flow);before=completed_stages(flow)
-    original=flow.m['mq_context'] if boundary=='context' else flow.m['MonitorGitLab']
+    original=flow.m['mq_context']
     def fail(*a,**kw):raise RuntimeError('temporary provider read failure')
-    if boundary=='context':monkeypatch.setitem(flow.m,'mq_context',fail)
-    else:
-        class Failing(original):
-            def project(self):fail()
-        monkeypatch.setitem(flow.m,'MonitorGitLab',Failing)
+    monkeypatch.setitem(flow.m,'mq_context',fail)
     progressed=flow.m['mq_consume'](flow.config,flow.q)
     saved=flow.q.job(job['id'])
     assert saved['stages']==before['stages'] and saved['workspace']==before['workspace']
     assert saved['state']=='pending' and saved['wait_reason']=='retry' and progressed is True
     assert saved['last_error']['error']=='temporary provider read failure'
     assert flow.q.mr(11,82)['reviewed_head'] is None and flow.sends==[]
-    monkeypatch.setitem(flow.m,'mq_context' if boundary=='context' else 'MonitorGitLab',original)
+    monkeypatch.setitem(flow.m,'mq_context',original)
     monkeypatch.setitem(flow.m,'mq_stamp',lambda:saved['retry_at']+1)
     reopened=flow.m['MonitorQueue'](flow.config)
     try:
@@ -200,7 +195,7 @@ def test_two_persistent_context_failures_do_not_starve_third_job_in_one_tick(flo
         if iid in (81,83):raise flow.m['MonitorDeferred']('current diff is incomplete')
         return original(c,iid,**kw)
     monkeypatch.setitem(flow.m,'mq_context',context)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert flow.q.job(third['id'])['stages'] and flow.launched==['claude']
     for job in (first,second):
         saved=flow.q.job(job['id'])
@@ -251,36 +246,6 @@ def finding(key):
             'old_path':'x.py','new_path':'x.py','new_line':1}}
 
 
-@pytest.mark.parametrize('partial',['prepared','confirmed'])
-def test_operation_retry_keeps_batch_and_known_publication_progress(flow,monkeypatch,partial):
-    quiet_scan(flow,monkeypatch)
-    flow.results['codex']=domain(actions=[finding('one'),finding('two')])
-    job=enqueue(flow);before=completed_stages(flow)
-    original_context=flow.m['mq_context'];original_send=flow.m['mq_send'];broken=[False]
-    def context(*a,**kw):
-        if broken[0]:raise RuntimeError('temporary context read failure')
-        if partial=='confirmed' and any(e['state']=='confirmed' for e in flow.q.effects()):
-            broken[0]=True;raise RuntimeError('temporary context read failure')
-        return original_context(*a,**kw)
-    def send(*a,**kw):
-        broken[0]=True
-        raise flow.m['MonitorCycleYield']('before send',issued=False)
-    monkeypatch.setitem(flow.m,'mq_context',context)
-    if partial=='prepared':
-        monkeypatch.setitem(flow.m,'mq_send',send)
-        with pytest.raises(flow.m['MonitorCycleYield']):flow.m['mq_consume'](flow.config,flow.q)
-        assert flow.q.effects()[0]['state']=='prepared' and flow.sends==[]
-    assert flow.m['mq_consume'](flow.config,flow.q)
-    saved=flow.q.job(job['id']);batch=copy.deepcopy(saved['batch'])
-    assert saved['wait_reason']=='retry' and saved['stages']==before['stages']
-    assert [e['state'] for e in flow.q.effects()]==[partial]
-    monkeypatch.setitem(flow.m,'mq_context',original_context);monkeypatch.setitem(flow.m,'mq_send',original_send)
-    monkeypatch.setitem(flow.m,'mq_stamp',lambda:saved['retry_at']+1)
-    flow.m['mq_tick'](flow.config_path)
-    assert flow.q.job(job['id'])['outcome']=='reviewed' and flow.q.job(job['id'])['batch']==batch
-    assert len(flow.sends)==2 and len(flow.q.effects())==2
-    assert all(e['state']=='confirmed' for e in flow.q.effects())
-    assert flow.launched==['claude','codex']
 
 
 def test_changed_head_after_operation_error_does_not_publish_cached_result(flow,monkeypatch):
@@ -291,77 +256,15 @@ def test_changed_head_after_operation_error_does_not_publish_cached_result(flow,
     monkeypatch.setitem(flow.m,'mq_context',original);monkeypatch.setitem(flow.m,'mq_stamp',lambda:saved['retry_at']+1)
     flow.context['head']='d'*40;flow.context['mr']['sha']='d'*40
     flow.m['mq_consume'](flow.config,flow.q);flow.m['mq_consume'](flow.config,flow.q)
-    assert flow.q.job(job['id'])['outcome']=='superseded by a new head'
-    assert flow.q.job(job['id'])['rounds'][0]['stages']==before['stages']
+    assert flow.q.job(job['id'])['outcome']=='context changed; completed publications preserved'
+    assert flow.q.job(job['id'])['stages']==before['stages']
     assert flow.q.mr(11,82)['reviewed_head'] is None and flow.sends==[]
 
 
-@pytest.mark.parametrize('changed',['head','closed'])
-def test_prepared_unsent_effect_is_settled_when_its_context_changes(flow,monkeypatch,changed):
-    flow.results['codex']=domain(actions=[finding('one')]);job=enqueue(flow);completed_stages(flow)
-    original=flow.m['mq_send']
-    def unsent(*a,**kw):raise flow.m['MonitorCycleYield']('before send',issued=False)
-    monkeypatch.setitem(flow.m,'mq_send',unsent)
-    with pytest.raises(flow.m['MonitorCycleYield']):flow.m['mq_consume'](flow.config,flow.q)
-    assert flow.q.effects()[0]['state']=='prepared'
-    monkeypatch.setitem(flow.m,'mq_send',original)
-    if changed=='head':flow.context['head']='d'*40;flow.context['mr']['sha']='d'*40
-    else:flow.context['mr']['state']='closed'
-    flow.m['mq_consume'](flow.config,flow.q);flow.m['mq_consume'](flow.config,flow.q)
-    assert flow.q.job(job['id'])['state']=='completed'
-    assert flow.q.effects()[0]['state']=='cancelled' and not flow.q.effects()[0].get('note_id')
-    assert flow.q.mr(11,82)['reviewed_head'] is None and flow.sends==[]
 
 
-def test_unknown_effect_prevents_reset_and_keeps_its_batch_for_inspection(flow,monkeypatch):
-    flow.results['codex']=domain(actions=[finding('one')]);job=enqueue(flow);completed_stages(flow)
-    def unknown(*a,**kw):raise RuntimeError('delivery is unknown')
-    monkeypatch.setitem(flow.m,'mq_send',unknown)
-    flow.m['mq_consume'](flow.config,flow.q)
-    before=copy.deepcopy(flow.q.job(job['id']));effect=copy.deepcopy(flow.q.effects()[0])
-    assert before['wait_reason']=='effect_unknown' and effect['state']=='unknown'
-    with flow.q.atomic():
-        active=flow.q.job(job['id']);active.update(state='running',wait_reason=None);flow.q.save(active)
-    with pytest.raises(RuntimeError,match='unsettled public effect prohibits round reset'):
-        flow.m['mq_reset_round'](flow.q,active,'context changed')
-    assert flow.q.job(job['id'])['batch']==before['batch'] and flow.q.effects()[0]==effect
 
 
-@pytest.mark.parametrize('changed_body',[False,True])
-def test_cancelled_same_head_effect_is_revalidated_without_changing_identity(flow,monkeypatch,changed_body):
-    flow.results['codex']=domain(actions=[finding('one')]);job=enqueue(flow);completed_stages(flow)
-    original=flow.m['mq_send']
-    def unsent(*a,**kw):raise flow.m['MonitorCycleYield']('before send',issued=False)
-    monkeypatch.setitem(flow.m,'mq_send',unsent)
-    with pytest.raises(flow.m['MonitorCycleYield']):flow.m['mq_consume'](flow.config,flow.q)
-    prepared=copy.deepcopy(flow.q.effects()[0])
-    monkeypatch.setitem(flow.m,'mq_send',original)
-    flow.context['threads'].append({'id':'human','notes':[{'id':200,'body':'Mais contexto.',
-        'author':{'id':9},'system':False,'resolvable':False,'resolved':False,
-        'created_at':'2026-10-19T01:00:00Z'}]})
-    assert flow.m['mq_consume'](flow.config,flow.q)
-    cancelled=copy.deepcopy(flow.q.effects()[0]);saved=flow.q.job(job['id'])
-    assert cancelled['state']=='cancelled' and cancelled['body']==prepared['body']
-    assert saved['stages']==[] and saved['rounds'][0]['batch']['effects'][0]['key']==cancelled['key']
-    assert flow.q.mr(11,82)['reviewed_head'] is None and flow.sends==[]
-    if changed_body:flow.results['codex']['actions'][0]['body']='[P2] Corpo alterado.'
-    reopened=flow.m['MonitorQueue'](flow.config)
-    try:
-        for _ in range(8):
-            if not flow.m['mq_consume'](flow.config,reopened):break
-        current=reopened.job(job['id'])
-        assert flow.launched==['claude','codex','claude','codex']
-        assert len(reopened.effects())==1 and reopened.effects()[0]['key']==cancelled['key']
-        if changed_body:
-            assert current['wait_reason']=='retry'
-            assert 'changed its immutable public effect' in current['last_error']['error']
-            assert reopened.effects()[0]==cancelled and flow.sends==[]
-            assert reopened.mr(11,82)['reviewed_head'] is None
-        else:
-            assert current['outcome']=='reviewed' and len(flow.sends)==1
-            assert reopened.effects()[0]['state']=='confirmed'
-            assert reopened.mr(11,82)['reviewed_head']=='a'*40
-    finally:reopened.close()
 
 
 def test_earlier_sibling_marker_cannot_admit_human_answer(flow,tmp_path,monkeypatch):

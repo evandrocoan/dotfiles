@@ -13,7 +13,7 @@ from test_codex_gitlab_periodic import enqueue, quiet_scan
 
 def launch(f):
     job=enqueue(f)
-    assert f.m['mq_step'](f.config,f.q)
+    assert f.step()
     saved=f.q.job(job['id'])
     stage=saved['stages'][0]
     assert stage['delivery']=='accepted'
@@ -68,7 +68,7 @@ def test_receipt_or_terminal_unit_with_live_execution_cannot_release_slot(flow,s
     f=flow;job,stage=launch(f)
     f.service.units[stage['unit']]['ActiveState']=state
     f.service.populated=populated
-    assert not f.m['mq_step'](f.config,f.q)
+    assert not f.step()
     assert f.q.job(job['id'])['stages'][0]['state']=='running'
     assert f.launched==['claude'] and f.sends==[]
 
@@ -96,7 +96,7 @@ def test_lost_launch_acknowledgment_reconciles_same_invocation_once(flow,monkeyp
         if args[0]=='systemd-run':raise RuntimeError('lost acknowledgment after service accepted')
         return result
     monkeypatch.setitem(f.m,'mq_service_command',command)
-    job=enqueue(f);f.m['mq_step'](f.config,f.q)
+    job=enqueue(f);f.step()
     saved=f.q.job(job['id']);stage=saved['stages'][0]
     assert stage['delivery']=='sending'
     assert f.q.mr(11,82)['chats']=={}
@@ -125,7 +125,7 @@ def test_absent_unit_requires_receipt_or_reboot_evidence(flow,receipt):
 
 def test_reboot_preserves_completed_success_and_exact_public_source_validation(flow):
     f=flow;job,stage=launch(f)
-    f.m['mq_step'](f.config,f.q)
+    f.step()
     f.service.identity['boot']='new-boot';f.service.units.clear()
     f.drain()
     saved=f.q.job(job['id'])
@@ -175,10 +175,11 @@ def test_split_final_native_ids_preserved_despite_later_human_turn(flow):
     f=flow;job,stage=launch(f);root=directory(f,stage)
     events=[json.loads(l) for l in (root/'stdout').read_text().splitlines()]
     path,values=records(f,stage)
-    first=values[1];second=copy.deepcopy(first);second['uuid']=str(uuid.uuid4());second['parentUuid']=first['uuid']
+    index=next(i for i,r in enumerate(values) if r.get('uuid')==events[0]['uuid'])
+    first=values[index];second=copy.deepcopy(first);second['uuid']=str(uuid.uuid4());second['parentUuid']=first['uuid']
     # The installed CLI result envelope carries only the last text block.
     first['message']['content']=[{'type':'text','text':'Review result:'}]
-    values.insert(2,second);values[3]['parentUuid']=second['uuid']
+    values.insert(index+1,second);values[index+2]['parentUuid']=second['uuid']
     later_user={'type':'user','uuid':str(uuid.uuid4()),'sessionId':stage['session'],
                 'parentUuid':second['uuid'],'message':{'content':'A later human input'}}
     later=copy.deepcopy(second);later.update(uuid=str(uuid.uuid4()),parentUuid=later_user['uuid'])
@@ -188,7 +189,7 @@ def test_split_final_native_ids_preserved_despite_later_human_turn(flow):
                      'parent_tool_use_id':None,'message':second['message']})
     child=copy.deepcopy(events[1]);child['uuid']=str(uuid.uuid4());child['parent_tool_use_id']='tool-child'
     events.insert(2,child);rewrite_output(f,stage,events)
-    f.m['mq_step'](f.config,f.q)
+    f.step()
     saved=f.q.job(job['id'])['stages'][0]
     assert saved['state']=='succeeded'
     assert saved['final_ids']==[first['uuid'],second['uuid']]

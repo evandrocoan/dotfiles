@@ -638,13 +638,15 @@ any terminal failure. Unstarted automatic events for the same MR share one pendi
 first event's FIFO position, using the latest admitted commit and current discussions. Original
 events remain visible with an administrative coalescing outcome; that outcome does not claim a
 completed review. Human requests and already-started work remain separate. There is no credit
-classifier or fallback mode. Publication starts only after every enabled reviewer has finished,
-with at least one valid complete review. All failures
-remain visible; an entirely failed round waits for the configured interval before retrying.
-Operation failures preserve completed reviewer stages, the workspace snapshot and publication
-progress, then retry the pending operation on the existing cadence. Persistent failures leave the
-MR waiting while other MRs proceed. An incomplete GitLab diff remains deferred before review;
-retry does not claim that missing context was reviewed.
+classifier or fallback mode. Each reviewer receives the MR link and workspace, reads context as
+needed, investigates and tests, and publishes findings during its review through scoped monitor
+tools. It finishes with a readable summary, without a final JSON review report. The next reviewer
+reads the actual discussions and earlier summary: separate defects on the same line can have
+separate threads; the model decides whether a concern duplicates or supplements an existing one.
+All failures remain visible; an entirely failed round waits for the configured interval before
+retrying. Operation recovery preserves completed stages, workspace and confirmed publications.
+An omitted GitLab diff does not block dispatch. The model can investigate local Git; inline tools
+validate omitted content against the MR's exact base/start/head objects in that workspace.
 
 `status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
 include their native `name`, `session`, saved result or error, and a copyable `resume_command`
@@ -652,15 +654,24 @@ to open the conversation later in the CLI using its original directory and nativ
 Saved conversations do not keep an idle process or require a browser connection.
 
 The monitor handles queue administration, comments, replies, resolutions and authenticated
-read-back. Reviewers return proposals rather than publishing. Uncertain native execution keeps
-the single slot until its status is known. An uncertain public send blocks that MR for inspection;
-other MRs can continue. A missing receipt never authorizes blindly sending again.
+read-back behind small read, finding, reply, resolve, finish and ask-human tools. Uncertain native
+execution keeps the single slot until its status is known. An uncertain public send blocks that
+MR; after native termination other MRs can continue while subsequent cycles attempt read-back.
+A missing receipt never authorizes blindly sending again. Asking a human fences writes immediately;
+only the actual native final establishes the question that a sufficient human answer can release.
 
 Requirements: Linux, Python 3.11+, the existing Poetry environment, and the existing GitLab MCP
-credential in Codex configuration for the selected HTTPS origin. Native Codex access also requires
-the already installed optional `websockets` package. The reviewer permission profile is supplied
-per chat; no global permission-profile installation is needed. Unrelated commands, help and
-offline status do not import that package. Claude uses the
+credential in Codex configuration for the selected HTTPS origin. Install the optional tool group:
+
+```bash
+cd ~/scripts
+poetry install --with monitor-tools
+```
+
+The scoped stdio helper uses that environment's official MCP SDK and `websockets`; it is started
+by the native client when needed, without another timer or scanning daemon. The reviewer permission
+profile and tool approvals are supplied per launch; no global permission installation is needed.
+Unrelated commands, help and offline status do not import these optional packages. Claude uses the
 installed, signed-in CLI and its subscription in finite print mode under the existing user systemd
 manager; no new inference API key is configured. Run `claude auth login` when its existing login
 needs renewal.
@@ -795,6 +806,9 @@ explanations, mixed/automatic input, `?` or trailing `w` do not authorize effect
 question remains open until a sufficient later human answer to its exact anchor; capacity waits
 preserve that answer. Original Claude sessions remain valid answer surfaces after another execution.
 No agent needs to call claim, pause, resume, effect-intent, effect-receipt or complete.
+New launches use fresh instructions and tools. Existing issued reviews are collected through
+their original native reader; old proposals are not replayed as publications. Existing chats and
+human questions remain valid original sources, without editing their loaded instructions.
 
 Diagnostics and read-only recovery:
 

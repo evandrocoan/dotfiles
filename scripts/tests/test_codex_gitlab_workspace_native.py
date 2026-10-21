@@ -334,8 +334,8 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
     f.config.clear();f.config.update(m['mq_config'](f.config_path))
     home=Path(f.config['claude_home']);home.mkdir()
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Provider)
-    server.requests=[];server.steps=[]
-    server.final_text=rendered(domain(outcome='question',question='Which fixture rule should be used?'))
+    server.requests=[];server.steps=[('mcp__gitlab_review__ask_human',{'question':'Which fixture rule should be used?'})]
+    server.final_text='Which fixture rule should be used?'
     worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
     for key in list(os.environ):
         if key.startswith(('ANTHROPIC_','CLAUDE_','CODEX_')):monkeypatch.delenv(key)
@@ -362,9 +362,10 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         assert m['mq_print_execution'](f.config,saved['stages'][0])['terminal'] is True
         assert m['mq_cgroup_empty'](stage['service_identity']['root']+'/app.slice/'+stage['unit'])
         f.drain()
-        assert f.launched==['codex'] and f.sends==[]
+        assert f.launched==[] and f.sends==[]
         assert f.q.job(job['id'])['wait_reason']=='human'
         server.final_text='Cold resume fixture complete.'
+        server.steps=[]
         arguments=m['mq_claude_arguments'](m['mq_workspace_config'](f.config,saved),'Later fixture input','resume')
         index=arguments.index('--append-system-prompt');del arguments[index:index+2]
         arguments[-2:-2]=['--resume',stage['session']]
@@ -375,7 +376,7 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         # Revalidation still selects the captured question, never the resumed final.
         observed=m['mq_claude_observe'](f.config,saved['stages'][0])
         assert observed['anchor']==saved['stages'][0]['anchor']
-        assert observed['text']==rendered(saved['stages'][0]['result'])
+        assert observed['text']=='Which fixture rule should be used?'
     finally:
         if stage and stage.get('unit'):
             state=m['mq_service_show'](f.config,stage['unit'])

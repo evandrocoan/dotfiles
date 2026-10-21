@@ -76,15 +76,21 @@ FIFO and one consumer own all repositories, keyed by authenticated GitLab reposi
 IID. Coalesce unstarted automatic work per MR at its oldest FIFO position, preserving original
 event lineage and freezing membership at reservation. Human work and previously issued work remain
 separate. Every configured reviewer runs in order after success or any terminal failure; no quota
-classifier or fallback mode. Agents return domain proposals; only the monitor journals, publishes
-and confirms effects. Unknown execution cannot release serial capacity. Human requests retain
+classifier or fallback mode. Agents investigate the MR link and publish during review through
+round-bound monitor tools; only the monitor journals, sends and confirms effects. No final JSON
+review or all-reviewer publication barrier. Unknown execution cannot release serial capacity. Human requests retain
 actual native source, bounded scope and sufficient-answer holds. Only completed actual code review
 advances the code checkpoint. New Claude stages use finite print CLI services, with exact native
 stream identities and service/cgroup termination proof; idle sessions retain history without a
 process. Existing issued background stages and native human intake retain their original sources. Use fresh state and lazily created chats; predecessor chats/state
 remain outside the consumer without migration or instruction updates. Earlier sessions created by
 this consumer remain valid original human/hold sources. Preserve exact native input/result identity,
-concern consolidation, immutable publication identities and whole-discussion resolution checks.
+immutable publication identities and whole-discussion resolution checks. Models compare concerns
+against actual discussions; different defects on the same line remain separate. Completion and
+question signals are provisional until their exact native final. Uncertain sends fence that MR;
+after native termination other MRs can proceed while read-back preserves the remaining reviewers.
+New launches use the tool route; old issued results remain historical evidence, never replayed as
+new public actions. Read-only human intake uses a compact assessment of its actual source.
 
 Each round snapshots the current named Codex project's ordered folders and necessary shared Git
 metadata once for both reviewers and recovery. The model chooses repositories, branches and tests;

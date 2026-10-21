@@ -25,6 +25,13 @@ PyYAML = "^6.0"
 markdown-it-py = "^4.0"
 pytest = "^9.0"
 
+[tool.poetry.group.monitor-tools]
+optional = true
+
+[tool.poetry.group.monitor-tools.dependencies]
+mcp = "^2.3.0"
+websockets = "^10.4"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

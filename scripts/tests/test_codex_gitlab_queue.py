@@ -216,9 +216,16 @@ def rendered(value):
     return ((value.get('question') or '')+'\n```csm-review\n'+json.dumps(value)+'\n```\nProposta preparada.')
 
 
+def compact(value):
+    import json
+    assessment=value['assessment']
+    return '```csm-assessment\n'+json.dumps({'kind':assessment['kind'],'summary':assessment['summary'],
+        **assessment['scope'],'question_anchor':assessment.get('question_anchor')})+'\n```'
+
+
 @pytest.fixture
 def flow(module,tmp_path,monkeypatch):
-    """Actual worker/adapters and SQLite; simulated native wire/provider, zero remote writes."""
+    """Actual worker/SQLite with external native/GitLab providers and explicit model steps."""
     import json
     import uuid
     import sys
@@ -246,6 +253,11 @@ def flow(module,tmp_path,monkeypatch):
             if route.startswith('/users/'): return {'id':int(route.rsplit('/',1)[1]),'bot':True}
             raise AssertionError(route)
     def native(c,method,params,**kwargs):
+        if kwargs.get('followup'):
+            import asyncio
+            result=native(c,method,params)
+            async def request(name,arguments):return m['monitor_native'](c,name,arguments)
+            return asyncio.run(kwargs['followup'](request,result))
         if method=='thread/start':
             identity=str(uuid.uuid4()); chats[identity]={'id':identity,'cwd':c['cwd'],
                 'projectId':params.get('projectId'),'status':{'type':'idle'},
@@ -308,11 +320,105 @@ def flow(module,tmp_path,monkeypatch):
     f=Flow(); f.m=m;f.q=q;f.config=config;f.context=context;f.results=results
     f.service=service
     f.launched=launched;f.sends=sends;f.chats=chats;f.turns=turns;f.items=items;f.raw=raw;f.config_path=config_path
+    f.model_calls=[];f.model_errors=[];f.processed=set()
+    def model_step():
+        active=q.jobs('running')
+        if not active or not active[0]['stages']:return
+        job=active[0];stage=job['stages'][-1]
+        if stage['state']!='running' or stage.get('protocol')!='tools' or stage['id'] in f.processed:return
+        if not stage.get('session'):return
+        result=results[stage['reviewer']]
+        if isinstance(result,Exception):return
+        native_path=None;records=None
+        if stage['reviewer']=='codex':
+            if not stage.get('session') or not turns.get(stage['session']):return
+            stage=copy.deepcopy(stage)
+            if not stage.get('turn_id'):stage['turn_id']=turns[stage['session']][0]['id']
+            turn=next(t for t in turns[stage['session']] if t['id']==stage['turn_id'])
+            turn['status']='inProgress'
+            final=items[stage['turn_id']].pop()
+            source_id=items[stage['turn_id']][0]['id']
+        else:
+            native_path=Path(config['claude_home'])/'projects'/'fixture'/(stage['session']+'.jsonl')
+            if not native_path.exists():return # This injected provider never accepted execution.
+            records=[json.loads(line) for line in native_path.read_text().splitlines()]
+            source_id=records[0]['uuid'];final=records[1];records=records[:1]
+            state=service.units[stage['unit']];original_state=state.copy()
+            state.update(ActiveState='active',SubState='running',ControlGroup=stage['service_identity']['root']+'/app.slice/'+stage['unit'])
+            service.populated=True
+        f.processed.add(stage['id'])
+        def call(name,args):
+            current=q.job(job['id']);current_stage=current['stages'][-1];call_id='tool-'+str(uuid.uuid4())
+            if stage['reviewer']=='codex':
+                meta={'threadId':stage['session'],'sessionId':stage['session'],'callId':call_id,
+                    'x-codex-turn-metadata':{'thread_id':stage['session'],'session_id':stage['session'],'turn_id':stage['turn_id']}}
+            else:
+                records.append({'uuid':str(uuid.uuid4()),'parentUuid':records[-1]['uuid'],'type':'assistant',
+                    'sessionId':stage['session'],'cwd':config['cwd'],'message':{'id':'message-'+call_id,
+                    'content':[{'type':'tool_use','id':call_id,'name':'mcp__gitlab_review__'+name,'input':args}]}})
+                native_path.write_text(''.join(json.dumps(r)+'\n' for r in records))
+                meta={'claudecode/toolUseId':call_id}
+            f.model_calls.append((stage['reviewer'],name,args))
+            value=m['mq_tool_execute'](m['mq_workspace_config'](config,current),q,current,current_stage,meta,name,args)
+            if records is not None:
+                records.append({'uuid':str(uuid.uuid4()),'parentUuid':records[-1]['uuid'],'type':'user',
+                    'sessionId':stage['session'],'cwd':config['cwd'],
+                    'message':{'content':[{'type':'tool_result','tool_use_id':call_id,'content':json.dumps(value)}]}})
+            return value
+        text=result.get('question') or 'Revisão concluída com análise estática; testes não executados.'
+        try:
+            if job['kind']=='intake':
+                a=result.get('assessment') or {'kind':'explanation','summary':'No explicit action',
+                    'scope':{'effects':[],'discussions':[]},'question_anchor':None}
+                text='```csm-assessment\n'+json.dumps({'kind':a['kind'],'summary':a['summary'],
+                    **a['scope'],'question_anchor':a.get('question_anchor')})+'\n```'
+            elif stage.get('purpose')=='question':
+                text=job['pending_question']['question'];call('ask_human',{'question':text})
+            elif result['outcome']=='question':call('ask_human',{'question':text})
+            elif result['outcome']=='complete':
+                call('read_mr',{})
+                for action in result['actions']:
+                    if action['kind']=='finding':
+                        p=action['position'];side='new' if p.get('new_line') else 'old'
+                        call('publish_finding',{'body':action['body'],'path':p[side+'_path'],'line':p[side+'_line'],'side':side})
+                    elif action['kind']=='reply':call('reply',{'discussion':action['discussion'],'body':action['body']})
+                    else:
+                        call('read_discussion',{'discussion':action['discussion']})
+                        notes=[{'note':n['id'],'status':n['concerns'][0]['disposition'] if n.get('concerns') else 'no_concern',
+                            'evidence':n['concerns'][0]['evidence'] if n.get('concerns') else n['no_concern_reason']}
+                            for n in action['assessment']['notes']]
+                        call('resolve',{'discussion':action['discussion'],'explanation':action['body'],
+                            'basis':action['basis'],'notes':notes})
+                call('finish_review',{})
+        except (OSError,RuntimeError,ValueError) as error:
+            f.model_errors.append(error);text='Não concluí: '+str(error)
+        finally:
+            if stage['reviewer']=='codex':
+                turn['status']='completed';final['text']=text;items[stage['turn_id']].append(final)
+            else:
+                service.populated=False;state.clear();state.update(original_state)
+                final['parentUuid']=records[-1]['uuid'];final['message']['content']=[{'type':'text','text':text}]
+                records.append(final);records.append({'uuid':str(uuid.uuid4()),'parentUuid':final['uuid'],
+                    'sessionId':stage['session'],'type':'system','subtype':'turn_duration'})
+                native_path.write_text(''.join(json.dumps(r)+'\n' for r in records))
+                directory=Path(config['queue_file']).parent/'executions'/stage['id']
+                stream=[{'type':'assistant','session_id':stage['session'],'uuid':final['uuid'],
+                    'parent_tool_use_id':None,'message':final['message']},
+                    {'type':'result','session_id':stage['session'],'is_error':False,'subtype':'success','result':text}]
+                (directory/'stdout').write_text(''.join(json.dumps(r)+'\n' for r in stream))
+                receipt=json.loads((directory/'receipt.json').read_text())
+                import hashlib
+                receipt['stdout_digest']=hashlib.sha256((directory/'stdout').read_bytes()).hexdigest()
+                (directory/'receipt.json').write_text(json.dumps(receipt))
+    def step(connection=None):
+        value=m['mq_step'](config,connection or q);model_step();return value
+    def tick():
+        value=m['mq_tick'](config_path);model_step();return value
     def drain(limit=20):
         for _ in range(limit):
-            if not m['mq_step'](config,q): return
+            if not step():return
         raise AssertionError('worker failed to reach idle/hold')
-    f.drain=drain
+    f.model_step=model_step;f.step=step;f.tick=tick;f.drain=drain
     yield f
     q.close()
 
@@ -342,12 +448,12 @@ def test_worker_preserves_native_receipts_after_restart_and_does_not_resend(flow
         source={'origin':'automatic'},context=copy.deepcopy(flow.context))
     # Every advancement rereads the database like an interrupted/restarted consumer.
     for _ in range(10):
-        flow.m['mq_step'](flow.config,flow.q)
+        flow.step()
         if flow.q.job(job['id'])['state']=='completed': break
     assert flow.launched==['claude','codex']
     assert len(flow.sends)==1 and flow.sends[0][0]=='POST'
     assert flow.q.effects()[0]['state']=='confirmed'
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     assert len(flow.sends)==1
     assert flow.q.job(job['id'])['state']=='completed'
 
@@ -376,12 +482,16 @@ def assessment(text,*,kind='action',anchor=None):
             'scope':{'effects':['reply','resolve'],'discussions':['csp']},'question_anchor':anchor}
 
 
-def test_real_human_after_completed_round_gets_new_fifo_job_without_code_checkpoint(flow,monkeypatch):
+@pytest.mark.parametrize('render',[rendered,compact])
+def test_real_human_after_completed_round_gets_new_fifo_job_without_code_checkpoint(flow,monkeypatch,render):
     previous=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
         source={'origin':'automatic'},context=copy.deepcopy(flow.context))
     flow.drain();assert flow.q.job(previous['id'])['state']=='completed'
     text='responda na thread que a CSP foi corrigida e que o apontamento de memoização não procede, e marque como resolvida'
     source=human_turn(flow,text)
+    if render is rendered:
+        with flow.q.atomic():
+            record=flow.q.mr(11,82);record['instruction_versions'][source['session']]=2;flow.q.put_mr(record)
     action=resolution_fixture(flow)
     result=domain(assessment=assessment(text),actions=[action])
     original_send=flow.m['mq_send']
@@ -393,7 +503,7 @@ def test_real_human_after_completed_round_gets_new_fifo_job_without_code_checkpo
             return {}
         return original_send(api,method,route,payload)
     monkeypatch.setitem(flow.m,'mq_send',send)
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'human-final','phase':'final_answer','text':rendered(result)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'human-final','phase':'final_answer','text':render(result)})
     flow.results.update(claude=result,codex=result)
     flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
     jobs=flow.q.jobs();assert len(jobs)==2 and jobs[1]['kind']=='human' and jobs[1]['source']==source
@@ -450,7 +560,8 @@ def test_singleton_lock_does_not_block_wake_enqueue(flow):
         os.close(descriptor)
 
 
-def test_question_hold_sufficient_answer_releases_only_its_original_anchor(flow):
+@pytest.mark.parametrize('render',[rendered,compact])
+def test_question_hold_sufficient_answer_releases_only_its_original_anchor(flow,render):
     # Claude fails, Codex emits a real native question S; after the full barrier it holds.
     flow.results['claude']=RuntimeError('terminal error')
     flow.results['codex']=domain(outcome='question',question='Qual comportamento devo considerar na CSP?')
@@ -460,6 +571,9 @@ def test_question_hold_sufficient_answer_releases_only_its_original_anchor(flow)
     held=flow.q.mr(11,82)['hold'];assert held and flow.launched==['claude','codex']
     assert flow.q.job(original['id'])['wait_reason']=='human'
     source=human_turn(flow,'considere a CSP atual e continue')
+    if render is rendered:
+        with flow.q.atomic():
+            record=flow.q.mr(11,82);record['instruction_versions'][source['session']]=2;flow.q.put_mr(record)
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor='wrong question'))
     with pytest.raises(RuntimeError,match='exact sufficient-answer'):
         flow.m['mq_accept_answer'](flow.config,flow.q,flow.q.mr(11,82),source,answer)
@@ -467,7 +581,7 @@ def test_question_hold_sufficient_answer_releases_only_its_original_anchor(flow)
     # Hold's automatic scope has no existing threads in this fixture; use finding-only bounded scope.
     answer['assessment']['question_anchor']=held['anchor']
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':rendered(answer)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':render(answer)})
     flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
     assert flow.q.mr(11,82)['hold']==held  # Registration alone never clears a hold.
     flow.results.update(claude=domain(),codex=domain())
@@ -478,12 +592,12 @@ def test_question_hold_sufficient_answer_releases_only_its_original_anchor(flow)
     assert flow.launched==['claude','codex','claude','codex']
 
 
-def test_question_first_reviewer_does_not_skip_second(flow):
+def test_question_first_reviewer_preserves_second_behind_human_hold(flow):
     flow.results['claude']=domain(outcome='question',question='Qual regra usar?')
     flow.q.enqueue(11,82,source_key='code:question',kind='code',head='a'*40,
         source={'origin':'automatic'},context=copy.deepcopy(flow.context))
     flow.drain()
-    assert flow.launched==['claude','codex']
+    assert flow.launched==['claude']
     record=flow.q.mr(11,82)
     assert record['hold']['provider']=='claude'
     assert flow.q.jobs()[0]['state']=='pending'
@@ -505,13 +619,13 @@ def test_automatic_copy_is_not_a_human_answer_and_cannot_clear_hold(flow):
 def test_changed_head_invalidates_old_result_before_any_send(flow):
     job=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
         source={'origin':'automatic'},context=copy.deepcopy(flow.context))
-    for _ in range(4): flow.m['mq_step'](flow.config,flow.q)
+    for _ in range(4): flow.step()
     assert flow.launched==['claude','codex']
     flow.context['head']='d'*40;flow.context['mr']['sha']='d'*40
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     assert flow.sends==[] and flow.q.mr(11,82)['reviewed_head'] is None
     flow.drain()
-    assert flow.q.job(job['id'])['outcome']=='superseded by a new head'
+    assert flow.q.job(job['id'])['outcome']=='context changed; completed publications preserved'
 
 
 @pytest.mark.parametrize('state',['closed','merged'])
@@ -524,15 +638,6 @@ def test_closed_or_merged_mr_never_starts_or_publishes(flow,state):
     assert flow.launched==[] and flow.sends==[] and flow.q.mr(11,82)['reviewed_head'] is None
 
 
-def test_consolidation_requires_earlier_findings_to_be_accounted_for(flow):
-    first=domain();first['concerns']=[{'key':'one','discussion':'csp','disposition':'open','evidence':'source line'}]
-    flow.results['claude']=first
-    flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context));flow.drain()
-    job=flow.q.jobs()[0]
-    assert flow.launched==['claude','codex']
-    assert job['state']=='pending' and 'omitted earlier concerns' in job['validation_error']
-    assert flow.sends==[] and flow.q.mr(11,82)['reviewed_head'] is None
 
 
 def resolution_fixture(flow, *, bot=True):
@@ -553,7 +658,7 @@ def test_compound_reply_then_resolve_requires_exact_confirmed_explanation(flow,m
     def send(api,method,route,payload):
         if method=='PUT':
             assert len(flow.sends)==1
-            assert flow.q.effects()[0]['state']=='confirmed'
+            assert next(e for e in flow.q.effects() if e['kind']=='reply')['state']=='confirmed'
             flow.sends.append((method,route,payload))
             for note in flow.context['threads'][0]['notes']:
                 note.update(resolved=True,resolved_by={'id':7})
@@ -580,11 +685,12 @@ def test_new_concern_after_explanation_prevents_resolve(flow,monkeypatch):
     flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
         source={'origin':'automatic'},context=copy.deepcopy(flow.context))
     # Stop at the actual race; a subsequent pass would correctly require a new assessment.
-    for _ in range(5): flow.m['mq_step'](flow.config,flow.q)
+    for _ in range(5): flow.step()
     assert [method for method,_,_ in flow.sends]==['POST']
     assert all(not n['resolved'] for n in flow.context['threads'][0]['notes'])
-    assert flow.q.mr(11,82)['reviewed_head'] is None
-    assert flow.q.jobs()[0]['rounds'][-1]['reason'].startswith('context changed')
+    assert flow.q.mr(11,82)['reviewed_head']=='a'*40 # First reviewer completed actual code review.
+    assert flow.q.jobs()[0]['stages'][-1]['state']=='failed'
+    assert 'context changed' in str(flow.model_errors[-1])
 
 
 def test_unknown_public_delivery_readback_recovers_without_second_send(flow,monkeypatch):
@@ -672,7 +778,7 @@ def test_interrupted_answer_is_interpreted_read_only_while_hold_remains(flow):
     result=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     result['assessment']['scope']={'effects':['finding'],'discussions':[]}
     flow.results.update(claude=result,codex=result)
-    for _ in range(5): flow.m['mq_step'](flow.config,flow.q)
+    for _ in range(5): flow.step()
     assert flow.q.job(intake['id'])['state']=='completed'
     assert flow.q.mr(11,82)['hold']==hold  # Registered sufficient answer is not an implicit release.
     assert flow.q.job(original['id'])['wait_reason']=='answer_ready'
@@ -722,9 +828,10 @@ def test_unrelated_discussion_change_after_explanation_also_blocks_resolve(flow,
     monkeypatch.setitem(flow.m,'mq_send',send)
     flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
         source={'origin':'automatic'},context=copy.deepcopy(flow.context))
-    for _ in range(5): flow.m['mq_step'](flow.config,flow.q)
+    for _ in range(5): flow.step()
     assert len(flow.sends)==1 and flow.q.effects()[0]['state']=='confirmed'
-    assert flow.q.jobs()[0]['rounds'][-1]['reason'].startswith('context changed')
+    assert flow.q.jobs()[0]['stages'][-1]['state']=='failed'
+    assert 'context changed' in str(flow.model_errors[-1])
     assert not flow.context['threads'][0]['notes'][0]['resolved']
 
 
@@ -736,14 +843,14 @@ def test_crash_after_native_question_result_recovers_same_hold_before_next_stage
     original=flow.m['mq_question']
     def crash(*args): raise InterruptedError('crash after terminal result commit')
     monkeypatch.setitem(flow.m,'mq_question',crash)
-    flow.m['mq_step'](flow.config,flow.q)
-    with pytest.raises(InterruptedError): flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
+    with pytest.raises(InterruptedError): flow.step()
     saved=flow.q.jobs()[0]
     assert saved['stages'][0]['result']['question']==question and flow.q.mr(11,82)['hold'] is None
     monkeypatch.setitem(flow.m,'mq_question',original)
     flow.drain()
     assert flow.q.mr(11,82)['hold']['question']==question
-    assert flow.launched==['claude','codex'] and flow.sends==[]
+    assert flow.launched==['claude'] and flow.sends==[]
 
 
 def test_crash_after_sufficient_answer_keeps_required_new_round(flow,monkeypatch):
@@ -757,7 +864,7 @@ def test_crash_after_sufficient_answer_keeps_required_new_round(flow,monkeypatch
     original=flow.m['mq_reset_round']
     def crash(*args): raise InterruptedError('crash between answer and new execution')
     monkeypatch.setitem(flow.m,'mq_reset_round',crash)
-    with pytest.raises(InterruptedError): flow.m['mq_step'](flow.config,flow.q)
+    with pytest.raises(InterruptedError): flow.step()
     assert flow.q.job(job['id'])['needs_round_reset'] and flow.q.mr(11,82)['hold'] is None
     assert flow.q.mr(11,82)['reviewed_head'] is None
     monkeypatch.setitem(flow.m,'mq_reset_round',original)
@@ -767,17 +874,6 @@ def test_crash_after_sufficient_answer_keeps_required_new_round(flow,monkeypatch
     assert flow.q.job(job['id'])['answers']==[source]
 
 
-def test_altered_native_final_cannot_publish_saved_proposal(flow):
-    resolution_fixture(flow)
-    flow.results['codex']=domain(actions=[{'key':'answer','kind':'reply','body':'CSP corrigida.','discussion':'csp'}])
-    flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context))
-    for _ in range(4): flow.m['mq_step'](flow.config,flow.q)
-    last=flow.q.jobs()[0]['stages'][-1]
-    flow.items[last['turn_id']][-1]['text']=rendered(domain())
-    with pytest.raises(RuntimeError,match='native final result changed'):
-        flow.m['mq_step'](flow.config,flow.q)
-    assert flow.sends==[] and flow.q.effects()==[] and flow.q.mr(11,82)['reviewed_head'] is None
 
 
 def test_readonly_answer_intake_cannot_bypass_uncertain_public_effect(flow):
@@ -838,7 +934,7 @@ def test_original_claude_question_session_can_answer_after_fresh_execution(flow)
     rows=[{'type':'user','uuid':source_id,'parentUuid':hold['native_anchor'],'sessionId':session_s,
            'cwd':flow.config['cwd'],'message':{'content':text}},
           {'type':'assistant','uuid':anchor,'parentUuid':source_id,'sessionId':session_s,
-           'message':{'id':'message-'+anchor,'stop_reason':'end_turn','content':[{'type':'text','text':rendered(answer)}]}},
+           'message':{'id':'message-'+anchor,'stop_reason':'end_turn','content':[{'type':'text','text':compact(answer)}]}},
           {'type':'system','subtype':'turn_duration','uuid':str(uuid.uuid4()),'parentUuid':anchor,'sessionId':hold['session']}]
     with target.open('a') as stream:
         for row in rows: stream.write(json.dumps(row)+'\n')

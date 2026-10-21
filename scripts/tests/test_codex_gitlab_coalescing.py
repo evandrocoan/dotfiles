@@ -205,14 +205,14 @@ def test_ten_events_run_each_configured_reviewer_only_once(flow,first_kind):
     for stage in saved['stages']:
         data=json.loads((flow.q.path.parent/'inputs'/(stage['id']+'.json')).read_text())
         assert data['original_source']==code['source']
-        assert data['context']['head']=='b'*40 and data['kind']=='code'
-        assert data['context']['threads']==latest['threads']
+        assert data['head']=='b'*40 and data['kind']=='code'
+        assert 'context' not in data # Context is read through tools when needed.
         assert 'coalesced_jobs' not in data
 
 
 def test_arrivals_preserve_accepted_input_and_form_one_followup(flow):
     first=automatic(flow.q,'first',context=flow.context)
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     frozen=copy.deepcopy(flow.q.job(first['id']))
     stage=frozen['stages'][0];path=flow.q.path.parent/'inputs'/(stage['id']+'.json');before=path.read_bytes()
     later=automatic(flow.q,'later',kind='discussion',context=flow.context)
@@ -237,13 +237,13 @@ def test_grouped_review_still_blocks_closed_or_merged_mr(flow,state):
 def test_grouped_review_rejects_changed_head_before_publication(flow):
     first=automatic(flow.q,'first',context=flow.context)
     automatic(flow.q,'comments',kind='discussion',context=flow.context)
-    for _ in range(4):flow.m['mq_step'](flow.config,flow.q)
+    for _ in range(4):flow.step()
     assert flow.launched==['claude','codex']
     flow.context['head']='d'*40;flow.context['mr']['sha']='d'*40
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     assert flow.sends==[] and flow.q.mr(11,82)['reviewed_head'] is None
     flow.drain()
-    assert flow.q.job(first['id'])['outcome']=='superseded by a new head'
+    assert flow.q.job(first['id'])['outcome']=='context changed; completed publications preserved'
 
 
 def test_failed_group_retries_without_recreating_absorbed_work(flow,monkeypatch):
@@ -267,17 +267,17 @@ def test_restart_keeps_grouped_input_and_publishes_once(flow):
         'position':{'position_type':'text','base_sha':'b'*40,'start_sha':'c'*40,'head_sha':'a'*40,
             'old_path':'x.py','new_path':'x.py','new_line':1}}
     flow.results['codex']=domain(actions=[action])
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     accepted=copy.deepcopy(flow.q.job(first['id']))
     stage=accepted['stages'][0];path=flow.q.path.parent/'inputs'/(stage['id']+'.json');before=path.read_bytes()
     reopened=flow.m['MonitorQueue'](flow.config)
     try:
         assert reopened.job(first['id'])==accepted
         for _ in range(12):
-            if not flow.m['mq_step'](flow.config,reopened):break
+            if not flow.step(reopened):break
         assert reopened.job(first['id'])['outcome']=='reviewed'
         assert reopened.effects()[0]['state']=='confirmed' and len(reopened.effects())==1
-        assert not flow.m['mq_step'](flow.config,reopened)
+        assert not flow.step(reopened)
     finally:reopened.close()
     assert path.read_bytes()==before and flow.launched==['claude','codex']
     assert len(flow.sends)==1

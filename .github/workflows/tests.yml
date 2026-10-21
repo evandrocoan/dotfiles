@@ -37,7 +37,7 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           python -m pip install poetry==2.3.3
-          poetry install --only skill-tests --no-interaction
+          poetry install --only skill-tests,monitor-tools --no-interaction
 
       - name: Run repository tests and syntax checks
         working-directory: scripts

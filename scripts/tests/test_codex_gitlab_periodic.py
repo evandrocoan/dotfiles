@@ -10,7 +10,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import assessment, domain, flow, human_turn, module, rendered
+from test_codex_gitlab_queue import assessment, domain, flow, human_turn, module, rendered, compact
 
 
 def enqueue(f, iid=82):
@@ -54,7 +54,7 @@ def test_post_launch_missing_service_inventory_never_releases_serial_capacity(fl
         return original(c,args)
     monkeypatch.setitem(flow.m,'mq_service_command',command)
     job=enqueue(flow)
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     saved=flow.q.job(job['id'])
     assert saved['stages'][0]['state']=='running'
     assert saved['stages'][0]['delivery']=='sending'
@@ -66,7 +66,7 @@ def test_successive_ticks_resume_same_stage_then_advance_and_exit(flow,monkeypat
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
     if first_failure:flow.results['claude']=RuntimeError('terminal provider failure')
     for expected in (['claude'],['claude','codex'],['claude','codex']):
-        result=flow.m['mq_tick'](flow.config_path)
+        result=flow.tick()
         assert result['cycle']=='checked'
         assert flow.launched==expected
     assert flow.q.job(job['id'])['state']=='completed'
@@ -75,21 +75,43 @@ def test_successive_ticks_resume_same_stage_then_advance_and_exit(flow,monkeypat
 
 def test_ticks_with_active_reviewer_do_not_wait_or_start_another(flow,monkeypatch):
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     flow.service.populated=True
-    flow.m['mq_tick'](flow.config_path)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
+    flow.tick()
     assert flow.launched==['claude']
     assert flow.q.job(job['id'])['stages'][0]['state']=='running'
     flow.service.populated=False
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert flow.launched==['claude','codex']
+
+
+def test_slow_uncertain_readback_rotates_without_starving_ready_work(flow,monkeypatch):
+    f=flow;quiet_scan(f,monkeypatch)
+    blocked=[]
+    for iid in (90,91):
+        queued=enqueue(f,iid);job=f.q.reserve({11});assert job['id']==queued['id']
+        f.q.park(job,'effect_unknown');blocked.append(job['id'])
+    ready=enqueue(f);context=f.m['mq_context'];attempts=[]
+    def slow(c,iid,**kwargs):
+        if iid in (90,91):
+            attempts.append(iid)
+            # The I/O boundary exhausted its deadline. Consumer/recovery logic remains real.
+            assert c['_cycle_deadline']-time.monotonic()<=c['cycle_seconds']/4
+            raise f.m['MonitorCycleYield']('fixture HTTP exhausted read-back budget')
+        return context(c,iid,**kwargs)
+    monkeypatch.setitem(f.m,'mq_context',slow)
+    for _ in range(3):f.tick()
+    assert attempts==[90,91,90]
+    assert f.launched==['claude','codex'] and f.q.job(ready['id'])['state']=='completed'
+    assert all(f.q.job(identifier)['wait_reason']=='effect_unknown' for identifier in blocked)
+    assert not f.sends
 
 
 @pytest.mark.parametrize('stop_confirmed',[False,True])
 def test_expired_owned_reviewer_only_progresses_after_stop_confirmation(flow,monkeypatch,stop_confirmed):
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     job=flow.q.job(job['id']);stage=job['stages'][0]
     flow.m['mq_update_stage'](flow.q,job,stage['id'],review_deadline=1)
     flow.service.populated=True
@@ -101,7 +123,7 @@ def test_expired_owned_reviewer_only_progresses_after_stop_confirmation(flow,mon
             if not stop_confirmed:return ''
         return original(c,args)
     monkeypatch.setitem(flow.m,'mq_service_command',stop)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     saved=flow.q.job(job['id'])
     assert stopped==[stage['session']]
     assert bool(saved['stages'][0]['cancel_requested_at'])
@@ -113,11 +135,11 @@ def test_expired_unacknowledged_attempt_retains_intent_and_capacity(flow,monkeyp
     quiet_scan(flow,monkeypatch)
     def lost(c,args):raise RuntimeError('lost launch acknowledgment')
     monkeypatch.setitem(flow.m,'mq_claude_command',lost)
-    job=enqueue(flow);flow.m['mq_tick'](flow.config_path)
+    job=enqueue(flow);flow.tick()
     job=flow.q.job(job['id']);stage=job['stages'][0]
     flow.m['mq_update_stage'](flow.q,job,stage['id'],review_deadline=1)
     monkeypatch.setitem(flow.m,'mq_claude_agents',lambda *a:[])
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     saved=flow.q.job(job['id'])
     assert saved['state']=='running' and saved['stages'][0]['cancel_requested_at']
     assert saved['stages'][0]['review_deadline']==1
@@ -128,7 +150,7 @@ def test_expired_unacknowledged_attempt_retains_intent_and_capacity(flow,monkeyp
 def test_acceptance_and_mr_ownership_commit_together(flow,monkeypatch):
     original=flow.m['mq_claude_accept']
     monkeypatch.setitem(flow.m,'mq_claude_accept',lambda *a:None)
-    job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
+    job=enqueue(flow);flow.step()
     job=flow.q.job(job['id']);stage=job['stages'][0]
     assert stage['session'] and stage['delivery']=='sending'
     monkeypatch.setitem(flow.m,'mq_claude_accept',original)
@@ -147,10 +169,10 @@ def test_acceptance_and_mr_ownership_commit_together(flow,monkeypatch):
 
 
 def test_existing_accepted_registration_is_repaired_idempotently(flow,monkeypatch):
-    job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
+    job=enqueue(flow);flow.step()
     # Model the old version's interruption between its separate acknowledgment and mapping commits.
     with flow.q.atomic():flow.q.put_mr({'repository_id':11,'iid':82,'chats':{},'hold':None})
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     saved=flow.q.job(job['id']);session=saved['stages'][0]['session']
     assert flow.q.mr(11,82)['chats']['claude']==session
     assert flow.q.mr(11,82).get('claude_history',[])==[]
@@ -161,54 +183,27 @@ def test_budget_before_launch_preserves_prepared_attempt(flow,monkeypatch):
     original=flow.m['mq_service_command']
     def yield_before(c,args):raise flow.m['MonitorCycleYield']('before spawn')
     monkeypatch.setitem(flow.m,'mq_service_command',yield_before)
-    result=flow.m['mq_tick'](flow.config_path)
+    result=flow.tick()
     saved=flow.q.job(job['id']);attempt=saved['stages'][0]['id']
     assert result['yielded'] and saved['stages'][0]['delivery']=='prepared'
     assert saved['stages'][0]['state']=='running' and flow.launched==[]
     monkeypatch.setitem(flow.m,'mq_service_command',original)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert flow.q.job(job['id'])['stages'][0]['id']==attempt
     assert flow.launched==['claude']
 
 
 def test_ready_progression_precedes_inventory_that_uses_its_budget(flow,monkeypatch):
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     def slow(*args):
         assert flow.launched==['claude','codex']
         raise flow.m['MonitorCycleYield']('slow inventory')
     monkeypatch.setitem(flow.m,'mq_inventory',slow)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert flow.launched==['claude','codex']
 
 
-@pytest.mark.parametrize('after_send',[False,True,'interrupted_send'])
-def test_budget_yield_around_send_retains_batch_and_does_not_repeat_review(flow,monkeypatch,after_send):
-    quiet_scan(flow,monkeypatch)
-    action={'key':'finding','kind':'finding','body':'[P2] Subtraia o desconto.',
-        'position':{'position_type':'text','base_sha':'b'*40,'start_sha':'c'*40,'head_sha':'a'*40,
-            'old_path':'x.py','new_path':'x.py','new_line':1}}
-    flow.results['codex']=domain(actions=[action]);job=enqueue(flow)
-    flow.m['mq_tick'](flow.config_path);flow.m['mq_tick'](flow.config_path)
-    original_send=flow.m['mq_send'];original_context=flow.m['mq_context'];sent=[False]
-    def send(*args):
-        if not after_send:raise flow.m['MonitorCycleYield']('before send')
-        result=original_send(*args);sent[0]=True
-        if after_send=='interrupted_send':raise flow.m['MonitorCycleYield']('during possible send',issued=True)
-        return result
-    def context(*args,**kw):
-        if sent[0] and after_send is True:raise flow.m['MonitorCycleYield']('after send')
-        return original_context(*args,**kw)
-    monkeypatch.setitem(flow.m,'mq_send',send);monkeypatch.setitem(flow.m,'mq_context',context)
-    flow.m['mq_tick'](flow.config_path)
-    saved=flow.q.job(job['id']);batch=copy.deepcopy(saved['batch'])
-    assert saved['state']=='running' and saved['outcome'] is None
-    assert len(flow.sends)==int(bool(after_send))
-    monkeypatch.setitem(flow.m,'mq_send',original_send);monkeypatch.setitem(flow.m,'mq_context',original_context)
-    flow.m['mq_tick'](flow.config_path)
-    assert flow.q.job(job['id'])['state']=='completed'
-    assert flow.q.job(job['id'])['batch']==batch
-    assert len(flow.sends)==1 and flow.launched==['claude','codex']
 
 
 @pytest.mark.parametrize('changed',[None,'version','binary','message','session'])
@@ -217,7 +212,7 @@ def test_original_launch_only_trust_rejection_requires_unchanged_identity(flow,t
     flow.config['claude_bin']=str(binary)
     def lost(c,args):raise RuntimeError('legacy original launch failed')
     monkeypatch.setitem(flow.m,'mq_claude_command',lost)
-    job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
+    job=enqueue(flow);flow.step()
     job=flow.q.job(job['id']);stage=job['stages'][0]
     message=f"Claude CLI failed: Workspace not trusted. Run `claude` in {flow.config['cwd']} once and accept the trust prompt, then retry."
     # Arrange a previously issued legacy attempt; new launches never use this transport.
@@ -231,7 +226,7 @@ def test_original_launch_only_trust_rejection_requires_unchanged_identity(flow,t
     if changed=='message':flow.m['mq_update_stage'](flow.q,job,stage['id'],error={'message':message+' other operation'})
     if changed=='session':flow.m['mq_update_stage'](flow.q,job,stage['id'],session='already-issued-session')
     if changed=='binary':flow.m['mq_update_stage'](flow.q,job,stage['id'],started_at=0)
-    flow.m['mq_step'](flow.config,flow.q)
+    flow.step()
     saved=flow.q.job(job['id'])
     assert saved['stages'][0]['state']==('failed' if changed is None else 'running')
     if changed is None:
@@ -250,9 +245,9 @@ def test_slow_human_intake_rotates_to_later_mr_on_next_cycle(flow,monkeypatch):
         if r['iid']==1:raise flow.m['MonitorCycleYield']('slow first MR')
     monkeypatch.setitem(flow.m,'mq_intake',intake)
     monkeypatch.setitem(flow.m,'mq_inventory',lambda *a:True)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert seen==[1]
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert seen[:2]==[1,2]
     assert flow.q.mr(11,2)['hold']=={'question':'original'}
 
@@ -317,12 +312,12 @@ def test_cycle_timeout_after_possible_launch_preserves_sending_identity(flow,mon
     quiet_scan(flow,monkeypatch);job=enqueue(flow)
     def uncertain(*args):raise flow.m['MonitorCycleYield']('possible accepted input',issued=True)
     monkeypatch.setitem(flow.m,'mq_claude_command',uncertain)
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     saved=flow.q.job(job['id']);stage=saved['stages'][0]
     assert stage['state']=='running' and stage['delivery']=='sending'
     assert stage['input'] and stage['name'] and stage['review_deadline']
     monkeypatch.setitem(flow.m,'mq_claude_agents',lambda *a:[])
-    flow.m['mq_tick'](flow.config_path)
+    flow.tick()
     assert flow.q.job(job['id'])['stages'][0]['id']==stage['id']
     assert flow.launched==[]
 
@@ -372,12 +367,13 @@ def test_old_session_cannot_hide_sufficient_answer_in_later_claude_session(flow,
     rows=[{'type':'user','uuid':source,'parentUuid':hold['native_anchor'],'sessionId':hold['session'],
         'cwd':flow.config['cwd'],'message':{'content':text}},
         {'type':'assistant','uuid':final,'parentUuid':source,'sessionId':hold['session'],
-         'message':{'id':'message-'+final,'stop_reason':'end_turn','content':[{'type':'text','text':rendered(answer)}]}},
+         'message':{'id':'message-'+final,'stop_reason':'end_turn','content':[{'type':'text','text':compact(answer)}]}},
         {'type':'system','subtype':'turn_duration','uuid':str(uuid.uuid4()),'parentUuid':final,'sessionId':hold['session']}]
     with target.open('a') as stream:
         for row in rows:stream.write(json.dumps(row)+'\n')
     old=str(uuid.uuid4());record=flow.q.mr(11,82)
-    record['codex_contexts']={old:record['codex_context'],**record['codex_contexts']}
+    record['codex_contexts']={old:{'cwd':flow.config['cwd'],'project_id':None,'roots':[flow.config['cwd']]},
+        **record.get('codex_contexts',{})}
     with flow.q.atomic():flow.q.put_mr(record)
     original=flow.m['monitor_native']
     def native(c,method,params,**kw):
@@ -406,7 +402,7 @@ def test_slow_earlier_source_in_same_session_does_not_hide_answer(flow,monkeypat
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':rendered(answer)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':compact(answer)})
     original=flow.m['mq_codex_items']
     def items(c,session,turn):
         if turn==old['turn_id']:raise flow.m['MonitorCycleYield']('slow earlier turn')
@@ -432,7 +428,7 @@ def test_recorded_mixed_inventory_artifact_preserves_native_acceptance(flow,monk
             return json.dumps([*capture['response'],*json.loads(output)])
         return output
     monkeypatch.setitem(flow.m,'mq_claude_command',command)
-    job=enqueue(flow);flow.m['mq_step'](flow.config,flow.q)
+    job=enqueue(flow);flow.step()
     saved=flow.q.job(job['id']);stage=saved['stages'][0]
     with flow.q.atomic():
         stage.pop('transport');stage['background_id']=stage['session'][:8];stage['delivery']='sending'
@@ -453,7 +449,7 @@ def test_paged_history_resumes_answer_order_proof_across_cycles(flow,monkeypatch
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':rendered(answer)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':compact(answer)})
     session=hold['session'];native=flow.m['monitor_native'];calls=[];clock=[0];budget=[0]
     question=next(t for t in flow.turns[session] if t['id']==hold['turn_id'])
     user=next(t for t in flow.turns[session] if t['id']==source['turn_id'])
@@ -493,7 +489,7 @@ def test_paged_intake_visits_latest_source_before_reading_older_pages(flow,monke
     enqueue(flow);flow.drain()
     source=human_turn(flow,'explique a regra atual')
     answer=domain(outcome='noop',assessment=assessment(source['texts'][0],kind='explanation'))
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'explanation','phase':'final_answer','text':rendered(answer)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'explanation','phase':'final_answer','text':compact(answer)})
     native=flow.m['monitor_native'];calls=[]
     def paged(c,method,params,**kw):
         if method=='thread/turns/list':
@@ -525,7 +521,7 @@ def test_answer_appended_after_cursor_stalls_is_found_on_fresh_head(flow,monkeyp
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':rendered(answer)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':compact(answer)})
     try:flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
     except flow.m['MonitorCycleYield']:pass
     assert flow.q.job(job['id'])['wait_reason']=='answer_ready'
@@ -539,7 +535,7 @@ def test_slow_recent_source_does_not_starve_saved_answer_in_history(flow,monkeyp
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':rendered(answer)})
+    flow.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer','text':compact(answer)})
     native=flow.m['monitor_native'];initial=[True];reads=[];poison=[None]
     question=next(t for t in flow.turns[hold['session']] if t['id']==hold['turn_id'])
     user=next(t for t in flow.turns[hold['session']] if t['id']==source['turn_id'])

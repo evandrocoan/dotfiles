@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import flow, module, domain, rendered, assessment
+from test_codex_gitlab_queue import flow, module, domain, rendered, assessment, compact
 
 
 @pytest.fixture
@@ -119,14 +119,14 @@ def test_same_five_roots_reach_both_real_dispatchers_without_global_writes(proje
 
 def test_folder_addition_during_round_and_restart_only_changes_the_next_round(project):
     f=project; first=enqueue(f)
-    f.m['mq_step'](f.config,f.q)
+    f.step()
     saved=f.q.job(first['id'])['workspace']
     extra=Path(f.config['cwd']).parent/'new folder';extra.mkdir()
     f.live['roots'].append(str(extra))
     reopened=f.m['MonitorQueue'](f.config)
     try:
         for _ in range(10):
-            if not f.m['mq_step'](f.config,reopened):break
+            if not f.step(reopened):break
         else:pytest.fail('restarted round did not terminate')
     finally:reopened.close()
     first=f.q.job(first['id'])
@@ -148,7 +148,7 @@ def native_human(f, session, text, result=None):
     f.turns[session].insert(0,{'id':turn,'status':'completed'})
     f.items[turn]=[{'type':'userMessage','id':source_id,'content':[{'type':'text','text':text}]}]
     if result:
-        f.items[turn].append({'type':'agentMessage','id':'final-'+turn,'phase':'final_answer','text':rendered(result)})
+        f.items[turn].append({'type':'agentMessage','id':'final-'+turn,'phase':'final_answer','text':compact(result)})
     return {'origin':'human','provider':'codex','session':session,'turn_id':turn,
         'source_id':source_id,'texts':[text],'cwd':f.chats[session]['cwd'],
         'project_id':f.chats[session]['projectId'],'mixed':False,'automated':False}
@@ -205,7 +205,7 @@ def test_same_name_different_project_is_not_authorized(project):
     f=project;f.live['id']=str(uuid.uuid4())
     enqueue(f)
     with pytest.raises(RuntimeError,match='native project identity changed'):
-        f.m['mq_step'](f.config,f.q)
+        f.step()
     assert f.launched == [] and f.sends == []
 
 
