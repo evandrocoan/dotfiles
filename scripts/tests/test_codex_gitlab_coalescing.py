@@ -203,7 +203,7 @@ def test_ten_events_run_each_configured_reviewer_only_once(flow,first_kind):
     assert saved['outcome']=='reviewed' and len(saved['coalesced_jobs'])==9
     assert flow.q.mr(11,82)['reviewed_head']=='b'*40
     for stage in saved['stages']:
-        data=json.loads((flow.q.path.parent/'inputs'/(stage['id']+'.json')).read_text())
+        data=stage['input_context']
         assert data['original_source']==code['source']
         assert data['head']=='b'*40 and data['kind']=='code'
         assert 'context' not in data # Context is read through tools when needed.
@@ -214,10 +214,10 @@ def test_arrivals_preserve_accepted_input_and_form_one_followup(flow):
     first=automatic(flow.q,'first',context=flow.context)
     flow.step()
     frozen=copy.deepcopy(flow.q.job(first['id']))
-    stage=frozen['stages'][0];path=flow.q.path.parent/'inputs'/(stage['id']+'.json');before=path.read_bytes()
+    stage=frozen['stages'][0];before=stage['input']
     later=automatic(flow.q,'later',kind='discussion',context=flow.context)
     automatic(flow.q,'more-later',kind='discussion',context=flow.context)
-    assert flow.q.job(first['id'])==frozen and path.read_bytes()==before
+    assert flow.q.job(first['id'])==frozen and flow.q.job(first['id'])['stages'][0]['input']==before
     assert [j['id'] for j in flow.q.jobs('pending')]==[later['id']]
     flow.drain()
     assert flow.launched==['claude','codex','claude','codex']
@@ -269,7 +269,7 @@ def test_restart_keeps_grouped_input_and_publishes_once(flow):
     flow.results['codex']=domain(actions=[action])
     flow.step()
     accepted=copy.deepcopy(flow.q.job(first['id']))
-    stage=accepted['stages'][0];path=flow.q.path.parent/'inputs'/(stage['id']+'.json');before=path.read_bytes()
+    stage=accepted['stages'][0];before=stage['input']
     reopened=flow.m['MonitorQueue'](flow.config)
     try:
         assert reopened.job(first['id'])==accepted
@@ -279,7 +279,7 @@ def test_restart_keeps_grouped_input_and_publishes_once(flow):
         assert reopened.effects()[0]['state']=='confirmed' and len(reopened.effects())==1
         assert not flow.step(reopened)
     finally:reopened.close()
-    assert path.read_bytes()==before and flow.launched==['claude','codex']
+    assert flow.q.job(first['id'])['stages'][0]['input']==before and flow.launched==['claude','codex']
     assert len(flow.sends)==1
 
 

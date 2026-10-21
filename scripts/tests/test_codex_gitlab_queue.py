@@ -286,7 +286,7 @@ def flow(module,tmp_path,monkeypatch):
         name=args[args.index('--name')+1]
         claude_agents.append({'id':session[:8],'sessionId':session,'name':name,'cwd':c['cwd'],'kind':'background','state':'running'})
         result=results['claude']
-        rows=[{'type':'user','uuid':src,'sessionId':session,'cwd':c['cwd'],'message':{'content':args[-1] if args[0]=='--print' else args[1]}}]
+        rows=[{'type':'user','uuid':src,'sessionId':session,'cwd':c['cwd'],'message':{'content':c.get('_test_stdin',args[-1]) if args[0]=='--print' else args[1]}}]
         rows.append({'type':'assistant','uuid':final,'parentUuid':src,'sessionId':session,
             'isApiErrorMessage':isinstance(result,Exception),'error':str(result),
             'message':{'id':'message-'+final,'stop_reason':'end_turn','content':[{'type':'text','text':str(result) if isinstance(result,Exception) else rendered(result)}]}})

@@ -87,7 +87,11 @@ advances the code checkpoint. New Claude stages use finite print CLI services, w
 stream identities and service/cgroup termination proof; idle sessions retain history without a
 process. Existing issued background stages and native human intake retain their original sources. Use fresh state and lazily created chats; predecessor chats/state
 remain outside the consumer without migration or instruction updates. Earlier sessions created by
-this consumer remain valid original human/hold sources. Preserve exact native input/result identity,
+this consumer remain valid original human/hold sources. New stages send the complete readable native task from one frozen stage snapshot; old inputs
+keep their original validation. Archive operational diagnostics instead of sending them as review
+directives. Explicit operator restart retires only the selected terminal held round, queues a full
+review in fresh chats, and preserves late answers read-only against the exact retired question.
+Preserve exact native input/result identity,
 immutable publication identities and whole-discussion resolution checks. Models compare concerns
 against actual discussions; different defects on the same line remain separate. Completion and
 question signals are provisional until their exact native final. Uncertain sends fence that MR;

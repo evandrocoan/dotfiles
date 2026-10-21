@@ -120,8 +120,8 @@ class Native:
         except subprocess.TimeoutExpired:self.child.terminate();self.child.wait(timeout=10)
         self.child.stdout.close();self.errors.close()
 
-    def turn(self,thread,permissions):
-        result=self.rpc('turn/start',{'threadId':thread,'input':[{'type':'text','text':'Disposable local fixture'}],
+    def turn(self,thread,permissions,text="Disposable local fixture"):
+        result=self.rpc('turn/start',{'threadId':thread,'input':[{'type':'text','text':text}],
             'approvalPolicy':'never','permissions':permissions})
         identifier=result['turn']['id']
         while True:
@@ -204,7 +204,17 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
         thread=created['thread'];identifier=thread['id']
         assert thread['projectId']==project['id']
         assert m['monitor_thread_source_roots'](c,thread)==c['_workspace']['roots']
-        native.turn(identifier,m['MQ_PERMISSION_PROFILE'])
+        visible=m['mq_render_input']({'stage':str(uuid.uuid4()),'kind':'code',
+            'url':'https://gitlab.example.test/team/repo/-/merge_requests/82','head':'a'*40,
+            'workspace':c['_workspace'],'model_selection':{'model':'gpt-6.1-sol','effort':'xhigh'},
+            'original_source':{'origin':'automatic'},'prior_reviewers':[]})
+        native.turn(identifier,m['MQ_PERMISSION_PROFILE'],visible)
+        history=native.rpc('thread/turns/list',{'threadId':identifier,'itemsView':'notLoaded'})
+        turn=history['data'][0]['id']
+        wire=native.rpc('thread/items/list',{'threadId':identifier,'turnId':turn})
+        users=[r['item'] for r in wire['data'] if r['item']['type']=='userMessage']
+        assert len(users)==1 and len(users[0]['content'])==1
+        assert users[0]['content'][0]['type']=='text' and users[0]['content'][0]['text']==visible
         assert server.targets[0].read_text()=='native edit\n'
         assert not any(p.exists() for p in server.targets[1:])
         outputs=[i for i in server.requests[-1]['input'] if i.get('type')=='custom_tool_call_output']
@@ -244,9 +254,10 @@ class Provider(http.server.BaseHTTPRequestHandler):
         if index==0 and hasattr(self.server,'release'):
             self.server.entered.set()
             assert self.server.release.wait(35),'fixture provider was never released'
-        tool=index<len(self.server.steps)
+        step_index=0 if getattr(self.server,'retry_on_busy',False) and 'monitor is checking this stage; retry this tool' in json.dumps(data['messages'][-1]) else index
+        tool=step_index<len(self.server.steps)
         if tool:
-            name,value=self.server.steps[index]
+            name,value=self.server.steps[step_index]
             block={'type':'tool_use','id':'tool-'+str(index),'name':name,'input':{}}
             delta={'type':'input_json_delta','partial_json':json.dumps(value)}
         else:
@@ -323,19 +334,21 @@ def test_native_claude_commands_editing_and_denials(native_workspace,mode):
         server.shutdown();server.server_close();worker.join(5)
 
 
-def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_path,monkeypatch):
+@pytest.mark.parametrize('large',[False,True])
+def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_path,monkeypatch,large):
     """Real installed Claude/systemd, real FIFO consumer, local model and GitLab wire fixtures."""
     f=flow;m=f.m
     for name in ('mq_service_command','mq_service_identity','mq_cgroup_empty'):
         monkeypatch.setitem(m,name,module[name])
     binary=shutil.which('claude');assert binary
-    f.raw.update(claude_bin=binary,review_timeout_seconds=30)
+    f.raw.update(claude_bin=binary,review_timeout_seconds=30,reviewers=['codex','claude'] if large else ['claude','codex'])
     f.config_path.write_text(json.dumps(f.raw))
     f.config.clear();f.config.update(m['mq_config'](f.config_path))
     home=Path(f.config['claude_home']);home.mkdir()
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Provider)
     server.requests=[];server.steps=[('mcp__gitlab_review__ask_human',{'question':'Which fixture rule should be used?'})]
     server.final_text='Which fixture rule should be used?'
+    server.retry_on_busy=True
     worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
     for key in list(os.environ):
         if key.startswith(('ANTHROPIC_','CLAUDE_','CODEX_')):monkeypatch.delenv(key)
@@ -348,34 +361,45 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
     try:
         job=f.q.enqueue(11,82,source_key='native-print',kind='code',head='a'*40,
             source={'origin':'automatic'},context=f.context)
+        if large:
+            f.step()
+            first=f.q.job(job['id'])['stages'][0]
+            f.items[first['turn_id']][-1]['text']='Earlier review context: '+('á context '*20000)
+            assert m['mq_consume'](f.config,f.q) # Collect the actual preceding native final.
+        index=1 if large else 0
         assert m['mq_consume'](f.config,f.q)
-        stage=f.q.job(job['id'])['stages'][0]
+        stage=f.q.job(job['id'])['stages'][index]
         deadline=time.monotonic()+40
         while time.monotonic()<deadline:
             m['mq_consume'](f.config,f.q)
             saved=f.q.job(job['id'])
-            if saved['stages'][0]['state']!='running':break
+            if saved['stages'][index]['state']!='running':break
             time.sleep(.1)
-        assert saved['stages'][0]['state']=='succeeded',saved
-        assert saved['stages'][0]['result']['question']=='Which fixture rule should be used?'
-        assert f.q.mr(11,82)['hold']['native_anchor']==saved['stages'][0]['anchor']
-        assert m['mq_print_execution'](f.config,saved['stages'][0])['terminal'] is True
+        assert saved['stages'][index]['state']=='succeeded',saved
+        request=saved['stages'][index]['input']
+        if large:assert len(request.encode('utf-8'))>131072
+        native_records=m['mq_claude_records'](f.config,stage['session'])
+        user=next(r for r in native_records if r['type']=='user')
+        assert user['message']['content']==request
+        assert saved['stages'][index]['result']['question']=='Which fixture rule should be used?'
+        assert f.q.mr(11,82)['hold']['native_anchor']==saved['stages'][index]['anchor']
+        assert m['mq_print_execution'](f.config,saved['stages'][index])['terminal'] is True
         assert m['mq_cgroup_empty'](stage['service_identity']['root']+'/app.slice/'+stage['unit'])
         f.drain()
-        assert f.launched==[] and f.sends==[]
+        assert f.launched==(['codex'] if large else []) and f.sends==[]
         assert f.q.job(job['id'])['wait_reason']=='human'
         server.final_text='Cold resume fixture complete.'
         server.steps=[]
         arguments=m['mq_claude_arguments'](m['mq_workspace_config'](f.config,saved),'Later fixture input','resume')
-        index=arguments.index('--append-system-prompt');del arguments[index:index+2]
+        prompt_index=arguments.index('--append-system-prompt');del arguments[prompt_index:prompt_index+2]
         arguments[-2:-2]=['--resume',stage['session']]
         output=subprocess.run([binary,*arguments],cwd=f.config['cwd'],env=m['mq_claude_environment'](f.config),
             stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=30)
         assert output.returncode==0,output.stderr
         assert any(m['mq_instructions']() in block.get('text','') for block in server.requests[-1]['system'])
         # Revalidation still selects the captured question, never the resumed final.
-        observed=m['mq_claude_observe'](f.config,saved['stages'][0])
-        assert observed['anchor']==saved['stages'][0]['anchor']
+        observed=m['mq_claude_observe'](f.config,saved['stages'][index])
+        assert observed['anchor']==saved['stages'][index]['anchor']
         assert observed['text']=='Which fixture rule should be used?'
     finally:
         if stage and stage.get('unit'):

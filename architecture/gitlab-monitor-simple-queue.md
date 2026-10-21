@@ -39,8 +39,8 @@ Codex selects a distinct thread-local permissions profile at creation, resume an
 resume explicitly supplies the round's roots. Claude receives the same primary/additional
 directories, scoped native Edit/Write rules and command sandbox settings without inherited hooks
 or unrelated writable directories. Preserve intended model/effort and subscription credentials.
-No unsandboxed retry is enabled. The immutable input remains readable without adding the queue
-directory as a writable workspace. Necessary linked-worktree Git metadata may be outside the
+No unsandboxed retry is enabled. The complete saved request is sent directly to the native chat
+without adding the queue directory as a writable workspace. Necessary linked-worktree Git metadata may be outside the
 configured roots; this exception does not include the main checkout's source directory.
 
 Register original contexts for every Codex session created by this consumer, retaining older
@@ -84,6 +84,17 @@ Each job binds authenticated repository ID, MR IID, mapped chat, immutable sourc
 internal epoch and exact native execution attempt. Persist exact automatic input before native
 start and prove its acknowledgment or reconcile that exact delivery. Acceptance is not review.
 Unknown native execution retains the running slot; elapsed time is not evidence of termination.
+
+Newly prepared stages persist the complete readable task message and its frozen
+context together in the existing queue stage before dispatch. Send that message directly to each
+native client; do not require the reviewer to read a separate input file. Keep execution identity
+and exact native-input authentication. Already prepared or issued historical inputs retain their
+original bytes and original validation. Archive prior-round operational diagnostics with their
+round instead of presenting them as current work or human-decision requirements. Input validation,
+question-continuation authentication and interrupted delivery must use the same saved context.
+Claude's finite service receives the saved message through verified UTF-8 standard input, with
+versioned compatibility for already prepared argv executions. A transport artifact is not another
+input authority. Proven failure before process execution cannot become unknown native capacity.
 
 Reviewers use task-sized read, finding, reply and resolve operations. The helper derives job,
 stage, epoch, source and public-operation identities; models supply only domain arguments.
@@ -215,6 +226,23 @@ the pre-answer result. Partial native output is not an invented completed questi
 created by this consumer remain valid human sources for their original requests and questions,
 even when a later execution uses a different Claude session.
 
+An explicit local operator request through `restart-review JOB --stage STAGE --reason TEXT` may discard one exactly selected pending round
+and return that same admitted work to the FIFO tail for a fresh complete review and new chats.
+Revalidate job/stage/epoch, original native input/question, exact termination, repository/open MR,
+admitted head, current native-answer frontier, absence of pending answers and settled public
+effects. Archive the old round, diagnostic, held question and operator reason distinctly from
+sufficient answers. Preserve original admission/source, original contexts, public identities and
+actual code checkpoint. Reset active stages/attempt/workspace; every configured reviewer runs in
+the replacement round. This explicit full restart is separate from failed-reviewer selective retry.
+Repetition cannot repeat the transition; no fake automatic event or human answer is created.
+Changed context or uncertainty rejects without dispatch. Genuine holds outside the selected round
+remain authoritative; models cannot request this administration through their review tools.
+
+Native intake is not atomic with operator retirement. Recheck the source frontier before commit
+and preserve its identity in retirement history. A late answer to that exact retired question is
+handled read-only with its original scope and source; it cannot become unrelated mutable work or
+an answer to another hold. Unrelated explicit new actions in original chats remain admissible.
+
 ## Publications
 
 The consumer validates repository, job authority, immutable reviewed head, current discussion,
@@ -264,6 +292,11 @@ stage input carry this delegation; native launch uses that stage's selection. Do
 model-choice holds before admitted work. Existing native holds still require their real sufficient
 answers; manual chats and domain-question policy are unchanged. New instruction versions must not
 change how older compact human assessments are authenticated and read.
+
+The same saved native message and frozen context govern dispatch, tool authentication, question
+continuation and recovery; historical inputs remain on their original reader. Explicit operator
+restart adds a selected round-discard transition and late-answer handling without changing native
+human-action admission or public-effect ownership.
 
 Each 15-minute systemd trigger runs one bounded queue cycle and exits, using a oneshot service
 without automatic restart or a resident scan helper. The current TOML cadence/window governs
@@ -318,6 +351,8 @@ cutover. New work uses fresh instructions without moving, migrating or rewriting
 | Safe effects and progress | Scoped tools and publication journal | `test_codex_gitlab_tools.py`: live publication, immutable receipts, source/context denials, partial sends, whole-discussion resolution, honest checkpoint |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
+| Visible native requests  | Existing stage input, native dispatch, input validation and question continuation | Exact message/context, historical reader, large Claude stdin, pre-exec failure and native creation/cold-resume checks |
+| Explicit full-round restart  | Operator control, original native question, existing queue and intake | Native-answer frontier/races, late replies, exact target, fresh complete review/chat, FIFO/history/effect preservation and rejection controls |
 | Shared editable workspace | Round snapshot and native launch policy | Same roots across reviewers/restart, linked Git metadata, read-only intake, original-chat answers |
 
 The standalone CLI owns `MonitorQueue`, the ordered worker and one shared instruction producer.

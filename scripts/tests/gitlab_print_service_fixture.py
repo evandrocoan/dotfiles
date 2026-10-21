@@ -28,7 +28,8 @@ class PrintService:
         start=arguments.index('--')+1
         args=arguments[start+1:]
         assert args[0]=='--print' and '--remote-control' not in args and '--bg' not in args
-        self.claude(config,args)
+        stdin=next((a.split('file:',1)[1] for a in arguments if a.startswith('--property=StandardInput=file:')),None)
+        self.claude({**config,**({'_test_stdin':Path(stdin).read_text()} if stdin else {})},args)
         session=args[args.index('--session-id')+1]
         roots=list((Path(config['claude_home'])/'projects').glob('*/'+session+'.jsonl'))
         assert len(roots)==1

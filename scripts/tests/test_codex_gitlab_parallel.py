@@ -192,7 +192,7 @@ def test_recorded_mr7_result_survives_restart_and_next_reviewer_receives_proposa
         current=reopened.job(job['id'])
         assert current['stages'][0]==first and current['stages'][1]['reviewer']=='codex'
         assert current['stages'][1]['state']=='running' and f.launched==['claude','codex']
-        immutable=json.loads((reopened.path.parent/'inputs'/(current['stages'][1]['id']+'.json')).read_text())
+        immutable=f.m['mq_input_context'](reopened,current['stages'][1])
         assert immutable['prior_reviewers'][0]['summary']==rendered(f.results['claude'])
         assert reopened.mr(11,82)['reviewed_head'] is None and f.sends==[]
     finally:reopened.close()

@@ -789,7 +789,9 @@ After all configured reviewers run, only reviewers that failed return to the end
 queue, waiting at least the configured interval before another attempt. Successful reviewers do
 not repeat. This also covers earlier partial successes in the current queue; questions and
 unconfirmed publications keep their existing holds. Model and effort are already selected by
-the monitor configuration, without an additional model-choice question in each review.
+the monitor configuration, without an additional model-choice question in each review. New stages
+show the complete review request in the native chat, including the exact head and workspace.
+The queue retains that same message for recovery; reviewers do not need to open an input JSON file.
 HTTP operations respect the cycle's total deadline even with slowly arriving data. The unit also
 has a 14-minute final timeout; its process-only stop policy preserves native reviewers for recovery.
 
@@ -824,6 +826,20 @@ codex-session-stats monitor-gitlab snapshot --project 123 --mr 82
 codex-session-stats monitor-gitlab recover --job JOB_UUID
 journalctl --user -u codex-gitlab-monitor.service -n 100 --no-pager
 ```
+
+To deliberately abandon a terminal round waiting for a human decision and review it again from
+scratch, use its job and held stage IDs from status:
+
+```bash
+codex-session-stats monitor-gitlab restart-review JOB_UUID --stage STAGE_UUID --reason "Review this round afresh"
+```
+
+This archives the old round/question and moves the same admitted work to the queue tail. Every
+configured reviewer runs again with new chats; history, confirmed publications and checkpoints
+remain intact. The command checks native termination, pending answers, the current open MR/head
+and settled effects; it refuses uncertainty. It does not dispatch a review. Repeating the same
+command returns the original result. Late answers to the retired question remain read-only;
+unrelated explicit requests in the old chat still follow normal intake. Other holds are unaffected.
 
 `recover` only confirms an already issued effect by authenticated read-back; it never resends an
 unconfirmed operation. Resolutions require an explained verified fix or authenticated bot false

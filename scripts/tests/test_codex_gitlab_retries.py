@@ -201,7 +201,7 @@ def test_prepared_claude_inheritance_survives_new_configuration(flow,monkeypatch
     with pytest.raises(f.m['MonitorCycleYield']):f.step()
     saved=f.q.job(original['id']);stage=saved['stages'][0]
     assert stage['delivery']=='prepared' and stage['model_selection']['effort'] is None
-    encoded=(f.q.path.parent/'inputs'/(stage['id']+'.json')).read_bytes()
+    encoded=copy.deepcopy(stage)
     seen=[]
     def resumed(c,args):
         if args[0]=='systemd-run':seen.extend(args)
@@ -209,7 +209,8 @@ def test_prepared_claude_inheritance_survives_new_configuration(flow,monkeypatch
     monkeypatch.setitem(f.m,'mq_service_command',resumed)
     f.config['claude_effort']='max';assert f.step()
     assert '--effort' not in seen and 'max' not in seen
-    assert (f.q.path.parent/'inputs'/(stage['id']+'.json')).read_bytes()==encoded
+    assert f.q.job(original['id'])['stages'][0]['input']==encoded['input']
+    assert f.q.job(original['id'])['stages'][0]['input_context']==encoded['input_context']
     assert f.q.job(original['id'])['stages'][0]['id']==stage['id'] and f.launched==['claude']
 
 
@@ -281,7 +282,7 @@ def test_model_choice_is_pinned_in_actual_native_input_and_version3_answers_rema
     f=flow;original=automatic(f);f.drain()
     job=f.q.job(original['id'])
     for stage in job['stages']:
-        data=json.loads((f.q.path.parent/'inputs'/(stage['id']+'.json')).read_text())
+        data=stage['input_context']
         expected=({'model':f.config['model'],'effort':f.config['effort']} if stage['reviewer']=='codex'
                   else {'model':f.config['claude_model'],'effort':f.config.get('claude_effort')})
         assert data['model_selection']==expected==stage['model_selection']

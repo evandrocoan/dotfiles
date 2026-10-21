@@ -110,7 +110,7 @@ def test_same_five_roots_reach_both_real_dispatchers_without_global_writes(proje
     assert policy['network']['unix_sockets'] == {f.config['socket']:'deny'}
     assert policy['filesystem'][str(f.q.path.parent)] == 'read'
     for stage in job['stages']:
-        data=json.loads((f.q.path.parent/'inputs'/(stage['id']+'.json')).read_text())
+        data=stage['input_context']
         assert data['workspace'] == job['workspace']
     assert f.config_path.read_bytes() == config_before
     assert (Path(f.config['codex_home'])/'config.toml').read_bytes() == native_before
