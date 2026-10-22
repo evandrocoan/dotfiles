@@ -346,8 +346,8 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
     f.config.clear();f.config.update(m['mq_config'](f.config_path))
     home=Path(f.config['claude_home']);home.mkdir()
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Provider)
-    server.requests=[];server.steps=[('mcp__gitlab_review__ask_human',{'question':'Which fixture rule should be used?'})]
-    server.final_text='Which fixture rule should be used?'
+    server.requests=[];server.steps=[]
+    server.final_text='Estado da revisão: aguardando resposta\nWhich fixture rule should be used?'
     server.retry_on_busy=True
     worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
     for key in list(os.environ):
@@ -364,7 +364,7 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         if large:
             f.step()
             first=f.q.job(job['id'])['stages'][0]
-            f.items[first['turn_id']][-1]['text']='Earlier review context: '+('á context '*20000)
+            f.items[first['turn_id']][-1]['text']='Earlier review context: '+('á context '*20000)+'\nEstado da revisão: concluída\nCommit revisado: '+'a'*40
             assert m['mq_consume'](f.config,f.q) # Collect the actual preceding native final.
         index=1 if large else 0
         assert m['mq_consume'](f.config,f.q)
@@ -400,7 +400,7 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         # Revalidation still selects the captured question, never the resumed final.
         observed=m['mq_claude_observe'](f.config,saved['stages'][index])
         assert observed['anchor']==saved['stages'][index]['anchor']
-        assert observed['text']=='Which fixture rule should be used?'
+        assert observed['text']=='Estado da revisão: aguardando resposta\nWhich fixture rule should be used?'
     finally:
         if stage and stage.get('unit'):
             state=m['mq_service_show'](f.config,stage['unit'])
@@ -438,7 +438,8 @@ def test_native_finite_service_failure_stops_children_and_continues_codex(flow,m
         assert case in saved['stages'][0]['error']['message']
         assert m['mq_cgroup_empty'](stage['service_identity']['root']+'/app.slice/'+stage['unit'])
         f.drain()
-        assert f.q.job(job['id'])['state']=='completed'
+        assert f.q.job(job['id'])['wait_reason']=='reviewer_retry'
+        assert f.q.job(job['id'])['stages'][1]['state']=='succeeded'
         assert f.launched==['codex'] and f.sends==[]
     finally:
         if stage and stage.get('unit'):

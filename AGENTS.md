@@ -76,28 +76,27 @@ FIFO and one consumer own all repositories, keyed by authenticated GitLab reposi
 IID. Coalesce unstarted automatic work per MR at its oldest FIFO position, preserving original
 event lineage and freezing membership at reservation. Human work and previously issued work remain
 separate. Every configured reviewer runs in order after success or any terminal failure; no quota
-classifier or fallback mode. Agents investigate the MR link and publish during review through
-round-bound monitor tools. After an attempt, only failed reviewers return to the FIFO tail with
-the configured interval; successful stages remain completed. The configured model/effort is already
-the operator's selection for dispatched work. Real questions retain their native answer holds;
-only the monitor journals, sends and confirms effects. No final JSON
-review or all-reviewer publication barrier. Unknown execution cannot release serial capacity. Human requests retain
-actual native source, bounded scope and sufficient-answer holds. Only completed actual code review
-advances the code checkpoint. New Claude stages use finite print CLI services, with exact native
-stream identities and service/cgroup termination proof; idle sessions retain history without a
-process. Existing issued background stages and native human intake retain their original sources. Use fresh state and lazily created chats; predecessor chats/state
-remain outside the consumer without migration or instruction updates. Earlier sessions created by
-this consumer remain valid original human/hold sources. New stages send the complete readable native task from one frozen stage snapshot; old inputs
-keep their original validation. Archive operational diagnostics instead of sending them as review
-directives. Explicit operator restart retires only the selected terminal held round, queues a full
-review in fresh chats, and preserves late answers read-only against the exact retired question.
-Preserve exact native input/result identity,
-immutable publication identities and whole-discussion resolution checks. Models compare concerns
-against actual discussions; different defects on the same line remain separate. Completion and
-question signals are provisional until their exact native final. Uncertain sends fence that MR;
-after native termination other MRs can proceed while read-back preserves the remaining reviewers.
-New launches use the tool route; old issued results remain historical evidence, never replayed as
-new public actions. Read-only human intake uses a compact assessment of its actual source.
+classifier or fallback mode. Agents investigate the MR link and publish directly through the existing ordinary GitLab MCP.
+Both reviewers read complete current threads, including their peer's findings, explain verified
+fixes/invalid concerns before resolving and preserve remaining concerns. Different defects on the
+same line remain separate. No private review MCP, per-send monitor journal or final JSON review
+report is used for new stages. Normal tool permissions bound operations; current head/open-state,
+human scope and whole-discussion checks at publication belong to the reviewer and are not equivalent
+to the retired runtime gates. Intake remains read-only.
+
+Keep exact native input/result identity, sufficient-answer holds and actual code checkpoints.
+Readable final statuses are admitted only from the exact native terminal final. Snapshot current
+question scope before establishing a new automatic hold; snapshot failure blocks that MR until
+recovery, without retaining capacity after proven termination. Human scope never expands.
+Passively collect authenticated normal tool outputs to filter only proven self-generated inventory
+deltas. Preserve external edits and same-account human notes; missing results remain eligible.
+Retire only never-issued self-only automatic discussion work, retaining its original admissions.
+New input formats must not alter historical validators. Proven-unissued old preparations may be
+archived outside executed attempts; preserve successful reviewers and selective retries. Unknown
+execution cannot release capacity or be relaunched. Historical uncertain sends retain read-back-only
+recovery. New instructions use fresh chats without rewriting old chats or native history. Original
+consumer chats remain valid human and hold sources. Only actual completed code review advances a
+code checkpoint. Explicit restart preserves retired questions and late answers as read-only.
 
 Each round snapshots the current named Codex project's ordered folders and necessary shared Git
 metadata once for both reviewers and recovery. The model chooses repositories, branches and tests;

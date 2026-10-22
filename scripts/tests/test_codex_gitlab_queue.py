@@ -238,7 +238,10 @@ def flow(module,tmp_path,monkeypatch):
     config_path.write_text(json.dumps(raw)); config_path.chmod(0o600)
     config = m['mq_config'](config_path)
     Path(config['codex_home']).mkdir()
-    (Path(config['codex_home'])/'config.toml').write_text('')
+    (Path(config['codex_home'])/'config.toml').write_text(
+        '[mcp_servers.gitlab]\nurl = \"http://127.0.0.1:9/mcp\"\n'
+        '[mcp_servers.gitlab.http_headers]\nPrivate-Token = \"fixture-only\"\n'
+        'X-Gitlab-Api-Url = \"https://gitlab.example.test/api/v4\"\n')
     context = {'repository_id':11,'iid':82,'head':'a'*40,'actor_id':7,
         'mr':{'iid':82,'project_id':11,'state':'opened','sha':'a'*40,'title':'MR',
               'diff_refs':{'head_sha':'a'*40,'base_sha':'b'*40,'start_sha':'c'*40}},
@@ -325,7 +328,7 @@ def flow(module,tmp_path,monkeypatch):
         active=q.jobs('running')
         if not active or not active[0]['stages']:return
         job=active[0];stage=job['stages'][-1]
-        if stage['state']!='running' or stage.get('protocol')!='tools' or stage['id'] in f.processed:return
+        if stage['state']!='running' or stage.get('protocol') not in {'tools','direct'} or stage['id'] in f.processed:return
         if not stage.get('session'):return
         result=results[stage['reviewer']]
         if isinstance(result,Exception):return
@@ -347,23 +350,47 @@ def flow(module,tmp_path,monkeypatch):
             state.update(ActiveState='active',SubState='running',ControlGroup=stage['service_identity']['root']+'/app.slice/'+stage['unit'])
             service.populated=True
         f.processed.add(stage['id'])
-        def call(name,args):
-            current=q.job(job['id']);current_stage=current['stages'][-1];call_id='tool-'+str(uuid.uuid4())
-            if stage['reviewer']=='codex':
-                meta={'threadId':stage['session'],'sessionId':stage['session'],'callId':call_id,
-                    'x-codex-turn-metadata':{'thread_id':stage['session'],'session_id':stage['session'],'turn_id':stage['turn_id']}}
-            else:
-                records.append({'uuid':str(uuid.uuid4()),'parentUuid':records[-1]['uuid'],'type':'assistant',
-                    'sessionId':stage['session'],'cwd':config['cwd'],'message':{'id':'message-'+call_id,
-                    'content':[{'type':'tool_use','id':call_id,'name':'mcp__gitlab_review__'+name,'input':args}]}})
-                native_path.write_text(''.join(json.dumps(r)+'\n' for r in records))
-                meta={'claudecode/toolUseId':call_id}
+        def direct_call(name,args):
+            call_id='tool-'+str(uuid.uuid4())
+            args={'project_id':'11','merge_request_iid':'82',**args}
+            if name=='mr_discussions':value=copy.deepcopy(context['threads'])
+            elif name=='create_merge_request_thread':
+                m['mq_send'](API(config),'POST','/projects/11/merge_requests/82/discussions',args)
+                value=copy.deepcopy(context['threads'][-1])
+            elif name=='create_merge_request_discussion_note':
+                value=m['mq_send'](API(config),'POST','/projects/11/merge_requests/82/discussions/'+args['discussion_id']+'/notes',args)
+            elif name=='resolve_merge_request_thread':
+                thread=next(t for t in context['threads'] if t['id']==args['discussion_id'])
+                for n in thread['notes']:n['resolved']=True
+                sends.append(('PUT','/projects/11/merge_requests/82/discussions/'+thread['id'],{'resolved':True}))
+                value=copy.deepcopy(thread)
+            else:raise AssertionError(name)
+            for thread in context['threads']:
+                for n in thread['notes']:n.setdefault('updated_at',n['created_at'])
+            if name=='create_merge_request_thread':value=copy.deepcopy(context['threads'][-1])
+            wire=copy.deepcopy(value)
+            def coerce(thread):
+                for note in thread['notes']:
+                    note['id']=str(note['id']);note['author']['id']=str(note['author']['id'])
+            if name=='mr_discussions':
+                for thread in wire:coerce(thread)
+                wire={'items':wire,'pagination':{'x_next_page':None}}
+            elif name=='create_merge_request_thread':coerce(wire)
+            elif name=='create_merge_request_discussion_note':
+                wire['id']=str(wire['id']);wire['author']['id']=str(wire['author']['id'])
+            payload=[{'type':'text','text':'Thread resolved successfully' if name=='resolve_merge_request_thread' else json.dumps(wire)}]
             f.model_calls.append((stage['reviewer'],name,args))
-            value=m['mq_tool_execute'](m['mq_workspace_config'](config,current),q,current,current_stage,meta,name,args)
-            if records is not None:
-                records.append({'uuid':str(uuid.uuid4()),'parentUuid':records[-1]['uuid'],'type':'user',
-                    'sessionId':stage['session'],'cwd':config['cwd'],
-                    'message':{'content':[{'type':'tool_result','tool_use_id':call_id,'content':json.dumps(value)}]}})
+            if stage['reviewer']=='codex':
+                items[stage['turn_id']].append({'type':'mcpToolCall','id':call_id,'server':'gitlab',
+                    'tool':name,'arguments':args,'status':'completed','error':None,'result':{'content':payload}})
+            else:
+                call={'uuid':str(uuid.uuid4()),'parentUuid':records[-1]['uuid'],'type':'assistant',
+                    'sessionId':stage['session'],'cwd':config['cwd'],'message':{'id':'message-'+call_id,
+                    'content':[{'type':'tool_use','id':call_id,'name':'mcp__gitlab__'+name,'input':args}]}}
+                records.append(call)
+                records.append({'uuid':str(uuid.uuid4()),'parentUuid':call['uuid'],'type':'user',
+                    'sessionId':stage['session'],'cwd':config['cwd'],'message':{'content':[
+                    {'type':'tool_result','tool_use_id':call_id,'content':payload}]}})
             return value
         text=result.get('question') or 'Revisão concluída com análise estática; testes não executados.'
         try:
@@ -372,24 +399,27 @@ def flow(module,tmp_path,monkeypatch):
                     'scope':{'effects':[],'discussions':[]},'question_anchor':None}
                 text='```csm-assessment\n'+json.dumps({'kind':a['kind'],'summary':a['summary'],
                     **a['scope'],'question_anchor':a.get('question_anchor')})+'\n```'
-            elif stage.get('purpose')=='question':
-                text=job['pending_question']['question'];call('ask_human',{'question':text})
-            elif result['outcome']=='question':call('ask_human',{'question':text})
-            elif result['outcome']=='complete':
-                call('read_mr',{})
-                for action in result['actions']:
-                    if action['kind']=='finding':
-                        p=action['position'];side='new' if p.get('new_line') else 'old'
-                        call('publish_finding',{'body':action['body'],'path':p[side+'_path'],'line':p[side+'_line'],'side':side})
-                    elif action['kind']=='reply':call('reply',{'discussion':action['discussion'],'body':action['body']})
-                    else:
-                        call('read_discussion',{'discussion':action['discussion']})
-                        notes=[{'note':n['id'],'status':n['concerns'][0]['disposition'] if n.get('concerns') else 'no_concern',
-                            'evidence':n['concerns'][0]['evidence'] if n.get('concerns') else n['no_concern_reason']}
-                            for n in action['assessment']['notes']]
-                        call('resolve',{'discussion':action['discussion'],'explanation':action['body'],
-                            'basis':action['basis'],'notes':notes})
-                call('finish_review',{})
+            elif stage.get('protocol')=='direct':
+                if stage.get('purpose')=='question':
+                    text='Estado da revisão: aguardando resposta\n'+job['pending_question']['question']
+                elif result['outcome']=='question':
+                    text='Estado da revisão: aguardando resposta\n'+text
+                elif result['outcome']=='complete':
+                    direct_call('mr_discussions',{})
+                    for action in result['actions']:
+                        if action['kind']=='finding':
+                            if not any(n['body']==action['body'] for t in context['threads'] for n in t['notes']):
+                                direct_call('create_merge_request_thread',{'body':action['body']})
+                        elif action['kind']=='reply':direct_call('create_merge_request_discussion_note',
+                            {'discussion_id':action['discussion'],'body':action['body']})
+                        else:
+                            thread=next(t for t in context['threads'] if t['id']==action['discussion'])
+                            if all(n.get('resolved') for n in thread['notes']):continue
+                            direct_call('create_merge_request_discussion_note',
+                                {'discussion_id':action['discussion'],'body':action['body']})
+                            direct_call('mr_discussions',{})
+                            direct_call('resolve_merge_request_thread',{'discussion_id':action['discussion'],'resolved':True})
+                    text += '\nEstado da revisão: concluída\nCommit revisado: '+result['head']
         except (OSError,RuntimeError,ValueError) as error:
             f.model_errors.append(error);text='Não concluí: '+str(error)
         finally:
@@ -452,7 +482,8 @@ def test_worker_preserves_native_receipts_after_restart_and_does_not_resend(flow
         if flow.q.job(job['id'])['state']=='completed': break
     assert flow.launched==['claude','codex']
     assert len(flow.sends)==1 and flow.sends[0][0]=='POST'
-    assert flow.q.effects()[0]['state']=='confirmed'
+    assert flow.q.effects()==[]
+    assert flow.q.mr(11,82)['own_outputs']
     flow.step()
     assert len(flow.sends)==1
     assert flow.q.job(job['id'])['state']=='completed'
@@ -672,58 +703,10 @@ def test_compound_reply_then_resolve_requires_exact_confirmed_explanation(flow,m
     assert flow.q.jobs()[0]['state']=='completed'
 
 
-def test_new_concern_after_explanation_prevents_resolve(flow,monkeypatch):
-    flow.results['codex']=domain(actions=[resolution_fixture(flow)])
-    original_send=flow.m['mq_send']
-    def send(api,method,route,payload):
-        assert method=='POST','concurrent concern must veto resolution'
-        result=original_send(api,method,route,payload)
-        flow.context['threads'][0]['notes'].append({'id':999,'body':'Outra preocupação não analisada.',
-            'author':{'id':10},'created_at':'2026-10-19T00:00:01Z','system':False,'resolvable':True,'resolved':False})
-        return result
-    monkeypatch.setitem(flow.m,'mq_send',send)
-    flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context))
-    # Stop at the actual race; a subsequent pass would correctly require a new assessment.
-    for _ in range(5): flow.step()
-    assert [method for method,_,_ in flow.sends]==['POST']
-    assert all(not n['resolved'] for n in flow.context['threads'][0]['notes'])
-    assert flow.q.mr(11,82)['reviewed_head']=='a'*40 # First reviewer completed actual code review.
-    assert flow.q.jobs()[0]['stages'][-1]['state']=='failed'
-    assert 'context changed' in str(flow.model_errors[-1])
 
 
-def test_unknown_public_delivery_readback_recovers_without_second_send(flow,monkeypatch):
-    flow.results['codex']=domain(actions=[{'key':'answer','kind':'reply','body':'A CSP foi corrigida.','discussion':'csp'}])
-    resolution_fixture(flow)
-    original_send=flow.m['mq_send']
-    def lost(api,method,route,payload):
-        original_send(api,method,route,payload)
-        raise TimeoutError('lost response after commit')
-    monkeypatch.setitem(flow.m,'mq_send',lost)
-    job=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context));flow.drain()
-    assert flow.q.job(job['id'])['wait_reason']=='effect_unknown'
-    assert len(flow.sends)==1 and flow.q.mr(11,82)['reviewed_head'] is None
-    result=flow.m['mq_recover'](flow.config,job['id'])
-    assert result['reconciled'] and len(flow.sends)==1
-    flow.drain()
-    saved=flow.q.job(job['id'])
-    assert saved['wait_reason']=='reviewer_retry' and len(flow.sends)==1
-    assert saved['review_attempt']['reviewers']==['codex']
 
 
-def test_missing_public_readback_never_authorizes_resend(flow,monkeypatch):
-    resolution_fixture(flow)
-    flow.results['codex']=domain(actions=[{'key':'answer','kind':'reply','body':'CSP corrigida.','discussion':'csp'}])
-    def uncertain(*args): raise TimeoutError('cannot know if remote committed')
-    monkeypatch.setitem(flow.m,'mq_send',uncertain)
-    job=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context));flow.drain()
-    with pytest.raises(RuntimeError,match='remains unconfirmed'):
-        flow.m['mq_recover'](flow.config,job['id'])
-    assert flow.q.job(job['id'])['wait_reason']=='effect_unknown'
-    assert flow.q.mr(11,82)['reviewed_head'] is None
 
 
 def test_real_gitlab_http_transport_is_local_and_rejects_redirects(module,tmp_path,monkeypatch):
@@ -816,25 +799,6 @@ def test_cli_initialize_tick_and_status_leave_predecessor_untouched(flow):
         os.close(descriptor)
 
 
-def test_unrelated_discussion_change_after_explanation_also_blocks_resolve(flow,monkeypatch):
-    flow.results['codex']=domain(actions=[resolution_fixture(flow)])
-    other={'id':44,'body':'Outro comentário original.','author':{'id':10},'created_at':'2026-10-19T00:00:00Z',
-           'system':False,'resolvable':True,'resolved':False}
-    flow.context['threads'].append({'id':'other','notes':[other]})
-    original_send=flow.m['mq_send']
-    def send(api,method,route,payload):
-        assert method=='POST','a changed unrelated discussion also requires reassessment'
-        result=original_send(api,method,route,payload)
-        other['body']='Comentário editado durante a publicação.'
-        return result
-    monkeypatch.setitem(flow.m,'mq_send',send)
-    flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context))
-    for _ in range(5): flow.step()
-    assert len(flow.sends)==1 and flow.q.effects()[0]['state']=='confirmed'
-    assert flow.q.jobs()[0]['stages'][-1]['state']=='failed'
-    assert 'context changed' in str(flow.model_errors[-1])
-    assert not flow.context['threads'][0]['notes'][0]['resolved']
 
 
 def test_crash_after_native_question_result_recovers_same_hold_before_next_stage(flow,monkeypatch):

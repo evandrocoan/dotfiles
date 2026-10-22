@@ -43,7 +43,10 @@ def save_records(path,values):
 
 def test_print_completion_does_not_use_tool_ancestry_or_background_inventory(flow,monkeypatch):
     f=flow;job,stage=launch(f)
-    def forbidden(*args):raise AssertionError('retired completion authority')
+    ancestry=f.m['mq_claude_final']
+    def forbidden(*args,**kwargs):
+        if 'tool_results' in kwargs:return ancestry(*args,**kwargs)
+        raise AssertionError('retired completion authority')
     monkeypatch.setitem(f.m,'mq_claude_final',forbidden)
     monkeypatch.setitem(f.m,'mq_claude_agents',forbidden)
     f.drain()

@@ -276,7 +276,7 @@ def test_restart_keeps_grouped_input_and_publishes_once(flow):
         for _ in range(12):
             if not flow.step(reopened):break
         assert reopened.job(first['id'])['outcome']=='reviewed'
-        assert reopened.effects()[0]['state']=='confirmed' and len(reopened.effects())==1
+        assert reopened.effects()==[] and reopened.mr(11,82)['own_outputs']
         assert not flow.step(reopened)
     finally:reopened.close()
     assert flow.q.job(first['id'])['stages'][0]['input']==before and flow.launched==['claude','codex']

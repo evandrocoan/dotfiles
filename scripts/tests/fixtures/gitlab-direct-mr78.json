@@ -1,0 +1,23 @@
+{
+  "capture_kind": "partial-authenticated-native-artifact",
+  "session": "01a15fd6-1d70-7c02-88a2-88528c3798c7",
+  "turn_id": "01a1613a-bfe6-7b62-adf7-1a26d287946f",
+  "stage_id": "d2a3bb3f-21fe-41dd-8f6a-264856f49aa1",
+  "source_id": "msg_01a1613a-c5b1-7312-832d-895b4e2b6cc7",
+  "final_id": "msg_0d21aec489c670bd016ad96758ceb081919a523ee3889a58fe",
+  "input_digest": "4e96ed6456c255f39335dbe283eacc853cbf3c7a04523954cf590bf2b4edb8fa",
+  "old_task_prefix": "Review this MR, investigate its code and discussions, run useful tests, and publish actionable findings, replies or evidenced resolutions through gitlab_review tools.",
+  "read_error": "Error executing tool read_mr: MR head changed or MR is closed/merged",
+  "final_question": "O `read_mr` recusou a revisão porque o head mudou ou o MR !78 foi fechado/mesclado. Como deseja prosseguir?\n\n1. Solicitar uma nova revisão com o head atual admitido pelo monitor, se o MR ainda estiver aberto (recomendado).\n2. Encerrar esta execução sem nova revisão.",
+  "limitation": "Captured exact original input/turn/final and queue binding; not a full MCP wire replay. The rejection does not distinguish changed head from closed/merged state.",
+  "head": "128038c4a3dd08c9c041ea635d21a63c7d6fc14f",
+  "native_signal": {
+    "identity": {
+      "turn_id": "01a1613a-bfe6-7b62-adf7-1a26d287946f",
+      "source_id": "01a1613a-c5b1-7312-832d-896189767f8c",
+      "call_id": "exec-c92577a9-4f84-4ca0-be00-789a4901c8f5"
+    },
+    "question": "O `read_mr` recusou a revisão porque o head mudou ou o MR !78 foi fechado/mesclado. Como deseja prosseguir?\n\n1. Solicitar uma nova revisão com o head atual admitido pelo monitor, se o MR ainda estiver aberto (recomendado).\n2. Encerrar esta execução sem nova revisão."
+  },
+  "registered_source_id": "01a1613a-c5b1-7312-832d-896189767f8c"
+}

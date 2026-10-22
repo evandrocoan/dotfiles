@@ -432,7 +432,7 @@ def test_recorded_mixed_inventory_artifact_preserves_native_acceptance(flow,monk
     job=enqueue(flow);flow.step()
     saved=flow.q.job(job['id']);stage=saved['stages'][0]
     with flow.q.atomic():
-        stage.pop('transport');stage['background_id']=stage['session'][:8];stage['delivery']='sending'
+        stage['protocol']='tools';stage.pop('transport');stage['background_id']=stage['session'][:8];stage['delivery']='sending'
         flow.q.save(saved)
     flow.m['mq_claude_accept'](flow.config,flow.q,saved,stage)
     assert stage['delivery']=='accepted' and stage['session']

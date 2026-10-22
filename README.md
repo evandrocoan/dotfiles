@@ -642,26 +642,28 @@ first event's FIFO position, using the latest admitted commit and current discus
 events remain visible with an administrative coalescing outcome; that outcome does not claim a
 completed review. Human requests and already-started work remain separate. There is no credit
 classifier or fallback mode. Each reviewer receives the MR link and workspace, reads context as
-needed, investigates and tests, and publishes findings during its review through scoped monitor
-tools. It finishes with a readable summary, without a final JSON review report. The next reviewer
+needed, investigates and tests, and publishes findings during its review directly through the existing ordinary GitLab MCP. It finishes with a readable summary, without a final JSON review report. The next reviewer
 reads the actual discussions and earlier summary: separate defects on the same line can have
 separate threads; the model decides whether a concern duplicates or supplements an existing one.
 All failures remain visible; an entirely failed round waits for the configured interval before
-retrying. Operation recovery preserves completed stages, workspace and confirmed publications.
-An omitted GitLab diff does not block dispatch. The model can investigate local Git; inline tools
-validate omitted content against the MR's exact base/start/head objects in that workspace.
+retrying. Execution recovery preserves completed stages and workspace; already published comments remain in GitLab.
+An omitted GitLab diff does not block dispatch. The model investigates local Git at the MR's exact
+base/start/head objects in that workspace.
 
 `status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
 include their native `name`, `session`, saved result or error, and a copyable `resume_command`
 to open the conversation later in the CLI using its original directory and native history.
 Saved conversations do not keep an idle process or require a browser connection.
 
-The monitor handles queue administration, comments, replies, resolutions and authenticated
-read-back behind small read, finding, reply, resolve, finish and ask-human tools. Uncertain native
-execution keeps the single slot until its status is known. An uncertain public send blocks that
-MR; after native termination other MRs can continue while subsequent cycles attempt read-back.
-A missing receipt never authorizes blindly sending again. Asking a human fences writes immediately;
-only the actual native final establishes the question that a sufficient human answer can release.
+The monitor handles the FIFO and native execution; Claude and Codex read and publish through the
+normal GitLab tools. Both read complete discussions, including the other's findings, and explain
+verified fixes or invalid concerns before resolving. New stages have no private review MCP or
+monitor send journal. The model checks the current open MR, refs, bounded human request and full
+thread before writing, and reads GitLab before retrying an uncertain send. These instructions do
+not provide the retired helper's deterministic per-call publication checks or exactly-once recovery.
+The installed MCP returns no note revisions for resolution success; a resolution-only change may
+therefore cause one extra ordinary review. Unknown native execution still keeps the single slot. Actual final questions retain native holds;
+a sufficient human answer is required before further mutable work on that MR.
 
 Requirements: Linux, Python 3.11+, the existing Poetry environment, and the existing GitLab MCP
 credential in Codex configuration for the selected HTTPS origin. Install the optional tool group:
@@ -671,8 +673,8 @@ cd ~/scripts
 poetry install --with monitor-tools
 ```
 
-The scoped stdio helper uses that environment's official MCP SDK and `websockets`; it is started
-by the native client when needed, without another timer or scanning daemon. The reviewer permission
+The native app connection uses `websockets`; new reviews connect to the existing shared GitLab HTTP
+MCP, whose startup catalog must include `core,merge_requests` (see [Shared GitLab MCP](#shared-gitlab-mcp)). The reviewer permission
 profile and tool approvals are supplied per launch; no global permission installation is needed.
 Unrelated commands, help and offline status do not import these optional packages. Claude uses the
 installed, signed-in CLI and its subscription in finite print mode under the existing user systemd
@@ -724,8 +726,7 @@ During admitted reviews, both models can run commands, edit files, switch branch
 without command approvals in these folders and their necessary shared Git metadata. Claude uses
 the same primary directory plus `--add-dir` for the others. The model chooses the repository,
 branch and test command and must preserve pre-existing work and verify the actual MR revision.
-The monitor does not map repositories to folders or prepare checkouts. The authenticated GitLab
-diff and read-only exact-SHA file reader remain available. Queue/native state stays protected;
+The monitor does not map repositories to folders or prepare checkouts. The ordinary GitLab diff/file tools remain available. Queue/native state stays protected;
 intake launches remain read-only. These launch settings do not serialize manual turns you start
 directly in the Codex app or Claude CLI.
 
@@ -793,7 +794,7 @@ queue, waiting at least the configured interval before another attempt. Successf
 not repeat. This also covers earlier partial successes in the current queue; questions and
 unconfirmed publications keep their existing holds. Model and effort are already selected by
 the monitor configuration, without an additional model-choice question in each review. New stages
-show the complete review request in the native chat, including the exact head and workspace.
+show the complete review request in the native chat, including the MR link, reason and workspace.
 The queue retains that same message for recovery; reviewers do not need to open an input JSON file.
 HTTP operations respect the cycle's total deadline even with slowly arriving data. The unit also
 has a 14-minute final timeout; its process-only stop policy preserves native reviewers for recovery.
@@ -816,7 +817,12 @@ explanations, mixed/automatic input, `?` or trailing `w` do not authorize effect
 question remains open until a sufficient later human answer to its exact anchor; capacity waits
 preserve that answer. Original Claude sessions remain valid answer surfaces after another execution.
 No agent needs to call claim, pause, resume, effect-intent, effect-receipt or complete.
-New launches use fresh instructions and tools. Existing issued reviews are collected through
+New launches use fresh instructions and normal GitLab tools. The readable final summary ends with
+`Estado da revisão: concluída`, `Estado da revisão: não concluída`, or
+`Estado da revisão: aguardando resposta`; code completion also states `Commit revisado:` and the
+actual full SHA. A new automatic question saves its current discussion scope before becoming a
+hold. A failed snapshot waits for recovery on that MR. Self-generated activity is filtered only
+from exact native tool results; same-account human edits remain observable. Existing issued reviews are collected through
 their original native reader; old proposals are not replayed as publications. Existing chats and
 human questions remain valid original sources, without editing their loaded instructions.
 
@@ -844,17 +850,17 @@ and settled effects; it refuses uncertainty. It does not dispatch a review. Repe
 command returns the original result. Late answers to the retired question remain read-only;
 unrelated explicit requests in the old chat still follow normal intake. Other holds are unaffected.
 
-`recover` only confirms an already issued effect by authenticated read-back; it never resends an
-unconfirmed operation. Resolutions require an explained verified fix or authenticated bot false
-positive, assessment of all notes, and unchanged context except the exact confirmed explanation.
-Closed or merged MRs accept no new effects. To stop supervision, stop both service and timer; do
+`recover` only confirms a historical journaled effect by authenticated read-back; it never resends
+an unconfirmed operation. New direct sends have no such journal and are checked by the reviewer.
+To stop supervision, stop both service and timer; do
 not delete queue/history files to clear an uncertainty. The
 [architecture record](architecture/gitlab-monitor-simple-queue.md) defines these boundaries.
 
 ### Shared GitLab MCP
 
 The user-owned fork in [`scripts/gitlab-mcp/`](./scripts/gitlab-mcp/) runs one local HTTP
-server for Claude and Codex. Use its root `compose.yaml`, not the upstream example under `docker/`.
+server for Claude and Codex. Its Compose environment exposes `GITLAB_TOOLSETS: core,merge_requests`
+at startup so the reply tool is available on the first native turn. Use its root `compose.yaml`, not the upstream example under `docker/`.
 The server accepts connections only through host loopback and uses each client's existing GitLab
 credential. New chats must use this service instead of starting another `docker run` container.
 Existing stdio clients keep their containers until their sessions close normally.

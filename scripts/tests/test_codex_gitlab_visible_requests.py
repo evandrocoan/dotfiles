@@ -51,9 +51,9 @@ def test_readable_native_requests_and_no_external_input_json(flow):
     f.drain();saved=f.q.job(job['id'])
     assert f.launched==['claude','codex'] and saved['outcome']=='reviewed' and not f.model_errors
     for stage in saved['stages']:
-        assert stage.get('input_format')=='message-v1'
+        assert stage.get('input_format')=='message-v2'
         assert 'https://gitlab.example.test/team/repo/-/merge_requests/82' in stage['input']
-        assert 'Exact admitted head: '+'a'*40 in stage['input']
+        assert 'Exact admitted head:' not in stage['input']
         assert f.config['cwd'] in stage['input']
         assert 'Read the immutable input file' not in stage['input']
         assert 'unresolved reviewer disagreement' not in stage['input']
@@ -333,7 +333,7 @@ def test_cold_resume_empty_preparation_completes_exact_stage(flow,monkeypatch,ga
     try:
         assert f.step(connection)
         recovered=connection.job(job['id'])['stages'][0]
-        assert recovered['id']==stage['id'] and recovered['input_format']=='message-v1'
+        assert recovered['id']==stage['id'] and recovered['input_format']=='message-v2'
         f.drain()
         assert connection.job(job['id'])['outcome']=='reviewed' and f.launched==['claude','codex']
     finally:connection.close()
@@ -355,7 +355,7 @@ def test_restart_preserves_confirmed_publication_identity(flow):
         'position':{'position_type':'text','base_sha':'b'*40,'start_sha':'c'*40,'head_sha':'a'*40,
                     'old_path':'x.py','new_path':'x.py','new_line':1}}])
     job,hold=held(f);effects=copy.deepcopy(f.q.effects())
-    assert len(effects)==1 and effects[0]['state']=='confirmed' and len(f.sends)==1
+    assert effects==[] and f.q.mr(11,82)['own_outputs'] and len(f.sends)==1
     restart(f,job,hold)
     assert f.q.effects()==effects and len(f.sends)==1 and f.q.mr(11,82)['reviewed_head'] is None
     f.results['claude']=domain();f.results['codex']=domain();f.drain()

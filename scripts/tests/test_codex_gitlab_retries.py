@@ -65,7 +65,7 @@ def test_both_fail_then_each_success_removes_only_its_own_retry(flow,monkeypatch
     assert f.q.job(original['id'])['state']=='completed'
 
 
-def test_retry_reuses_confirmed_publication_from_failed_stage(flow,monkeypatch):
+def test_retry_model_reads_existing_discussions_after_failed_stage(flow,monkeypatch):
     f=flow
     action={'kind':'finding','body':'A falha concreta.', 'position':{'old_path':'x.py','new_path':'x.py',
         'new_line':1,'position_type':'text','base_sha':'b'*40,'start_sha':'c'*40,'head_sha':'a'*40}}
@@ -79,7 +79,7 @@ def test_retry_reuses_confirmed_publication_from_failed_stage(flow,monkeypatch):
     f.drain()
     assert f.q.job(original['id'])['state']=='completed'
     assert f.launched==['codex','claude','codex'] and len(f.sends)==1
-    assert len(f.q.effects())==1 and f.q.effects()[0]['state']=='confirmed'
+    assert f.q.effects()==[] and f.q.mr(11,82)['own_outputs']
 
 
 def failed_round(q):
@@ -214,34 +214,8 @@ def test_prepared_claude_inheritance_survives_new_configuration(flow,monkeypatch
     assert f.q.job(original['id'])['stages'][0]['id']==stage['id'] and f.launched==['claude']
 
 
-def test_old_stage_calls_are_denied_after_selective_retry(flow,monkeypatch):
-    f=flow;f.results['claude']=RuntimeError('failure');original=automatic(f);f.drain()
-    saved=f.q.job(original['id']);old=copy.deepcopy(saved['stages'][-1])
-    monkeypatch.setitem(f.m,'mq_stamp',lambda:saved['retry_at']+1)
-    assert f.step();job=f.q.job(original['id'])
-    with pytest.raises(RuntimeError,match='stale or inactive'):
-        f.m['mq_tool_authority'](f.config,f.q,job,old,{},'publish_finding',{},mutable=True)
-    assert not f.sends
 
 
-def test_retry_preserves_checkpoint_resolution_gate(flow,monkeypatch):
-    f=flow;f.results['codex']=RuntimeError('failure');original=automatic(f);f.drain()
-    saved=f.q.job(original['id']);assert f.q.mr(11,82)['reviewed_head']=='a'*40
-    monkeypatch.setitem(f.m,'mq_stamp',lambda:saved['retry_at']+1)
-    assert f.m['mq_step'](f.config,f.q)
-    job=f.q.job(original['id']);stage=job['stages'][-1]
-    f.turns[stage['session']][0]['status']='inProgress'
-    f.items[stage['turn_id']]=[i for i in f.items[stage['turn_id']] if i['type']=='userMessage']
-    resolution_fixture(f)
-    meta={'threadId':stage['session'],'sessionId':stage['session'],'callId':'retry-call',
-        'x-codex-turn-metadata':{'thread_id':stage['session'],'session_id':stage['session'],'turn_id':stage['turn_id']}}
-    c=f.m['mq_workspace_config'](f.config,job)
-    discussion=f.m['mq_tool_execute'](c,f.q,job,stage,meta,'read_discussion',{'discussion':'csp'})
-    with pytest.raises(RuntimeError,match='actual newly reviewed fix commit'):
-        f.m['mq_tool_execute'](c,f.q,job,stage,meta,'resolve',{'discussion':'csp',
-            'explanation':'Correção verificada.','basis':'verified_fix',
-            'notes':[{'note':discussion['notes'][0]['id'],'status':'fixed','evidence':'Código corrigido.'}]})
-    assert not f.sends and not f.q.effects()
 
 
 def test_retry_remains_frozen_when_a_new_commit_is_enqueued(flow):
@@ -287,7 +261,7 @@ def test_model_choice_is_pinned_in_actual_native_input_and_version3_answers_rema
                   else {'model':f.config['claude_model'],'effort':f.config.get('claude_effort')})
         assert data['model_selection']==expected==stage['model_selection']
         assert 'Proceed without asking to change model/effort' in stage['input']
-    assert 'do not offer upgrades/downgrades' in f.m['mq_instructions']()
+    assert 'Do not offer model changes' in f.m['mq_instructions']()
     source=human_turn(f,'responda na thread')
     with f.q.atomic():
         record=f.q.mr(11,82);record['instruction_versions'][source['session']]=3;f.q.put_mr(record)

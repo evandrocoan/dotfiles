@@ -2908,7 +2908,7 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 5
+MQ_INSTRUCTIONS_VERSION = 6
 MQ_COMPACT_ASSESSMENT_VERSION = 3
 
 
@@ -2993,12 +2993,14 @@ class MonitorQueue:
         def transaction():
             if self.readonly:
                 raise RuntimeError('queue is read-only')
-            self.db.execute('BEGIN IMMEDIATE')
+            nested = self.db.in_transaction
+            self.db.execute('SAVEPOINT monitor_nested' if nested else 'BEGIN IMMEDIATE')
             try:
                 yield
-                self.db.execute('COMMIT')
+                self.db.execute('RELEASE monitor_nested' if nested else 'COMMIT')
             except BaseException:
-                self.db.execute('ROLLBACK')
+                self.db.execute('ROLLBACK TO monitor_nested' if nested else 'ROLLBACK')
+                if nested:self.db.execute('RELEASE monitor_nested')
                 raise
         return transaction()
 
@@ -3141,7 +3143,7 @@ class MonitorQueue:
                 blockers = [j for j in self.jobs('pending') if j['id'] != job['id']
                     and j['repository_id'] == job['repository_id'] and j['iid'] == job['iid']
                     and (j['wait_reason'] in {'human','effect_unknown','creation_unknown','native_unknown'}
-                         or j.get('pending_question'))]
+                         or j.get('pending_question') or j.get('question_scope_pending'))]
                 if blockers and not (job['kind']=='intake' and record.get('hold')
                                      and all(j['wait_reason']=='human' for j in blockers)):
                     continue
@@ -3168,10 +3170,22 @@ class MonitorQueue:
                 'started_at':mq_stamp(), 'input': text, 'session': session, 'source_id': None, 'turn_id': None,
                 'result': None, 'error': None, 'delivery': 'prepared'}
             if purpose!='review':stage['purpose']=purpose
-            if job.get('protocol')=='tools':stage['protocol']='tools'
+            stage['protocol'] = 'direct'
             job['stages'].append(stage)
             self.save(job)
             return stage
+
+    def retire_preparation(self,job,stage):
+        with self.atomic():
+            self.check_running(job)
+            if (job['stages'][-1]!=stage or stage['state']!='running' or stage['delivery']!='prepared'
+                    or any(stage.get(k) for k in ('turn_id','unit','transport','manifest_digest'))
+                    or stage.get('session') or any(e.get('stage_id')==stage['id'] for e in self.effects())):
+                raise RuntimeError('old preparation non-issue is not proven')
+            job['stages'].pop()
+            job.setdefault('retired_preparations',[]).append({**stage,'retired_at':mq_stamp()})
+            job['protocol']='direct'
+            self.save(job)
 
     def stage_end(self, job, stage_id, *, result=None, error=None, terminal=False):
         with self.atomic():
@@ -3227,7 +3241,6 @@ class MonitorQueue:
         if self.next_reviewer(job) is not None or any(s['state'] == 'running' for s in job['stages']):
             raise RuntimeError('every enabled reviewer must run before settlement')
         successful = [s for s in job['stages'] if s['state'] == 'succeeded'
-                      and (job.get('protocol')!='tools' or s.get('protocol')=='tools')
                       and s.get('purpose')!='question' and s['result'].get('outcome') == 'complete']
         if not successful:
             return None
@@ -3398,35 +3411,38 @@ def mq_fingerprint(context):
 
 
 def mq_instructions():
-    return '''Review the supplied GitLab MR link at its admitted head. Read AGENTS.md before
-project commands. Choose the repository, branches, context and tests from the supplied workspace;
-preserve existing work and verify exact SHAs before claiming test coverage. Do not delegate,
-commit, reset, clean, stash or create worktrees unless explicitly requested.
-For these monitor-dispatched stages, the operator has already selected the configured model and
-thinking effort, including intentionally inherited client settings. Treat that selection as pinned
-for this work: do not offer upgrades/downgrades or ask for model/effort confirmation. Proceed with
-the admitted work. This delegation does not answer domain questions or change human-source rules.
-Use gitlab_review tools to read the MR/files/discussions and publish actionable findings inline,
-reply to comments, and resolve evidenced fixes or bot false positives. These tools belong to the
-monitor and handle its journal and confirmations. Do not use other credentials, write monitor or
-native state, change the immutable input, or bypass a rejected operation. A tool result tells you
-whether publication was confirmed; never claim an unconfirmed effect succeeded.
-The native task message contains the complete saved request. Supplied earlier messages and summaries
-are context, not fresh human authorization. Operational diagnostics do not define review decisions.
-Read current discussions before publishing. Reuse a discussion for the same concern; different
-defects on the same line are separate. Read each whole discussion before resolving and assess all
-its notes, including human follow-ups. Explain the evidence; disagreement alone is not a fix.
-If GitLab omits diff content, investigate with local Git at the exact authenticated base/start/head
-SHAs. The model chooses the checkout. For inline validation supply that checkout when necessary.
-Use read_mr again if the head/discussions changed. Never retry an uncertain public send yourself.
-An admitted review may edit and run commands/tests inside its workspace. Intake, a pending human
-decision, and unregistered direct messages are read-only. Questions, explanations, preferences,
-mixed/automatic messages, any human request containing ? or ending in w grant no mutation.
-For registered review work, call finish_review only after the actual review is complete, then end
-with a readable Portuguese summary including tests and limitations. No final JSON review report.
-If a human decision is needed, call ask_human and repeat its exact readable Portuguese question
-in your final response. Stop mutable work; the monitor will preserve the question and await a
-sufficient real human answer. An uncertain send or interrupted execution is not completion.
+    return '''Review the supplied GitLab MR link using the ordinary GitLab MCP tools. Read
+AGENTS.md before project commands. Choose repositories, branches, context and useful tests from
+the supplied workspace, preserve existing work and verify the actual SHAs used for test coverage.
+Do not delegate, commit, reset, clean, stash or create worktrees unless explicitly requested.
+The operator has already selected the configured model and thinking effort for this dispatched
+stage. Do not offer model changes or ask for confirmation. This does not answer domain questions.
+Read the current MR, diff and complete discussions, including the other reviewer's comments.
+Publish actionable findings inline when possible. Reuse a thread only for the same concern;
+different defects on the same line stay separate. Supplement other people's findings when useful.
+Before resolving, read every note and human follow-up, explain the verified fix or why the concern
+is invalid, and resolve only if no valid concern or unanswered question remains. This applies to
+both reviewers' findings and other bots. Disagreement alone is not grounds to close a discussion.
+Check the current open MR, refs and discussion immediately before writing. Never write to closed
+or merged MRs or outside an admitted human scope. If the head changes, review the current MR or
+report that the code review is incomplete; never ask the user to admit a SHA. Use local Git at
+exact authenticated base/start/head objects when GitLab omits a diff. Choose the checkout yourself.
+Do not post empty acknowledgments or repeated no-findings summaries. Use normal GitLab arguments,
+keep note/discussion IDs in successful results, and confirm uncertain sends by reading discussions
+before retrying. Do not claim publication without a successful result or confirming read.
+The native task contains the complete saved request. Earlier messages and summaries are context,
+not new human authorization. Do not write monitor/native state or read their credentials yourself.
+Admitted review may edit and run commands/tests inside the supplied workspace. Intake, pending
+human decisions and unregistered direct messages are read-only. Questions, preferences,
+explanations, mixed/automatic human messages, ? or trailing w grant no mutable human authorization.
+End with a readable Portuguese summary including tests and limitations, then exactly one plain
+terminal status line: Estado da revisão: concluída; Estado da revisão: não concluída; or
+Estado da revisão: aguardando resposta. Emit the selected line alone, without quoting or fencing.
+For completed code review, also emit Commit revisado: followed by the full actual reviewed SHA.
+For an operational failure use não concluída and explain why. For a real human decision use
+aguardando resposta followed by the complete question, stop mutable work and await a sufficient
+native human answer. Head changes, closed MRs and transport failures are not human decisions.
+There is no finish/ask tool or final JSON review report. Interrupted execution is not completion.
 For intake or a new direct human message, interpret only the original human text and any actual
 answers supplied. Return a brief explanation and one small fenced csm-assessment JSON object:
 {"kind":"action|answer|explanation","summary":"bounded request","effects":["reply","resolve"],
@@ -3595,8 +3611,9 @@ def mq_workspace_config(config, job):
     snapshot = job['workspace']
     scoped = {**config,'cwd':snapshot['cwd'],'_workspace':snapshot,
               '_workspace_write':job['kind'] not in {'intake','presentation'} and not job.get('pending_question')}
-    if job.get('protocol')=='tools' and job['stages']:
-        scoped['_tools'] = {'job':job['id'],'stage':job['stages'][-1]['id'],'epoch':job['epoch']}
+    if job['stages'] and job['stages'][-1].get('protocol')=='direct':
+        scoped['_direct_gitlab'] = True
+        scoped['_gitlab_mcp_file'] = str(Path(config['queue_file']).parent/'executions'/job['stages'][-1]['id']/'gitlab-mcp.json')
     if snapshot['project_id'] is not None:
         scoped['codex_project_binding'] = {**config['codex_project_binding'],
             'roots':snapshot['roots'],'existing_threads':{}}
@@ -3625,7 +3642,7 @@ def mq_verify_codex_context(config, record, native, session):
         raise RuntimeError('native conversation project/workspace context mismatch')
 
 
-def mq_render_input(data):
+def mq_render_input_v1(data):
     """Render only the frozen snapshot, never current configuration or queue state."""
     kind = data['kind']
     task = ('Review this MR, investigate its code and discussions, run useful tests, and publish '
@@ -3667,9 +3684,27 @@ def mq_render_input(data):
     return '\n'.join(lines)
 
 
+def mq_render_input(data):
+    """Change only generated instructions; preserve supplied text, answers and questions."""
+    preamble, context = mq_render_input_v1(data).split('\n--- BEGIN SUPPLIED CONTEXT ---\n',1)
+    lines = preamble.splitlines()
+    lines[0] = ('Carry out only the bounded original human request using the ordinary GitLab tools.'
+        if data['kind']=='human' else
+        'Review this MR using the ordinary GitLab tools. Investigate code and discussions, run useful '
+        'tests, and publish actionable inline findings, replies or explained resolutions.'
+        if data['kind'] in {'code','discussion'} else
+        'Read-only assessment of the original human request. Do not publish or edit anything.'
+        if data['kind']=='intake' else
+        'Read-only presentation of the saved pending question. Repeat that question in your final.')
+    lines = [line for line in lines if not line.startswith(('Exact admitted head:',
+        'For a review call finish_review'))]
+    lines.insert(1,'End with the readable review status required by the shared instructions; no final JSON review.')
+    return '\n'.join(lines)+'\n--- BEGIN SUPPLIED CONTEXT ---\n'+context
+
+
 def mq_input(queue, job, stage, context):
-    if stage.get('protocol')!='tools':
-        raise RuntimeError('new review inputs require the tool protocol')
+    if stage.get('protocol')!='direct':
+        raise RuntimeError('new review inputs require the direct GitLab route')
     data = {'stage':stage['id'],'reviewer':stage['reviewer'],
         'url':context['mr'].get('web_url') or queue.config['gitlab_url']+'/'+job['repository_path']
             +'/-/merge_requests/'+str(job['iid']),
@@ -3683,7 +3718,7 @@ def mq_input(queue, job, stage, context):
                            for s in job['stages'][:-1] if s['state']=='succeeded'],
         'pending_question':job.get('pending_question')}
     text = mq_render_input(data)
-    mq_update_stage(queue,job,stage['id'],input=text,input_format='message-v1',
+    mq_update_stage(queue,job,stage['id'],input=text,input_format='message-v2',
                     input_context=data,input_digest=monitor_digest(data))
     return text
 
@@ -3721,8 +3756,6 @@ def mq_codex_create(config, queue, job, *, start=None):
         return identifier
     selection = mq_native_selection(config,assignment=True)
     selection['config']['model_reasoning_effort'] = config['effort']
-    # The consumer supplies authenticated context and owns writes via the existing credential.
-    selection['config'][f"mcp_servers.{config['credential_mcp_server']}.enabled"] = False
     context = ({'projectId': config['codex_project_binding']['id'],
                 'runtimeWorkspaceRoots': config['codex_project_binding']['roots']}
                if config.get('codex_project_name') else {})
@@ -4180,6 +4213,12 @@ def mq_print_dispatch(config, queue, job, stage):
                 stream.write(raw);stream.flush();os.fsync(stream.fileno())
         monitor_private(target)
         if target.read_bytes()!=raw:raise RuntimeError('Claude stdin input changed')
+    if config.get('_direct_gitlab'):
+        server = mq_gitlab_server(config)
+        private = root/'gitlab-mcp.json'
+        mq_service_write(private,{'mcpServers':{config['credential_mcp_server']:{
+            'type':'http','url':server['url'],'headers':server['http_headers']}}})
+        config = {**config,'_gitlab_mcp_file':str(private)}
     arguments = mq_claude_arguments(config,stage['input'] if transport=='argv' else None,name)
     options = ['--session-id',session]
     if config.get('claude_model'):options += ['--model',config['claude_model']]
@@ -4253,8 +4292,9 @@ def mq_claude_accept(config, queue, job, stage):
             record.setdefault('claude_history',[]).append(previous)
         record.setdefault('claude_contexts',{})[native['sessionId']] = config['cwd']
         record['chats']['claude'] = native['sessionId']
-        if stage.get('protocol')=='tools':
-            record.setdefault('instruction_versions',{})[native['sessionId']] = MQ_INSTRUCTIONS_VERSION
+        if stage.get('protocol') in {'tools','direct'}:
+            record.setdefault('instruction_versions',{})[native['sessionId']] = (
+                MQ_INSTRUCTIONS_VERSION if stage['protocol']=='direct' else 5)
         queue.put_mr(record)
         queue.save(job)
     return native
@@ -4316,11 +4356,12 @@ def mq_claude_records(config, session):
     return records
 
 
-def mq_claude_final(records, source):
+def mq_claude_final(records, source, *, tool_results=None):
     """Follow one native input through tool results; group split blocks of its final message."""
     chain = {source['uuid']:(set(),None)}
     finals, seals, parents, positions = {}, [], {}, {}
     messages, call_messages, returned, closed = {}, {}, set(), set()
+    tool_calls = {}
     def descends(node,ancestor):
         while node in chain:
             if node==ancestor:return True
@@ -4352,6 +4393,9 @@ def mq_claude_final(records, source):
             if set(identities)&returned:
                 raise RuntimeError('duplicate Claude tool result identity')
             returned.update(identities)
+            if tool_results is not None:
+                tool_results.extend({'id':c['tool_use_id'],**tool_calls[c['tool_use_id']],
+                    'result':c.get('content'),'error':c.get('is_error',False)} for c in content)
         elif kind=='assistant':
             if not isinstance(content,list) or any(not isinstance(c,dict) for c in content):
                 raise RuntimeError('invalid Claude assistant content')
@@ -4363,6 +4407,8 @@ def mq_claude_final(records, source):
             group = messages.get(identity)
             if group and not descends(record.get('parentUuid'),group['first']):
                 raise RuntimeError('ambiguous Claude message ownership')
+            tool_calls.update((c.get('id'),{'tool':c.get('name'),'arguments':c.get('input')})
+                              for c in content if c.get('type')=='tool_use')
             calls = [c.get('id') for c in content if c.get('type')=='tool_use']
             if (any(not isinstance(i,str) or not i for i in calls)
                     or len(set(calls))!=len(calls)):
@@ -4447,10 +4493,11 @@ def mq_claude_stop(config, native):
 def mq_input_context(queue,stage):
     if 'input_format' in stage:
         data = stage.get('input_context')
-        if (stage['input_format']!='message-v1' or not isinstance(data,dict)
+        renderer = {'message-v1':mq_render_input_v1,'message-v2':mq_render_input}.get(stage['input_format'])
+        if (renderer is None or not isinstance(data,dict)
                 or data.get('stage')!=stage['id'] or data.get('reviewer')!=stage['reviewer']
                 or monitor_digest(data)!=stage.get('input_digest')
-                or mq_render_input(data)!=stage['input']):
+                or renderer(data)!=stage['input']):
             raise RuntimeError('registered immutable reviewer input changed')
         return data
     # Historical prepared/issued executions keep their original file and exact hash.
@@ -4493,27 +4540,57 @@ def mq_verify_permission_selection(response):
         raise RuntimeError('native conversation did not select the reviewer permission profile')
 
 
+MQ_GITLAB_READS = ('get_merge_request_approval_state','search_repositories','get_file_contents',
+    'get_branch','list_branches','get_merge_request','get_merge_request_diffs',
+    'list_merge_request_changed_files','list_merge_request_diffs','get_merge_request_file_diff',
+    'mr_discussions','get_merge_request_discussion','get_merge_request_note','get_merge_request_notes',
+    'list_issues','my_issues','get_issue','list_issue_discussions','get_project','list_projects',
+    'list_project_members','list_labels','get_repository_tree','list_merge_requests','whoami',
+    'list_commits','get_commit','get_commit_diff','get_file_blame','health_check',
+    'get_merge_request_versions','get_merge_request_version')
+MQ_GITLAB_WRITES = ('create_merge_request_thread','create_merge_request_discussion_note',
+                    'resolve_merge_request_thread')
+
+
+def mq_gitlab_server(config):
+    import tomllib
+    # Validate the same static origin/credential used by inventory; never select another account.
+    monitor_credential(config)
+    server = tomllib.loads((Path(config['codex_home'])/'config.toml').read_text())['mcp_servers'][config['credential_mcp_server']]
+    if 'url' not in server:
+        raise RuntimeError('direct reviews require the configured ordinary GitLab HTTP MCP')
+    return {'url':server['url'],'http_headers':server['http_headers']}
+
+
+def mq_gitlab_tools(config):
+    return [*MQ_GITLAB_READS,*(MQ_GITLAB_WRITES if config.get('_workspace_write') else ())]
+
+
 def mq_native_selection(config,*,assignment=False):
     import tomllib
     selection = {'permissions':MQ_PERMISSION_PROFILE,'config':{
         'permissions.'+MQ_PERMISSION_PROFILE:mq_permission_profile(config),
         'features.network_proxy':True}}
     servers = tomllib.loads((Path(config['codex_home'])/'config.toml').read_text()).get('mcp_servers',{})
+    direct = config.get('_direct_gitlab')
+    target = config['credential_mcp_server']
     for name in servers:
         if not re.fullmatch(r'[A-Za-z0-9_-]+',name):
             raise RuntimeError('MCP server name cannot be addressed safely by native override')
+        if direct and name==target:
+            continue
         if name != 'codex_app' or not assignment:
             selection['config']['mcp_servers.'+name+'.enabled'] = False
         else:
-            # Host RPCs assign the chat; with approvalPolicy=never the model cannot use them.
-            assignment_tools = ['list_projects','move_thread_to_project']
-            selection['config']['mcp_servers.codex_app.enabled_tools'] = assignment_tools
-            for tool in assignment_tools:
+            selection['config']['mcp_servers.codex_app.enabled_tools'] = ['list_projects','move_thread_to_project']
+            for tool in ('list_projects','move_thread_to_project'):
                 selection['config']['mcp_servers.codex_app.tools.'+tool+'.approval_mode'] = 'prompt'
-    selection['config'][f"mcp_servers.{config['credential_mcp_server']}.enabled"] = False
-    if config.get('_tools'):
-        selection['config']['mcp_servers.gitlab_review'] = {**mq_tool_command(config),
-            'enabled':True,'tools':{name:{'approval_mode':'approve'} for name in MQ_TOOLS}}
+    if direct:
+        tools = mq_gitlab_tools(config)
+        selection['config']['mcp_servers.'+target] = {**mq_gitlab_server(config),'enabled':True,
+            'enabled_tools':tools,'tools':{name:{'approval_mode':'approve'} for name in tools}}
+    else:
+        selection['config']['mcp_servers.'+target+'.enabled'] = False
     return selection
 
 
@@ -4548,9 +4625,9 @@ def mq_claude_arguments(config, text, name):
         '--tools','Read,Grep,Glob,Bash,Edit,Write' if writable else 'Read,Grep,Glob,Bash',
         '--setting-sources','','--settings',json.dumps(settings),
         '--strict-mcp-config','--mcp-config','{"mcpServers":{}}']
-    if config.get('_tools'):
-        arguments[-1] = json.dumps({'mcpServers':{'gitlab_review':mq_tool_command(config)}})
-        allowed.extend('mcp__gitlab_review__'+name for name in MQ_TOOLS)
+    if config.get('_direct_gitlab'):
+        arguments[-1] = config['_gitlab_mcp_file']
+        allowed.extend('mcp__'+config['credential_mcp_server']+'__'+name for name in mq_gitlab_tools(config))
     if len(workspace['roots']) > 1:
         arguments.extend(['--add-dir',*workspace['roots'][1:]])
     return [*arguments,'--allowedTools',*allowed,'--',text] if text is not None else [*arguments,'--allowedTools',*allowed,'--']
@@ -4746,6 +4823,7 @@ def mq_resolution_receipt(queue,job,effect,context):
 def mq_all_stages(queue):
     for job in queue.jobs():
         yield from job['stages']
+        yield from job.get('retired_preparations',[])
         for previous in job.get('rounds', []):
             yield from previous['stages']
 
@@ -4976,6 +5054,9 @@ def mq_retired_question(config,queue,record,source,result=None):
 
 
 def mq_intake(config,queue,record):
+    if any(j.get('question_scope_pending') for j in queue.jobs()
+           if (j['repository_id'],j['iid'])==(record['repository_id'],record['iid'])):
+        return
     for seen,source,text in mq_human_candidates(config,queue,record):
         joined = '\n'.join(source['texts'])
         if source['automated'] or source['mixed'] or '?' in joined or joined.rstrip().endswith('w'):
@@ -5015,6 +5096,185 @@ def mq_intake(config,queue,record):
                     admitted['retired_question']=retired;queue.save(admitted)
         with queue.atomic():
             queue.set_meta(seen,{'disposition':'observed'})
+
+
+def mq_note_versions(threads):
+    rows = []
+    for thread in threads:
+        for note in thread['notes']:
+            if note.get('system'):continue
+            row = monitor_note(note,thread['id'])
+            rows.append({k:row[k] for k in ('id','discussion','revision','author_id','resolved')}
+                | {'updated_at':note.get('updated_at'),'resolved_at':note.get('resolved_at')})
+    return rows
+
+
+def mq_mcp_note_versions(threads):
+    """The shared MCP coerces REST note/author IDs to strings; historical REST stays strict."""
+    normalized = []
+    def identifier(value):
+        if isinstance(value,str) and re.fullmatch(r'[1-9][0-9]{0,19}',value):return int(value)
+        return value
+    for thread in threads:
+        notes = [{**note,'id':identifier(note.get('id')),
+                  'author':{**note.get('author',{}),'id':identifier(note.get('author',{}).get('id'))}}
+                 for note in thread['notes']]
+        normalized.append({**thread,'notes':notes})
+    return mq_note_versions(normalized)
+
+
+def mq_normalize_notes(rows, own):
+    normalized = []
+    for row in rows:
+        seen = set()
+        while row is not None and monitor_digest(row) in own:
+            key = monitor_digest(row)
+            if key in seen:raise RuntimeError('cyclic self-output observation')
+            seen.add(key);row = own[key]
+        if row is not None:normalized.append(row)
+    return sorted(normalized,key=lambda r:(r['discussion'],r['id']))
+
+
+def mq_native_gitlab_calls(config,queue,stage):
+    """Read only exact registered native ancestry, never infer a send from final prose."""
+    mq_verify_input(queue,stage)
+    if not stage.get('session'):return []
+    if stage['reviewer']=='codex':
+        if not stage.get('turn_id'):return []
+        items = mq_codex_items(config,stage['session'],stage['turn_id'])
+        inputs = [i for i in items if i.get('type')=='userMessage']
+        if (len(inputs)!=1 or mq_texts(inputs[0].get('content'))!=([stage['input']],False)
+                or inputs[0].get('clientId') not in {None,stage['id']} or mq_automatic_items(items)
+                or stage.get('source_id') and inputs[0].get('id')!=stage['source_id']):
+            raise RuntimeError('direct tool observation native input changed')
+        return [{'id':i['id'],'tool':i['tool'],'arguments':i.get('arguments'),
+                 'result':i.get('result'),'error':i.get('error')}
+                for i in items if i.get('type')=='mcpToolCall' and i.get('server')==stage.get('gitlab_server',config['credential_mcp_server'])
+                and i.get('status')=='completed']
+    records = mq_claude_records(config,stage['session'])
+    sources = [r for r in records if r.get('type')=='user' and r.get('message',{}).get('content')==stage['input']]
+    if (len(sources)!=1 or sources[0].get('cwd')!=config['cwd']
+            or stage.get('source_id') and sources[0]['uuid']!=stage['source_id']):
+        raise RuntimeError('direct tool observation Claude input changed')
+    calls = []
+    mq_claude_final(records,sources[0],tool_results=calls)
+    prefix = 'mcp__'+stage.get('gitlab_server',config['credential_mcp_server'])+'__'
+    return [{**c,'tool':c['tool'][len(prefix):]} for c in calls
+            if isinstance(c.get('tool'),str) and c['tool'].startswith(prefix)]
+
+
+def mq_tool_payload(value):
+    if isinstance(value,dict):
+        if value.get('isError'):return None
+        if value.get('structuredContent') is not None:return value['structuredContent']
+        value = value.get('content')
+    if isinstance(value,list) and len(value)==1 and value[0].get('type')=='text':value = value[0].get('text')
+    if isinstance(value,str):
+        try:return json.loads(value)
+        except ValueError:return None
+    return None
+
+
+def mq_observe_outputs(config,queue,job,stage):
+    if stage.get('protocol')!='direct':return
+    from urllib.parse import unquote
+    calls = mq_native_gitlab_calls(config,queue,stage)
+    own, cursor, threads = {},dict(stage.get('output_cursor',{})),{}
+    for call in calls:
+        arguments = call.get('arguments')
+        if (call.get('error') or not isinstance(arguments,dict)
+                or unquote(str(arguments.get('project_id'))) not in {str(job['repository_id']),job.get('repository_path')}
+                or str(arguments.get('merge_request_iid'))!=str(job['iid'])):continue
+        payload = mq_tool_payload(call['result'])
+        if payload is None:continue
+        digest = monitor_digest(call)
+        if call['id'] in cursor and cursor[call['id']]!=digest:raise RuntimeError('observed native tool result changed')
+        tool = call['tool']
+        if tool=='mr_discussions':
+            rows = payload.get('items') if isinstance(payload,dict) else payload
+            if isinstance(rows,list):
+                threads.update((t['id'],t) for t in rows if isinstance(t,dict) and 'notes' in t)
+        elif tool=='get_merge_request_discussion' and isinstance(payload,dict) and 'notes' in payload:
+            threads[payload['id']] = payload
+        elif tool in MQ_GITLAB_WRITES and call['id'] not in cursor:
+            try:
+                discussion = payload.get('id') if tool=='create_merge_request_thread' else arguments.get('discussion_id')
+                if not isinstance(discussion,str) or not isinstance(payload,dict):continue
+                current = payload if 'notes' in payload else {'id':discussion,'notes':[payload]}
+                after = mq_mcp_note_versions([current])
+                if tool!='resolve_merge_request_thread':
+                    for row in after:
+                        if isinstance(row['updated_at'],str) and row['author_id']==job['context']['actor_id']:
+                            own[monitor_digest(row)] = None
+                else:
+                    before = mq_mcp_note_versions([threads[discussion]]) if discussion in threads else []
+                    if {r['id'] for r in before}=={r['id'] for r in after}:
+                        for row in after:
+                            previous = next(r for r in before if r['id']==row['id'])
+                            if (row['resolved']!=previous['resolved'] and isinstance(row['updated_at'],str)
+                                    and all(row[k]==previous[k] for k in ('discussion','revision','author_id'))):
+                                own[monitor_digest(row)] = previous
+                threads[discussion] = current
+            except (KeyError,TypeError,RuntimeError,ValueError):pass
+        cursor[call['id']] = digest
+    if cursor==stage.get('output_cursor',{}) and not own:return
+    with queue.atomic():
+        if queue.job(job['id'])!=job:raise RuntimeError('direct observation stage changed')
+        record = queue.mr(job['repository_id'],job['iid'])
+        record.setdefault('own_outputs',{}).update(own)
+        stage['output_cursor'] = cursor
+        queue.put_mr(record);queue.save(job)
+        mq_retire_self_activity(queue,record)
+
+
+def mq_retire_self_activity(queue,record):
+    """Administrative retirement only; never touch issued work, code or human admission."""
+    own = record.get('own_outputs',{})
+    for job in queue.jobs('pending'):
+        members = [job,*[queue.job(i) for i in job.get('coalesced_jobs',[])]]
+        if ((job['repository_id'],job['iid'])!=(record['repository_id'],record['iid'])
+                or job['stages'] or job.get('coalescing_frozen') or job.get('rounds')
+                or job.get('pending_question') or job.get('batch') or job.get('prepared')
+                or job.get('wait_reason') or any(e.get('job_id')==job['id'] for e in queue.effects())
+                or record.get('hold') and record['hold']['job_id']==job['id']):continue
+        admissions = [queue.admission(m) for m in members]
+        if not all(a['kind']=='discussion' and a['source'].get('origin')=='automatic'
+                   and 'note_delta' in a['source'] for a in admissions):continue
+        if all(mq_normalize_notes(a['source']['note_delta']['before'],own)==
+               mq_normalize_notes(a['source']['note_delta']['after'],own) for a in admissions):
+            job.update(state='completed',outcome='self-only discussion activity; not reviewed',completed_at=mq_stamp())
+            queue.save(job)
+
+
+def mq_observe_direct_stages(config,queue):
+    repositories = {p['id'] for p in mq_repositories(config)}
+    pending = [(job,stage) for job in queue.jobs() if job.get('workspace')
+        and job['repository_id'] in repositories for stage in job['stages']
+        if stage.get('protocol')=='direct' and not stage.get('output_collected')]
+    for job,stage in mq_rotated_sources(queue,'output_next_stage',pending,lambda pair:pair[1]['id']):
+        scoped = mq_workspace_config(mq_repository(config,job['repository_id']),job)
+        try:
+            mq_budget(config)
+            mq_observe_outputs(scoped,queue,job,stage)
+            if stage['state']!='running':
+                with queue.atomic():stage['output_collected']=True;queue.save(job)
+        except (OSError,RuntimeError,ValueError) as failure:
+            mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
+
+
+def mq_prepare_question(config,queue,job):
+    for stage in job['stages']:
+        if (stage.get('protocol')=='direct' and stage['state']=='succeeded'
+                and stage['result']['outcome']=='question' and not stage.get('question_context')
+                and not any(q['stage_id']==stage['id'] for q in job.get('questions',[]))):
+            with queue.atomic():job['question_scope_pending']=stage['id'];queue.save(job)
+            try:context = mq_context(config,job['iid'],with_diff=False)
+            except (OSError,RuntimeError,ValueError):
+                queue.park(job,'question_scope',retry_at=mq_stamp()+config['interval_minutes']*60)
+                raise
+            with queue.atomic():
+                queue.check_running(job);stage['question_context']=context
+                job.pop('question_scope_pending',None);queue.save(job)
 
 
 def mq_inventory(config,queue):
@@ -5061,22 +5321,33 @@ def mq_inventory(config,queue):
                     owned = [e for e in queue.effects() if e['repository_id']==project['id'] and e['iid']==context['iid']]
                     notes = [monitor_note(n,t['id']) for t in context['threads'] for n in t['notes']
                         if not n.get('system') and not any(e.get('body')==n['body'] and e.get('actor_id')==n['author']['id'] for e in owned)]
+                    raw = mq_note_versions([{'id':t['id'],'notes':[n for n in t['notes'] if not any(
+                        e.get('body')==n['body'] and e.get('actor_id')==n['author']['id'] for e in owned)]}
+                        for t in context['threads']])
+                    own = record.get('own_outputs',{})
+                    before = record.get('observed_note_versions')
                     signature = monitor_digest([{k:n[k] for k in ('id','discussion','revision','author_id')} for n in notes])
                     fresh_start = 'observed_notes' not in record
                     generation = record.get('observation_generation',0)+1
-                    changed = record.get('observed_head')!=context['head'] or record.get('observed_notes')!=signature or fresh_start
-                    if changed:
-                        code = record.get('observed_head')!=context['head'] or fresh_start
-                        source = {'origin':'automatic','head':context['head']} if code else {'origin':'automatic','notes':signature}
-                        queue.enqueue(project['id'],context['iid'],
-                            source_key=f"observation:{project['id']}:{context['iid']}:{generation}:{context['head']}:{signature}",
-                            kind='code' if code else 'discussion',head=context['head'],source=source,context=context)
-                        with queue.atomic():
-                            mq_admit(config,project['id'])
-                            fresh = queue.mr(project['id'],context['iid'])
-                            fresh.update(observed_head=context['head'],observed_notes=signature,
-                                observation_generation=generation,title=context['mr']['title'])
-                            queue.put_mr(fresh)
+                    note_changed = (mq_normalize_notes(before,own)!=mq_normalize_notes(raw,own)
+                        if before is not None else record.get('observed_notes')!=signature)
+                    changed = record.get('observed_head')!=context['head'] or note_changed or fresh_start
+                    with queue.atomic():
+                        if changed:
+                            code = record.get('observed_head')!=context['head'] or fresh_start
+                            source = {'origin':'automatic','head':context['head']} if code else {
+                                'origin':'automatic','notes':signature,
+                                **({'note_delta':{'before':before,'after':raw}} if before is not None else {})}
+                            queue.enqueue(project['id'],context['iid'],
+                                source_key=f"observation:{project['id']}:{context['iid']}:{generation}:{context['head']}:{signature}",
+                                kind='code' if code else 'discussion',head=context['head'],source=source,context=context)
+                        mq_admit(config,project['id'])
+                        fresh = queue.mr(project['id'],context['iid'])
+                        fresh.update(observed_head=context['head'],observed_notes=signature,
+                            observed_note_versions=raw,observation_generation=generation if changed else generation-1,
+                            title=context['mr']['title'])
+                        queue.put_mr(fresh)
+                        mq_retire_self_activity(queue,fresh)
                 except (OSError,RuntimeError,ValueError) as failure:
                     mq_diagnostic(queue,f"inventory_error:{project['id']}:{iid}",failure)
         except MonitorDeferred as failure:
@@ -5096,7 +5367,7 @@ def mq_question(queue,job,stage,result):
             'provider':stage['reviewer'],'session':stage['session'],'question':result['question'],
             'scope':job.get('scope') or job.get('pending_question',{}).get('scope') or {
                 'effects':['finding','reply','resolve'],
-                'discussions':[t['id'] for t in stage.get('view',job['context'])['threads']]}}
+                'discussions':[t['id'] for t in stage.get('question_context',stage.get('view',job['context']))['threads']]}}
         job.setdefault('questions',[]).append(question)
         if not record.get('hold'):
             record['hold'] = question
@@ -5137,366 +5408,51 @@ def mq_release_answer(config,queue,job):
     return True
 
 
-MQ_TOOLS = ('read_mr','read_file','read_discussion','publish_finding','reply','resolve',
-            'finish_review','ask_human')
-
-
-def mq_tool_command(config):
-    interpreter = Path(__file__).resolve().parents[2]/'scripts/.venv/bin/python'
-    if not interpreter.is_file():
-        raise RuntimeError('monitor tools require: cd ~/scripts && poetry install --with monitor-tools')
-    binding = config['_tools']
-    return {'command':str(interpreter),'args':[str(Path(__file__).resolve()),'monitor-gitlab',
-        '--config',config['_config_path'],'tools','--job',binding['job'],'--stage',binding['stage'],
-        '--epoch',binding['epoch']], 'env':{key:os.environ[key] for key in (
-            'XDG_RUNTIME_DIR','DBUS_SESSION_BUS_ADDRESS','SSL_CERT_FILE','SSL_CERT_DIR') if key in os.environ}}
-
-
-def mq_tool_native(config,queue,job,stage,meta,name,arguments):
-    """Metadata comes from the client's private MCP transport, never tool arguments."""
-    mq_verify_input(queue,stage)
-    mq_verify_job_sources(config,queue,job)
-    if stage['reviewer']=='codex':
-        native = meta.get('x-codex-turn-metadata') or {}
-        session,turn,call = meta.get('threadId'),native.get('turn_id'),meta.get('callId')
-        if (session!=stage['session'] or meta.get('sessionId')!=session
-                or native.get('thread_id')!=session or native.get('session_id')!=session
-                or not isinstance(call,str) or not call or not isinstance(turn,str)
-                or stage.get('turn_id') not in {None,turn}):
-            raise RuntimeError('foreign native MCP call identity')
-        thread = monitor_native(config,'thread/read',{'threadId':session,'includeTurns':False})['thread']
-        mq_verify_codex_context(config,queue.mr(job['repository_id'],job['iid']),thread,session)
-        turns = [t for t in monitor_turns(config,session,stop_ids=[turn]) if t['id']==turn]
-        if len(turns)!=1 or turns[0]['status']!='inProgress':
-            raise RuntimeError('tool caller is not the active admitted native turn')
-        items = mq_codex_items(config,session,turn)
-        users = [i for i in items if i.get('type')=='userMessage']
-        if (len(users)!=1 or mq_texts(users[0].get('content'))!=([stage['input']],False)
-                or users[0].get('clientId') not in {None,stage['id']} or mq_automatic_items(items)):
-            raise RuntimeError('native input changed or became mixed')
-        return {'turn_id':turn,'source_id':users[0]['id'],'call_id':call}
-    call = meta.get('claudecode/toolUseId')
-    if not isinstance(call,str) or not call:
-        raise RuntimeError('missing native Claude tool identity')
-    # Claude flushes transcript records asynchronously. Wait only for this exact call,
-    # with a small bounded grace; absence never becomes authority.
-    import time
-    deadline = time.monotonic()+2
-    while True:
-        records = mq_claude_records(config,stage['session'])
-        calls = [(r,b) for r in records for b in r.get('message',{}).get('content',[]) if isinstance(b,dict)
-            and b.get('type')=='tool_use' and b.get('id')==call]
-        if calls or time.monotonic()>=deadline:break
-        time.sleep(.025)
-    if (len(calls)!=1 or calls[0][1].get('name')!='mcp__gitlab_review__'+name
-            or calls[0][1].get('input')!=meta.get('_arguments',arguments)):
-        raise RuntimeError('Claude native tool call is absent or mismatched; retry after transcript flush')
-    by_id = {r.get('uuid'):r for r in records if r.get('uuid')}
-    record = calls[0][0]; visited = set()
-    while record:
-        identifier = record.get('uuid')
-        if identifier in visited or record.get('cwd')!=config['cwd']:
-            raise RuntimeError('native Claude call ancestry/context changed')
-        visited.add(identifier)
-        if record.get('type')=='user':
-            content = record['message'].get('content')
-            texts,mixed = mq_texts(content)
-            if texts or not isinstance(content,list) or any(b.get('type')!='tool_result' for b in content):
-                if mixed or texts!=[stage['input']] or stage.get('source_id') not in {None,identifier}:
-                    raise RuntimeError('native Claude input changed or became mixed')
-                execution = mq_print_execution(config,stage)
-                if execution['terminal'] or not execution.get('invocation'):
-                    raise RuntimeError('Claude caller is not the admitted live execution')
-                return {'source_id':identifier,'call_id':call,'invocation':execution['invocation']}
-        record = by_id.get(record.get('parentUuid'))
-    raise RuntimeError('native Claude tool lacks its registered original input')
-
-
 def mq_tool_uncertain(queue,job):
+    # Original journals retain read-back-only recovery; new direct stages create none.
     return [e for e in queue.effects() if e['repository_id']==job['repository_id'] and e['iid']==job['iid']
             and e['state'] in {'sending','unknown'}]
 
 
-def mq_tool_authority(config,queue,job,stage,meta,name,arguments,*,mutable=False):
-    queue.check_running(job)
-    if (stage!=job['stages'][-1] or stage['state']!='running' or stage.get('protocol')!='tools'
-            or stage.get('delivery') not in {'sending','accepted'}):
-        raise RuntimeError('stale or inactive tool stage')
-    mq_admit(config,job['repository_id'])
-    identity = mq_tool_native(config,queue,job,stage,meta,name,arguments)
-    if mutable:
-        if (job['kind'] in {'intake','presentation'} or job.get('pending_question')
-                or queue.mr(job['repository_id'],job['iid']).get('hold') or stage.get('question_intent')
-                or stage.get('finish_intent') or mq_tool_uncertain(queue,job)):
-            raise RuntimeError('intake, finished review, question or uncertain effect fences publication')
-        if job['source'].get('origin')=='human':
-            scope = job.get('scope')
-            kind = {'publish_finding':'finding'}.get(name,name)
-            if (not scope or kind not in scope['effects'] or kind in {'reply','resolve'}
-                    and arguments.get('discussion') not in scope['discussions']):
-                raise RuntimeError('tool exceeds admitted human request scope')
-    return identity
-
-
-def mq_tool_position(config,context,path,line,side,repository=None):
-    if (not isinstance(path,str) or path.startswith('/') or '\\' in path
-            or any(p in {'','..','.'} for p in path.split('/')) or side not in {'old','new'}):
-        raise RuntimeError('inline finding requires a canonical file path and old/new side')
-    diff = context['diff']
-    files = [d for d in diff['diffs'] if d.get(side+'_path')==path]
-    if len(files)!=1:
-        raise RuntimeError('inline file absent or ambiguous in authenticated MR diff')
-    file = files[0]
-    if file.get('too_large') or file.get('collapsed') or not file.get('diff'):
-        if repository is None:
-            raise RuntimeError('GitLab omitted this diff; provide a workspace Git checkout with exact MR objects')
-        root = Path(repository).resolve()
-        if not any(root.is_relative_to(Path(p).resolve()) for p in config['_workspace']['roots']):
-            raise RuntimeError('local diff checkout is outside the admitted workspace')
-        import subprocess
-        environment = {k:v for k,v in os.environ.items() if not k.startswith('GIT_')}
-        environment.update(LC_ALL='C',GIT_OPTIONAL_LOCKS='0')
-        def git(*args):
-            result = subprocess.run(['git','--literal-pathspecs','-C',str(root),*args],capture_output=True,env=environment,
-                timeout=mq_io_timeout(config,'native_timeout'))
-            if result.returncode:raise RuntimeError('exact local Git diff unavailable: '+result.stderr.decode(errors='replace'))
-            if len(result.stdout)>config['max_response_bytes']:raise RuntimeError('local diff exceeds configured bound')
-            return result.stdout.decode('utf-8')
-        refs = {'head':diff.get('head_commit_sha'),'base':diff.get('base_commit_sha'),'start':diff.get('start_commit_sha')}
-        for key,sha in refs.items():
-            if (not isinstance(sha,str) or not re.fullmatch('[a-f0-9]{40,64}',sha)
-                    or context['mr'].get('diff_refs',{}).get(key+'_sha')!=sha
-                    or git('rev-parse','--verify',sha+'^{commit}').strip()!=sha):
-                raise RuntimeError('local Git objects do not match authenticated MR refs')
-        # No branch inference, fetch, checkout or external diff driver; exact immutable objects only.
-        targets = ([refs['base']+':'+file['old_path'],refs['head']+':'+file['new_path']]
-            if file['old_path']!=file['new_path'] else [refs['base'],refs['head'],'--',file['new_path']])
-        patch = git('diff','--no-ext-diff','--no-textconv','--no-color','--no-renames','--unified=3',*targets)
-        if patch.count('\ndiff --git '):
-            raise RuntimeError('local inline validation requires one exact file patch')
-        file = {**file,'diff':patch}
-        context = {**context,'diff':{**diff,'diffs':[file]}}
-    position = {'position_type':'text','base_sha':diff['base_commit_sha'],
-        'start_sha':diff['start_commit_sha'],'head_sha':diff['head_commit_sha'],
-        'old_path':file['old_path'],'new_path':file['new_path'],side+'_line':line}
-    return mq_position(context,position)
-
-
-def mq_tool_context(config,queue,job,stage,*,with_diff=False,expected=True):
-    context = mq_context(config,job['iid'],with_diff=with_diff)
-    if context['head']!=job['head'] or context['mr']['state']!='opened':
-        raise MonitorContextChanged('MR head changed or MR is closed/merged')
-    if expected and (not stage.get('view') or mq_fingerprint(context)!=mq_fingerprint(stage['view'])):
-        raise MonitorContextChanged('read the current MR/discussion before publishing; context changed')
-    return context
-
-
-def mq_tool_send(config,queue,job,stage,action,context,authenticate):
-    """One write ahead intent, one send, authenticated read-back. Called under work.lock."""
-    body = action['body'].strip()
-    if not body or len(body)>16000 or '<!-- csmq:' in body or '<!-- codex-stats-op:' in body:
-        raise RuntimeError('invalid public body')
-    action = {**action,'key':monitor_digest([action['kind'],body,action.get('discussion'),action.get('position')])}
-    key = mq_effect_identity(job,action)
-    saved = queue.effect(key)
-    if saved and saved['state']=='confirmed':return saved
-    if saved and saved['state'] in {'sending','unknown'}:
-        raise RuntimeError('public effect awaits read-back; never resend')
-    effect = {'key':key,'job_id':job['id'],'repository_id':job['repository_id'],'iid':job['iid'],
-        'head':job['head'],'kind':action['kind'],'discussion':action.get('discussion'),
-        'target_discussion':action.get('discussion'),'position':action.get('position'),
-        'body':body+'\n\n<!-- csmq:'+key+' -->','state':'prepared','actor_id':context['actor_id'],
-        'protocol':'tools'}
-    if action['kind']=='resolve':
-        import copy
-        expected = copy.deepcopy(context)
-        for note in mq_thread(expected,action['discussion'])['notes']:
-            if note.get('resolvable'):note['resolved']=True
-        effect['expected_context'] = mq_fingerprint(expected)
-    receipt = mq_readback(config,queue,effect,context) if action['kind']!='resolve' else None
-    if receipt:
-        with queue.atomic():
-            queue.check_running(job);effect.update(state='confirmed',**receipt);queue.put_effect(effect)
-        return effect
-    authenticate()
-    api = MonitorGitLab(config);api.project()
-    latest = mq_tool_context(config,queue,job,stage)
-    if mq_fingerprint(latest)!=mq_fingerprint(context) or latest['actor_id']!=context['actor_id']:
-        raise MonitorContextChanged('public intent context changed before send')
-    with queue.atomic():
-        queue.check_running(job);effect['state']='sending';queue.put_effect(effect)
-    route = f"/projects/{job['repository_id']}/merge_requests/{job['iid']}/discussions"
-    try:
-        if action['kind']=='finding':
-            mq_send(api,'POST',route,{'body':effect['body'],'position':effect['position']})
-        elif action['kind']=='reply':
-            mq_send(api,'POST',route+'/'+effect['discussion']+'/notes',{'body':effect['body']})
-        else:mq_send(api,'PUT',route+'/'+effect['discussion'],{'resolved':True})
-        observed = mq_context(config,job['iid'],with_diff=False)
-        receipt = (mq_resolution_receipt(queue,job,effect,observed) if effect['kind']=='resolve'
-                   else mq_readback(config,queue,effect,observed))
-        if receipt is None:raise RuntimeError('public send is not confirmed')
-        import copy
-        expected = copy.deepcopy(context)
-        if effect['kind']=='resolve':
-            for note in mq_thread(expected,effect['discussion'])['notes']:
-                if note.get('resolvable'):note['resolved']=True
-        else:
-            thread = next((t for t in expected['threads'] if t['id']==receipt['discussion']),None)
-            if thread is None:
-                thread = {'id':receipt['discussion'],'notes':[]};expected['threads'].append(thread)
-            if not any(n['id']==receipt['note_id'] for n in thread['notes']):thread['notes'].append(receipt['raw_note'])
-        with queue.atomic():
-            queue.check_running(job);effect.update(state='confirmed',**receipt);queue.put_effect(effect)
-            # Incorporate only our confirmed effect. Concurrent input must be read by the model.
-            stage['view']=expected;queue.save(job)
-        return effect
-    except BaseException as error:
-        with queue.atomic():
-            queue.check_running(job);effect.update(state='unknown',error=type(error).__name__);queue.put_effect(effect)
-        raise
-
-
-def mq_tool_execute(config,queue,job,stage,meta,name,arguments):
-    if name not in MQ_TOOLS:raise RuntimeError('unknown review tool')
-    mutable = name in {'publish_finding','reply','resolve'}
-    authenticate = lambda:mq_tool_authority(config,queue,job,stage,meta,name,arguments,mutable=mutable)
-    identity = authenticate()
-    if name.startswith('read_'):
-        context = mq_tool_context(config,queue,job,stage,with_diff=bool(arguments.get('include_diff')),expected=False)
-        if name=='read_file':
-            return mq_snapshot(config,job['iid'],arguments['path'],arguments['ref'])
-        value = mq_thread(context,arguments['discussion']) if name=='read_discussion' else context
-        with queue.atomic():
-            queue.check_running(job);stage['view']=context
-            if name=='read_discussion':
-                stage.setdefault('discussions',{})[arguments['discussion']]=value
-            queue.save(job)
-        return value
-    if name in {'finish_review','ask_human'}:
-        if job['kind']=='intake':raise RuntimeError('intake returns a compact assessment, not review completion')
-        if name=='finish_review' and (stage.get('question_intent') or job.get('pending_question')
-                or queue.mr(job['repository_id'],job['iid']).get('hold') or mq_tool_uncertain(queue,job)):
-            raise RuntimeError('open question/uncertain effect prohibits finish')
-        if name=='finish_review':mq_tool_context(config,queue,job,stage)
-        value = {'identity':identity}
-        if name=='ask_human':
-            question = arguments.get('question')
-            if not isinstance(question,str) or not 1<=len(question.strip())<=8000:
-                raise RuntimeError('ask_human requires a readable bounded question')
-            if stage.get('question_intent') and stage['question_intent']['question']!=question:
-                raise RuntimeError('existing question cannot be replaced implicitly')
-            if job.get('pending_question') and job['pending_question']['question']!=question:
-                raise RuntimeError('question continuation must preserve the original question')
-            value['question']=question
-        with queue.atomic():
-            queue.check_running(job)
-            stage['question_intent' if name=='ask_human' else 'finish_intent']=value
-            queue.save(job)
-        return {'recorded':True,'provisional':True,'next':'End this native turn with a readable Portuguese final.'}
-    context = mq_tool_context(config,queue,job,stage,with_diff=name=='publish_finding')
-    if name=='publish_finding':
-        position = mq_tool_position(config,context,arguments['path'],arguments['line'],
-            arguments.get('side','new'),arguments.get('repository'))
-        action = {'kind':'finding','body':arguments['body'],'position':position}
-    else:
-        mq_thread(context,arguments['discussion'])
-        action = {'kind':name,'body':arguments.get('body',arguments.get('explanation','')),
-                  'discussion':arguments['discussion']}
-    if name=='resolve':
-        discussion = arguments['discussion']
-        repeated = {**action,'key':monitor_digest(['resolve',action['body'].strip(),discussion,None])}
-        saved = queue.effect(mq_effect_identity(job,repeated))
-        if saved and saved['state']=='confirmed':return {'state':'confirmed','key':saved['key'],'resolved':True}
-        read = stage.get('discussions',{}).get(discussion)
-        if not read or monitor_thread_snapshot(read)!=monitor_thread_snapshot(mq_thread(context,discussion)):
-            raise RuntimeError('read the complete current discussion before resolving')
-        notes = {str(n['id']):n for n in read['notes'] if not n.get('system')}
-        evaluated = arguments.get('notes')
-        if (not isinstance(evaluated,list) or len(evaluated)!=len(notes)
-                or {str(n.get('note')) for n in evaluated}!=set(notes)):
-            raise RuntimeError('assess every non-system note exactly once')
-        proof = []
-        for note in evaluated:
-            status,evidence = note.get('status'),note.get('evidence')
-            if status not in {'fixed','invalid','no_concern'} or not isinstance(evidence,str) or not evidence.strip():
-                raise RuntimeError('every note needs a supported disposition and evidence')
-            original = notes[str(note['note'])]
-            proof.append({'id':original['id'],'revision':monitor_digest(original['body']),
-                'concerns':[] if status=='no_concern' else [{'disposition':status,'evidence':evidence}],
-                'no_concern_reason':evidence if status=='no_concern' else None})
-        action.update(basis=arguments['basis'],assessment={'complete':True,'notes':proof,'fix_commit':job['head']})
-        api = MonitorGitLab(config);api.project();mq_resolution(api,queue,job,action,context)
-        explanation = mq_tool_send(config,queue,job,stage,{**action,'kind':'reply'},context,authenticate)
-        context = mq_tool_context(config,queue,job,stage)
-        mq_resolution(api,queue,job,action,context,explanation)
-    receipt = mq_tool_send(config,queue,job,stage,action,context,authenticate)
-    return {k:receipt[k] for k in ('state','key','discussion','note_id','resolved') if k in receipt}
-
-
-def mq_serve_tools(path,identifier,stage_id,epoch):
-    try:
-        from mcp.server import MCPServer
-        from mcp.server.mcpserver import Context
-        from mcp.server.mcpserver.exceptions import ToolError
-    except ImportError as error:
-        raise RuntimeError('monitor tools require: cd ~/scripts && poetry install --with monitor-tools') from error
-    server = MCPServer('gitlab_review')
-    # Deferred annotations must be resolvable by the SDK without importing it on CLI startup.
-    globals()['MQToolContext'] = Context
-    def invoke(name,arguments,ctx):
-        config = mq_config(path)
-        try:lock = mq_lock(config,'work')
-        except BlockingIOError:return {'retry':True,'reason':'monitor is checking this stage; retry this tool'}
-        queue = None
-        try:
-            queue = MonitorQueue(config)
-            job = queue.job(identifier)
-            if not job or job['epoch']!=epoch or not job['stages'] or job['stages'][-1]['id']!=stage_id:
-                raise RuntimeError('stale tool launch binding')
-            scoped = mq_workspace_config(mq_repository(config,job['repository_id']),job)
-            meta = {**dict(ctx.request_context.meta or {}),
-                '_arguments':dict(ctx.request_context.params or {}).get('arguments',{})}
-            return mq_tool_execute(scoped,queue,job,job['stages'][-1],meta,name,arguments)
-        except (OSError,RuntimeError,ValueError,KeyError) as error:
-            raise ToolError(str(error)) from error
-        finally:
-            if queue is not None:queue.close()
-            os.close(lock)
-    @server.tool()
-    def read_mr(ctx:MQToolContext,include_diff:bool=False)->dict:
-        """Read this MR's metadata and discussions, optionally its diff (omitted parts stay flagged)."""
-        return invoke('read_mr',{'include_diff':include_diff},ctx)
-    @server.tool()
-    def read_file(path:str,ref:str,ctx:MQToolContext)->dict:
-        """Read a repository file at an exact authenticated MR head/base/start SHA."""
-        return invoke('read_file',{'path':path,'ref':ref},ctx)
-    @server.tool()
-    def read_discussion(discussion:str,ctx:MQToolContext)->dict:
-        """Read the entire discussion before replying or assessing resolution."""
-        return invoke('read_discussion',{'discussion':discussion},ctx)
-    @server.tool()
-    def publish_finding(body:str,path:str,line:int,ctx:MQToolContext,side:str='new',repository:str|None=None)->dict:
-        """Publish a distinct actionable defect inline. Supply a workspace checkout if its diff was omitted."""
-        return invoke('publish_finding',{'body':body,'path':path,'line':line,'side':side,'repository':repository},ctx)
-    @server.tool()
-    def reply(discussion:str,body:str,ctx:MQToolContext)->dict:
-        """Reply to an existing concern with useful evidence; do not duplicate another finding."""
-        return invoke('reply',{'discussion':discussion,'body':body},ctx)
-    @server.tool()
-    def resolve(discussion:str,explanation:str,basis:str,notes:list[dict],ctx:MQToolContext)->dict:
-        """Explain and resolve verified_fix or bot_false_positive. Assess every note with
-        {note: ID, status: fixed|invalid|no_concern, evidence: text}, covering every concern."""
-        return invoke('resolve',{'discussion':discussion,'explanation':explanation,'basis':basis,'notes':notes},ctx)
-    @server.tool()
-    def finish_review(ctx:MQToolContext)->dict:
-        """Request completion after actual review; then give a readable final with tests/limitations."""
-        return invoke('finish_review',{},ctx)
-    @server.tool()
-    def ask_human(question:str,ctx:MQToolContext)->dict:
-        """Fence writes pending a human decision. Repeat the exact question in your final answer."""
-        return invoke('ask_human',{'question':question},ctx)
-    server.run()
+def mq_direct_result(job,stage,observed):
+    if observed.get('error'):
+        return None,observed['error']
+    text = observed.get('text','')
+    if not isinstance(text,str) or not text.strip() or not observed.get('anchor'):
+        raise RuntimeError('missing readable native final')
+    if job['kind']=='intake' and stage.get('purpose')!='question':
+        return mq_parse_assessment(text,job,mq_combined_source(job)),None
+    # Parse plain terminal lines without losing the original readable question bytes.
+    statuses, heads, fence, offset = [],[],None,0
+    for raw in text.splitlines(keepends=True):
+        offset += len(raw)
+        line = raw.rstrip('\r\n')
+        marker = re.match(r'^ {0,3}(`{3,}|~{3,})(.*)$',line)
+        if marker:
+            if fence is None:fence = marker[1]
+            elif marker[1][0]==fence[0] and len(marker[1])>=len(fence) and not marker[2].strip():
+                fence = None
+            continue
+        if fence is not None:continue
+        status = re.fullmatch(r'Estado da revisão: (concluída|aguardando resposta|não concluída)\s*',line)
+        head = re.fullmatch(r'Commit revisado: ([a-f0-9]{40,64})\s*',line)
+        if status:statuses.append((status[1],offset))
+        if head:heads.append(head[1])
+    if len(statuses)!=1:
+        raise RuntimeError('expected one readable terminal review status')
+    state, after_status = statuses[0]
+    if state=='não concluída':
+        return None,{'message':text}
+    if state=='aguardando resposta':
+        question = text[after_status:].strip()
+        if not question:
+            raise RuntimeError('question status requires a complete readable question')
+        return mq_domain_result(job,'question',question=question),None
+    if job['kind']=='code' and len(heads)!=1:
+        raise RuntimeError('completed code review requires its actual reviewed commit')
+    if len(heads)>1:
+        raise RuntimeError('ambiguous reviewed commit')
+    return mq_domain_result(job,head=heads[0] if heads else job['head']),None
 
 
 def mq_tool_result(queue,job,stage,observed):
@@ -5537,38 +5493,11 @@ def mq_restore_question(queue,job):
                 job['pending_question'] = job.get('pending_question') or {
                     'stage':stage['id'],'reviewer':stage['reviewer'],'question':stage['question_intent']['question'],
                     'scope':job.get('scope') or {'effects':['finding','reply','resolve'],
-                        'discussions':[t['id'] for t in stage.get('view',job['context'])['threads']]}}
+                        'discussions':[t['id'] for t in stage.get('question_context',stage.get('view',job['context']))['threads']]}}
                 stage['question_transferred']=True
                 queue.save(job)
             return True
     return False
-
-
-def mq_adopt_tools(queue,job):
-    """Retire unissued legacy work; keep issued results, original sources and public journals."""
-    if job.get('protocol')=='tools':return
-    if any(s['state']=='running' for s in job['stages']):
-        stage = job['stages'][-1]
-        if stage['delivery']!='prepared':raise RuntimeError('issued legacy execution must be collected first')
-        with queue.atomic():
-            queue.check_running(job)
-            stage.update(state='failed',error={'message':'legacy input was never issued; replaced by tool dispatch'})
-            job['stages'].pop()
-            job.setdefault('rounds',[]).append({'reason':'retired unissued legacy input',
-                'stages':[stage],'batch':None,'workspace':job.get('workspace')})
-            queue.save(job)
-    if mq_tool_uncertain(queue,job):raise RuntimeError('legacy public send must be reconciled before cutover')
-    record = queue.mr(job['repository_id'],job['iid'])
-    if job['stages'] and queue.next_reviewer(job) is None and not record.get('hold'):
-        mq_reset_round(queue,job,'retired legacy proposal; reassess through tools without replaying public effects')
-    with queue.atomic():
-        queue.check_running(job)
-        if job.get('batch'):
-            job.setdefault('retired_batches',[]).append(job['batch']);job['batch']=None
-        for effect in queue.effects():
-            if effect.get('job_id')==job['id'] and effect['state']=='prepared':
-                effect.update(state='cancelled',cancelled_reason='unissued legacy proposal retired');queue.put_effect(effect)
-        job['protocol']='tools';queue.save(job)
 
 
 def mq_step(config,queue):
@@ -5595,8 +5524,8 @@ def mq_step(config,queue):
             and not (queue.path.parent/'inputs'/(stage['id']+'.json')).is_symlink())
         if not empty_preparation:mq_verify_input(queue,stage)
         if stage['delivery']=='prepared':
-            if stage.get('protocol')!='tools':
-                mq_adopt_tools(queue,job);return True
+            if stage.get('protocol')!='direct':
+                queue.retire_preparation(job,stage);return True
             return mq_launch_stage(scoped,queue,job,stage)
         expired = mq_stamp() >= stage.get('review_deadline',stage['started_at']+config['review_timeout_seconds'])
         if expired and not stage.get('cancel_requested_at'):
@@ -5621,8 +5550,15 @@ def mq_step(config,queue):
             if expired and mq_cancel_stage(scoped,stage):
                 observed = {'terminal':True,'error':{'message':'review timed out; exact native execution stopped'}}
             else:return False
+        if stage.get('protocol')=='direct':
+            try:mq_observe_outputs(scoped,queue,job,stage)
+            except (OSError,RuntimeError,ValueError) as failure:
+                mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
         result,error = None,observed.get('error')
-        if stage.get('protocol')=='tools':
+        if stage.get('protocol')=='direct':
+            try:result,error = mq_direct_result(job,stage,observed)
+            except (RuntimeError,ValueError) as failure:error = {'message':str(failure)}
+        elif stage.get('protocol')=='tools':
             try:result,error = mq_tool_result(queue,job,stage,observed)
             except (RuntimeError,ValueError) as failure:error = {'message':str(failure)}
         elif error is None:
@@ -5634,15 +5570,19 @@ def mq_step(config,queue):
                 error = {'message':str(failure)}
         mq_update_stage(queue,job,stage['id'],summary=observed.get('text'))
         queue.stage_end(job,stage['id'],result=result,error=error,terminal=True)
+        mq_prepare_question(scoped,queue,job)
         mq_restore_question(queue,job)
         if stage.get('purpose')=='question' and error:
             queue.park(job,'retry',retry_at=mq_stamp()+config['interval_minutes']*60)
         return True
+    mq_prepare_question(scoped,queue,job)
     if mq_restore_question(queue,job):return True
     if mq_tool_uncertain(queue,job):
         queue.park(job,'effect_unknown')
         return True
-    mq_adopt_tools(queue,job)
+    with queue.atomic():
+        queue.check_running(job)
+        job['protocol']='direct';queue.save(job)
     if job.get('pending_question'):
         scoped = mq_workspace(scoped,queue,job)
         stage = queue.stage_start(job,job['pending_question']['reviewer'],'',purpose='question')
@@ -5652,7 +5592,7 @@ def mq_step(config,queue):
         return True
     record = queue.mr(job['repository_id'],job['iid'])
     if (record.get('hold') and record['hold']['job_id']==job['id'] and record.get('pending_answers')
-            and (job.get('protocol')=='tools' or queue.next_reviewer(job) is None)):
+            and (job.get('protocol') in {'tools','direct'} or queue.next_reviewer(job) is None)):
         if mq_release_answer(scoped,queue,job):
             return True
     if job.get('resumed_from')=='all_failed' and job['outcome']=='retry':
@@ -5672,7 +5612,7 @@ def mq_step(config,queue):
         with queue.atomic():
             queue.check_running(job)
             job['context'] = context
-            job['protocol']='tools'
+            job['protocol']='direct'
             if job['kind'] in {'human','intake'}:
                 job['head'] = context['head']
             if not job.get('scope') and job['prepared'] and (job['prepared'].get('assessment') or {}).get('kind')=='action':
@@ -5682,7 +5622,7 @@ def mq_step(config,queue):
         queue.park(job,'repository_removed')
         return True
     record = queue.mr(job['repository_id'],job['iid'])
-    if job.get('protocol')=='tools' and record.get('hold') and job['kind']!='intake':
+    if job.get('protocol') in {'tools','direct'} and record.get('hold') and job['kind']!='intake':
         queue.park(job,'human')
         return True
     next_reviewer = queue.next_reviewer(job)
@@ -5691,7 +5631,7 @@ def mq_step(config,queue):
         stage = queue.stage_start(job,next_reviewer,'')
         return mq_launch_stage(scoped,queue,job,stage)
     record = queue.mr(job['repository_id'],job['iid'])
-    if job.get('protocol')=='tools' and record.get('hold') and job['kind']!='intake':
+    if job.get('protocol') in {'tools','direct'} and record.get('hold') and job['kind']!='intake':
         queue.park(job,'human')
         return True
     if job['kind']=='intake':
@@ -5726,7 +5666,7 @@ def mq_step(config,queue):
             queue.save(job)
         queue.park(job,'all_failed',retry_at=mq_stamp()+config['interval_minutes']*60)
         return True
-    if job.get('protocol')=='tools':
+    if job.get('protocol') in {'tools','direct'}:
         mq_verify_job_sources(scoped,queue,job)
         current = mq_context(scoped,job['iid'],with_diff=False)
         if job['kind']=='intake':
@@ -5735,7 +5675,7 @@ def mq_step(config,queue):
             with queue.atomic():
                 queue.check_running(job);job.update(kind='human',scope=scope,prepared=result);queue.save(job)
             return True
-        if current['head']!=job['head'] or current['mr']['state']!='opened':
+        if current['head']!=job['head'] or result['head']!=job['head'] or current['mr']['state']!='opened':
             queue.finish(job,'context changed; completed publications preserved',reviewed=False)
         else:
             queue.finish(job,'reviewed',reviewed=job['kind']=='code')
@@ -5745,7 +5685,10 @@ def mq_step(config,queue):
 
 
 def mq_launch_stage(config,queue,job,stage):
-    if job.get('protocol')=='tools':config = mq_workspace_config(config,job)
+    config = mq_workspace_config(config,job)
+    if stage.get('protocol')!='direct':raise RuntimeError('historical native inputs cannot be launched again')
+    if 'gitlab_server' not in stage:
+        mq_update_stage(queue,job,stage['id'],gitlab_server=config['credential_mcp_server'])
     if 'model_selection' not in stage:
         choice = ({'model':config['model'],'effort':config['effort']} if stage['reviewer']=='codex'
                   else {'model':config.get('claude_model'),'effort':config.get('claude_effort')})
@@ -5931,8 +5874,10 @@ def mq_tick(path):
         config['_cycle_deadline'] = time.monotonic()+config['cycle_seconds']
         config['_io_guard'] = lambda:mq_budget(config)
         config['_native_guard'] = lambda:mq_budget(config)
+        mq_observe_direct_stages(config,queue)
         # Ready native progression precedes potentially slow read-back and intake.
         mq_drain(config,queue)
+        mq_observe_direct_stages(config,queue)
         # One rotating read-back gets a bounded share; an ambiguous MR cannot starve others.
         pending = next(mq_rotated_sources(queue,'recovery_next_job',
             [j for j in queue.jobs('pending') if j['wait_reason']=='effect_unknown'],lambda j:j['id']),None)
@@ -6215,7 +6160,7 @@ def mq_main():
         if arguments.action=='instructions':
             print(mq_instructions()); return 0
         if arguments.action=='tools':
-            mq_serve_tools(path,arguments.job,arguments.stage,arguments.epoch);return 0
+            raise RuntimeError('the private review MCP is retired; use the ordinary GitLab MCP')
         if arguments.action=='configure':
             data = monitor_default_config(arguments.project_url,arguments.project_id,arguments.mcp_server)
             target = (arguments.analysis_config or path.with_name('analysis.toml')).expanduser().absolute()

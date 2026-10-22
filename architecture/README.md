@@ -9,7 +9,7 @@ local implementation plans.
 - [GitLab monitor work ownership](gitlab-monitor-work-ownership.md): superseded predecessor contract for native
   request provenance, ownership and recovery across MR chats.
 - [GitLab monitor simple queue](gitlab-monitor-simple-queue.md): implemented monitor-owned FIFO, ordered
-  Claude/Codex stages, scoped review tools, authenticated public-effect recovery and human holds.
+  Claude/Codex stages, direct native GitLab tools, passive self-activity observation, historical effect recovery and human holds.
 
 ## Lifecycle
 
