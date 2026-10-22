@@ -1,0 +1,138 @@
+#!/usr/bin/python3
+"""Export bounded cgroup v2 swap rates to Netdata without extra privileges."""
+import argparse
+from collections import deque
+import hashlib
+import os
+from pathlib import Path
+import sys
+import time
+
+
+CONTEXT = "hostswap.cgroup_io"
+
+
+class Collector:
+    def __init__(self, root, interval, max_groups=256, max_directories=2048):
+        self.root = root
+        self.interval = interval
+        self.max_groups = max_groups
+        self.max_directories = max_directories
+        self.previous = {}
+
+    def sample(self, now):
+        pending = deque([self.root])
+        groups, values = {}, {}
+        errors = truncated = visited = 0
+        deadline = time.monotonic() + 1
+        while pending and visited < self.max_directories and time.monotonic() < deadline:
+            directory = pending.popleft()
+            visited += 1
+            try:
+                with os.scandir(directory) as entries:
+                    # Bound enumeration itself, including a directory with thousands of children.
+                    for index, entry in enumerate(entries):
+                        if index >= self.max_directories or len(pending) >= self.max_directories:
+                            truncated += 1
+                            break
+                        if entry.is_dir(follow_symlinks=False):
+                            pending.append(Path(entry.path))
+                if directory == self.root:
+                    continue
+                with (directory / "cgroup.procs").open() as stream:
+                    populated = bool(stream.read(1))
+                if not populated:
+                    continue
+                if len(groups) >= self.max_groups:
+                    truncated += 1
+                    continue
+                identity = directory.stat()
+                counters = {}
+                with (directory / "memory.stat").open() as stream:
+                    for line in stream:
+                        key, value = line.split()
+                        if key in ("pswpin", "pswpout"):
+                            counters[key] = int(value)
+                if len(counters) != 2 or min(counters.values()) < 0:
+                    raise ValueError("missing or invalid swap counters")
+                if directory.stat().st_ino != identity.st_ino:
+                    raise ValueError("cgroup changed during sampling")
+                path = "/" + str(directory.relative_to(self.root))
+                # Netdata normalizes punctuation in labels; hex survives unchanged.
+                label = "p" + os.fsencode(path).hex()
+                if len(label) > 2048:
+                    truncated += 1
+                    continue
+                key = hashlib.sha256(path.encode()).hexdigest()[:24]
+                current = {"identity": (identity.st_dev, identity.st_ino),
+                           "time": now, **counters, "label": label}
+                groups[key] = current
+                old = self.previous.get(key)
+                if (old and old["identity"] == current["identity"]
+                        and 0 < now - old["time"] <= self.interval * 3
+                        and all(current[k] >= old[k] for k in counters)):
+                    values[key] = {k: round((current[k] - old[k]) * os.sysconf("SC_PAGE_SIZE")
+                                           / (now - old["time"]) / 1024 * 1000)
+                                   for k in counters}
+            except FileNotFoundError:
+                errors += 1  # Churn is missing coverage, not a measured zero.
+            except (OSError, ValueError):
+                errors += 1
+        truncated += len(pending)
+        old = self.previous
+        self.previous = groups
+        return groups, values, old, {"tracked": len(groups), "measured": len(values),
+                                    "errors": errors, "truncated": truncated}
+
+    def emit(self, now, output):
+        groups, values, old, coverage = self.sample(now)
+        for key in old.keys() - groups.keys():
+            print(f"CHART hostswap_cgroup.{key} '' 'Cgroup swap activity' 'KiB/s' swap "
+                  f"'{CONTEXT}' line 120000 {self.interval} obsolete", file=output)
+        for key in groups.keys() - old.keys():
+            print(f"CHART hostswap_cgroup.{key} '' 'Cgroup swap activity' 'KiB/s' swap "
+                  f"'{CONTEXT}' line 120000 {self.interval}", file=output)
+            print(f"CLABEL cgroup_path '{groups[key]['label']}' 1\nCLABEL_COMMIT", file=output)
+            print("DIMENSION in in absolute 1 1000\nDIMENSION out out absolute 1 1000", file=output)
+        for key in groups:
+            print(f"BEGIN hostswap_cgroup.{key}", file=output)
+            if key in values:
+                rates = values[key]
+                print(f"SET in = {rates['pswpin']}\nSET out = {rates['pswpout']}", file=output)
+            print("END", file=output)
+        print("BEGIN hostswap.coverage", file=output)
+        for key, value in coverage.items():
+            print(f"SET {key} = {value}", file=output)
+        print("END", file=output, flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("interval", nargs="?", type=int, default=10)
+    parser.add_argument("--root", type=Path, default=Path("/sys/fs/cgroup"))
+    parser.add_argument("--iterations", type=int, help="Bounded diagnostic run")
+    args = parser.parse_args()
+    if args.interval < 1 or (args.iterations is not None and args.iterations < 1):
+        parser.error("interval and iterations must be positive")
+    if not args.root.is_dir() or args.root.is_symlink():
+        parser.error("cgroup root must be an existing directory, not a symlink")
+    collector = Collector(args.root, args.interval)
+    print(f"CHART hostswap.coverage '' 'Swap collector coverage' groups swap "
+          f"hostswap.coverage line 119999 {args.interval}")
+    for key in ("tracked", "measured", "errors", "truncated"):
+        print(f"DIMENSION {key} {key} absolute 1 1")
+    count = 0
+    try:
+        while True:
+            started = time.monotonic()
+            collector.emit(started, sys.stdout)
+            count += 1
+            if args.iterations is not None and count >= args.iterations:
+                return
+            time.sleep(max(0, args.interval - (time.monotonic() - started)))
+    except BrokenPipeError:
+        return
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,5 @@
 [Unit]
-Description=Check Netdata memory pressure and notify the desktop
+Description=Check host swap history and Netdata capacity; notify the desktop
 
 [Service]
 Type=oneshot

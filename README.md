@@ -28,7 +28,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
     - [Historical performance monitoring](#historical-performance-monitoring)
-      - [Netdata memory notifications](#netdata-memory-notifications)
+      - [Host swap and thrashing notifications](#host-swap-and-thrashing-notifications)
       - [Install or update the collectors](#install-or-update-the-collectors)
       - [Apply the monitoring configuration](#apply-the-monitoring-configuration)
       - [Investigate a slow period](#investigate-a-slow-period)
@@ -1418,14 +1418,47 @@ processes from delay rankings while preserving the raw snapshots. Boot enablemen
 it is not a verified fix for anomalous kernel counters.
 History begins when recording starts; very short memory spikes between samples can still be missed.
 
-#### Netdata memory notifications
+<a id="netdata-memory-notifications"></a>
 
-[`netdata_memory_check.py`](./scripts/netdata_memory_check.py) samples the actual Netdata
-cgroup every five minutes through a user timer. It warns about swap-in of at least 1 MiB/s or
-anonymous memory plus swap reaching 85% of `memory.high`. The second condition is a capacity
-warning, not evidence of active thrashing; file cache is excluded. Each condition is notified at
-most once every six hours within a boot. A reboot resets the monotonic-clock baseline. Missing
-counters, a stopped service or notification failure produce an error instead of a healthy result.
+#### Host swap and thrashing notifications
+
+The user service `netdata-memory-check.service` monitors host-wide swap activity and possible
+thrashing. Netdata collects and retains the measurements; this service analyzes the history and
+sends desktop notifications, including activity from other applications, services and containers.
+
+[`netdata_memory_check.py`](./scripts/netdata_memory_check.py) queries Netdata history every minute.
+It warns when host swap-in or swap-out averages at least 1 MiB/s in each of two consecutive
+60-second windows. A single burst, cold swap occupancy and file-cache growth do not qualify.
+When sustained swap is accompanied by memory PSI of at least 2%, the warning also reports memory
+pressure and possible thrashing. This does not prove which PID caused it. Host warnings repeat at
+most every 15 minutes. The separate Netdata capacity warning still uses
+anonymous memory plus swap reaching 85% of `memory.high`, excluding file cache, with a six-hour
+cooldown. A reboot resets suppression; failed delivery does not consume it.
+
+[`cgroup_swap.plugin`](./scripts/performance-monitoring/cgroup_swap.plugin) runs inside the existing
+Netdata service as its normal user. Every ten seconds it exports cgroup v2 swap-in/out rates in
+`hostswap.cgroup_io` and coverage in `hostswap.coverage`. History uses the existing DBengine budgets
+and retention. At most 256 populated cgroups are tracked, with bounded discovery; departed charts
+become obsolete. Paths in the `cgroup_path` label use `p` followed by the hexadecimal path bytes.
+The warning lists up to three non-overlapping services or containers; several PIDs in one group
+cannot be distinguished by these counters. Missing or incomplete attribution is explicit and does
+not suppress a valid host warning.
+
+Install or update the plugin and Netdata configuration after saving the files being replaced:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo install -d -m 0755 /etc/netdata/custom-plugins.d
+sudo install -m 0755 ~/scripts/performance-monitoring/cgroup_swap.plugin /etc/netdata/custom-plugins.d/
+sudo install -m 0644 ~/scripts/performance-monitoring/netdata.conf /etc/netdata/netdata.conf
+sudo systemctl restart netdata.service
+```
+
+Allow about two minutes for complete history after startup. Netdata/API failure, missing host
+samples or notification failure produce an error instead of a healthy result. Capacity checks
+remain possible when the API is unavailable. No extra root access is granted to either collector
+or notifier.
 
 Install or update the timer in a terminal from the graphical user session:
 
@@ -1442,8 +1475,8 @@ systemctl --user status netdata-memory-check.timer --no-pager
 journalctl --user -u netdata-memory-check.service -n 10 --no-pager
 ```
 
-The check uses system Python and the existing `notify-send`. Private baseline and suppression
-state lives under `~/.local/state/netdata-memory-check/`. To test desktop delivery once without
+The check uses system Python and the existing `notify-send`. Private suppression state lives under
+`~/.local/state/netdata-memory-check/`. To test desktop delivery once without
 changing normal suppression state:
 
 ```bash
@@ -1458,7 +1491,24 @@ A successful command means the desktop notification service accepted the request
 manager bus is unavailable, run these commands from the logged-in graphical session. Remove the
 timer with `systemctl --user disable --now netdata-memory-check.timer`, remove only its two files
 from `~/.config/systemd/user/`, then run `systemctl --user daemon-reload`. This leaves Netdata and
-its historical metrics intact.
+its historical metrics intact. To stop only the extra history collection, set `cgroup_swap = no`
+in `/etc/netdata/netdata.conf`, restart Netdata, then remove only
+`/etc/netdata/custom-plugins.d/cgroup_swap.plugin`. Apply the same setting in the source configuration
+if the change should survive reinstallation. Existing metric history expires under normal retention.
+
+Inspect collection and history with the dashboard at `http://127.0.0.1:19999`, or:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+curl --fail --silent --show-error 'http://127.0.0.1:19999/api/v1/data?chart=hostswap.coverage&after=-180&points=18'
+curl --fail --silent --show-error 'http://127.0.0.1:19999/api/v2/data?contexts=hostswap.cgroup_io&after=-180&points=18&group_by=label,dimension&group_by_label=cgroup_path'
+journalctl -u netdata.service -n 20 --no-pager
+```
+
+Coverage distinguishes tracked and measured groups, read errors and truncated discovery. Newly
+created or reset groups need a second counter sample; incomplete two-minute group history is
+reported as partial attribution. Host detection requires complete, current host swap history.
 
 #### Install or update the collectors
 
@@ -1533,6 +1583,8 @@ sudo install -m 0644 scripts/performance-monitoring/sysstat.default /etc/default
 sudo install -m 0644 scripts/performance-monitoring/sysstat.conf /etc/sysstat/sysstat
 sudo install -m 0644 scripts/performance-monitoring/99-performance-monitoring.conf /etc/sysctl.d/99-performance-monitoring.conf
 sudo install -m 0644 scripts/performance-monitoring/netdata.conf /etc/netdata/netdata.conf
+sudo install -d -m 0755 /etc/netdata/custom-plugins.d
+sudo install -m 0755 scripts/performance-monitoring/cgroup_swap.plugin /etc/netdata/custom-plugins.d/
 sudo install -m 0644 scripts/performance-monitoring/netdata-apps_groups.conf /etc/netdata/apps_groups.conf
 sudo touch /etc/netdata/.opt-out-from-anonymous-statistics
 sudo install -d -o netdata -g netdata -m 0750 /var/lib/netdata/cloud.d

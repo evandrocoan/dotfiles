@@ -1,10 +1,10 @@
 [Unit]
-Description=Check Netdata memory pressure periodically
+Description=Check host swap history and Netdata capacity periodically
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
-AccuracySec=30s
+OnUnitActiveSec=60s
+AccuracySec=5s
 Unit=netdata-memory-check.service
 
 [Install]
