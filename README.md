@@ -239,6 +239,12 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    # +----------- Minute (0 - 59)
    ```
 1. Configure [`./scripts/check_ci`](./scripts/check_ci)
+   1. Use the Poetry environment in `scripts/.venv` and configure the sibling `scripts/.env`:
+      `CHECK_CI_HOSTS="runner-a runner-b"` (whitespace-separated IPs or SSH aliases).
+      Keep this file local; it is ignored by Git.
+   1. Each destination must support non-interactive `ssh <destination> true` with an already
+      trusted host key. Run `./scripts/check_ci` to check manually. Failures and timeouts trigger
+      desktop notifications and a nonzero exit status. This checks SSH access, not flow job state.
    1. Create a `systemd --user` service, which can access dbus and the DISPLAY:
    1. `cp -rv ./scripts/install/* ~/.config/`
    1. `systemctl --user daemon-reload`

@@ -1,25 +1,107 @@
-#!/bin/bash
-# Create crontab scrip `crontab -e`
-# 0 * * * * bash -l /home/yourusername/scripts/check-ci
-# * * * * * command-to-execute
-# - - - - -
-# | | | | |
-# | | | | +--- Day of the week (0-7) (Sunday is both 0 and 7)
-# | | | +----- Month (1 - 12)
-# | | +------- Day of the month (1 - 31)
-# | +--------- Hour (0 - 23)
-# +----------- Minute (0 - 59)
+#!/usr/bin/env bash
+set -euo pipefail
 
-ip_list=(
-    "192.168.0.1"
-    "192.168.0.2"
-)
+# Set CHECK_CI_HOSTS="runner-a runner-b" in the sibling .env.
+# Destinations use the existing SSH configuration and trusted host keys.
+SCRIPT_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIRECTORY
+ENV_FILE="${SCRIPT_DIRECTORY}/.env"
+readonly ENV_FILE
+PYTHON="${SCRIPT_DIRECTORY}/.venv/bin/python"
+readonly PYTHON
 
-for ip in "${ip_list[@]}"; do
-    if nc -zv "$ip" 22; then
-        echo "Successfully connected to $ip on port 22"
-    else
-        notify-send "$(realpath $0)" "Connection to $ip on port 22 failed"
+function send_notification() {
+    local message="${1}"
+
+    if ! timeout --kill-after=2s 5s notify-send -- "check_ci" "${message}"; then
+        printf 'Error: could not deliver the check_ci notification.\n' >&2
+        return 1
     fi
-done
+}
 
+function main() {
+    local command_name
+    local host_list
+    local host
+    local ssh_output
+    local ssh_status
+    local failed=0
+    local -a hosts
+
+    if (( $# != 0 )); then
+        printf 'Error: check_ci does not accept arguments.\n' >&2
+        return 2
+    fi
+
+    for command_name in ssh timeout notify-send; do
+        if ! command -v "${command_name}" >/dev/null; then
+            printf 'Error: required command not found: %s.\n' "${command_name}" >&2
+            return 2
+        fi
+    done
+
+    if [[ ! -x "${PYTHON}" ]]; then
+        printf 'Error: missing Python environment: %s; run poetry install in %s.\n' \
+            "${PYTHON}" "${SCRIPT_DIRECTORY}" >&2
+        send_notification 'Missing Python environment; check the check_ci logs.' || true
+        return 2
+    fi
+
+    if host_list="$("${PYTHON}" -I - "${ENV_FILE}" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+try:
+    from dotenv import dotenv_values
+except ImportError:
+    sys.exit("Error: python-dotenv is missing; run poetry install in the scripts directory.")
+
+path = Path(sys.argv[1])
+if not path.is_file():
+    sys.exit(f"Error: configuration file not found: {path}.")
+try:
+    value = dotenv_values(path, interpolate=False).get("CHECK_CI_HOSTS")
+except (OSError, UnicodeError) as error:
+    sys.exit(f"Error: could not read {path}: {error}.")
+if not value or not value.strip():
+    sys.exit(f"Error: set CHECK_CI_HOSTS to a whitespace-separated list of SSH destinations in {path}.")
+hosts = value.split()
+if any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:@%\[\]-]*", host) for host in hosts):
+    sys.exit("Error: CHECK_CI_HOSTS contains an invalid SSH destination.")
+print("\n".join(dict.fromkeys(hosts)))
+PY
+    )"; then
+        mapfile -t hosts <<<"${host_list}"
+    else
+        send_notification 'Invalid configuration; check CHECK_CI_HOSTS in scripts/.env and the check_ci logs.' || true
+        return 2
+    fi
+
+    for host in "${hosts[@]}"; do
+        if ssh_output="$(timeout --kill-after=2s 15s ssh -nT \
+            -o BatchMode=yes \
+            -o ConnectTimeout=10 \
+            -o ConnectionAttempts=1 \
+            -o StrictHostKeyChecking=yes \
+            -o UpdateHostKeys=no \
+            -o ControlMaster=no \
+            -o ControlPath=none \
+            -o ClearAllForwardings=yes \
+            -o ForwardAgent=no \
+            -o ForwardX11=no \
+            -- "${host}" true 2>&1)"; then
+            printf 'SSH check succeeded for %s.\n' "${host}"
+        else
+            ssh_status=$?
+            failed=1
+            printf 'SSH check failed for %s (exit %s):\n%s\n' \
+                "${host}" "${ssh_status}" "${ssh_output}" >&2
+            send_notification "SSH check failed for ${host} (exit ${ssh_status}): ${ssh_output}" || true
+        fi
+    done
+
+    return "${failed}"
+}
+
+main "$@"
