@@ -104,100 +104,79 @@ answer resolves the question it addresses; request only information or choices i
 
 ## Model and reasoning effort at task entry
 
-After classifying the latest request under the question-only gate below, identify the acting
-agent's effective model and reasoning effort before a substantive answer, plan, project command,
-or edit. Use trustworthy runtime metadata when exposed. Otherwise run
-`codex-session-stats current --client <acting-client> --format json` in the acting agent's own
-environment, selecting `codex`, `claude`, or `copilot` from the actual runtime. Always select the
-client explicitly here: a client launched by another client can inherit its parent's identity
-variables. For Copilot CLI, add `--session-id` from its session-context hook or trusted runtime
-metadata. Native Claude/Copilot subagents also need their own `--agent-id`; a root hook's ID does
-not identify the child. Accept only a successful result with a nonempty model and a known effort,
-or an explicit `unsupported` effort status. The CLI validates the selected identity and current
-runtime evidence; do not repeat its identity comparison or infer settings from saved defaults.
-For a delegated agent, use its own runtime metadata, its own command result, or an accepted
-launcher assignment communicated to that agent; if none is available, ask the parent. Never
-substitute the parent's command result or `CODEX_SESSION_ID` for the child's identity. If the
-acting settings remain unknown, ask the user to read the model and thinking level shown for this
-active session. The parent's settings do not identify the child.
-If the client has no configurable thinking level, establish that fact rather than inventing an
-effort value. Do not infer identity or effort from writing style, a model list, repository settings,
-or a default. If either remains unknown, wait for the missing information; silence is not a
-fallback route. Carry a known setting across turns in the same session, except after a reply to a
-model or effort recommendation. Apply the single-response verification procedure below even when
-the user says to keep the current setting; also recheck after a handoff, new agent, or conflicting
-runtime evidence.
+### Identify the acting settings
 
-After identifying the acting settings, assess the lowest adequate model and effort for each task
-role from its scope, uncertainty, consequences, and any selected reviews. The agent owns this
-recommendation; do not require the user to label a task as Sol medium or Sol xhigh. Recommend a
-specific supported pair and explain the tradeoff. The user chooses the model and effort and may
-keep a setting below or above the recommendation. A recommended minimum is not a prerequisite.
-Compare effort only within the same model and its supported levels; do not silently substitute
-another model or provider or override an exact pair selected by the user.
+After applying the question-only gate, identify the acting model and reasoning effort before a
+substantive answer, plan, project command, or edit. Use trustworthy current runtime metadata;
+otherwise run `codex-session-stats current --client <acting-client> --format json` in the acting
+agent's environment. Select `codex`, `claude`, or `copilot` explicitly from the actual runtime:
+child clients can inherit their parent's identity variables.
 
-Reassess role fit on every new user request, including question-only turns. Carry verified model
-and effort settings across turns, but not the prior role's adequacy judgment. A task boundary is
-a change in the requested outcome or role, not necessarily a new chat or project: a completed
-high-risk edit followed by explanation-only questions starts a new role. Follow-ups in an
-unchanged role and scope do not reset the user's setting choice or the one-time downgrade prompt.
-Keep the reassessment internal when no setting change is warranted.
+- For Copilot CLI, include `--session-id` from its session-context hook or trusted runtime metadata.
+  Native Claude/Copilot subagents also need their own `--agent-id`, not the root hook's ID.
+- For delegated agents, use their own runtime metadata, command result, or accepted launcher
+  assignment. If none is available, ask the parent; never substitute the parent's command result
+  or `CODEX_SESSION_ID` for the child's identity.
 
-For either an upgrade or a downgrade, make the recommendation in one question: state the role,
-target model and thinking level (if configurable), and a brief reason. Include any instruction
-to change the client setting before sending the answer in this initial question. When automatic
-detection is available, explain that the next turn will verify the actual session setting without
-requiring the user to report it again. Present these numbered choices in ordinary text in the
-final response, in the user's language:
+Accept only successful CLI output with a nonempty model and either known effort or explicit
+`unsupported` effort status. The CLI validates identity and current evidence; do not repeat that
+comparison. Establish when a client has no configurable thinking level rather than inventing one.
+Never infer settings from saved defaults, repository settings, model lists, or writing style.
+
+Carry identified settings across turns, but recheck after a handoff, a new agent, conflicting
+runtime evidence, or a reply to a model/effort recommendation as described below.
+
+### Recommend once for the current scope
+
+On every new user request, including question-only turns, assess the lowest adequate supported
+model and effort from the role, scope, uncertainty, consequences, and selected reviews. Make this
+recommendation yourself. The user may choose above or below it; a recommended minimum is not a
+prerequisite. Compare effort only within the same model's supported levels, and never silently
+substitute another model/provider or override an exact selected pair.
+
+A new outcome or role creates a task boundary, including explanation-only questions after a
+completed implementation. Reconsider the recommendation after a material change in task, risk,
+or role. Follow-ups in an unchanged role and scope retain the user's choice, including a pinned
+setting. Keep reassessment internal when no setting change is warranted.
+
+Offer a sufficient lower setting once at the task boundary unless the user already chose to keep
+the current setting for that scope. For either an upgrade or a downgrade, ask one question stating
+the role, target model and thinking level (if configurable), and the reason/tradeoff. Include
+instructions to change the client setting before replying. When automatic detection is available,
+explain that the next turn will verify the actual setting without another user report. Present
+these options as ordinary text in the final response, in the user's language:
 
 1. Switch to the named model and thinking level (recommended).
 2. Keep the current named model and thinking level.
 
-Also invite a free-text answer naming another model and thinking level. A numeric answer selects
-the corresponding named pair; it does not programmatically change the client's setting.
+Invite another model/level in free text. While the choice is unanswered, retain the known identity
+and wait under the visible-question rule. Explain material limitations once, honor the user's
+choice, and do not treat a preference for a stronger model as a technical inability. Actual tool
+availability and authorization still apply.
 
-The user's single selection or reply completes the choice. Accept the recommended option,
-its option number, "switch", or "I'll use Z with thinking Y" without asking them to confirm,
-repeat the pair, manually inspect the setting, or send a separate "ok". At the start of the next
-assistant turn, automatically recheck the acting session's model and effort using the identity
-and evidence rules above. Rerun `codex-session-stats current --client <acting-client> --format json`
-when available, including when the user says "keep" or "continue" or explicitly names a pair.
-Use fresh current-turn evidence rather than the remembered pre-switch setting.
+### Verify after the user's reply
 
-A selection does not programmatically change the client or prove a change within an in-flight
-turn. Trustworthy current-turn runtime evidence takes precedence over the user's reply. If the
-detected pair differs from that reply or the recommendation, briefly report the actual setting
-and continue the authorized task with it. Any different model or effort, above or below the
-recommendation, remains the user's choice: do not request reconfirmation, insist on the recommended
-pair, or repeat the switch question solely because of that difference. Verification does not
-authorize changing the client's setting. An explicitly postponed switch does not change the
-effective pair.
+Accept one unambiguous selection, option number, "switch", or named pair without asking the user
+for another confirmation, manual inspection, or separate "ok". At the start of the next assistant
+turn, automatically recheck using the identity rules above. Rerun the command when available even
+if the user says "keep" or "continue" or supplies a pair. Fresh current-turn evidence takes
+precedence over both the reply and the remembered pre-switch setting.
 
-If automatic verification is unavailable or unsuccessful, use an unambiguous pair identified by
-the user's answer and context as user-reported, not verified. Ask only for the missing model or
-thinking level when that fallback cannot identify the pair. A bare "ok" identifies a pair only
-when it answers a pending recommendation naming that pair.
+If the detected pair differs from the reply or recommendation, briefly report it and continue the
+authorized task. Do not insist on the recommendation or reopen the choice solely for that
+difference. A numeric selection does not configure the client or prove a switch; neither silence
+nor an explicitly postponed switch changes the effective setting.
 
-When the current setting is above a sufficient lower setting, ask once at the task boundary to
-switch down if that setting is supported and the user has not already chosen to keep the current
-one for this scope. Apply the same single-question procedure above. The
-user may decline and keep the sufficient higher setting. An unanswered recommendation remains
-pending under the visible-question rule above; neither silence nor agreement to a future switch
-changes the client setting. Do not repeat the downgrade request for each step, file, or turn in
-an unchanged scope. Reconsider it after a material change in task, risk, or role. A user-pinned
-setting controls this scope without a repeated switch prompt.
+Choosing or verifying settings does not authorize changing the client or performing task actions,
+replace the user's review of a linked plan, or release question-only deferred implementation.
 
-If neither automatic verification nor the user-reported fallback identifies the effective setting,
-ask for the model and thinking level displayed for the active session and hold that role until
-its identity is established. When the known setting
-differs from the recommendation, explain the material limitation once and honor the user's choice;
-do not block authorized work solely on the agent's model-fit assessment. While a requested switch
-choice is unanswered, keep the known setting as the reported identity and await the user's choice.
-Actual tool availability, authorization, and inability to perform an operation still need honest
-handling; do not recast a preference for a stronger model as a technical impossibility.
+### If verification is unavailable
 
-A model or thinking choice does not release question-only deferred implementation, replace the
-user's review of a linked plan, or authorize any task action.
+If automatic verification is unavailable or unsuccessful, use an unambiguous pair from the user's
+answer and context, labelled user-reported rather than verified. A bare "ok" identifies a pair
+only when it answers a pending recommendation naming that pair. If either model or effort remains
+unknown, ask only for the missing information displayed for the active session and wait; silence
+is not a fallback.
 
 ## Mandatory question-only gate
 
