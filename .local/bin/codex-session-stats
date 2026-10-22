@@ -5164,67 +5164,129 @@ def mq_native_gitlab_calls(config,queue,stage):
 
 
 def mq_tool_payload(value):
-    if isinstance(value,dict):
-        if value.get('isError'):return None
-        if value.get('structuredContent') is not None:return value['structuredContent']
-        value = value.get('content')
-    if isinstance(value,list) and len(value)==1 and value[0].get('type')=='text':value = value[0].get('text')
-    if isinstance(value,str):
-        try:return json.loads(value)
-        except ValueError:return None
+    # Native clients may wrap the shared MCP's text envelope in another JSON envelope.
+    for _ in range(8):
+        if isinstance(value,dict):
+            if value.get('isError'):return None
+            if value.get('structuredContent') is not None:value = value['structuredContent']
+            elif 'content' in value:value = value['content']
+            else:return value
+        elif isinstance(value,list):
+            if len(value)==1 and isinstance(value[0],dict) and value[0].get('type')=='text':
+                value = value[0].get('text')
+            else:return value
+        elif isinstance(value,str):
+            try:value = json.loads(value)
+            except ValueError:return None
+        else:return None
     return None
 
 
-def mq_observe_outputs(config,queue,job,stage):
-    if stage.get('protocol')!='direct':return
+class MonitorOutputObservationError(RuntimeError):
+    """Optional native evidence was unavailable; authoritative queue writes are separate."""
+
+
+def mq_created_note(call,job):
+    arguments = call['arguments']
+    if arguments.get('jmespath'):return None
+    payload = mq_tool_payload(call.get('result'))
+    if not isinstance(payload,dict):return None
+    if call['tool']=='create_merge_request_thread':
+        discussion,notes = payload.get('id'),payload.get('notes')
+        if not isinstance(notes,list) or len(notes)!=1:return None
+        note = notes[0]
+    else:
+        discussion,note = arguments.get('discussion_id'),payload
+    required = {'id','body','author','created_at','updated_at','system','resolvable','resolved'}
+    if (not isinstance(discussion,str) or not discussion or not isinstance(note,dict)
+            or not required<=note.keys() or not isinstance(note['author'],dict)
+            or not isinstance(arguments.get('body'),str) or note['body']!=arguments['body']
+            or any(type(note[k]) is not bool for k in ('system','resolvable','resolved'))
+            or note['system']):return None
+    for key,expected in (('project_id',job['repository_id']),('noteable_iid',job['iid'])):
+        if key in note and str(note[key])!=str(expected):return None
+    if 'discussion_id' in note and note['discussion_id']!=discussion:return None
+    try:
+        stamps = []
+        for key in ('created_at','updated_at','resolved_at'):
+            value = note.get(key)
+            if key=='resolved_at' and value is None:continue
+            if not isinstance(value,str):return None
+            stamp = datetime.datetime.fromisoformat(value.replace('Z','+00:00'))
+            if stamp.tzinfo is None:return None
+            stamps.append(stamp)
+        if stamps[1]<stamps[0]:return None
+        row = mq_mcp_note_versions([{'id':discussion,'notes':[note]}])[0]
+    except (KeyError,TypeError,RuntimeError,ValueError):return None
+    return row if row['author_id']==job['context']['actor_id'] else None
+
+
+def mq_output_changes(config,queue,job,stage):
+    """Acquire and interpret auxiliary evidence without changing any queue state."""
     from urllib.parse import unquote
     calls = mq_native_gitlab_calls(config,queue,stage)
-    own, cursor, threads = {},dict(stage.get('output_cursor',{})),{}
+    own, cursor = {},dict(stage.get('output_cursor',{}))
     for call in calls:
+        mq_budget(config)
+        if call.get('tool') not in {'create_merge_request_thread','create_merge_request_discussion_note'}:continue
         arguments = call.get('arguments')
         if (call.get('error') or not isinstance(arguments,dict)
                 or unquote(str(arguments.get('project_id'))) not in {str(job['repository_id']),job.get('repository_path')}
                 or str(arguments.get('merge_request_iid'))!=str(job['iid'])):continue
-        payload = mq_tool_payload(call['result'])
-        if payload is None:continue
         digest = monitor_digest(call)
         if call['id'] in cursor and cursor[call['id']]!=digest:raise RuntimeError('observed native tool result changed')
-        tool = call['tool']
-        if tool=='mr_discussions':
-            rows = payload.get('items') if isinstance(payload,dict) else payload
-            if isinstance(rows,list):
-                threads.update((t['id'],t) for t in rows if isinstance(t,dict) and 'notes' in t)
-        elif tool=='get_merge_request_discussion' and isinstance(payload,dict) and 'notes' in payload:
-            threads[payload['id']] = payload
-        elif tool in MQ_GITLAB_WRITES and call['id'] not in cursor:
-            try:
-                discussion = payload.get('id') if tool=='create_merge_request_thread' else arguments.get('discussion_id')
-                if not isinstance(discussion,str) or not isinstance(payload,dict):continue
-                current = payload if 'notes' in payload else {'id':discussion,'notes':[payload]}
-                after = mq_mcp_note_versions([current])
-                if tool!='resolve_merge_request_thread':
-                    for row in after:
-                        if isinstance(row['updated_at'],str) and row['author_id']==job['context']['actor_id']:
-                            own[monitor_digest(row)] = None
-                else:
-                    before = mq_mcp_note_versions([threads[discussion]]) if discussion in threads else []
-                    if {r['id'] for r in before}=={r['id'] for r in after}:
-                        for row in after:
-                            previous = next(r for r in before if r['id']==row['id'])
-                            if (row['resolved']!=previous['resolved'] and isinstance(row['updated_at'],str)
-                                    and all(row[k]==previous[k] for k in ('discussion','revision','author_id'))):
-                                own[monitor_digest(row)] = previous
-                threads[discussion] = current
-            except (KeyError,TypeError,RuntimeError,ValueError):pass
+        if call['id'] in cursor:continue
+        row = mq_created_note(call,job)
+        if row is None:continue
+        own[monitor_digest(row)] = None
         cursor[call['id']] = digest
-    if cursor==stage.get('output_cursor',{}) and not own:return
+    return own,cursor
+
+
+def mq_observe_outputs(config,queue,job,stage):
+    if stage.get('protocol')!='direct':return True
+    import time
+    mq_budget(config)
+    budget = config.get('_output_budget',{'remaining':5.0})
+    started = time.monotonic()
+    allowance = min(5.0,budget['remaining'])
+    if '_cycle_deadline' in config:
+        allowance = min(allowance,max(0,config['_cycle_deadline']-started)/8)
+    if allowance<=0:return False
+    scoped = {**config,'_cycle_deadline':started+allowance}
+    scoped['_native_guard'] = lambda:mq_budget(scoped)
+    scoped['_io_guard'] = lambda:mq_budget(scoped)
+    try:
+        # Bound only optional acquisition/decoding, never the persistence transaction.
+        with mq_http_deadline(scoped):
+            own,cursor = mq_output_changes(scoped,queue,job,stage)
+    except MonitorCycleYield:
+        if mq_expired(scoped) and not mq_expired(config):return False
+        raise
+    except InterruptedError:raise
+    except (OSError,RuntimeError,ValueError,KeyError,TypeError,AttributeError) as error:
+        raise MonitorOutputObservationError(str(error)) from error
+    finally:
+        budget['remaining'] = max(0,budget['remaining']-(time.monotonic()-started))
+    mq_budget(config)
+    if cursor==stage.get('output_cursor',{}) and not own:return True
     with queue.atomic():
         if queue.job(job['id'])!=job:raise RuntimeError('direct observation stage changed')
         record = queue.mr(job['repository_id'],job['iid'])
         record.setdefault('own_outputs',{}).update(own)
-        stage['output_cursor'] = cursor
-        queue.put_mr(record);queue.save(job)
+        saved = json.loads(json.dumps(job))
+        next(s for s in saved['stages'] if s['id']==stage['id'])['output_cursor'] = cursor
+        queue.put_mr(record);queue.save(saved)
         mq_retire_self_activity(queue,record)
+    stage['output_cursor'] = cursor
+    return True
+
+
+def mq_try_observe_outputs(config,queue,job,stage):
+    try:return mq_observe_outputs(config,queue,job,stage)
+    except MonitorOutputObservationError as failure:
+        mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
+        return False
 
 
 def mq_retire_self_activity(queue,record):
@@ -5247,19 +5309,32 @@ def mq_retire_self_activity(queue,record):
 
 
 def mq_observe_direct_stages(config,queue):
-    repositories = {p['id'] for p in mq_repositories(config)}
-    pending = [(job,stage) for job in queue.jobs() if job.get('workspace')
-        and job['repository_id'] in repositories for stage in job['stages']
-        if stage.get('protocol')=='direct' and not stage.get('output_collected')]
-    for job,stage in mq_rotated_sources(queue,'output_next_stage',pending,lambda pair:pair[1]['id']):
-        scoped = mq_workspace_config(mq_repository(config,job['repository_id']),job)
-        try:
+    import time
+    budget = config.setdefault('_output_budget',{'remaining':5.0})
+    started,remaining = time.monotonic(),budget['remaining']
+    if remaining<=0:return
+    deadline = started+remaining
+    try:
+        repositories = {p['id'] for p in mq_repositories(config)}
+        pending = [(job,stage) for job in queue.jobs() if job.get('workspace')
+            and job['repository_id'] in repositories for stage in job['stages']
+            if stage.get('protocol')=='direct' and not stage.get('output_collected')]
+        stages = mq_rotated_sources(queue,'output_next_stage',pending,lambda pair:pair[1]['id'])
+        # Check before advancing: rotation itself commits a durable cursor for each stage.
+        while budget['remaining']>0 and time.monotonic()<deadline:
             mq_budget(config)
-            mq_observe_outputs(scoped,queue,job,stage)
-            if stage['state']!='running':
+            pair = next(stages,None)
+            if pair is None:break
+            budget['remaining'] = min(budget['remaining'],max(0,deadline-time.monotonic()))
+            if budget['remaining']<=0:break
+            job,stage = pair
+            scoped = mq_workspace_config(mq_repository(config,job['repository_id']),job)
+            collected = mq_try_observe_outputs(scoped,queue,job,stage)
+            if collected and stage['state']!='running':
                 with queue.atomic():stage['output_collected']=True;queue.save(job)
-        except (OSError,RuntimeError,ValueError) as failure:
-            mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
+    finally:
+        # Include traversal and completed transactions without counting acquisition twice.
+        budget['remaining'] = min(budget['remaining'],max(0,remaining-(time.monotonic()-started)))
 
 
 def mq_prepare_question(config,queue,job):
@@ -5551,9 +5626,7 @@ def mq_step(config,queue):
                 observed = {'terminal':True,'error':{'message':'review timed out; exact native execution stopped'}}
             else:return False
         if stage.get('protocol')=='direct':
-            try:mq_observe_outputs(scoped,queue,job,stage)
-            except (OSError,RuntimeError,ValueError) as failure:
-                mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
+            mq_try_observe_outputs(scoped,queue,job,stage)
         result,error = None,observed.get('error')
         if stage.get('protocol')=='direct':
             try:result,error = mq_direct_result(job,stage,observed)
@@ -5872,6 +5945,7 @@ def mq_tick(path):
     try:
         queue = MonitorQueue(config)
         config['_cycle_deadline'] = time.monotonic()+config['cycle_seconds']
+        config['_output_budget'] = {'remaining':min(5.0,config['cycle_seconds']/8)}
         config['_io_guard'] = lambda:mq_budget(config)
         config['_native_guard'] = lambda:mq_budget(config)
         mq_observe_direct_stages(config,queue)

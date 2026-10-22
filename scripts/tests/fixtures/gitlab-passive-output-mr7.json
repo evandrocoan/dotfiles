@@ -1,0 +1,66 @@
+{
+  "capture_kind": "partial-authenticated-native-artifact",
+  "source": {
+    "repository_id": 11,
+    "iid": 82,
+    "job_id": "32a166f3-9744-48cb-a3b4-c05513acaec7",
+    "stage_id": "05a14711-8424-4716-ac10-e6a55279b241",
+    "session_id": "4e1c2b2d-3afe-78b7-a2f4-15f12330b7a5",
+    "turn_id": "85bccbb6-acb3-7928-aafc-bfcbb9ae02c6",
+    "head": "3c157e9e9f353ac3b53f37d42a680c192fcce877",
+    "input_digest": "89e679e77457948a37e5002b5679325bb508b70699bfac7c4c4052aafc26a272"
+  },
+  "sanitization": "Repository, MR, actor, native identities, revision hashes, discussion/note identifiers and paths use consistent fixture values. Recorded envelope shapes, relationships and terminal status are preserved; the original native input is not reproduced.",
+  "calls": [
+    {
+      "id": "exec-6cf35bb2-dd96-40ff-b709-16269cbe8d51",
+      "tool": "create_merge_request_discussion_note",
+      "arguments": {
+        "project_id": "11",
+        "merge_request_iid": "82",
+        "discussion_id": "905cd608455d3599a29edcd7c89b5d39485a9fc4",
+        "body": "Recorded pagination concern."
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"id\": \"1002\", \"type\": \"DiffNote\", \"body\": \"Recorded pagination concern.\", \"author\": {\"id\": \"7\"}, \"created_at\": \"2026-10-22T09:05:36.035-03:00\", \"updated_at\": \"2026-10-22T09:05:36.035-03:00\", \"system\": false, \"noteable_id\": \"182\", \"noteable_type\": \"MergeRequest\", \"project_id\": \"11\", \"noteable_iid\": \"82\", \"resolvable\": true, \"resolved\": false, \"resolved_by\": null, \"resolved_at\": null, \"position\": {\"base_sha\": \"b4456317f35112d5504b2419e5ffd783067bb1da\", \"start_sha\": \"0ba2fd32a074082b53e27ab8b0141631f6f89fe5\", \"head_sha\": \"3c157e9e9f353ac3b53f37d42a680c192fcce877\", \"old_path\": \"example-service/scripts/scan_conan_vulnerabilities.py\", \"new_path\": \"example-service/scripts/scan_conan_vulnerabilities.py\", \"position_type\": \"text\", \"new_line\": 208, \"old_line\": null, \"line_range\": null}, \"commit_id\": null, \"suggestions\": [], \"confidential\": false, \"internal\": false, \"imported\": false, \"imported_from\": \"none\", \"commands_changes\": {}}"
+          }
+        ],
+        "structuredContent": null,
+        "_meta": null
+      },
+      "error": null
+    },
+    {
+      "id": "exec-7508cbd1-3275-44a1-bb30-4df5fc8a4442",
+      "tool": "mr_discussions",
+      "arguments": {
+        "project_id": "11",
+        "merge_request_iid": "82",
+        "per_page": 100,
+        "jmespath": "items[?id == '905cd608455d3599a29edcd7c89b5d39485a9fc4'].{discussion_id:id,notes:notes[].{id:id,body:body,resolved:resolved}}"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[{\"discussion_id\": \"905cd608455d3599a29edcd7c89b5d39485a9fc4\", \"notes\": [{\"id\": \"1001\", \"body\": \"Recorded pagination concern.\", \"resolved\": false}, {\"id\": \"1002\", \"body\": \"Recorded pagination concern.\", \"resolved\": false}]}]"
+          }
+        ],
+        "structuredContent": null,
+        "_meta": null
+      },
+      "error": null
+    }
+  ],
+  "observed": {
+    "terminal": true,
+    "text": "Inspecionei os três arquivos alterados e as 25 discussões no head `3c157e9e9f353ac3b53f37d42a680c192fcce877`.\n\nPubliquei um [complemento inline sobre paginação](https://gitlab.example.test/ai/exampleai/example-ai/-/merge_requests/82#note_1002): uma página vazia com token pode produzir relatório limpo e saída 0. Nenhuma discussão foi resolvida.\n\nValidação: `git diff --check` apontou dois problemas de whitespace. Os testes dinâmicos ficaram bloqueados por falta de permissão no Docker e pelo bloqueio de acesso a `api.osv.dev`. Não executei pipeline nem alterei o worktree.\n\nEstado da revisão: não concluída",
+    "anchor": "msg_a755c6165b3c6bb7fb80c4eb146355f5a00cd1556ef33f9cb6",
+    "turn_id": "85bccbb6-acb3-7928-aafc-bfcbb9ae02c6",
+    "source_id": "fcc7082c-25f8-793e-ad5d-474907f8ad00"
+  },
+  "missing": "Full native session, other tool interactions, local commands and live GitLab chronology are not replayed. Other reads contained nested envelopes with invalid/truncated inner JSON; tested separately as unknown output."
+}
