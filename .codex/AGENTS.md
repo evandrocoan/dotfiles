@@ -123,9 +123,10 @@ active session. The parent's settings do not identify the child.
 If the client has no configurable thinking level, establish that fact rather than inventing an
 effort value. Do not infer identity or effort from writing style, a model list, repository settings,
 or a default. If either remains unknown, wait for the missing information; silence is not a
-fallback route. Carry a known setting across turns in the same session. Apply the single-response
-switch procedure below when the user chooses another pair; recheck after a handoff, new agent,
-or conflicting runtime evidence.
+fallback route. Carry a known setting across turns in the same session, except after a reply to a
+model or effort recommendation. Apply the single-response verification procedure below even when
+the user says to keep the current setting; also recheck after a handoff, new agent, or conflicting
+runtime evidence.
 
 After identifying the acting settings, assess the lowest adequate model and effort for each task
 role from its scope, uncertainty, consequences, and any selected reviews. The agent owns this
@@ -144,8 +145,10 @@ Keep the reassessment internal when no setting change is warranted.
 
 For either an upgrade or a downgrade, make the recommendation in one question: state the role,
 target model and thinking level (if configurable), and a brief reason. Include any instruction
-to change the client setting before sending the answer in this initial question. Present these
-numbered choices in ordinary text in the final response, in the user's language:
+to change the client setting before sending the answer in this initial question. When automatic
+detection is available, explain that the next turn will verify the actual session setting without
+requiring the user to report it again. Present these numbered choices in ordinary text in the
+final response, in the user's language:
 
 1. Switch to the named model and thinking level (recommended).
 2. Keep the current named model and thinking level.
@@ -155,17 +158,25 @@ the corresponding named pair; it does not programmatically change the client's s
 
 The user's single selection or reply completes the choice. Accept the recommended option,
 its option number, "switch", or "I'll use Z with thinking Y" without asking them to confirm,
-repeat the pair, inspect the setting again, or send a separate "ok". For the next assistant turn,
-use the pair identified by that answer as the user-reported setting. Ask only for a missing model or
-thinking level when the answer and context do not identify the pair. Choosing to keep the current
-setting needs no acknowledgment step; continue the authorized task.
+repeat the pair, manually inspect the setting, or send a separate "ok". At the start of the next
+assistant turn, automatically recheck the acting session's model and effort using the identity
+and evidence rules above. Rerun `codex-session-stats current --client <acting-client> --format json`
+when available, including when the user says "keep" or "continue" or explicitly names a pair.
+Use fresh current-turn evidence rather than the remembered pre-switch setting.
 
 A selection does not programmatically change the client or prove a change within an in-flight
-turn. Trustworthy current-turn runtime metadata takes precedence over the user-reported setting;
-report and resolve an actual contradiction without treating a remembered pre-switch setting as
-contradictory evidence. If the user explicitly postpones the switch until later, retain the known
-current setting without requesting another confirmation. A bare "ok" identifies a pair only when
-it answers a pending recommendation naming that pair.
+turn. Trustworthy current-turn runtime evidence takes precedence over the user's reply. If the
+detected pair differs from that reply or the recommendation, briefly report the actual setting
+and continue the authorized task with it. Any different model or effort, above or below the
+recommendation, remains the user's choice: do not request reconfirmation, insist on the recommended
+pair, or repeat the switch question solely because of that difference. Verification does not
+authorize changing the client's setting. An explicitly postponed switch does not change the
+effective pair.
+
+If automatic verification is unavailable or unsuccessful, use an unambiguous pair identified by
+the user's answer and context as user-reported, not verified. Ask only for the missing model or
+thinking level when that fallback cannot identify the pair. A bare "ok" identifies a pair only
+when it answers a pending recommendation naming that pair.
 
 When the current setting is above a sufficient lower setting, ask once at the task boundary to
 switch down if that setting is supported and the user has not already chosen to keep the current
@@ -176,8 +187,9 @@ changes the client setting. Do not repeat the downgrade request for each step, f
 an unchanged scope. Reconsider it after a material change in task, risk, or role. A user-pinned
 setting controls this scope without a repeated switch prompt.
 
-If the effective setting cannot be verified, ask for the model and thinking level displayed for
-the active session and hold that role until its identity is established. When the known setting
+If neither automatic verification nor the user-reported fallback identifies the effective setting,
+ask for the model and thinking level displayed for the active session and hold that role until
+its identity is established. When the known setting
 differs from the recommendation, explain the material limitation once and honor the user's choice;
 do not block authorized work solely on the agent's model-fit assessment. While a requested switch
 choice is unanswered, keep the known setting as the reported identity and await the user's choice.
