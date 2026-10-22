@@ -37,6 +37,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Check the NVMe SSD health](#check-the-nvme-ssd-health)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
+      - [Restore GNOME Keyring SSH after a crash](#restore-gnome-keyring-ssh-after-a-crash)
       - [Manual XFCE recovery](#manual-xfce-recovery)
       - [Shared XFWM launcher](#shared-xfwm-launcher)
       - [Recover VS Code from a stuck Crashpad handler](#recover-vs-code-from-a-stuck-crashpad-handler)
@@ -1812,6 +1813,46 @@ Review the proposed package removal list. Historical files under `/var/log/atop`
 and `/var/cache/netdata` can be removed separately once they are no longer needed.
 
 ### Fix system crash
+
+#### Restore GNOME Keyring SSH after a crash
+
+When desktop applications use `$XDG_RUNTIME_DIR/keyring/ssh`, the GNOME Keyring daemon must
+restart with its SSH component as well as its password and PKCS#11 components. The
+[user service override](scripts/install/systemd/user/gnome-keyring-daemon.service.d/ssh.conf)
+includes SSH in the startup command and keeps automatic restart on failure. It leaves the
+distribution's service file intact.
+
+Install or update the override as the desktop user, without sudo:
+
+```sh
+mkdir -p ~/.config/systemd/user/gnome-keyring-daemon.service.d
+cp ~/scripts/install/systemd/user/gnome-keyring-daemon.service.d/ssh.conf \
+    ~/.config/systemd/user/gnome-keyring-daemon.service.d/ssh.conf
+systemctl --user daemon-reload
+systemctl --user enable --now gnome-keyring-daemon.socket gnome-keyring-daemon.service
+```
+
+The updated command applies at the next daemon start. If the daemon is already running without
+SSH, activate that component without restarting the password service:
+
+```sh
+gnome-keyring-daemon --start --components=ssh
+```
+
+Check the loaded override and restart policy with `systemctl --user cat gnome-keyring-daemon.service`
+and `systemctl --user show gnome-keyring-daemon.service -p ExecStart -p Restart`. Check service
+health with `systemctl --user status gnome-keyring-daemon.service` and
+`journalctl --user -u gnome-keyring-daemon.service`. Use
+`SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/keyring/ssh" ssh-add -l` to confirm that the SSH agent responds.
+Applications already using that socket do not need to be reopened after recovery.
+
+To remove this override, run the following commands. The distribution's startup command applies
+at the next daemon start; the password service remains enabled:
+
+```sh
+rm ~/.config/systemd/user/gnome-keyring-daemon.service.d/ssh.conf
+systemctl --user daemon-reload
+```
 
 #### Manual XFCE recovery
 
