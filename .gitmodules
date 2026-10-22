@@ -7,3 +7,6 @@
 [submodule "scripts/tmux-resurrect"]
 	path = scripts/tmux-resurrect
 	url = https://github.com/evandroforks/tmux-resurrect
+[submodule "scripts/gitlab-mcp"]
+	path = scripts/gitlab-mcp
+	url = https://github.com/evandroforks/gitlab-mcp

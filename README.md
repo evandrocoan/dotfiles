@@ -16,6 +16,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
       - [Automatic GitLab MR review](#automatic-gitlab-mr-review)
+    - [Shared GitLab MCP](#shared-gitlab-mcp)
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
@@ -27,6 +28,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Install XFCE from sources](#install-xfce-from-sources)
     - [Vim style cheat](#vim-style-cheat)
     - [Historical performance monitoring](#historical-performance-monitoring)
+      - [Netdata memory notifications](#netdata-memory-notifications)
       - [Install or update the collectors](#install-or-update-the-collectors)
       - [Apply the monitoring configuration](#apply-the-monitoring-configuration)
       - [Investigate a slow period](#investigate-a-slow-period)
@@ -848,6 +850,84 @@ Closed or merged MRs accept no new effects. To stop supervision, stop both servi
 not delete queue/history files to clear an uncertainty. The
 [architecture record](architecture/gitlab-monitor-simple-queue.md) defines these boundaries.
 
+### Shared GitLab MCP
+
+The user-owned fork in [`scripts/gitlab-mcp/`](./scripts/gitlab-mcp/) runs one local HTTP
+server for Claude and Codex. Use its root `compose.yaml`, not the upstream example under `docker/`.
+The server accepts connections only through host loopback and uses each client's existing GitLab
+credential. New chats must use this service instead of starting another `docker run` container.
+Existing stdio clients keep their containers until their sessions close normally.
+
+Create the private environment file without overwriting an existing one:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd ~/scripts/gitlab-mcp
+if [[ ! -e .env ]]; then
+    install -m 0600 .env.example .env
+fi
+```
+
+Set `GITLAB_MCP_IMAGE` to the tested immutable image reference (`repository@sha256:...`) and
+`GITLAB_API_URL` to the intended HTTPS API endpoint. The image must already exist locally;
+`pull_policy: never` prevents an implicit image change. Read the actual repository digest with
+`docker image inspect <tested-image-tag> --format '{{json .RepoDigests}}'`. If that list is empty,
+stop and obtain a tested, locally available repository digest; do not substitute the image ID. `.env` contains no GitLab token. The
+Compose file does not forward the upstream example's token variables. Dynamic API destinations
+and unauthenticated discovery remain disabled. Start and inspect the service:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd ~/scripts/gitlab-mcp
+docker compose -p gitlab-mcp-shared config --quiet
+docker compose -p gitlab-mcp-shared up -d --wait --wait-timeout 60
+docker compose -p gitlab-mcp-shared ps
+curl --fail --max-time 3 http://127.0.0.1:3002/health
+```
+
+In `~/.codex/config.toml`, the canonical `mcp_servers.gitlab` uses
+`url = "http://127.0.0.1:3002/mcp"` and static `http_headers` named `Private-Token` and
+`X-Gitlab-Api-Url`. The latter equals the fixed server API destination. Preserve tool approval
+tables, remove the old `command`, `args` and token-bearing `env`, and set the duplicate
+`mcp_servers.gitlab-mcp.enabled = false`. The GitLab monitor keeps selecting `gitlab` and reads
+these same headers; it rejects ambiguous credentials and a different API origin. No monitor
+queue or scheduling migration is needed.
+
+In `~/.claude.json`, `mcpServers.gitlab` uses `type: "http"`, the same loopback URL, and
+`headers` with those two names. Move the existing credential from `env` into `headers`; keep
+both client files mode 600. Credentials and MCP session IDs are sensitive: do not paste configs
+or unredacted HTTP traces into diagnostics. The service has no server-wide GitLab token, but
+retains authenticated session credentials in memory until session cleanup.
+
+New CLI processes load the updated entries. In Codex desktop's MCP settings, verify that `gitlab`
+is enabled and `gitlab-mcp` is disabled, then perform a read-only identity call in an existing chat
+and a fresh user-created test chat. Return to the existing chat and repeat the call. The installed
+settings screen may have no Restart button; successful calls in the actual open app are the
+acceptance check. An isolated test of its bundled app-server does not replace that check.
+
+Archiving a completed test chat releases its MCP session in the installed Codex clients.
+Switching away from a chat or unsubscribing from its notifications does not prove that the chat
+or its MCP connection was closed. Open connections remain subject to the server's session and
+memory ceilings. Only archive user chats when their lifecycle permits it.
+
+For an update, build and validate the fork first, record the resulting immutable image reference,
+change only that pin in `.env`, and repeat the start/health checks. Use
+`docker compose -p gitlab-mcp-shared logs --tail 100` and `docker stats --no-stream` to investigate
+failures, keeping logs private. An unavailable server should produce a visible tool error;
+validate recovery after restoration. Long-lived open responses protect active sessions from idle
+expiry, while disconnected sessions are reclaimed after the configured idle interval.
+
+Rollback snapshots are private under `~/.local/state/gitlab-mcp-migration/`. Restore only the
+original GitLab entries after checking for newer edits; never copy an old whole config over newer
+settings. The monitor supports the original explicit stdio token/API pair as well as HTTP.
+Reload the affected clients and verify a read-only identity call before removing the shared
+service with `docker compose -p gitlab-mcp-shared down` from the fork directory. This command
+must not target unrelated legacy containers. Backups contain credentials: retain them privately
+only as long as rollback is required.
+
+
 ### Codex VS Code history patch
 
 [The local history patcher](scripts/codex-vscode-history-fix/patch.cjs) increases the extension's
@@ -1319,8 +1399,10 @@ considerably shorter than a month. Save an incident outside `/var/log/atop` befo
 The cleanup policy is in [`retain_atop_logs.py`](./scripts/performance-monitoring/retain_atop_logs.py).
 
 Netdata's metric-data budgets total 2 GiB across tiers, plus indexes and other metadata; the size or
-age limit reached first determines retention. Its service has a 384 MiB memory pressure threshold
-and a 768 MiB hard limit. Exact per-process investigation uses atop; Netdata groups applications
+age limit reached first determines retention. Its service memory limits are defined in the
+[systemd drop-in](./scripts/systemd/system/netdata.service.d/10-performance-monitoring.conf).
+Keep the pressure threshold above Netdata's observed working set to avoid repeated reclaim and
+swap activity. Exact per-process investigation uses atop; Netdata groups applications
 according to [`netdata-apps_groups.conf`](./scripts/performance-monitoring/netdata-apps_groups.conf).
 Disk-space collection excludes inaccessible internal Docker mounts and root FUSE mounts; the
 backing filesystems and container I/O remain monitored.
@@ -1334,6 +1416,48 @@ such atop `BDELAY` values as invalid; the incident reports flag them and exclude
 processes from delay rankings while preserving the raw snapshots. Boot enablement improves coverage;
 it is not a verified fix for anomalous kernel counters.
 History begins when recording starts; very short memory spikes between samples can still be missed.
+
+#### Netdata memory notifications
+
+[`netdata_memory_check.py`](./scripts/netdata_memory_check.py) samples the actual Netdata
+cgroup every five minutes through a user timer. It warns about swap-in of at least 1 MiB/s or
+anonymous memory plus swap reaching 85% of `memory.high`. The second condition is a capacity
+warning, not evidence of active thrashing; file cache is excluded. Each condition is notified at
+most once every six hours within a boot. A reboot resets the monotonic-clock baseline. Missing
+counters, a stopped service or notification failure produce an error instead of a healthy result.
+
+Install or update the timer in a terminal from the graphical user session:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+install -d ~/.config/systemd/user
+install -m 0644 ~/scripts/install/systemd/user/netdata-memory-check.service ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/systemd/user/netdata-memory-check.timer ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now netdata-memory-check.timer
+systemctl --user start netdata-memory-check.service
+systemctl --user status netdata-memory-check.timer --no-pager
+journalctl --user -u netdata-memory-check.service -n 10 --no-pager
+```
+
+The check uses system Python and the existing `notify-send`. Private baseline and suppression
+state lives under `~/.local/state/netdata-memory-check/`. To test desktop delivery once without
+changing normal suppression state:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+NETDATA_CHECK_TEMP="$(mktemp -d)"
+trap 'rm -rf -- "${NETDATA_CHECK_TEMP}"' EXIT
+python3 ~/scripts/netdata_memory_check.py --state "${NETDATA_CHECK_TEMP}/state.json" --demand-threshold 0.001
+```
+
+A successful command means the desktop notification service accepted the request. If the user
+manager bus is unavailable, run these commands from the logged-in graphical session. Remove the
+timer with `systemctl --user disable --now netdata-memory-check.timer`, remove only its two files
+from `~/.config/systemd/user/`, then run `systemctl --user daemon-reload`. This leaves Netdata and
+its historical metrics intact.
 
 #### Install or update the collectors
 

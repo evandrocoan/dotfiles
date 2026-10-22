@@ -2553,15 +2553,57 @@ def monitor_credential(config: dict) -> tuple[str, str]:
     import tomllib
     from urllib.parse import urlsplit
     source = Path(config["codex_home"]) / "config.toml"
-    server = tomllib.loads(source.read_text())["mcp_servers"][config["credential_mcp_server"]]
-    environment = server.get("env", {})
-    token = environment.get("GITLAB_PERSONAL_ACCESS_TOKEN")
-    endpoint = environment.get("GITLAB_API_URL", "").rstrip("/")
-    parsed = urlsplit(endpoint)
-    if (not token or parsed.username or parsed.password or parsed.query or parsed.fragment
-            or f"{parsed.scheme}://{parsed.netloc}" != config["gitlab_url"]
-            or parsed.path not in {"", "/api/v4"}):
-        raise RuntimeError("selected MCP credential is missing or does not match the configured HTTPS origin")
+    diagnostic = "selected MCP credential is missing, ambiguous or does not match the configured HTTPS origin"
+
+    def header_value(value):
+        return (isinstance(value, str) and bool(value) and value == value.strip()
+                and not any(ord(c) < 32 or 127 <= ord(c) < 160 for c in value))
+
+    try:
+        server = tomllib.loads(source.read_text())["mcp_servers"][config["credential_mcp_server"]]
+        if not isinstance(server, dict):
+            raise ValueError()
+        if "url" in server:
+            # HTTP credentials have one static source. Never fall back to legacy
+            # env, ambient variables or another MCP server when this is malformed.
+            if (not header_value(server["url"]) or any(key in server for key in (
+                    "command", "args", "env", "env_vars", "env_http_headers", "http_headers_helper", "bearer_token_env_var"))):
+                raise ValueError()
+            mcp_url = urlsplit(server["url"])
+            if (mcp_url.scheme not in {"http", "https"} or not mcp_url.hostname
+                    or any(c.isspace() for c in mcp_url.hostname)
+                    or mcp_url.username is not None or mcp_url.password is not None):
+                raise ValueError()
+            # Accessing port also validates its numeric value and range.
+            if mcp_url.port is not None and mcp_url.port == 0:
+                raise ValueError()
+            raw_headers = server.get("http_headers")
+            if not isinstance(raw_headers, dict):
+                raise ValueError()
+            headers = {key.lower(): value for key, value in raw_headers.items()}
+            if len(headers) != len(raw_headers) or {"authorization", "job-token"} & headers.keys():
+                raise ValueError()
+            token = headers.get("private-token")
+            endpoint = headers.get("x-gitlab-api-url")
+        else:
+            if (not header_value(server.get("command")) or any(key in server for key in (
+                    "http_headers", "env_http_headers", "http_headers_helper", "bearer_token_env_var"))):
+                raise ValueError()
+            environment = server.get("env", {})
+            if not isinstance(environment, dict):
+                raise ValueError()
+            token = environment.get("GITLAB_PERSONAL_ACCESS_TOKEN")
+            endpoint = environment.get("GITLAB_API_URL")
+        if not header_value(token) or not header_value(endpoint):
+            raise ValueError()
+        parsed = urlsplit(endpoint.rstrip("/"))
+        if (parsed.scheme != "https" or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or f"{parsed.scheme}://{parsed.netloc}" != config["gitlab_url"]
+                or parsed.path not in {"", "/api/v4"}):
+            raise ValueError()
+    except (OSError, KeyError, TypeError, ValueError):
+        # Do not include parser errors or credential values in diagnostics.
+        raise RuntimeError(diagnostic) from None
     return config["gitlab_url"] + "/api/v4", token
 
 
