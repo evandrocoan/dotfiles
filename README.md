@@ -1428,27 +1428,75 @@ History begins when recording starts; very short memory spikes between samples c
 
 #### Host swap and thrashing notifications
 
-The user service `netdata-memory-check.service` monitors host-wide swap activity and possible
-thrashing. Netdata collects and retains the measurements; this service analyzes the history and
-sends desktop notifications, including activity from other applications, services and containers.
+The user service `netdata-memory-check.service` analyzes saved host and process history every
+minute and sends desktop notifications. It warns only when host swap-in or swap-out averages
+at least 1 MiB/s **and** memory PSI averages at least 2% in each of two consecutive 60-second
+windows. A burst, swap without sustained pressure, cold swap occupancy and file-cache growth
+stay quiet. Host metrics continue to come from Netdata; process activity is saved separately.
 
-[`netdata_memory_check.py`](./scripts/netdata_memory_check.py) queries Netdata history every minute.
-It warns when host swap-in or swap-out averages at least 1 MiB/s in each of two consecutive
-60-second windows. A single burst, cold swap occupancy and file-cache growth do not qualify.
-When sustained swap is accompanied by memory PSI of at least 2%, the warning also reports memory
-pressure and possible thrashing. This does not prove which PID caused it. Host warnings repeat at
-most every 15 minutes. The separate Netdata capacity warning still uses
-anonymous memory plus swap reaching 85% of `memory.high`, excluding file cache, with a six-hour
-cooldown. A reboot resets suppression; failed delivery does not consume it.
+[`process_swap_history.py`](./scripts/process_swap_history.py) reuses the installed `iotop` Python
+reader to collect kernel TASKSTATS TGID counters every ten seconds. Its dedicated root service,
+[`process-swap-monitor.service`](./scripts/systemd/system/process-swap-monitor.service), records
+positive swap-in wait deltas, process name, PID, start identity and RAM/swap context. It does not
+record command lines, environments or application payloads. Kernel thread aggregates are used;
+PID reuse, reset counters, gaps and process churn cannot become invented activity.
 
-[`cgroup_swap.plugin`](./scripts/performance-monitoring/cgroup_swap.plugin) runs inside the existing
-Netdata service as its normal user. Every ten seconds it exports cgroup v2 swap-in/out rates in
-`hostswap.cgroup_io` and coverage in `hostswap.coverage`. History uses the existing DBengine budgets
-and retention. At most 256 populated cgroups are tracked, with bounded discovery; departed charts
-become obsolete. Paths in the `cgroup_path` label use `p` followed by the hexadecimal path bytes.
-The warning lists up to three non-overlapping services or containers; several PIDs in one group
-cannot be distinguished by these counters. Missing or incomplete attribution is explicit and does
-not suppress a valid host warning.
+The SQLite history at `/var/lib/process-swap-monitor/history.sqlite3` includes quiet-window coverage,
+not just notifications. Retention is bounded by 30 days or 64 MiB including transaction files;
+the first limit reached wins. The main file is capped at 31 MiB, reserving a full rollback journal
+and header margin inside that total. Busy hosts can retain less than 30 days. Writes are batched,
+older records are pruned and queries open the saved database read-only. The collector scans at most
+4,096 processes with a one-second scan budget. Its service has 64 MiB memory pressure and 96 MiB
+hard limits, a 10% CPU ceiling and 16-task ceiling; measured normal use should remain below 64 MiB
+RSS and 1% of one CPU core on average. Truncated scans and unavailable accounting remain explicit.
+
+[`netdata_memory_check.py`](./scripts/netdata_memory_check.py) lists up to three names and PIDs
+ranked by measured swap-in wait during the same historical window. Wait seconds identify affected
+processes; they do not establish which allocator caused pressure, measure per-PID swap-out bytes or
+turn occupied swap into activity. Missing/partial PID history is explicit and does not suppress
+real sustained host pressure. Only intervals wholly inside the requested window contribute to
+PID attribution; a delayed sample or small boundary jitter can exclude an edge interval and mark
+coverage partial. No wait is divided or assigned to a different time window. Processes started
+before delay accounting was enabled may have
+incomplete counters until their next normal start; the boot `delayacct` caveat above still applies.
+Host warnings repeat at most every 15 minutes. The separate Netdata capacity warning uses anonymous
+memory plus swap reaching 85% of `memory.high`, excluding file cache, with a six-hour cooldown.
+A reboot resets suppression; failed delivery does not consume it. Old swap-only warnings do not
+suppress the first qualifying pressure warning after this update.
+
+[`cgroup_swap.plugin`](./scripts/performance-monitoring/cgroup_swap.plugin) continues recording
+cgroup v2 swap-in/out rates in `hostswap.cgroup_io` and coverage in `hostswap.coverage` inside
+Netdata as its normal user. Its 256-cgroup bound and DBengine budgets remain unchanged. These
+metrics are available for historical context; desktop warnings use the saved per-PID evidence.
+
+Install the collector from the home repository after saving any files being replaced. It uses
+system Python and the already installed `iotop` package; these commands install no dependencies.
+The installed source and unit must remain root-owned, outside the user-writable home:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo install -d -o root -g root -m 0755 /usr/local/lib/performance-monitoring
+sudo install -o root -g root -m 0644 ~/scripts/process_swap_history.py /usr/local/lib/performance-monitoring/
+sudo install -o root -g root -m 0644 ~/scripts/systemd/system/process-swap-monitor.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now process-swap-monitor.service
+sudo systemctl restart process-swap-monitor.service
+sudo systemctl status process-swap-monitor.service --no-pager
+```
+
+The collector has only the capabilities needed for TASKSTATS and process metadata. IP sockets
+are disabled; filesystem writes are restricted to its state directory and private temporary space.
+Isolated system Python excludes user import paths. The user notifier retains its existing
+privileges and reads sanitized historical fields. To query a past
+window or a PID after that process has exited, use the saved window's end time in Unix seconds,
+aligned to ten seconds (omit `--before` for the latest complete window):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+/usr/bin/python3 ~/scripts/process_swap_history.py query --before 1792699900 --pid 123
+```
 
 Install or update the plugin and Netdata configuration after saving the files being replaced:
 
@@ -1463,8 +1511,8 @@ sudo systemctl restart netdata.service
 
 Allow about two minutes for complete history after startup. Netdata/API failure, missing host
 samples or notification failure produce an error instead of a healthy result. Capacity checks
-remain possible when the API is unavailable. No extra root access is granted to either collector
-or notifier.
+remain possible when the API is unavailable. The desktop notifier never needs TASKSTATS
+privileges; only the dedicated collector runs as root.
 
 Install or update the timer in a terminal from the graphical user session:
 
@@ -1497,7 +1545,13 @@ A successful command means the desktop notification service accepted the request
 manager bus is unavailable, run these commands from the logged-in graphical session. Remove the
 timer with `systemctl --user disable --now netdata-memory-check.timer`, remove only its two files
 from `~/.config/systemd/user/`, then run `systemctl --user daemon-reload`. This leaves Netdata and
-its historical metrics intact. To stop only the extra history collection, set `cgroup_swap = no`
+its historical metrics intact. To stop only per-PID collection, run
+`sudo systemctl disable --now process-swap-monitor.service`. To uninstall that collector, then
+remove only `/etc/systemd/system/process-swap-monitor.service` and
+`/usr/local/lib/performance-monitoring/process_swap_history.py`, and run
+`sudo systemctl daemon-reload`. Keep `/var/lib/process-swap-monitor/` for historical queries;
+stopping/uninstalling does not require deleting it. New pressure warnings can lack PID attribution
+while collection is disabled. To stop only the extra cgroup history collection, set `cgroup_swap = no`
 in `/etc/netdata/netdata.conf`, restart Netdata, then remove only
 `/etc/netdata/custom-plugins.d/cgroup_swap.plugin`. Apply the same setting in the source configuration
 if the change should survive reinstallation. Existing metric history expires under normal retention.
@@ -1844,7 +1898,9 @@ tool. To remove the tools, run `sudo systemctl disable --now smartmontools` foll
 #### Remove the monitoring setup
 
 First remove the [incident capture component](#automatic-incident-capture) using its removal commands
-above, if installed. Then stop the remaining collectors. These commands retain historical data:
+above, if installed. Also remove the [desktop timer and per-PID collector](#host-swap-and-thrashing-notifications)
+using their removal instructions above. Then stop the remaining collectors. These commands retain
+historical data:
 
 ```bash
 #!/usr/bin/env bash

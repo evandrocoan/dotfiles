@@ -1,4 +1,4 @@
-"""Exercise the real notifier entrypoint over HTTP, cgroup and desktop boundaries."""
+"""Exercise the notifier over HTTP, real SQLite history and desktop boundaries."""
 import fcntl
 import importlib.util
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -12,6 +12,8 @@ import threading
 import time
 import unittest
 from urllib.parse import parse_qs, urlsplit
+
+from process_swap_history import History
 
 SCRIPT = Path(os.environ.get("NETDATA_CHECK_SCRIPT", Path(__file__).with_name("netdata_memory_check.py")))
 spec = importlib.util.spec_from_file_location("netdata_check", SCRIPT)
@@ -33,30 +35,21 @@ class NetdataMemoryCheckTest(unittest.TestCase):
                     return
                 before = int(query["before"][0])
                 if chart == "mem.swapio":
+                    suite.seed_history(before)
+                if chart == "mem.swapio":
                     labels, columns = ["in", "out"], [suite.incoming, suite.outgoing]
                 elif chart == "system.memory_some_pressure":
-                    labels, columns = ["some 60"], [[suite.psi] * 12]
-                elif chart == "hostswap.coverage":
-                    labels = list(suite.coverage)
-                    columns = [suite.coverage[k] if isinstance(suite.coverage[k], list)
-                               else [suite.coverage[k]] * 12 for k in labels]
+                    labels, columns = ["some 60"], [suite.psi if isinstance(suite.psi, list) else [suite.psi] * 12]
                 else:
-                    labels, columns = [], []
-                    for path, rates in suite.groups.items():
-                        for direction, rate in zip(("in", "out"), rates):
-                            labels.append(direction + "," + "p" + os.fsencode(path).hex())
-                            columns.append([rate] * 12)
+                    self.send_error(404)
+                    return
                 rows = [[before - (11 - i) * 10] + [col[i] for col in columns] for i in range(12)]
                 if suite.stale:
                     for row in rows:
                         row[0] -= 60
                 if suite.missing and chart == "mem.swapio":
                     rows[5][1] = None
-                if chart == "groups" and suite.group_gap:
-                    rows[3][1] = None
                 doc = {"labels": ["time", *labels], "data": rows}
-                if chart == "groups":
-                    doc = {"result": doc, "view": {"dimensions": {"ids": labels}}}
                 body = json.dumps(doc).encode()
                 self.send_response(200)
                 self.send_header("Content-Length", str(len(body)))
@@ -93,11 +86,30 @@ class NetdataMemoryCheckTest(unittest.TestCase):
             "raise SystemExit(int(os.environ.get('NOTIFY_FAIL','0')))\n")
         self.notifier.chmod(0o700)
         self.incoming, self.outgoing = [0] * 12, [0] * 12
-        self.psi, self.stale, self.missing, self.group_gap = 0, False, False, False
+        self.psi, self.stale, self.missing = 2, False, False
         self.unavailable, self.requests = set(), []
-        self.groups = {"/system.slice/example.service": (1024, 0)}
-        self.coverage = dict(tracked=1, measured=1, errors=0, truncated=0)
+        self.history_path = self.root / "history.sqlite3"
+        self.processes = [dict(pid=123, start=100, name="example-app", delay_ns=100000000,
+                               rss=4096, swap=1024)]
+        self.coverage = dict(scanned=1, measured=1, errors=0, truncated=0, baselines=0,
+                             resets=0, gone=0, accounting_at_boot=True)
+        self.history_missing, self.history_gap = False, False
         self.write_cgroup()
+
+    def seed_history(self, before):
+        if self.history_missing:
+            return
+        writer = History(self.history_path)
+        try:
+            writer.db.execute("DELETE FROM frames")
+            writer.db.commit()
+            for stamp in range(before - 110, before + 1, 10):
+                if self.history_gap and stamp == before - 50:
+                    continue
+                writer.record(dict(boot=self.boot.read_text(), bucket=stamp, start=stamp-10,
+                                   end=stamp, elapsed=10, coverage=self.coverage, activity=self.processes))
+        finally:
+            writer.close()
 
     def write_cgroup(self, anon=100, swap=0, high=1000, cache=0):
         for name, value in {"memory.stat": f"anon {anon}\nfile {cache}\n",
@@ -108,7 +120,8 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         result = subprocess.run([sys.executable, str(SCRIPT), "--netdata-url",
                                  f"http://127.0.0.1:{self.server.server_port}",
                                  "--cgroup", str(self.cgroup), "--boot-id", str(self.boot),
-                                 "--state", str(self.state), "--notify-command", str(self.notifier)],
+                                 "--state", str(self.state), "--notify-command", str(self.notifier),
+                                 "--process-history", str(self.history_path)],
                                 env={**os.environ, "NOTIFY_LOG": str(self.log),
                                      "NOTIFY_FAIL": "1" if fail_notification else "0"},
                                 capture_output=True, text=True, timeout=10)
@@ -127,24 +140,24 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         self.assertEqual(self.state.parent.stat().st_mode & 0o777, 0o700)
         self.assertEqual(len(self.requests), 2)  # No full cgroup query on a quiet sample.
 
-    def test_sustained_swap_uses_historical_windows_and_attributes_groups(self):
+    def test_sustained_swap_and_pressure_use_saved_measured_pid(self):
         self.incoming = [1024] * 12
         result = self.run_check()
-        self.assertEqual(result["conditions"], ["host-swap"])
-        self.assertEqual(result["sent"], ["host-swap"])
+        self.assertEqual(result["conditions"], ["memory-pressure"])
+        self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["host"]["swap_in_windows_bytes_per_second"], [1048576] * 2)
-        self.assertEqual(result["host"]["attribution"]["groups"][0]["in_bytes_per_second"], 1048576)
-        self.assertIn("example.service", self.notifications()[0][-1])
-        self.assertNotIn("possível thrashing", self.notifications()[0][-1])
+        self.assertEqual(result["host"]["attribution"]["processes"][0]["swap_in_wait_seconds"], 1.2)
+        self.assertIn("example-app (PID 123): 1.200 s aguardando swap-in", self.notifications()[0][-1])
+        self.assertNotIn("system.slice", self.notifications()[0][-1])
         self.assertTrue(all(q["points"] == ["12"] for _, q in self.requests))
 
     def test_negative_out_direction_is_measured_as_positive_activity(self):
         self.outgoing = [-2048] * 12
         self.psi = 2
         result = self.run_check()
-        self.assertEqual(result["sent"], ["host-swap"])
+        self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["host"]["swap_out_windows_bytes_per_second"], [2097152] * 2)
-        self.assertIn("possível thrashing", self.notifications()[0][-1])
+        self.assertIn("Possível thrashing", self.notifications()[0][-1])
 
     def test_burst_and_psi_alone_do_not_warn(self):
         self.psi = 20
@@ -174,15 +187,15 @@ class NetdataMemoryCheckTest(unittest.TestCase):
     def test_suppression_survives_recovery_and_expires(self):
         self.incoming = [1024] * 12
         self.run_check()
-        self.assertEqual(self.run_check()["suppressed"], ["host-swap"])
+        self.assertEqual(self.run_check()["suppressed"], ["memory-pressure"])
         self.incoming = [0] * 12
         self.assertEqual(self.run_check()["conditions"], [])
         self.incoming = [1024] * 12
-        self.assertEqual(self.run_check()["suppressed"], ["host-swap"])
+        self.assertEqual(self.run_check()["suppressed"], ["memory-pressure"])
         state = json.loads(self.state.read_text())
-        state["alerts"]["host-swap"] -= 901
+        state["alerts"]["memory-pressure"] -= 901
         self.state.write_text(json.dumps(state))
-        self.assertEqual(self.run_check()["sent"], ["host-swap"])
+        self.assertEqual(self.run_check()["sent"], ["memory-pressure"])
         self.assertEqual(len(self.notifications()), 2)
 
     def test_demand_keeps_separate_six_hour_cooldown(self):
@@ -190,28 +203,28 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         self.assertEqual(self.run_check()["sent"], ["demand"])
         self.incoming = [1024] * 12
         result = self.run_check()
-        self.assertEqual(result["sent"], ["host-swap"])
+        self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["suppressed"], ["demand"])
 
     def test_notification_failure_retries_without_claiming_delivery(self):
         self.incoming = [1024] * 12
         result = self.run_check(expected=2, fail_notification=True)
-        self.assertEqual(result["notification_failures"], ["host-swap"])
+        self.assertEqual(result["notification_failures"], ["memory-pressure"])
         self.assertEqual(result["sent"], [])
         self.assertEqual(json.loads(self.state.read_text())["alerts"], {})
-        self.assertEqual(self.run_check()["sent"], ["host-swap"])
+        self.assertEqual(self.run_check()["sent"], ["memory-pressure"])
 
     def test_reboot_resets_suppression(self):
         self.incoming = [1024] * 12
         self.run_check()
         self.boot.write_text("boot-two")
-        self.assertEqual(self.run_check()["sent"], ["host-swap"])
+        self.assertEqual(self.run_check()["sent"], ["memory-pressure"])
 
     def test_corrupt_state_reports_reset(self):
         self.run_check()
         self.state.write_text("{broken")
         self.assertTrue(self.run_check()["state_reset"])
-        self.assertEqual(json.loads(self.state.read_text())["version"], 2)
+        self.assertEqual(json.loads(self.state.read_text())["version"], 3)
 
     def test_old_state_migrates_demand_cooldown(self):
         self.run_check()
@@ -231,7 +244,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         self.incoming = [1024] * 12
         (self.cgroup / "memory.stat").unlink()
         result = self.run_check(expected=2)
-        self.assertEqual(result["sent"], ["host-swap"])
+        self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertIn("capacity", result["errors"])
 
     def test_missing_or_stale_history_is_not_healthy_or_a_warning(self):
@@ -251,43 +264,70 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         self.assertEqual(result["sent"], ["demand"])
         self.assertEqual(result["status"], "unavailable")
 
+    def test_low_pressure_swap_does_not_warn(self):
+        self.incoming = [4096] * 12
+        self.psi = 1.99
+        self.assertEqual(self.run_check()["conditions"], [])
+        self.assertEqual(self.notifications(), [])
+
+    def test_isolated_pressure_spike_does_not_warn(self):
+        self.incoming = [4096] * 12
+        self.psi = [0] * 6 + [20] * 6
+        self.assertEqual(self.run_check()["conditions"], [])
+        self.assertEqual(self.notifications(), [])
+
+    def test_missing_pressure_is_not_healthy_and_preserves_capacity(self):
+        self.incoming = [4096] * 12
+        self.unavailable.add("system.memory_some_pressure")
+        self.write_cgroup(anon=900)
+        result = self.run_check(expected=2)
+        self.assertEqual(result["host"]["status"], "unavailable")
+        self.assertEqual(result["sent"], ["demand"])
+
     def test_attribution_failure_is_explicit_without_suppressing_host(self):
         self.incoming = [1024] * 12
-        self.unavailable.add("hostswap.coverage")
+        self.history_missing = True
         result = self.run_check()
-        self.assertEqual(result["sent"], ["host-swap"])
+        self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["host"]["attribution"]["status"], "unavailable")
-        self.assertIn("Atribuição parcial", self.notifications()[0][-1])
+        self.assertIn("Histórico por PID indisponível", self.notifications()[0][-1])
 
-    def test_partial_and_gapped_attribution_is_visible(self):
+    def test_partial_coverage_and_gaps_are_visible(self):
         self.incoming = [1024] * 12
         self.coverage["truncated"] = 1
-        self.group_gap = True
+        self.history_gap = True
         result = self.run_check()
         self.assertEqual(result["host"]["attribution"]["status"], "partial")
-        self.assertEqual(result["host"]["attribution"]["groups"], [])
+        self.assertIn("example-app (PID 123)", self.notifications()[0][-1])
+        self.assertIn("Cobertura por PID parcial", self.notifications()[0][-1])
 
-    def test_recovered_coverage_still_marks_the_whole_window_partial(self):
+    def test_measured_zero_is_distinct_from_partial_and_occupied_swap(self):
         self.incoming = [1024] * 12
-        for field, incomplete in (("errors", 1), ("truncated", 1), ("measured", 0)):
-            normal = self.coverage[field]
-            self.coverage[field] = [incomplete] * 6 + [normal] * 6
-            result = self.run_check()
-            attribution = result["host"]["attribution"]
-            self.assertEqual(attribution["status"], "partial", field)
-            self.assertTrue(attribution["window_partial"])
-            self.assertEqual(attribution["coverage"][field], normal)
-            self.coverage[field] = normal
-
-    def test_hierarchy_top_three_and_markup_escaping(self):
-        self.incoming = [1024] * 12
-        self.groups = {"/a": (4000, 0), "/a/child": (3000, 0), "/b/<bad&>": (2000, 0),
-                       "/c": (1000, 0), "/d": (500, 0)}
+        self.processes = []
         result = self.run_check()
-        self.assertEqual([g["path"] for g in result["host"]["attribution"]["groups"]],
-                         ["/a", "/b/<bad&>", "/c"])
-        self.assertIn("&lt;bad&amp;&gt;", self.notifications()[0][-1])
-        self.assertNotIn("/a/child", self.notifications()[0][-1])
+        self.assertEqual(result["host"]["attribution"]["status"], "measured")
+        self.assertEqual(result["host"]["attribution"]["processes"], [])
+        self.assertIn("Nenhum PID com espera de swap-in", self.notifications()[0][-1])
+
+    def test_top_three_ranks_by_wait_and_escapes_names(self):
+        self.incoming = [1024] * 12
+        self.processes = [dict(pid=i, start=100, name=name, delay_ns=delay,
+                               rss=1000, swap=100000000 // i)
+                          for i, name, delay in ((1, "slow", 100000000), (2, "<bad&>\n", 400000000),
+                                                 (3, "third", 200000000), (4, "second", 300000000))]
+        result = self.run_check()
+        self.assertEqual([p["pid"] for p in result["host"]["attribution"]["processes"]], [2, 4, 3])
+        body = self.notifications()[0][-1]
+        self.assertIn("&lt;bad&amp;&gt; (PID 2)", body)
+        self.assertNotIn("PID 1", body)
+
+    def test_previous_low_pressure_notice_does_not_suppress_new_condition(self):
+        self.run_check()
+        self.state.write_text(json.dumps({"version": 2, "boot": "boot-one",
+                                         "alerts": {"host-swap": time.monotonic()}}))
+        self.incoming = [1024] * 12
+        self.assertEqual(self.run_check()["sent"], ["memory-pressure"])
+        self.assertNotIn("host-swap", json.loads(self.state.read_text())["alerts"])
 
     def test_locked_run_does_not_fetch_or_notify(self):
         self.state.parent.mkdir(mode=0o700)
