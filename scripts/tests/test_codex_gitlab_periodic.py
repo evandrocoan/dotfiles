@@ -10,7 +10,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import assessment, domain, flow, human_turn, module, rendered, compact
+from test_codex_gitlab_queue import historical_hold, assessment, domain, flow, human_turn, module, rendered, compact
 
 
 def enqueue(f, iid=82):
@@ -238,7 +238,7 @@ def test_original_launch_only_trust_rejection_requires_unchanged_identity(flow,t
 
 def test_slow_human_intake_rotates_to_later_mr_on_next_cycle(flow,monkeypatch):
     with flow.q.atomic():
-        flow.q.put_mr({'repository_id':11,'iid':1,'chats':{},'hold':None})
+        flow.q.put_mr({'repository_id':11,'iid':1,'chats':{},'hold':{'question':'first'}})
         flow.q.put_mr({'repository_id':11,'iid':2,'chats':{},'hold':{'question':'original'}})
     seen=[]
     def intake(c,q,r):
@@ -360,6 +360,7 @@ def test_http_deadline_bounds_trickling_response_not_only_socket_inactivity(modu
 def test_old_session_cannot_hide_sufficient_answer_in_later_claude_session(flow,monkeypatch,failure):
     flow.results['claude']=domain(outcome='question',question='Qual regra de CSP considerar?')
     job=enqueue(flow);flow.drain();hold=flow.q.mr(11,82)['hold']
+    historical_hold(flow)
     assert hold['provider']=='claude'
     text='considere a regra atual e continue';source=str(uuid.uuid4());final=str(uuid.uuid4())
     answer=domain(assessment=assessment(text,kind='answer',anchor=hold['anchor']))
@@ -399,6 +400,7 @@ def test_old_session_cannot_hide_sufficient_answer_in_later_claude_session(flow,
 def test_slow_earlier_source_in_same_session_does_not_hide_answer(flow,monkeypatch):
     flow.results.update(claude=RuntimeError('terminal'),codex=domain(outcome='question',question='Qual regra considerar?'))
     job=enqueue(flow);flow.drain();hold=flow.q.mr(11,82)['hold']
+    historical_hold(flow)
     old=human_turn(flow,'primeiro pedido antigo')
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
@@ -449,6 +451,7 @@ def test_recorded_mixed_inventory_artifact_preserves_native_acceptance(flow,monk
 def test_paged_history_resumes_answer_order_proof_across_cycles(flow,monkeypatch,question_first):
     flow.results.update(claude=RuntimeError('terminal'),codex=domain(outcome='question',question='Qual regra considerar?'))
     job=enqueue(flow);flow.drain();hold=flow.q.mr(11,82)['hold']
+    historical_hold(flow)
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
@@ -488,28 +491,18 @@ def test_paged_history_resumes_answer_order_proof_across_cycles(flow,monkeypatch
     assert 2 in calls
 
 
-def test_paged_intake_visits_latest_source_before_reading_older_pages(flow,monkeypatch):
-    enqueue(flow);flow.drain()
-    source=human_turn(flow,'explique a regra atual')
-    answer=domain(outcome='noop',assessment=assessment(source['texts'][0],kind='explanation'))
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'explanation','phase':'final_answer','text':compact(answer)})
-    native=flow.m['monitor_native'];calls=[]
-    def paged(c,method,params,**kw):
-        if method=='thread/turns/list':
-            calls.append(params.get('cursor'))
-            if params.get('cursor'):raise flow.m['MonitorCycleYield']('slow older page')
-            return {'data':[flow.turns[source['session']][0]],'nextCursor':'older'}
-        return native(c,method,params,**kw)
-    monkeypatch.setitem(flow.m,'monitor_native',paged)
-    try:flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
-    except flow.m['MonitorCycleYield']:pass
-    assert flow.q.meta('human:'+source['session']+':'+source['turn_id'])=={'disposition':'observed'}
-    assert calls==[None,'older'] and flow.sends==[]
+def test_completed_chat_is_not_read_for_new_messages(flow,monkeypatch):
+    enqueue(flow);flow.drain();human_turn(flow,'explique a regra atual')
+    def forbidden(*a,**kw):raise AssertionError('completed chat was scanned')
+    monkeypatch.setitem(flow.m,'monitor_native',forbidden)
+    before=flow.q.jobs();flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
+    assert flow.q.jobs()==before and flow.sends==[]
 
 
 def test_answer_appended_after_cursor_stalls_is_found_on_fresh_head(flow,monkeypatch):
     flow.results.update(claude=RuntimeError('terminal'),codex=domain(outcome='question',question='Qual regra considerar?'))
     job=enqueue(flow);flow.drain();hold=flow.q.mr(11,82)['hold']
+    historical_hold(flow)
     native=flow.m['monitor_native'];calls=[]
     def paged(c,method,params,**kw):
         if method=='thread/turns/list':
@@ -535,6 +528,7 @@ def test_answer_appended_after_cursor_stalls_is_found_on_fresh_head(flow,monkeyp
 def test_slow_recent_source_does_not_starve_saved_answer_in_history(flow,monkeypatch):
     flow.results.update(claude=RuntimeError('terminal'),codex=domain(outcome='question',question='Qual regra considerar?'))
     job=enqueue(flow);flow.drain();hold=flow.q.mr(11,82)['hold']
+    historical_hold(flow)
     source=human_turn(flow,'considere a regra atual e continue')
     answer=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}

@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import assessment, domain, flow, module, rendered, compact
+from test_codex_gitlab_queue import historical_hold, assessment, domain, flow, module, rendered, compact
 from test_codex_gitlab_recovery import FIXTURES, captured_claude, enqueue, finding
 
 
@@ -221,7 +221,7 @@ def question(f):
 
 
 def test_recorded_parallel_human_answer_preserves_then_releases_original_hold(flow):
-    f=flow;job,hold=question(f);append_answer(f,hold)
+    f=flow;job,hold=question(f);historical_hold(f);append_answer(f,hold)
     f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
     record=f.q.mr(11,82)
     assert record['hold']==hold and record['pending_answers'][0]['source']['source_id']==SOURCE
@@ -233,7 +233,7 @@ def test_recorded_parallel_human_answer_preserves_then_releases_original_hold(fl
 
 
 def test_mixed_parallel_human_result_cannot_release_original_hold(flow):
-    f=flow;job,hold=question(f);append_answer(f,hold,mixed=True)
+    f=flow;job,hold=question(f);historical_hold(f);append_answer(f,hold,mixed=True)
     f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
     record=f.q.mr(11,82)
     assert record['hold']==hold and record.get('pending_answers',[])==[]

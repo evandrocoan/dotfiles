@@ -86,12 +86,13 @@ print(json.dumps(out))
 
 
 class Native:
-    def __init__(self, binary, config):
+    def __init__(self, binary, config, *, environment=None):
         self.events=queue.Queue();self.counter=0;self.pending=[]
         self.errors=(Path(config['codex_home'])/'server.stderr').open('a')
         env={k:v for k,v in os.environ.items() if not k.startswith(('OPENAI_','CODEX_'))}
         env.update(CODEX_HOME=config['codex_home'],HTTP_PROXY='http://127.0.0.1:9',
             HTTPS_PROXY='http://127.0.0.1:9',NO_PROXY='127.0.0.1,localhost')
+        env.update(environment or {})
         self.child=subprocess.Popen([binary,'app-server','--stdio'],cwd=config['cwd'],env=env,
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.errors,text=True)
         def read():
@@ -121,8 +122,9 @@ class Native:
         self.child.stdout.close();self.errors.close()
 
     def turn(self,thread,permissions,text="Disposable local fixture"):
-        result=self.rpc('turn/start',{'threadId':thread,'input':[{'type':'text','text':text}],
-            'approvalPolicy':'never','permissions':permissions})
+        params={'threadId':thread,'input':[{'type':'text','text':text}],'approvalPolicy':'never'}
+        if permissions is not None:params['permissions']=permissions
+        result=self.rpc('turn/start',params)
         identifier=result['turn']['id']
         while True:
             for event in self.pending:
@@ -135,8 +137,28 @@ class Native:
 
 
 @pytest.mark.parametrize('legacy',[False,True])
-def test_native_codex_commands_git_and_denials(native_workspace,legacy):
+def test_native_codex_intake_command_denials(native_workspace,legacy):
     m,c,roots,main,script,expected=native_workspace
+    c['_workspace_write']=False
+    targets={**{str(root):str(root/'forbidden') for root in roots},
+        'git-metadata':str(main/'.git'/'forbidden'),
+        'main-source':str(main/'forbidden'),
+        'queue':str(Path(c['queue_file']).parent/'forbidden'),
+        'native':str(Path(c['codex_home'])/'forbidden')}
+    script.write_text('''import json,pathlib,socket
+out={'source_read':pathlib.Path(__file__).read_text().startswith('import json,pathlib,socket')}
+for label,target in TARGETS.items():
+    try:pathlib.Path(target).write_text('forbidden');out[label]='WRITTEN'
+    except OSError:out[label]='denied'
+peer=None
+try:
+    peer=socket.socket(socket.AF_UNIX)
+    peer.connect(ENDPOINT);out['socket']='CONNECTED'
+except OSError:out['socket']='denied'
+finally:
+    if peer is not None:peer.close()
+print(json.dumps(out))
+'''.replace('TARGETS',repr(targets)).replace('ENDPOINT',repr(c['socket'])))
     binary=os.environ.get('CODEX_MONITOR_NATIVE_CODEX') or shutil.which('codex')
     assert binary,'Codex CLI must be installed for the selected native probe'
     data={'model':'gpt-6.1-sol','analytics':{'enabled':False},
@@ -148,8 +170,9 @@ def test_native_codex_commands_git_and_denials(native_workspace,legacy):
         result=native.rpc('command/exec',{'command':[sys.executable,str(script)],'cwd':c['cwd'],
             'permissionProfile':m['MQ_PERMISSION_PROFILE'],'timeoutMs':20000})
         assert result['exitCode']==0,result
-        assert json.loads(result['stdout'])==expected
-        assert not (main/'bad').exists()
+        assert json.loads(result['stdout'])=={
+            'source_read':True,**{label:'denied' for label in targets},'socket':'denied'}
+        assert all(not Path(target).exists() for target in targets.values())
     finally:native.close()
 
 
@@ -161,7 +184,13 @@ class Responses(http.server.BaseHTTPRequestHandler):
         if self.headers.get('Content-Encoding')=='gzip':raw=gzip.decompress(raw)
         data=json.loads(raw);self.server.requests.append(data)
         index=len(self.server.requests)-1
-        if index<len(self.server.targets):
+        if index==0 and getattr(self.server,'command',None):
+            code=('let r=await tools.exec_command('+json.dumps({'cmd':self.server.command,
+                'yield_time_ms':1000,'max_output_tokens':5000})+');text(r);'
+                'while(r.session_id){r=await tools.write_stdin({session_id:r.session_id,chars:"",yield_time_ms:1000,max_output_tokens:5000});text(r);}')
+            item={'type':'custom_tool_call','id':'host-probe','call_id':'host-probe',
+                'namespace':'functions','name':'exec','input':code}
+        elif index<len(self.server.targets):
             item={'type':'custom_tool_call','id':'patch-'+str(index),'call_id':'patch-'+str(index),'name':'apply_patch',
                   'input':'*** Begin Patch\n*** Add File: '+str(self.server.targets[index])+'\n+native edit\n*** End Patch'}
         else:
@@ -200,7 +229,7 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
         created=native.rpc('thread/start',{'cwd':c['cwd'],'ephemeral':False,'projectId':project['id'],
             'runtimeWorkspaceRoots':c['_workspace']['roots'],'approvalPolicy':'never',
             'developerInstructions':m['mq_instructions'](),**selected})
-        m['mq_verify_permission_selection'](created)
+        m['mq_verify_permission_selection'](c,created)
         thread=created['thread'];identifier=thread['id']
         assert thread['projectId']==project['id']
         assert m['monitor_thread_source_roots'](c,thread)==c['_workspace']['roots']
@@ -208,7 +237,7 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
             'url':'https://gitlab.example.test/team/repo/-/merge_requests/82','head':'a'*40,
             'workspace':c['_workspace'],'model_selection':{'model':'gpt-6.1-sol','effort':'xhigh'},
             'original_source':{'origin':'automatic'},'prior_reviewers':[]})
-        native.turn(identifier,m['MQ_PERMISSION_PROFILE'],visible)
+        native.turn(identifier,m['mq_codex_permissions'](c),visible)
         history=native.rpc('thread/turns/list',{'threadId':identifier,'itemsView':'notLoaded'})
         turn=history['data'][0]['id']
         wire=native.rpc('thread/items/list',{'threadId':identifier,'turnId':turn})
@@ -216,30 +245,113 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
         assert len(users)==1 and len(users[0]['content'])==1
         assert users[0]['content'][0]['type']=='text' and users[0]['content'][0]['text']==visible
         assert server.targets[0].read_text()=='native edit\n'
-        assert not any(p.exists() for p in server.targets[1:])
+        assert all(p.read_text()=='native edit\n' for p in server.targets[1:])
         outputs=[i for i in server.requests[-1]['input'] if i.get('type')=='custom_tool_call_output']
         assert {i['call_id'] for i in outputs}=={'patch-'+str(i) for i in range(4)}
-        for item in outputs:
-            if item['call_id']!='patch-0':
-                output=str(item['output'])
-                if item['call_id']=='patch-2':
-                    assert 'Exit code: 1\n' in output and 'Failed to write file' in output,item
-                else:
-                    assert 'rejected' in output.lower(),item
+        assert not any('rejected' in str(item['output']).lower() for item in outputs)
         extra=main.parent/'new folder';extra.mkdir()
         native.rpc('project/update',{'projectId':project['id'],
             'roots':[{'path':str(p)} for p in [*roots,extra]]})
         native.close();native=Native(binary,c)
         resumed=native.rpc('thread/resume',{'threadId':identifier,'excludeTurns':True,
             'runtimeWorkspaceRoots':c['_workspace']['roots'],'approvalPolicy':'never',**selected})
-        m['mq_verify_permission_selection'](resumed)
+        m['mq_verify_permission_selection'](c,resumed)
         assert resumed['thread']['projectId']==project['id']
         assert m['monitor_thread_source_roots'](c,resumed['thread'])==c['_workspace']['roots']
-        native.turn(identifier,m['MQ_PERMISSION_PROFILE'])
+        native.turn(identifier,m['mq_codex_permissions'](c))
         assert len(server.requests)==6
         assert json.dumps(m['mq_instructions']())[1:-1] in json.dumps(server.requests[-1])
+        for writable in (False,True):
+            c['_workspace_write']=writable
+            target=main/('role-'+str(writable))
+            server.targets += [main/'unused']*(len(server.requests)-len(server.targets))
+            server.targets.append(target)
+            native.close();native=Native(binary,c)
+            selected=m['mq_native_selection'](c)
+            resumed=native.rpc('thread/resume',{'threadId':identifier,'excludeTurns':True,
+                'runtimeWorkspaceRoots':c['_workspace']['roots'],'approvalPolicy':'never',**selected})
+            expected_profile={'id':':danger-full-access','extends':None} if writable else {
+                'id':m['MQ_PERMISSION_PROFILE'],'extends':':read-only'}
+            assert resumed['activePermissionProfile']==expected_profile
+            native.turn(identifier,m['mq_codex_permissions'](c))
+            assert target.exists()==writable
+        # Full access is retained by a later manual turn with no override.
+        target=main/'manual-continuation'
+        server.targets += [main/'unused']*(len(server.requests)-len(server.targets))
+        server.targets.append(target)
+        native.turn(identifier,None)
+        assert target.read_text()=='native edit\n'
     finally:
         native.close();server.shutdown();server.server_close();worker.join(5)
+
+
+@pytest.mark.skipif(os.environ.get('CODEX_MONITOR_HOST_PROBES')!='1',
+    reason='requires explicitly selected host Docker, GCR and read-only GitLab SSH probes')
+@pytest.mark.parametrize('reviewer',['codex','claude'])
+def test_native_review_host_commands(native_workspace,monkeypatch,reviewer):
+    m,c,roots,main,script,expected=native_workspace
+    agent=Path(os.environ['XDG_RUNTIME_DIR'])/'gcr/ssh'
+    assert agent.is_socket() and agent.stat().st_uid==os.getuid()
+    monkeypatch.setenv('SSH_AUTH_SOCK',str(agent))
+    target='git@'+os.environ['CODEX_MONITOR_HOST_GITLAB']
+    reference=subprocess.run(['ssh-add','-l'],capture_output=True,text=True,check=True).stdout
+    result_file=roots[0]/'host-result.json'
+    script=roots[0]/'host-probe.py'
+    script.write_text('''import json,os,subprocess,socket,urllib.request,urllib.error
+from pathlib import Path
+out={'agent':os.environ.get('SSH_AUTH_SOCK')}
+for name,command in COMMANDS.items():
+    r=subprocess.run(command,capture_output=True,text=True,timeout=12)
+    out[name]={'code':r.returncode,'stdout':r.stdout,'stderr':r.stderr}
+for url in ['https://pypi.org','https://registry.npmjs.org','https://api.osv.dev']:
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url,method='HEAD'),timeout=8) as response:out[url]=response.status
+    except urllib.error.HTTPError as error:out[url]=error.code
+with socket.socket() as server:server.bind(('127.0.0.1',0));out['binding']=True
+Path(RESULT).write_text(json.dumps(out))
+'''.replace('COMMANDS',repr({'docker':['docker','version','--format','{{json .Server.Version}}'],
+        'keys':['ssh-add','-l'],'ssh':['ssh','-T','-oBatchMode=yes','-oStrictHostKeyChecking=yes',
+        '-oConnectTimeout=8',target]})).replace('RESULT',repr(str(result_file))))
+    command=shlex.join([sys.executable,str(script)])
+    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Responses if reviewer=='codex' else Provider)
+    server.requests=[];server.targets=[];server.command=command
+    server.steps=[('Bash',{'command':command,'description':'Read-only host capability check'})]
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    native=None
+    try:
+        if reviewer=='codex':
+            data={'model':'gpt-6.1-sol','model_provider':'fixture','analytics':{'enabled':False},
+                'mcp_servers':{'gitlab':{'command':'fixture-must-not-run','enabled':False}},
+                'model_providers':{'fixture':{'name':'Local fixture','base_url':f'http://127.0.0.1:{server.server_port}/v1',
+                    'wire_api':'responses','requires_openai_auth':False,'supports_websockets':False}}}
+            (Path(c['codex_home'])/'config.toml').write_text(toml_tables(data))
+            native=Native(os.environ.get('CODEX_MONITOR_NATIVE_CODEX') or shutil.which('codex'),c,
+                environment={'SSH_AUTH_SOCK':'/tmp/fixture-no-agent','HTTP_PROXY':'','HTTPS_PROXY':'','ALL_PROXY':'','NO_PROXY':'*'})
+            selected=m['mq_native_selection'](c)
+            created=native.rpc('thread/start',{'cwd':c['cwd'],'approvalPolicy':'never',**selected})
+            m['mq_verify_permission_selection'](c,created)
+            native.turn(created['thread']['id'],m['mq_codex_permissions'](c))
+        else:
+            home=Path(c['claude_home'])
+            (home/'.claude.json').write_text(json.dumps({'projects':{c['cwd']:{'hasTrustDialogAccepted':True}}}))
+            environment={k:v for k,v in m['mq_claude_environment'](c).items()
+                if not k.startswith(('ANTHROPIC_','CODEX_','OPENAI_'))}
+            environment.update(ANTHROPIC_API_KEY='fixture-only',ANTHROPIC_BASE_URL=f'http://127.0.0.1:{server.server_port}',
+                CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1',DISABLE_AUTOUPDATER='1',HTTP_PROXY='',HTTPS_PROXY='',ALL_PROXY='',NO_PROXY='*')
+            result=subprocess.run([shutil.which('claude'),*m['mq_claude_arguments'](c,'Run the read-only fixture.','capability fixture')],
+                cwd=c['cwd'],env=environment,capture_output=True,text=True,timeout=60)
+            assert result.returncode==0,result.stderr
+        assert result_file.is_file(),'native command never completed'
+        result=json.loads(result_file.read_text())
+        assert result['agent']==str(agent)
+        assert result['keys']['code']==0 and result['keys']['stdout']==reference
+        assert result['docker']['code']==0,result
+        assert result['ssh']['code']==0 and 'Welcome to GitLab' in result['ssh']['stdout'],result
+        assert result['binding'] is True and result['https://pypi.org']==200 and result['https://registry.npmjs.org']==200
+        assert result['https://api.osv.dev'] in {200,404}
+    finally:
+        if native:native.close()
+        server.shutdown();server.server_close();thread.join(5)
 
 
 class Provider(http.server.BaseHTTPRequestHandler):
@@ -280,7 +392,7 @@ class Provider(http.server.BaseHTTPRequestHandler):
 def test_native_claude_commands_editing_and_denials(native_workspace,mode):
     m,c,roots,main,script,expected=native_workspace
     unavailable=mode=='unavailable'
-    if mode=='intake':c['_workspace_write']=False
+    if mode!='review':c['_workspace_write']=False
     binary=shutil.which('claude');assert binary,'Claude CLI must be installed for the selected native probe'
     home=Path(c['claude_home'])
     (home/'.claude.json').write_text(json.dumps({'projects':{c['cwd']:{'hasTrustDialogAccepted':True}}}))
@@ -292,7 +404,10 @@ def test_native_claude_commands_editing_and_denials(native_workspace,mode):
         ('Edit',{'file_path':str(roots[-1]/'tool-write'),'old_string':'initial','new_string':'edited'}),
         ('Write',{'file_path':str(main/'tool-outside'),'content':'forbidden'}),
         ('Read',{'file_path':str(Path(c['queue_file']).parent/'input.json')})]
-    if mode=='unavailable':server.steps=server.steps[:1]
+    if unavailable:
+        # This command is allowed by intake, so the error must come from the sandbox.
+        server.steps=[('Bash',{'command':'codex-session-stats current --client claude --format json',
+            'description':'Allowed read-only intake command with unavailable confinement'})]
     if mode=='intake':
         server.steps=[('Bash',{'command':shlex.join([sys.executable,'-c',
             'from pathlib import Path;Path('+repr(str(root/'written'))+').write_text("forbidden")']),
@@ -325,8 +440,12 @@ def test_native_claude_commands_editing_and_denials(native_workspace,mode):
             assert not any((root/'written').exists() for root in roots)
             assert all(results['tool-'+str(i)]['is_error'] is True for i in range(len(server.steps))),results
             assert not (main/'bad').exists()
+            if unavailable:
+                assert 'sandbox' in str(results['tool-0']['content']).lower(),results
             return
-        assert json.loads(results['tool-0']['content'])==expected
+        trusted={**{str(root):'ok' for root in roots},
+            **{key:'WRITTEN' for key in ('main-source','symlink','queue','native')},'socket':'CONNECTED'}
+        assert json.loads(results['tool-0']['content'])==trusted
         assert (roots[-1]/'tool-write').read_text()=='edited'
         assert results['tool-3']['is_error'] is True and not (main/'tool-outside').exists()
         assert 'immutable' in results['tool-4']['content']
@@ -388,19 +507,30 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         f.drain()
         assert f.launched==(['codex'] if large else []) and f.sends==[]
         assert f.q.job(job['id'])['wait_reason']=='human'
-        server.final_text='Cold resume fixture complete.'
-        server.steps=[]
+        server.final_text='Cold resume fixture complete.\nEstado da revisão: concluída\nCommit revisado: '+'a'*40
+        marker=Path(f.config['cwd'])/'native-human-continuation'
+        server.steps=[('unused',{})]*len(server.requests)+[('Write',{'file_path':str(marker),'content':'continued'})]
         arguments=m['mq_claude_arguments'](m['mq_workspace_config'](f.config,saved),'Later fixture input','resume')
         prompt_index=arguments.index('--append-system-prompt');del arguments[prompt_index:prompt_index+2]
         arguments[-2:-2]=['--resume',stage['session']]
         output=subprocess.run([binary,*arguments],cwd=f.config['cwd'],env=m['mq_claude_environment'](f.config),
             stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=30)
         assert output.returncode==0,output.stderr
+        assert marker.read_text()=='continued'
         assert any(m['mq_instructions']() in block.get('text','') for block in server.requests[-1]['system'])
+        assert 'csm-assessment' not in m['mq_instructions']()
         # Revalidation still selects the captured question, never the resumed final.
         observed=m['mq_claude_observe'](f.config,saved['stages'][index])
         assert observed['anchor']==saved['stages'][index]['anchor']
         assert observed['text']=='Estado da revisão: aguardando resposta\nWhich fixture rule should be used?'
+        m['mq_intake'](f.config,f.q,f.q.mr(11,82))
+        assert f.q.mr(11,82)['hold'] is None
+        f.drain()
+        completed=f.q.job(job['id'])
+        assert completed['state']=='completed' and f.q.mr(11,82)['reviewed_head']=='a'*40
+        assert completed['stages'][index]['result']['outcome']=='question'
+        assert completed['stages'][index]['continuations'][0]['outcome']['result']['outcome']=='complete'
+        assert f.launched==['codex'] and f.sends==[] and len(f.q.jobs())==1
     finally:
         if stage and stage.get('unit'):
             state=m['mq_service_show'](f.config,stage['unit'])

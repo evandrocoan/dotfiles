@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from test_codex_gitlab_queue import assessment, domain, flow, module, rendered, compact
+from test_codex_gitlab_queue import historical_hold, assessment, domain, flow, module, rendered, compact
 from test_codex_gitlab_workspace import project
 from test_codex_gitlab_periodic import quiet_scan
 
@@ -85,6 +85,7 @@ def test_human_intake_uses_same_recorded_tool_ancestry(flow,tmp_path,monkeypatch
 def test_sufficient_human_answer_with_tool_results_releases_only_original_hold(flow):
     flow.results['claude']=domain(outcome='question',question='Qual regra usar?')
     job=enqueue(flow);flow.drain();hold=copy.deepcopy(flow.q.mr(11,82)['hold'])
+    historical_hold(flow)
     artifact=json.loads((FIXTURES/'gitlab-claude-tool-transcript.json').read_text())
     rows=artifact['records'];text='use a regra atual e continue'
     answer=domain(assessment=assessment(text,kind='answer',anchor=hold['anchor']))

@@ -249,6 +249,7 @@ def flow(module,tmp_path,monkeypatch):
             'diffs':[{'old_path':'x.py','new_path':'x.py','diff':'@@ -1 +1 @@\n-old\n+new'}]}}
     turns,items,chats,claude_agents = {},{},{},[]
     launched,sends,results = [],[],{'claude':domain(),'codex':domain()}
+    unread_calls,app_read = [],{}
     class API:
         def __init__(self,c,guard=None): self.config=c
         def project(self): return {'id':11}
@@ -267,10 +268,21 @@ def flow(module,tmp_path,monkeypatch):
                 'environments':[{'environmentId':'local','cwd':c['cwd'],
                                  'runtimeWorkspaceRoots':params.get('runtimeWorkspaceRoots',[c['cwd']])}]}
             turns[identity]=[]
-            return {'thread':chats[identity], 'activePermissionProfile':{'id':m['MQ_PERMISSION_PROFILE'],'extends':':read-only'}}
-        if method in {'thread/resume','thread/read'}: return {'thread':chats[params['threadId']],
-            'activePermissionProfile':{'id':m['MQ_PERMISSION_PROFILE'],'extends':':read-only'}}
+            profile=params['permissions']
+            return {'thread':chats[identity], 'activePermissionProfile':{'id':profile,
+                'extends':None if profile==':danger-full-access' else ':read-only'}}
+        if method in {'thread/resume','thread/read'}:
+            profile=params.get('permissions',m['MQ_PERMISSION_PROFILE'])
+            return {'thread':chats[params['threadId']],
+                'activePermissionProfile':{'id':profile,
+                    'extends':None if profile==':danger-full-access' else ':read-only'}}
         if method=='thread/name/set': return {}
+        if method=='mcpServer/tool/call':
+            assert params['server']=='codex_app' and params['tool']=='set_thread_read_state'
+            expected={'threadId':params['threadId'],'hostId':'local','source':'codex','read':False}
+            assert params['arguments']==expected
+            unread_calls.append(params['threadId']);app_read[params['threadId']]=False
+            return {'content':[{'type':'text','text':json.dumps({k:v for k,v in expected.items() if k!='source'})}]}
         if method=='turn/start':
             launched.append('codex'); t=str(uuid.uuid4()); result=results['codex']
             row={'id':t,'status':'failed' if isinstance(result,Exception) else 'completed','error':str(result)}
@@ -323,6 +335,7 @@ def flow(module,tmp_path,monkeypatch):
     f=Flow(); f.m=m;f.q=q;f.config=config;f.context=context;f.results=results
     f.service=service
     f.launched=launched;f.sends=sends;f.chats=chats;f.turns=turns;f.items=items;f.raw=raw;f.config_path=config_path
+    f.unread_calls=unread_calls;f.app_read=app_read
     f.model_calls=[];f.model_errors=[];f.processed=set()
     def model_step():
         active=q.jobs('running')
@@ -513,41 +526,6 @@ def assessment(text,*,kind='action',anchor=None):
             'scope':{'effects':['reply','resolve'],'discussions':['csp']},'question_anchor':anchor}
 
 
-@pytest.mark.parametrize('render',[rendered,compact])
-def test_real_human_after_completed_round_gets_new_fifo_job_without_code_checkpoint(flow,monkeypatch,render):
-    previous=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context))
-    flow.drain();assert flow.q.job(previous['id'])['state']=='completed'
-    text='responda na thread que a CSP foi corrigida e que o apontamento de memoização não procede, e marque como resolvida'
-    source=human_turn(flow,text)
-    if render is rendered:
-        with flow.q.atomic():
-            record=flow.q.mr(11,82);record['instruction_versions'][source['session']]=2;flow.q.put_mr(record)
-    action=resolution_fixture(flow)
-    result=domain(assessment=assessment(text),actions=[action])
-    original_send=flow.m['mq_send']
-    def send(api,method,route,payload):
-        if method=='PUT':
-            flow.sends.append((method,route,payload))
-            for note in flow.context['threads'][0]['notes']:
-                note.update(resolved=True,resolved_by={'id':7})
-            return {}
-        return original_send(api,method,route,payload)
-    monkeypatch.setitem(flow.m,'mq_send',send)
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'human-final','phase':'final_answer','text':render(result)})
-    flow.results.update(claude=result,codex=result)
-    flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
-    jobs=flow.q.jobs();assert len(jobs)==2 and jobs[1]['kind']=='human' and jobs[1]['source']==source
-    flow.drain()
-    assert flow.launched==['claude','codex','claude','codex']
-    assert flow.q.job(jobs[1]['id'])['state']=='completed'
-    assert flow.q.mr(11,82)['reviewed_head']=='a'*40
-    assert flow.q.job(previous['id'])['stages']==jobs[0]['stages']
-    assert [method for method,_,_ in flow.sends]==['POST','PUT']
-    assert all(e['state']=='confirmed' for e in flow.q.effects())
-    assert flow.context['threads'][0]['notes'][0]['resolved']
-    flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
-    assert len(flow.q.jobs())==2 and len(flow.sends)==2
 
 
 @pytest.mark.parametrize('text,mixed',[('responda na thread?',False),('responda na thread w',False),('responda na thread',True)])
@@ -568,17 +546,6 @@ def test_source_change_and_foreign_chat_are_rejected(flow):
         flow.m['mq_verify_source'](flow.config,flow.q,source,22,82)
 
 
-def test_occupied_queue_preserves_new_human_source(flow):
-    source=human_turn(flow,'responda na thread')
-    first=flow.q.enqueue(11,90,source_key='busy',kind='code',head='a'*40,source={'origin':'automatic'},context={})
-    flow.q.reserve({11})
-    result=domain(assessment=assessment(source['texts'][0]))
-    flow.items[source['turn_id']].append({'type':'agentMessage','id':'a','phase':'final_answer','text':rendered(result)})
-    flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
-    waiting=flow.q.jobs()[1]
-    assert waiting['state']=='pending' and waiting['source']==source
-    assert flow.q.reserve({11})['id']==first['id']
-    assert flow.sends==[]
 
 
 def test_singleton_lock_does_not_block_wake_enqueue(flow):
@@ -601,6 +568,7 @@ def test_question_hold_sufficient_answer_releases_only_its_original_anchor(flow,
     flow.drain()
     held=flow.q.mr(11,82)['hold'];assert held and flow.launched==['claude','codex']
     assert flow.q.job(original['id'])['wait_reason']=='human'
+    historical_hold(flow)
     source=human_turn(flow,'considere a CSP atual e continue')
     if render is rendered:
         with flow.q.atomic():
@@ -750,28 +718,15 @@ def test_lost_native_ack_is_reconciled_without_second_codex_turn(flow,monkeypatc
     assert len(flow.turns[flow.q.mr(11,82)['chats']['codex']])==1
 
 
-def test_interrupted_answer_is_interpreted_read_only_while_hold_remains(flow):
-    flow.results['claude']=RuntimeError('failed')
+def test_interrupted_answer_does_not_launch_a_classifier(flow):
     flow.results['codex']=domain(outcome='question',question='Qual regra usar?')
-    original=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context));flow.drain()
-    hold=flow.q.mr(11,82)['hold']
-    source=human_turn(flow,'use a regra atual e continue')
-    # No native final: the interruption cannot silently lose this exact answer.
-    flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
-    intake=flow.q.jobs()[1];assert intake['kind']=='intake'
-    result=domain(assessment=assessment(source['texts'][0],kind='answer',anchor=hold['anchor']))
-    result['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    flow.results.update(claude=result,codex=result)
-    for _ in range(5): flow.step()
-    assert flow.q.job(intake['id'])['state']=='completed'
-    assert flow.q.mr(11,82)['hold']==hold  # Registered sufficient answer is not an implicit release.
-    assert flow.q.job(original['id'])['wait_reason']=='answer_ready'
-    flow.results.update(claude=domain(),codex=domain())
-    flow.drain()
-    assert flow.q.mr(11,82)['hold'] is None
-    assert flow.q.job(original['id'])['state']=='completed'
-    assert flow.sends==[]
+    flow.q.enqueue(11,82,source_key='held',kind='code',head='a'*40,
+        source={'origin':'automatic'},context=flow.context)
+    flow.drain();hold=flow.q.mr(11,82)['hold']
+    human_turn(flow,'use a regra atual e continue')
+    before=flow.q.jobs();flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
+    assert flow.q.jobs()==before and flow.q.mr(11,82)['hold']==hold
+    assert flow.launched==['claude','codex'] and flow.sends==[]
 
 
 def test_cli_initialize_tick_and_status_leave_predecessor_untouched(flow):
@@ -877,39 +832,23 @@ def test_consumer_observation_failure_never_releases_unknown_native(flow,monkeyp
     assert flow.q.job(first['id'])['state']=='running' and flow.sends==[]
 
 
-def test_original_claude_question_session_can_answer_after_fresh_execution(flow):
+
+
+def historical_hold(f,protocol='tools'):
+    """Prepare a frozen previously issued question, as retained by the live consumer.
+
+    Only disposable fixture history is changed. The new producer never emits this format.
+    """
     import json
-    import uuid
-    flow.results['claude']=domain(outcome='question',question='Qual regra de CSP devo usar?')
-    original=flow.q.enqueue(11,82,source_key='code:a',kind='code',head='a'*40,
-        source={'origin':'automatic'},context=copy.deepcopy(flow.context));flow.drain()
-    hold=flow.q.mr(11,82)['hold'];session_s=hold['session']
-    # Another actual native input needs read-only interpretation. It creates fresh Claude T.
-    source_b=human_turn(flow,'preciso explicar melhor a CSP')
-    flow.m['mq_intake'](flow.config,flow.q,flow.q.mr(11,82))
-    flow.results.update(claude=domain(outcome='noop'),codex=domain(outcome='noop'))
-    flow.drain()
-    record=flow.q.mr(11,82)
-    assert record['hold']==hold and session_s in record['claude_history']
-    assert record['chats']['claude']!=session_s
-    # The user answers in the original S, after T has been registered and completed.
-    text='use a regra atual da CSP e continue';source_id=str(uuid.uuid4());anchor=str(uuid.uuid4())
-    answer=domain(assessment=assessment(text,kind='answer',anchor=hold['anchor']))
-    answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    target=next((Path(flow.config['claude_home'])/'projects').glob('*/'+session_s+'.jsonl'))
-    rows=[{'type':'user','uuid':source_id,'parentUuid':hold['native_anchor'],'sessionId':session_s,
-           'cwd':flow.config['cwd'],'message':{'content':text}},
-          {'type':'assistant','uuid':anchor,'parentUuid':source_id,'sessionId':session_s,
-           'message':{'id':'message-'+anchor,'stop_reason':'end_turn','content':[{'type':'text','text':compact(answer)}]}},
-          {'type':'system','subtype':'turn_duration','uuid':str(uuid.uuid4()),'parentUuid':anchor,'sessionId':hold['session']}]
-    with target.open('a') as stream:
-        for row in rows: stream.write(json.dumps(row)+'\n')
-    flow.m['mq_intake'](flow.config,flow.q,record)
-    assert flow.q.mr(11,82)['hold']==hold
-    assert flow.q.job(original['id'])['wait_reason']=='answer_ready'
-    flow.results.update(claude=domain(),codex=domain());flow.drain()
-    record=flow.q.mr(11,82)
-    assert record['hold'] is None
-    assert record['hold_history'][0]['answer']['session']==session_s
-    assert record['hold_history'][0]['answer']['source_id']==source_id
-    assert flow.q.job(original['id'])['state']=='completed' and flow.sends==[]
+    record=f.q.mr(11,82);hold=record['hold'];job=f.q.job(hold['job_id'])
+    stage=next(s for s in job['stages'] if s['id']==hold['stage_id'])
+    stage.update(protocol=protocol,instructions_version=6,input_format='message-v2',input=f.m['mq_render_input_v2'](stage['input_context']))
+    if stage['reviewer']=='codex':f.items[stage['turn_id']][0]['content'][0]['text']=stage['input']
+    else:
+        path=next((Path(f.config['claude_home'])/'projects').glob('*/'+stage['session']+'.jsonl'))
+        rows=[json.loads(line) for line in path.read_text().splitlines()]
+        next(r for r in rows if r.get('uuid')==stage['source_id'])['message']['content']=stage['input']
+        path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
+    record['instruction_versions'][stage['session']]=5
+    with f.q.atomic():f.q.save(job);f.q.put_mr(record)
+    return hold

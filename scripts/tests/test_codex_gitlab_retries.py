@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from test_codex_gitlab_queue import module, queue, flow, enqueue, domain, human_turn, assessment, compact, resolution_fixture
+from test_codex_gitlab_queue import historical_hold, module, queue, flow, enqueue, domain, human_turn, assessment, compact, resolution_fixture
 
 
 def automatic(f, **values):
@@ -172,17 +172,9 @@ def test_retry_rechecks_current_mr_before_dispatch(flow,monkeypatch,changed):
 @pytest.mark.parametrize('kind',['human','discussion'])
 def test_changed_head_never_rebinds_a_selective_retry(flow,monkeypatch,kind):
     f=flow;f.results['claude']=RuntimeError('failure')
-    if kind=='human':
-        source=human_turn(f,'Revise e publique os achados')
-        a=assessment(source['texts'][0]);a['scope']={'effects':['finding'],'discussions':[]}
-        with f.q.atomic():
-            record=f.q.mr(11,82);record.setdefault('instruction_versions',{})[source['session']]=3;f.q.put_mr(record)
-        f.items[source['turn_id']].append({'type':'agentMessage','id':'human-final','phase':'final_answer',
-            'text':compact(domain(assessment=a))})
-        f.m['mq_intake'](f.config,f.q,f.q.mr(11,82));original=f.q.jobs()[0]
-    else:
-        original=f.q.enqueue(11,82,source_key='discussion',kind=kind,head='a'*40,
-            source={'origin':'automatic'},context=f.context)
+    source=human_turn(f,'Revise e publique os achados') if kind=='human' else {'origin':'automatic'}
+    original=f.q.enqueue(11,82,source_key='previously-admitted',kind=kind,head='a'*40,
+        source=source,context=f.context)
     f.drain();saved=f.q.job(original['id'])
     assert saved['review_attempt']['reviewers']==['claude']
     monkeypatch.setitem(f.m,'mq_stamp',lambda:saved['retry_at']+1)
@@ -233,6 +225,7 @@ def test_sufficient_answer_resets_retry_attempt_bounds(flow,monkeypatch,crash):
     saved=f.q.job(original['id']);monkeypatch.setitem(f.m,'mq_stamp',lambda:saved['retry_at']+1)
     f.results['codex']=domain(outcome='question',question='Qual regra aplicar?');f.drain()
     held=f.q.mr(11,82)['hold'];assert held and f.q.job(original['id'])['wait_reason']=='human'
+    historical_hold(f)
     source=human_turn(f,'Use a regra já configurada e continue')
     answer=domain(outcome='noop',assessment=assessment(source['texts'][0],kind='answer',anchor=held['anchor']))
     answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
@@ -252,7 +245,7 @@ def test_sufficient_answer_resets_retry_attempt_bounds(flow,monkeypatch,crash):
     assert f.q.mr(11,82)['hold'] is None and len(f.q.mr(11,82)['hold_history'])==1
 
 
-def test_model_choice_is_pinned_in_actual_native_input_and_version3_answers_remain_compact(flow):
+def test_model_choice_is_pinned_and_old_completed_chats_create_no_new_human_work(flow):
     f=flow;original=automatic(f);f.drain()
     job=f.q.job(original['id'])
     for stage in job['stages']:
@@ -268,7 +261,7 @@ def test_model_choice_is_pinned_in_actual_native_input_and_version3_answers_rema
     result=domain(assessment=assessment(source['texts'][0]))
     f.items[source['turn_id']].append({'type':'agentMessage','id':'human-final','phase':'final_answer','text':compact(result)})
     f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
-    assert len(f.q.jobs())==2 and f.q.jobs()[-1]['kind']=='human'
+    assert len(f.q.jobs())==1 and f.q.jobs()[0]['state']=='completed'
 
 
 def test_recorded_capacity_failure_does_not_clear_the_actual_model_question(flow):

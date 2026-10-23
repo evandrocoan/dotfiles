@@ -680,7 +680,8 @@ poetry install --with monitor-tools
 ```
 
 The native app connection uses `websockets`; new reviews connect to the existing shared GitLab HTTP
-MCP, whose startup catalog must include `core,merge_requests` (see [Shared GitLab MCP](#shared-gitlab-mcp)). The reviewer permission
+MCP, whose startup catalog includes the MR tools and individual CI readers configured in
+[`compose.yaml`](scripts/gitlab-mcp/compose.yaml) (see [Shared GitLab MCP](#shared-gitlab-mcp)). The reviewer permission
 profile and tool approvals are supplied per launch; no global permission installation is needed.
 Unrelated commands, help and offline status do not import these optional packages. Claude uses the
 installed, signed-in CLI and its subscription in finite print mode under the existing user systemd
@@ -732,9 +733,19 @@ During admitted reviews, both models can run commands, edit files, switch branch
 without command approvals in these folders and their necessary shared Git metadata. Claude uses
 the same primary directory plus `--add-dir` for the others. The model chooses the repository,
 branch and test command and must preserve pre-existing work and verify the actual MR revision.
-The monitor does not map repositories to folders or prepare checkouts. The ordinary GitLab diff/file tools remain available. Queue/native state stays protected;
-intake launches remain read-only. These launch settings do not serialize manual turns you start
-directly in the Codex app or Claude CLI.
+The monitor does not map repositories to folders or prepare checkouts. The ordinary GitLab diff/file
+tools remain available. Codex reviews use native full access and direct networking; Claude review
+shells run without a sandbox. Both have the account's host access, including Docker and files
+outside these folders. Claude's native file-tool rules remain scoped, but do not constrain Bash.
+Queue/native validators remain application checks, not an OS boundary against these trusted
+processes. Intake explicitly selects read-only permissions. Manual Codex turns may inherit the
+last review's permissions; no automatic reset occurs. These launch settings do not serialize
+manual turns you start directly in the Codex app or Claude CLI.
+
+The monitor unit selects the existing GCR SSH agent at `%t/gcr/ssh`; Codex command launches receive
+the same socket even when the app-server inherited another agent. To diagnose SSH, run
+`SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gcr/ssh" ssh-add -l` and verify the intended public fingerprints.
+Install the updated monitor unit and reload systemd using the commands below.
 
 For Codex, close the ordinary app normally and open **Codex Monitor** from the applications menu.
 The [desktop entry](.local/share/applications/codex-monitor.desktop) uses the existing
@@ -789,7 +800,7 @@ systemctl --user enable --now codex-gitlab-monitor.timer
 ```
 
 Each trigger runs one bounded cycle and exits. It first handles registered work, completion,
-timeout and ready publication, then performs limited intake and starts eligible work. Claude and
+timeout and ready publication, then observes pending questions and starts eligible work. Claude and
 Codex continue independently between triggers; the next cycle reconnects to the saved execution.
 Completion, timeout and human-answer pickup normally wait until the next 15-minute trigger.
 The TOML interval/window governs automatic inventory; existing work and recovery can proceed after
@@ -816,13 +827,20 @@ issued background reviews finish through their original reader, without restarti
 them. The private `executions` directory beside the queue retains stdout, stderr and completion
 evidence; status includes the exact service unit for `systemctl --user status UNIT` diagnostics.
 
-Use the new MR chat normally for an explicit additional request after completion. The monitor
-reads the actual native source and bounded action assessment, then queues it without fabricating
-a code event. Human completion does not advance the code-review checkpoint. Questions, preferences,
-explanations, mixed/automatic input, `?` or trailing `w` do not authorize effects. A pending readable
-question remains open until a sufficient later human answer to its exact anchor; capacity waits
-preserve that answer. Original Claude sessions remain valid answer surfaces after another execution.
-No agent needs to call claim, pause, resume, effect-intent, effect-receipt or complete.
+Use newly created MR chats normally for human requests, including after completion. The agent
+handles the request directly there: no classification JSON, second model call or human-work FIFO
+admission. Manual work is outside the automatic FIFO. Questions, preferences, explanations,
+mixed/automatic input, `?` or trailing `w` grant no new mutable authorization.
+For an automatic review paused on a real question, answer in its original chat. The agent decides
+whether the answer is sufficient and continues there. The next trigger observes its actual final
+and advances the remaining automatic reviewers. An unrelated reply or interrupted turn leaves the
+question open. Failed resumed reviews receive the normal selective retry. Manual maintenance does
+not become a code-review checkpoint; its real GitLab activity may still trigger an automatic pass.
+
+This applies to newly prepared chats. Loaded older chats keep their original instructions/history;
+existing held questions retain their original answer path. No migration or database recreation is
+needed. Missing historical assessments remain pending; the monitor does not create a classifier
+to repair them. New automatic work uses fresh chats when the instruction version changes.
 New launches use fresh instructions and normal GitLab tools. The readable final summary ends with
 `Estado da revisão: concluída`, `Estado da revisão: não concluída`, or
 `Estado da revisão: aguardando resposta`; code completion also states `Commit revisado:` and the
@@ -854,7 +872,7 @@ configured reviewer runs again with new chats; history, confirmed publications a
 remain intact. The command checks native termination, pending answers, the current open MR/head
 and settled effects; it refuses uncertainty. It does not dispatch a review. Repeating the same
 command returns the original result. Late answers to the retired question remain read-only;
-unrelated explicit requests in the old chat still follow normal intake. Other holds are unaffected.
+old chats produce no new monitor jobs. Other holds are unaffected.
 
 `recover` only confirms a historical journaled effect by authenticated read-back; it never resends
 an unconfirmed operation. New direct sends have no such journal and are checked by the reviewer.
@@ -866,7 +884,12 @@ not delete queue/history files to clear an uncertainty. The
 
 The user-owned fork in [`scripts/gitlab-mcp/`](./scripts/gitlab-mcp/) runs one local HTTP
 server for Claude and Codex. Its Compose environment exposes `GITLAB_TOOLSETS: core,merge_requests`
-at startup so the reply tool is available on the first native turn. Use its root `compose.yaml`, not the upstream example under `docker/`.
+plus individual CI readers through `GITLAB_TOOLS` at startup. Installed clients do not refresh the
+catalog during a native turn, so required tools must be present on connection. The monitor's
+per-launch grants permit reads and its review writes; unrelated pipeline mutations are excluded.
+Other clients also see the added readers. Reapplying Compose recreates the service when its
+configuration changes; existing MCP sessions must reconnect. Use its root `compose.yaml`, not the
+upstream example under `docker/`.
 The server accepts connections only through host loopback and uses each client's existing GitLab
 credential. New chats must use this service instead of starting another `docker run` container.
 Existing stdio clients keep their containers until their sessions close normally.

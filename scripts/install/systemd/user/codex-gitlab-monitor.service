@@ -6,6 +6,7 @@ After=network.target
 Type=oneshot
 WorkingDirectory=%h
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=SSH_AUTH_SOCK=%t/gcr/ssh
 ExecStart=%h/.local/bin/codex-session-stats monitor-gitlab tick
 TimeoutStartSec=14min
 KillMode=process

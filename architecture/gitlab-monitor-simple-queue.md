@@ -11,12 +11,14 @@ The operator selected direct use of the existing ordinary GitLab HTTP MCP for ne
 review stages. This amendment supersedes private `gitlab_review` publication ownership for new stages;
 the older operation contract remains only for original issued evidence and
 read-back recovery. The FIFO, native identities, sufficient-answer holds, reviewer order and
-actual code checkpoints remain unchanged. Historical input formats retain their exact readers.
+actual code checkpoints remain unchanged. Historical input formats retain their exact readers. Freeze the actual dispatched instruction
+policy independently of input format, including an old preparation sent unchanged in a fresh chat.
 
 New native clients publish findings, replies and explained resolutions themselves. The monitor
 does not authorize individual sends, generate body markers, journal intentions or confirm receipts
 for these stages. Per-launch permissions expose reads and the three review writes; intake exposes
-reads only. Both reviewers read complete current discussions, including their peer's findings,
+reads only for already admitted historical work; no new intake jobs are produced.
+Both reviewers read complete current discussions, including their peer's findings,
 and preserve unresolved concerns. Current head/open-state checks and whole-discussion judgment
 at publication are agent responsibilities, not equivalent deterministic monitor gates.
 
@@ -37,7 +39,7 @@ exactly-once guarantee. Existing uncertain historical effects remain read-back-o
 Retire proven-unissued old preparations transactionally outside executed attempts. Preserve
 successes, selective-retry bounds, original source lookup, questions and original collectors for
 issued terminal results. Never relaunch ambiguous delivery. New stages use fresh instructions and
-the normal shared service's initial `core,merge_requests` catalog, without rewriting old chats.
+the normal shared service's initial MR and CI-read catalog, without rewriting old chats.
 
 The monitor owns one durable FIFO and one supervised consumer. Admitted reviewers receive the
 MR link and frozen workspace, obtain context on demand, investigate and publish during native
@@ -48,8 +50,11 @@ reviewers. No final JSON review report or all-reviewer publication barrier is re
 Preserve repository identity, human requests and holds admitted by this consumer, actual reviewed
 progress and publication provenance. The original fresh-queue cutover left predecessor state and
 chats untouched. Subsequent tool adoption retains this consumer's queue and original sources.
-New chats receive current instructions; never rewrite loaded historical instructions. Codex and Claude use the existing shared HTTP GitLab service and its initial `core,merge_requests`
-catalog, with per-launch review tool permissions and the same validated credential source.
+New chats receive current instructions; never rewrite loaded historical instructions. Codex and
+Claude use the existing shared HTTP GitLab service and its initial MR and CI-read catalog, with
+per-launch review tool permissions and the same validated credential source. The shared Compose
+configuration individually enables required CI readers; it does not activate pipeline mutations.
+Native clients need these reads in the initial catalog, without relying on mid-turn discovery.
 
 **Workspace execution amendment:** Reviewers may execute commands, edit files, change
 branches and run tests in the configured workspace folders and their necessary shared Git
@@ -57,11 +62,17 @@ metadata, without per-command approval. The monitor supplies the same durable wo
 to every reviewer in a round; the model chooses the repository, checkout and commands. Refresh
 the named Codex project's folders only for a new round. Preserve original chat contexts and human
 sources across fresh-chat creation when folders or shared instructions change. Consumer intake
-remains read-only; direct manual app turns follow
-the shared semantic instructions and are outside the consumer's launch serialization. Reviewers
-do not receive the consumer's native control socket or state-write capability. Global defaults,
-queue capacity and native-source protections remain unchanged; direct publication has the
-explicit limits in the amendment above.
+remains read-only; direct manual app turns follow the shared semantic instructions and are outside
+the consumer's launch serialization. Mutable Codex reviews select the native full-access
+profile with no command approval and direct networking. Mutable Claude reviews run Bash with the
+operator's host access and no shell sandbox. These trusted processes can reach monitor/native
+files and the control socket; Codex file tools also have full local access. Claude file tools
+retain workspace rules, which do not constrain Bash. Workspace remains task scope rather than
+an OS boundary. Queue and source validators remain application checks, not security guarantees
+against these processes. Intake explicitly reselects its read-only sandbox, network proxy and
+read-only MCP grants. Manual Codex continuations may inherit the latest native chat permissions;
+there is no automatic post-turn restoration. Global defaults, queue capacity and native-source
+validation remain unchanged; direct publication has the explicit limits in the amendment above.
 
 Persist canonical ordered roots, primary directory, native project identity and actual Git
 metadata paths before the first launch/input. A restart or later reviewer uses that same snapshot.
@@ -69,18 +80,21 @@ An archived round retains its original snapshot; only its successor resolves the
 again. A same-name replacement project does not inherit authorization. Historical saved folder
 lists do not prevent reading the current live list or authenticate a source against changed roots.
 
-Codex selects a distinct thread-local permissions profile at creation, resume and turn start;
-resume explicitly supplies the round's roots. Claude receives the same primary/additional
-directories, scoped native Edit/Write rules and command sandbox settings without inherited hooks
-or unrelated writable directories. Preserve intended model/effort and subscription credentials.
-No unsandboxed retry is enabled. The complete saved request is sent directly to the native chat
-without adding the queue directory as a writable workspace. Necessary linked-worktree Git metadata may be outside the
-configured roots; this exception does not include the main checkout's source directory.
+Codex selects and verifies the purpose-specific thread-local permissions profile at creation,
+resume and turn start; resume explicitly supplies the round's roots. Claude receives the same
+primary/additional directories and scoped native Edit/Write rules, without inherited hooks.
+Review shells use the trusted host route; intake retains its fail-closed sandbox and does not
+retry unsandboxed. Preserve intended model/effort and subscription credentials. Select the proven
+SSH agent in the monitor unit and forward it through Codex's launch-local shell environment.
+The complete saved request is sent directly to the native chat without adding the queue directory
+to the workspace. Necessary linked-worktree Git metadata may be outside the configured roots;
+that file-tool allowance does not include the main checkout's source directory. Mutable host
+access is broader, as specified above, without changing source authentication or intake permissions.
 
 Register original contexts for every Codex session created by this consumer, retaining older
 sessions after chat rotation. Source authentication uses that original
 context. A cold native read may omit live environments: only an exact notLoaded/null response
-uses the protected native rollout's authenticated session metadata and latest persisted turn
+uses the native rollout's authenticated session metadata and latest persisted turn
 context. The native home must remain private/owned; native rollout file modes are preserved,
 with bounded no-symlink reads of an owned regular file. Missing latest turn context is rejected. Changed or malformed latest context never falls back to older matching roots. Loaded
 ambiguous context remains rejected; verification never resumes the chat for inspection.
@@ -140,7 +154,8 @@ unfenced `Estado da revisão: concluída`, `Estado da revisão: aguardando respo
 `Estado da revisão: não concluída`. A completed code review includes `Commit revisado:` with its
 actual full SHA. A question follows its status in readable text. Incomplete or ambiguous output
 is a failed reviewer, never completed coverage. Native termination and input/final identity remain
-mandatory independently of that status. Intake keeps its original compact assessment.
+mandatory independently of that status. Already admitted historical intake keeps its explicit
+initial compact assessment task; that contract never applies to later ordinary human messages.
 
 For a new automatic question, persist an authenticated current discussion snapshot with the final
 before establishing its anchored hold. A failed scope read leaves that exact question pending and
@@ -202,7 +217,7 @@ native history and monitor status, which supplies a command to resume the origin
 Desktop import is not part of this contract. Historical Codex chats remain outside the consumer.
 
 Already issued background stages retain their original collection/cancellation and result
-revalidation until settled; new launches cannot select that transport. Human intake retains the
+revalidation until settled; new launches cannot select that transport. Historical answer intake retains the
 shared native ancestry collector: only tool results with matching ancestral call identities can
 continue an input, human/mixed input cuts that ancestry, and split final blocks belong to one
 completed native message. Register fresh Claude executions when needed, preserving original
@@ -221,35 +236,45 @@ read GitLab; they do not reuse a monitor receipt or promise exactly-once deliver
 
 ## Human input and questions
 
-Observe actual native human turns in mapped MR chats. Authenticate exact source text and its
-terminal assessment; do not infer source from the latest runtime turn. A compact fenced
-`csm-assessment` classifies action, sufficient answer or explanation, with bounded effects and
-actual discussion IDs. The reader binds the exact original text internally, rather than asking
-the model to reproduce administrative identity or a complete proposed publication batch.
-An explicit post-completion action enters the same FIFO as new human work. Read-only intake can
-recover a missing assessment; its automatic continuation is never itself human authorization.
-Before mutable dispatch, preserve the original source, assessment and scope. The old assessment
-reader remains available only for original historical sources. Human work never becomes an
-automatic code event or a new permission grant.
+Newly prepared review chats handle human followups as normal native conversations. The agent
+interprets and executes the actual request there, without assessment JSON, classification calls
+or admission of new human/intake jobs. Manual work is outside automatic FIFO serialization.
+Question-only input, preferences, explanations and mixed/automatic input grant no new mutable
+authority; native agents apply normal authorization and the applicable question-only rule.
+Ordinary messages cannot advance code checkpoints. Their real GitLab inventory deltas remain
+eligible for ordinary automatic work, including same-account human comments.
 
-Question marks, trailing-w, explanations, preferences, registered automation and mixed input do
-not admit mutable human work. Plain answers/explanations produce no job. Native user-channel
-clients remain trusted locally; this is not proof of physical typing. An interrupted human intake
-without a valid final assessment is preserved visibly as read-only recovery in this same jobs
-queue. Before dispatching continuation B, persist its relationship to original human source A.
-B's registered automation text is never human authorization. Recovery may interpret A but cannot
-publish or clear a hold before a valid action or sufficient-answer assessment against A. Do not automatically re-run already answered plain questions.
+The monitor observes only outstanding automatic-review questions. A question has the original
+stage/session, exact native final anchor, readable question and bounded scope. After proven
+termination the job waits pending; later work for that MR is blocked while other MRs proceed.
+Recover an interrupted question/result handoff before another reviewer. Partial output never
+creates a question or consent.
 
-A domain question is persisted with its actual final native anchor and must appear as a readable
-plain-language final question, not solely inside structured metadata. After that turn terminates,
-its job waits pending and other MRs may proceed. Every later job for the same MR remains blocked.
-Resume only on a later sufficient native human answer to the completed anchor, preserving scope,
-source, concerns and the prior hold history. Only an actual terminal native final can establish a question. If interruption occurs after saving
-that result and before saving its hold, reconstruct the same anchored hold before another stage
-or effect. Persist a required new-round reset with the sufficient answer, so a crash cannot apply
-the pre-answer result. Partial native output is not an invented completed question or consent. This preserves holds within the new consumer; predecessor chats are not intake. Earlier sessions
-created by this consumer remain valid human sources for their original requests and questions,
-even when a later execution uses a different Claude session.
+For a new-chat held task, the native model judges whether the actual answer is sufficient and
+continues that review in the same chat. Only actual continuation/completion of that held task
+uses the readable review status. Unrelated replies require no queue signal. Native metadata
+proves identity and order, not semantic sufficiency. Require the original native input/final,
+unchanged original context, a real nonautomatic unmixed human source and its exact completed
+final. Codex requires a completed turn; Claude requires parent ancestry through the held final
+and a native completion marker bound to that final branch. A generic, malformed or interrupted
+reply leaves the hold intact. Follow further questions in native causal order.
+
+Append immutable native continuation observations under the original held stage, keeping its
+captured question/final intact. One effective-stage accessor feeds settlement, failed-reviewer
+selection, prior summaries/status and actual code credit. No extra counted stage, automatic
+attempt or event is fabricated for manually executed work. A resumed operational failure releases
+the answered domain hold, runs remaining reviewers and receives ordinary failure-only retry.
+A real newer-head review settles the original work without credit for its admitted head.
+Uncertain historical-publication fences remain independent of every answer.
+
+Loaded historical chats retain their original instructions and readers. Consume an already
+produced original assessment only for its existing held question or already admitted work;
+never launch a repair classifier or produce new post-completion human work. Select that reader
+from the original held stage's frozen protocol/input, not its latest chat mapping. Missing
+historical assessments remain visibly held until an actual sufficient native response or supported
+operator recovery. Their sufficient-answer reset retains its original source/scope checks and
+crash recovery. Earlier consumer sessions remain original question sources; predecessor chats
+are not adopted. Native user-channel clients are trusted locally, not proof of physical typing.
 
 An explicit local operator request through `restart-review JOB --stage STAGE --reason TEXT` may discard one exactly selected pending round
 and return that same admitted work to the FIFO tail for a fresh complete review and new chats.
@@ -263,10 +288,13 @@ Repetition cannot repeat the transition; no fake automatic event or human answer
 Changed context or uncertainty rejects without dispatch. Genuine holds outside the selected round
 remain authoritative; models cannot request this administration through their review tools.
 
-Native intake is not atomic with operator retirement. Recheck the source frontier before commit
+Operator restart authenticates both the issued original final and the effective current native
+question. For new native holds its answer frontier covers only that current question surface,
+excluding accepted continuations and earlier manual context. Historical holds keep their original
+frontier. Native answer observation is not atomic with operator retirement. Recheck the source frontier before commit
 and preserve its identity in retirement history. A late answer to that exact retired question is
 handled read-only with its original scope and source; it cannot become unrelated mutable work or
-an answer to another hold. Unrelated explicit new actions in original chats remain admissible.
+an answer to another hold. Retired chats produce no new monitor work.
 
 ## Publications and passive observation
 
@@ -309,17 +337,17 @@ change how older compact human assessments or frozen input formats are authentic
 
 The same saved native message and frozen context govern dispatch, native identity, question
 continuation and recovery; historical inputs remain on their original reader. Explicit operator
-restart adds a selected round-discard transition and late-answer handling without changing native
-human-action admission.
+restart adds a selected round-discard transition and late-answer handling without changing normal
+native human conversations.
 
 Each 15-minute systemd trigger runs one bounded queue cycle and exits, using a oneshot service
 without automatic restart or a resident scan helper. The current TOML cadence/window governs
 automatic inventory. A singleton cycle lock and durable running job preserve serial capacity between
 processes. Ready native reconciliation, timeout handling, reviewer progression and effect reconciliation
-precede bounded inventory; persisted intake continuation prevents starvation of later sources.
-This continuation includes sessions, native sources and history pages within the same MR.
-Alternate recent-page refresh with historical continuation and retain the exact native
-question/answer order proof across cycles. HTTP has a wall-clock deadline for the entire operation,
+precede bounded inventory. Observe only held questions with a bounded share of each cycle.
+New held Codex observations retain page and causal turn progress across cycles; earlier generic
+replies cannot starve a later sufficient response. Historical answer readers retain their original
+session/source/page progress and exact order proof; ordinary completed chats are not scanned. HTTP has a wall-clock deadline for the entire operation,
 backed by a finite unit timeout.
 Normal budget exhaustion saves progress without recording reviewer failure or discarding confirmed effects.
 Native reviewers outlive the bounded cycle. Claude print services independently own their
@@ -349,7 +377,7 @@ tests after replacement protections pass. Never edit native databases or runtime
 The direct-route update pauses scheduling until implementation, validation, selected reviews and
 local commits finish. Prove issued native executions terminal before editing their runtime.
 Retain original `message-v1` and older file validators and finish/question intent readers for
-issued results. New inputs use `message-v2` and fresh instructions. Transactionally archive only
+issued results. New inputs use `message-v3` and fresh instructions; `message-v2` retains its exact renderer. Transactionally archive only
 proven-unissued old preparations outside executed attempts, preserving original lookup, successful
 stages and selective retry bounds. Unknown delivery is reconciled exactly, never relaunched.
 Existing holds and confirmed/uncertain journals remain authoritative. No old chat is rewritten.
@@ -362,7 +390,7 @@ Existing holds and confirmed/uncertain journals remain authoritative. No old cha
 | Selective reviewer retry | `MonitorQueue` attempt bounds, transactional tail move and worker settlement | `test_codex_gitlab_retries.py`: both orders, interval/FIFO/restart, partial-success backfill, native questions, reset interruption, old-call denial, receipt reuse and checkpoint guards |
 | Finite Claude execution | Transient service, receipt and stream collector | `test_codex_gitlab_print.py` and installed-client fixtures: native identities, split finals, lost acknowledgment, live descendants, timeout and resume |
 | Exact native/result identity | Original native source, versioned input and terminal result collector | `test_codex_gitlab_direct_native.py`: installed clients, real HTTP MCP and local model fixtures, scoped positive/negative permissions and exact output provenance |
-| Human scope and holds | Native intake and result admission | ?/w/mixed denials, sufficient answer, interrupted intake/question |
+| Native human conversations and held reviews | Targeted `mq_intake`, original native collectors and `mq_effective_stage` | `test_codex_gitlab_direct.py`: no general producer/classifier, causal continuations, original finals, failures/retries, checkpoints, source denials and transaction recovery; installed-client cold-resume probes; historical tools holds/fences |
 | Direct publications and observation | Native GitLab tools, passive collector and raw inventory deltas | `test_codex_gitlab_direct.py`: self-output race, human edits, version/hold/transition boundaries and honest checkpoints; legacy recovery tests retain original journals |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
@@ -372,11 +400,15 @@ Existing holds and confirmed/uncertain journals remain authoritative. No old cha
 
 The standalone CLI owns `MonitorQueue`, the ordered worker and one shared instruction producer.
 
-`mq_workspace` owns round snapshots; `mq_permission_profile` and `mq_claude_arguments` supply
+`mq_workspace` owns round snapshots; `mq_codex_permissions`, `mq_native_selection`,
+`mq_permission_profile` and `mq_claude_arguments` supply
 native execution policies. `mq_codex_context` retains original source contexts. Workspace adapter
 and installed-client probes are in `scripts/tests/test_codex_gitlab_workspace.py` and
 `scripts/tests/test_codex_gitlab_workspace_native.py`, covering shared roots, restart, linked
 metadata, actual editing/command behavior, read-only intake and original-chat hold answers.
+Installed-client probes cover Docker, authenticated SSH, dependency HTTPS, local binding and
+cold-resumed purpose transitions. `test_codex_gitlab_direct_native.py` exercises initial CI reads
+and tool filtering with forbidden pipeline mutations present in the initial fixture catalog.
 The default fresh store is `~/.local/state/codex-session-stats-queue/queue.sqlite3`, outside the
 predecessor writable directory and native state. Private immutable inputs are adjacent to it.
 `scripts/tests/test_codex_gitlab_queue.py` exercises real SQLite/worker/CLI/locks with fixture native

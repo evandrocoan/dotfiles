@@ -74,15 +74,24 @@ break the rest of the standalone CLI.
 Preserve the [simple queue contract](architecture/gitlab-monitor-simple-queue.md). One durable
 FIFO and one consumer own all repositories, keyed by authenticated GitLab repository ID plus MR
 IID. Coalesce unstarted automatic work per MR at its oldest FIFO position, preserving original
-event lineage and freezing membership at reservation. Human work and previously issued work remain
-separate. Every configured reviewer runs in order after success or any terminal failure; no quota
+event lineage and freezing membership at reservation. Previously admitted human work and issued work
+remain separate. Every configured reviewer runs in order after success or any terminal failure; no quota
 classifier or fallback mode. Agents investigate the MR link and publish directly through the existing ordinary GitLab MCP.
 Both reviewers read complete current threads, including their peer's findings, explain verified
 fixes/invalid concerns before resolving and preserve remaining concerns. Different defects on the
 same line remain separate. No private review MCP, per-send monitor journal or final JSON review
 report is used for new stages. Normal tool permissions bound operations; current head/open-state,
 human scope and whole-discussion checks at publication belong to the reviewer and are not equivalent
-to the retired runtime gates. Intake remains read-only.
+to the retired runtime gates. Already admitted historical intake remains read-only.
+
+New chats handle human followups directly, without assessment JSON, classification calls or human
+FIFO admission. Manual work is outside automatic serialization. Observe only already held automatic
+questions, preserving exact original native input/final and context. The native model owns answer
+sufficiency; native identities prove source/order. Append continuations under the original stage
+and use its effective result everywhere without replacing the original final or fabricating stages.
+Generic/interrupted replies retain holds; resumed failures follow reviewer continuation/retry;
+newer-head completion gives no old-head credit. Preserve historical question readers and uncertain
+effect fences without repair classifiers. Never scan completed chats for new human jobs.
 
 Keep exact native input/result identity, sufficient-answer holds and actual code checkpoints.
 Readable final statuses are admitted only from the exact native terminal final. Snapshot current
@@ -102,8 +111,11 @@ Each round snapshots the current named Codex project's ordered folders and neces
 metadata once for both reviewers and recovery. The model chooses repositories, branches and tests;
 the monitor must not maintain checkout mappings or a command catalog. Admitted reviews can execute
 and edit there without command approvals; intake remains read-only. Use thread/launch-local
-permissions, protect monitor/native state, and retain original consumer chat contexts when fresh
-chats are needed after folder/instruction changes. Do not update loaded historical instructions.
+permissions: mutable Codex reviews use native full access and Claude review shells are unsandboxed.
+These trusted processes can access monitor/native state; validators are application checks, not
+an OS boundary against them. Intake explicitly reselects read-only permissions. Manual Codex turns
+may inherit the last review permissions. Retain original consumer chat contexts when fresh chats
+are needed after folder/instruction changes. Do not update loaded historical instructions.
 
 ### Systemd user services
 

@@ -99,16 +99,12 @@ def test_same_five_roots_reach_both_real_dispatchers_without_global_writes(proje
     assert '--setting-sources' in args and args[args.index('--setting-sources')+1] == ''
     assert str(f.q.path.parent/'inputs') not in additional(args)
     settings=json.loads(args[args.index('--settings')+1])
-    assert settings['sandbox']['failIfUnavailable'] is True
-    assert settings['sandbox']['allowUnsandboxedCommands'] is False
+    assert settings['sandbox'] == {'enabled':False}
     assert 'Bash' in args and 'Read,Grep,Glob,Bash,Edit,Write' in args
     starts=[p for method,p in f.wire if method=='thread/start']
     assert starts[0]['runtimeWorkspaceRoots'] == roots
-    policy=starts[0]['config']['permissions.'+f.m['MQ_PERMISSION_PROFILE']]
-    assert all(policy['filesystem'][p]=='write' for p in roots)
-    assert all(policy['filesystem'][str(Path(p)/'.git')]=='write' for p in roots)
-    assert policy['network']['unix_sockets'] == {f.config['socket']:'deny'}
-    assert policy['filesystem'][str(f.q.path.parent)] == 'read'
+    assert starts[0]['permissions'] == ':danger-full-access'
+    assert starts[0]['config']['features.network_proxy'] is False
     for stage in job['stages']:
         data=stage['input_context']
         assert data['workspace'] == job['workspace']
@@ -154,39 +150,21 @@ def native_human(f, session, text, result=None):
         'project_id':f.chats[session]['projectId'],'mixed':False,'automated':False}
 
 
-def test_original_codex_hold_source_survives_root_change_and_readonly_intake(project):
-    f=project
-    f.results['codex']=domain(outcome='question',question='Qual regra devo usar?')
-    original=enqueue(f);f.drain()
-    hold=f.q.mr(11,82)['hold']; old=hold['session']
+def test_original_codex_hold_context_survives_later_project_folder_change(project):
+    f=project;f.results['codex']=domain(outcome='question',question='Qual regra devo usar?')
+    original=enqueue(f);f.drain();hold=f.q.mr(11,82)['hold'];old=hold['session']
+    frozen=copy.deepcopy(f.q.job(original['id'])['workspace'])
     extra=Path(f.config['cwd']).parent/'added';extra.mkdir();f.live['roots'].append(str(extra))
     native_human(f,old,'preciso explicar melhor a regra')
-    f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
-    f.results.update(claude=domain(outcome='noop'),codex=domain(outcome='noop'))
-    f.drain()
-    record=f.q.mr(11,82)
-    assert record['chats']['codex'] != old and record['hold'] == hold
-    intake=f.q.jobs()[1]
-    assert intake['kind'] == 'intake' and intake['state'] == 'completed'
-    starts=[p for method,p in f.wire if method=='thread/start']
-    policy=starts[-1]['config']['permissions.'+f.m['MQ_PERMISSION_PROFILE']]
-    assert 'write' not in policy['filesystem'].values()
-    args=f.claude_wire[-1][1]
-    assert 'Read,Grep,Glob,Bash' in args and 'Read,Grep,Glob,Bash,Edit,Write' not in args
-    assert 'Bash' not in args
-    text='use a regra atual e continue'
-    answer=domain(assessment=assessment(text,kind='answer',anchor=hold['anchor']))
-    answer['assessment']['scope']={'effects':['finding'],'discussions':[]}
-    source=native_human(f,old,text,answer)
-    f.m['mq_intake'](f.config,f.q,record)
-    assert f.q.mr(11,82)['hold'] == hold
-    assert f.q.job(original['id'])['wait_reason'] == 'answer_ready'
-    f.results.update(claude=domain(),codex=domain());f.drain()
-    record=f.q.mr(11,82)
-    assert record['hold'] is None
-    assert record['hold_history'][0]['answer'] == source
-    assert f.q.job(original['id'])['rounds'][0]['workspace']['roots'] != f.live['roots']
-    assert f.sends == []
+    before=f.q.jobs();f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
+    assert f.q.jobs()==before and f.q.mr(11,82)['hold']==hold
+    source=native_human(f,old,'use a regra atual e continue')
+    f.items[source['turn_id']].append({'type':'agentMessage','id':'answer-final','phase':'final_answer',
+        'text':'Estado da revisão: concluída\nCommit revisado: '+'a'*40})
+    f.m['mq_intake'](f.config,f.q,f.q.mr(11,82));f.drain()
+    assert f.q.mr(11,82)['hold'] is None and f.q.mr(11,82)['chats']['codex']==old
+    assert f.q.job(original['id'])['workspace']==frozen and frozen['roots']!=f.live['roots']
+    assert f.sends==[] and len(f.q.jobs())==1
 
 
 def test_stale_missing_folder_does_not_block_current_project_read(project):
@@ -209,7 +187,7 @@ def test_same_name_different_project_is_not_authorized(project):
     assert f.launched == [] and f.sends == []
 
 
-def test_git_metadata_grants_do_not_include_main_checkout_code(flow):
+def test_claude_file_tool_metadata_grants_do_not_include_main_checkout_code(flow):
     f=flow;base=Path(f.config['cwd']); main=base/'main';work=base/'worktree'
     subprocess.run(['git','init','-q',str(main)],check=True)
     subprocess.run(['git','-C',str(main),'-c','user.name=Fixture','-c','user.email=fixture@example.invalid',
@@ -220,13 +198,24 @@ def test_git_metadata_grants_do_not_include_main_checkout_code(flow):
     metadata=f.m['mq_git_metadata'](roots)
     assert str(main/'.git') in metadata and str(main) not in metadata
     config={**f.config,'_workspace':{'roots':roots,'git_metadata':metadata},'_workspace_write':True}
-    profile=f.m['mq_permission_profile'](config)
-    assert profile['filesystem'][str(main/'.git')] == 'write'
-    assert str(main) not in profile['filesystem']
     args=f.m['mq_claude_arguments'](config,'fixture','name')
     settings=json.loads(args[args.index('--settings')+1])
-    assert settings['sandbox']['filesystem']['allowWrite'] == metadata
+    assert settings['sandbox'] == {'enabled':False}
+    assert 'Edit(/'+str(main)+'/**)' not in args
+    assert all('Edit(/'+path+'/**)' in args for path in metadata)
     assert '--add-dir' not in args
+
+
+@pytest.mark.parametrize('writable',[False,True])
+def test_codex_profile_verification_is_exact_for_launch_purpose(flow,writable):
+    f=flow;c={**f.config,'_workspace_write':writable}
+    expected={'id':':danger-full-access','extends':None} if writable else {
+        'id':f.m['MQ_PERMISSION_PROFILE'],'extends':':read-only'}
+    f.m['mq_verify_permission_selection'](c,{'activePermissionProfile':expected})
+    other={'id':f.m['MQ_PERMISSION_PROFILE'],'extends':':read-only'} if writable else {
+        'id':':danger-full-access','extends':None}
+    with pytest.raises(RuntimeError,match='reviewer permission profile'):
+        f.m['mq_verify_permission_selection'](c,{'activePermissionProfile':other})
 
 
 def test_claude_does_not_copy_global_extra_folders_or_hooks(flow):

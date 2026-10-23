@@ -51,7 +51,7 @@ def test_readable_native_requests_and_no_external_input_json(flow):
     f.drain();saved=f.q.job(job['id'])
     assert f.launched==['claude','codex'] and saved['outcome']=='reviewed' and not f.model_errors
     for stage in saved['stages']:
-        assert stage.get('input_format')=='message-v2'
+        assert stage.get('input_format')=='message-v3'
         assert 'https://gitlab.example.test/team/repo/-/merge_requests/82' in stage['input']
         assert 'Exact admitted head:' not in stage['input']
         assert f.config['cwd'] in stage['input']
@@ -160,7 +160,7 @@ def test_native_answer_races_restart(flow,monkeypatch,moment):
         restart(f,job,hold)
         f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
         dispositions=[json.loads(r['value']) for r in f.q.db.execute("SELECT value FROM metadata WHERE key LIKE 'human:%'")]
-        assert any(d and d.get('disposition')=='retired_question_answer' for d in dispositions)
+        assert dispositions==[]  # Retired chats are no longer scanned for new work.
         assert len(f.q.jobs())==1 and not f.q.mr(11,82)['hold']
     assert not f.sends
 
@@ -172,20 +172,10 @@ def test_late_answer_cannot_clear_identical_new_question(flow):
     assert f.q.mr(11,82)['hold']==new and len(f.q.jobs())==1 and not f.sends
 
 
-def test_late_answer_without_assessment_uses_readonly_intake(flow):
+def test_late_answer_without_assessment_creates_no_job(flow):
     f=flow;job,hold=held(f);restart(f,job,hold)
-    human(f,hold);f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
-    intake=next(j for j in f.q.jobs() if j['kind']=='intake')
-    assert intake['retired_question']==hold
-    # Keep the full review pending while the actual old-chat reply is assessed.
-    with f.q.atomic():
-        original=f.q.job(job['id']);original['retry_at']=f.m['mq_stamp']()+999;f.q.save(original)
-    assessed=domain();assessed['assessment']={'kind':'answer','summary':'continue',
-        'text_basis':['continuar'],'scope':hold['scope'],'question_anchor':hold['anchor']}
-    f.results['codex']=assessed;f.results['claude']=assessed
-    f.drain()
-    assert f.q.job(intake['id'])['outcome']=='answer to an operator-retired question; no mutable work'
-    assert not f.sends and not f.q.mr(11,82)['hold']
+    human(f,hold);before=f.q.jobs();f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
+    assert f.q.jobs()==before and not f.sends and not f.q.mr(11,82)['hold']
 
 
 def test_restart_cli_and_transaction_rollback(flow,monkeypatch,capsys):
@@ -222,14 +212,11 @@ def test_restart_respects_consumer_lock_and_other_running_mr(flow):
     assert f.q.reserve({11})['id']==other['id'] and not f.sends
 
 
-def test_unrelated_action_in_old_chat_remains_human_work(flow):
+def test_unrelated_action_in_old_chat_creates_no_monitor_work(flow):
     f=flow;job,hold=held(f);restart(f,job,hold)
-    text='Publique um achado sobre a validação de login'
-    assessment={'kind':'action','summary':text,'effects':['finding'],'discussions':[],'question_anchor':None}
-    human(f,hold,text=text,result='```csm-assessment\n'+json.dumps(assessment)+'\n```')
-    f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
-    request=next(j for j in f.q.jobs() if j['kind']=='human')
-    assert request['source']['texts']==[text] and not request.get('retired_question') and not f.sends
+    human(f,hold,text='Publique um achado sobre a validação de login')
+    before=f.q.jobs();f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
+    assert f.q.jobs()==before and not f.sends
 
 
 @pytest.mark.parametrize('text',['continuar?','continuarw'])
@@ -333,7 +320,7 @@ def test_cold_resume_empty_preparation_completes_exact_stage(flow,monkeypatch,ga
     try:
         assert f.step(connection)
         recovered=connection.job(job['id'])['stages'][0]
-        assert recovered['id']==stage['id'] and recovered['input_format']=='message-v2'
+        assert recovered['id']==stage['id'] and recovered['input_format']=='message-v3'
         f.drain()
         assert connection.job(job['id'])['outcome']=='reviewed' and f.launched==['claude','codex']
     finally:connection.close()
@@ -342,10 +329,10 @@ def test_cold_resume_empty_preparation_completes_exact_stage(flow,monkeypatch,ga
 def test_restart_refuses_already_queued_unassessed_native_answer(flow):
     f=flow;job,hold=held(f);human(f,hold)
     f.m['mq_intake'](f.config,f.q,f.q.mr(11,82))
-    assert any(j['kind']=='intake' for j in f.q.jobs())
+    assert [j['kind'] for j in f.q.jobs()]==['code']
     assert not f.q.mr(11,82).get('pending_answers')
     before=(f.q.jobs(),f.q.mrs(),f.q.effects())
-    with pytest.raises(RuntimeError,match='unprocessed native human assessment'):restart(f,job,hold)
+    with pytest.raises(RuntimeError,match='unprocessed native human'):restart(f,job,hold)
     assert (f.q.jobs(),f.q.mrs(),f.q.effects())==before and not f.sends
 
 
