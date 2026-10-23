@@ -856,7 +856,7 @@ Diagnostics and read-only recovery:
 codex-session-stats monitor-gitlab status
 codex-session-stats monitor-gitlab instructions
 codex-session-stats monitor-gitlab snapshot --project 123 --mr 82
-codex-session-stats monitor-gitlab recover --job JOB_UUID
+codex-session-stats monitor-gitlab recover JOB_UUID
 journalctl --user -u codex-gitlab-monitor.service -n 100 --no-pager
 ```
 
@@ -870,9 +870,25 @@ codex-session-stats monitor-gitlab restart-review JOB_UUID --stage STAGE_UUID --
 This archives the old round/question and moves the same admitted work to the queue tail. Every
 configured reviewer runs again with new chats; history, confirmed publications and checkpoints
 remain intact. The command checks native termination, pending answers, the current open MR/head
-and settled effects; it refuses uncertainty. It does not dispatch a review. Repeating the same
+and active effects; it refuses uncertain execution or unresolved active public effects. It does not
+dispatch a review. Repeating the same
 command returns the original result. Late answers to the retired question remain read-only;
 old chats produce no new monitor jobs. Other holds are unaffected.
+
+To abandon an MR's pending automatic work and request a full review in fresh chats, use an original
+pending job ID from status:
+
+```bash
+codex-session-stats monitor-gitlab restart-mr JOB_UUID --reason "Abandon prior work and review afresh"
+```
+
+This retires the captured pending automatic work for that MR and moves one full review of its
+current commit to the FIFO tail. Existing GitLab comments remain; an unresolved old send remains
+historically unknown and the new review may duplicate it. Repeating with the same original job and
+reason returns the prior result without absorbing later arrivals. Independent human requests,
+pending human answers, active or unknown native execution, and closed or merged MRs block the
+operation. Status exposes the representative, retired jobs, current head, reason and historical
+effect dispositions. The reset itself sends no review comments and gives no completed-review credit.
 
 `recover` only confirms a historical journaled effect by authenticated read-back; it never resends
 an unconfirmed operation. New direct sends have no such journal and are checked by the reviewer.

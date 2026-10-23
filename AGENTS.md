@@ -91,7 +91,8 @@ sufficiency; native identities prove source/order. Append continuations under th
 and use its effective result everywhere without replacing the original final or fabricating stages.
 Generic/interrupted replies retain holds; resumed failures follow reviewer continuation/retry;
 newer-head completion gives no old-head credit. Preserve historical question readers and uncertain
-effect fences without repair classifiers. Never scan completed chats for new human jobs.
+effect fences outside explicit operator abandonment, without repair classifiers. Never scan
+completed chats for new human jobs.
 
 Keep exact native input/result identity, sufficient-answer holds and actual code checkpoints.
 Readable final statuses are admitted only from the exact native terminal final. Snapshot current
@@ -99,13 +100,23 @@ question scope before establishing a new automatic hold; snapshot failure blocks
 recovery, without retaining capacity after proven termination. Human scope never expands.
 Passively collect authenticated normal tool outputs to filter only proven self-generated inventory
 deltas. Preserve external edits and same-account human notes; missing results remain eligible.
-Retire only never-issued self-only automatic discussion work, retaining its original admissions.
+Passive inventory retires only never-issued self-only automatic discussion work, retaining its
+original admissions.
 New input formats must not alter historical validators. Proven-unissued old preparations may be
 archived outside executed attempts; preserve successful reviewers and selective retries. Unknown
-execution cannot release capacity or be relaunched. Historical uncertain sends retain read-back-only
-recovery. New instructions use fresh chats without rewriting old chats or native history. Original
-consumer chats remain valid human and hold sources. Only actual completed code review advances a
-code checkpoint. Explicit restart preserves retired questions and late answers as read-only.
+execution cannot release capacity or be relaunched. Normal recovery of historical uncertain sends
+remains read-back-only. New instructions use fresh chats without rewriting old chats or native
+history. Original consumer chats remain valid human and hold sources. Only actual completed code
+review advances a code checkpoint. Explicit restart preserves retired questions and late answers as
+read-only.
+
+An explicit local operator MR restart may retire captured pending automatic work, questions and
+unresolved historical public-effect delivery after proven native termination and a fresh open-MR/head
+read. Preserve original evidence and uncertainty as abandoned, never as an acknowledgment, human
+answer or review. Its durable receipt authorizes one full review of the authenticated head, at the
+FIFO tail with new chats; repetition cannot consume later arrivals. Normal recovery remains
+read-back-only. Strict held-round restart cannot abandon effects; explicitly retired effects no
+longer block subsequent work. Independent human work and unknown execution are not discarded.
 
 Each round snapshots the current named Codex project's ordered folders and necessary shared Git
 metadata once for both reviewers and recovery. The model chooses repositories, branches and tests;

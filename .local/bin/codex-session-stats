@@ -3053,6 +3053,18 @@ class MonitorQueue:
     def admission(job):
         return job.get('admission',{'kind':job['kind'],'head':job['head'],'source':job['source']})
 
+    def review_source(self,job):
+        receipt = job.get('operator_restart')
+        if receipt is None:
+            return self.admission(self.job(job.get('target_event',job['id'])))['source']
+        if (self.meta('operator_mr_restart:'+receipt['job'])!=receipt
+                or (receipt['job'],receipt['epoch'],receipt['repository_id'],receipt['iid'],receipt['head'])
+                   !=(job['id'],job['epoch'],job['repository_id'],job['iid'],job['head'])
+                or job['kind']!='code'):
+            raise RuntimeError('operator review authority changed')
+        return {'origin':'operator','operation':'restart-mr','job':receipt['job'],
+                'head':receipt['head'],'reason':receipt['reason']}
+
     def _coalesce(self, allowed_repositories):
         """Called only inside enqueue/reserve's write transaction, before reservation freezes work."""
         groups = {}
@@ -3222,7 +3234,7 @@ class MonitorQueue:
                     or self.mr(job['repository_id'],job['iid']).get('hold')):
                 return False
             if any(e['repository_id']==job['repository_id'] and e['iid']==job['iid']
-                   and e['state'] not in {'confirmed','cancelled'} for e in self.effects()):
+                   and not mq_effect_settled(self,e) for e in self.effects()):
                 return False
             latest = {s['reviewer']:mq_effective_stage(s) for s in job['stages'] if s.get('purpose')!='question'}
             failed = [r for r in job['reviewers'] if r in latest and latest[r]['state']=='failed']
@@ -3263,14 +3275,15 @@ class MonitorQueue:
             self.check_running(job)
             if any(s['state'] == 'running' for s in job['stages']):
                 raise RuntimeError('native execution must terminate before completion')
-            if any(e.get('job_id') == job['id'] and e['state'] not in {'confirmed','cancelled'} for e in self.effects()):
+            if any(e.get('job_id') == job['id'] and not mq_effect_settled(self,e) for e in self.effects()):
                 raise RuntimeError('uncertain effects prohibit completion')
             if reviewed:
+                self.review_source(job)
                 result = self.review_result(job)
                 if (job['kind'] != 'code' or result is None or result['head'] != job['head']
                         or self.mr(job['repository_id'],job['iid']).get('hold')):
                     raise RuntimeError('only actual completed code review advances checkpoint')
-                if job.get('coalesced_jobs') and not any(
+                if not job.get('operator_restart') and job.get('coalesced_jobs') and not any(
                         self.admission(member)['kind']=='code' and self.admission(member)['head']==job['head']
                         and self.admission(member)['source'].get('origin')=='automatic'
                         for member in [job,*[self.job(i) for i in job['coalesced_jobs']]]):
@@ -3301,6 +3314,16 @@ class MonitorQueue:
             (effect['key'], effect['repository_id'], effect['iid'], json.dumps(effect, ensure_ascii=False)))
 
 MONITOR_TOML_OPTIONS = MONITOR_TOML_OPTIONS | {"reviewers", "claude_model", "claude_effort", "review_timeout_seconds"}
+
+def mq_effect_settled(queue,effect):
+    """Administrative abandonment closes scheduling, never proves public delivery."""
+    if effect['state'] in {'confirmed','cancelled'}:return True
+    receipt = effect.get('operator_abandonment')
+    return bool(effect['state']=='abandoned' and receipt
+        and queue.meta('operator_mr_restart:'+receipt['job'])==receipt
+        and effect['key'] in receipt['effects']
+        and (effect['repository_id'],effect['iid'])==(receipt['repository_id'],receipt['iid']))
+
 
 def mq_config(path, *, diagnostic=False):
     # Read existing configuration, not predecessor state or historical chat maps.
@@ -3745,7 +3768,7 @@ def mq_input(queue, job, stage, context):
             +'/-/merge_requests/'+str(job['iid']),
         'head':job['head'],'kind':'presentation' if stage.get('purpose')=='question' else job['kind'],
         'model_selection':stage.get('model_selection'),'workspace':job['workspace'],
-        'original_source':queue.admission(queue.job(job.get('target_event',job['id'])))['source'],
+        'original_source':queue.review_source(job),
         'answers':job.get('answers',[]),'scope':job.get('scope'),
         'hold':job.get('retired_question') or queue.mr(job['repository_id'],job['iid']).get('hold'),
         'retired_question':job.get('retired_question'),
@@ -4926,6 +4949,7 @@ def mq_verify_source(config,queue,source,repository,iid):
 
 
 def mq_verify_job_sources(config,queue,job):
+    queue.review_source(job)
     for source in [job['source'], *job.get('answers',[])]:
         if source.get('origin') == 'human':
             mq_verify_source(config,queue,source,job['repository_id'],job['iid'])
@@ -5040,7 +5064,7 @@ def mq_reset_round(queue,job,reason):
         queue.check_running(job)
         if any(s['state']=='running' for s in job['stages']):
             raise RuntimeError('cannot reset a nonterminal native round')
-        if any(e.get('job_id')==job['id'] and e['state'] not in {'prepared','confirmed','cancelled'}
+        if any(e.get('job_id')==job['id'] and e['state']!='prepared' and not mq_effect_settled(queue,e)
                for e in queue.effects()):
             raise RuntimeError('unsettled public effect prohibits round reset')
         for effect in queue.effects():
@@ -5562,6 +5586,16 @@ def mq_prepare_question(config,queue,job):
                 job.pop('question_scope_pending',None);queue.save(job)
 
 
+def mq_inventory_notes(queue,context):
+    owned = [e for e in queue.effects() if e['repository_id']==context['repository_id'] and e['iid']==context['iid']]
+    threads = [{'id':t['id'],'notes':[n for n in t['notes'] if not any(
+        e.get('body')==n['body'] and e.get('actor_id')==n['author']['id'] for e in owned)]}
+        for t in context['threads']]
+    notes = [monitor_note(n,t['id']) for t in threads for n in t['notes'] if not n.get('system')]
+    signature = monitor_digest([{k:n[k] for k in ('id','discussion','revision','author_id')} for n in notes])
+    return signature,mq_note_versions(threads)
+
+
 def mq_inventory(config,queue):
     projects = mq_repositories(config)
     first = queue.meta('inventory_next_repository')
@@ -5603,15 +5637,9 @@ def mq_inventory(config,queue):
                     if context['mr']['state']!='opened':
                         continue
                     record = queue.mr(project['id'],context['iid'])
-                    owned = [e for e in queue.effects() if e['repository_id']==project['id'] and e['iid']==context['iid']]
-                    notes = [monitor_note(n,t['id']) for t in context['threads'] for n in t['notes']
-                        if not n.get('system') and not any(e.get('body')==n['body'] and e.get('actor_id')==n['author']['id'] for e in owned)]
-                    raw = mq_note_versions([{'id':t['id'],'notes':[n for n in t['notes'] if not any(
-                        e.get('body')==n['body'] and e.get('actor_id')==n['author']['id'] for e in owned)]}
-                        for t in context['threads']])
+                    signature,raw = mq_inventory_notes(queue,context)
                     own = record.get('own_outputs',{})
                     before = record.get('observed_note_versions')
-                    signature = monitor_digest([{k:n[k] for k in ('id','discussion','revision','author_id')} for n in notes])
                     fresh_start = 'observed_notes' not in record
                     generation = record.get('observation_generation',0)+1
                     note_changed = (mq_normalize_notes(before,own)!=mq_normalize_notes(raw,own)
@@ -5696,7 +5724,7 @@ def mq_release_answer(config,queue,job):
 def mq_tool_uncertain(queue,job):
     # Original journals retain read-back-only recovery; new direct stages create none.
     return [e for e in queue.effects() if e['repository_id']==job['repository_id'] and e['iid']==job['iid']
-            and e['state'] in {'sending','unknown'}]
+            and e['state']!='prepared' and not mq_effect_settled(queue,e)]
 
 
 def mq_direct_result(job,stage,observed):
@@ -6290,7 +6318,7 @@ def mq_snapshot(config,iid,filename=None,ref=None,discussion=None):
 def mq_reconcile_effects(config,queue,job):
     scoped = mq_repository(config,job['repository_id'])
     context = mq_context(scoped,job['iid'],with_diff=False)
-    uncertain = [e for e in queue.effects() if e.get('job_id')==job['id'] and e['state'] not in {'prepared','confirmed','cancelled'}]
+    uncertain = [e for e in queue.effects() if e.get('job_id')==job['id'] and e['state']!='prepared' and not mq_effect_settled(queue,e)]
     receipts = [(effect,(mq_resolution_receipt(queue,job,effect,context) if effect['kind']=='resolve'
                         else mq_readback(scoped,queue,effect,context))) for effect in uncertain]
     if any(receipt is None for effect,receipt in receipts):return False
@@ -6440,7 +6468,7 @@ def mq_restart_review(config,identifier,stage_id,reason):
             if queue.job(identifier)!=job or queue.mr(job['repository_id'],job['iid'])!=record:
                 raise RuntimeError('restart ownership/question changed')
             if any(e['repository_id']==job['repository_id'] and e['iid']==job['iid']
-                   and e['state'] not in {'confirmed','cancelled'} for e in queue.effects()):
+                   and not mq_effect_settled(queue,e) for e in queue.effects()):
                 raise RuntimeError('unsettled public effect prohibits restart')
             position = queue.db.execute('SELECT COALESCE(MAX(sequence),0)+1 FROM jobs').fetchone()[0]
             old = job['sequence']
@@ -6461,6 +6489,130 @@ def mq_restart_review(config,identifier,stage_id,reason):
             for key in ('validation_error','last_error','pending_question','review_attempt','needs_round_reset'):
                 job.pop(key,None)
             queue.save(job)
+        return receipt
+    finally:
+        if queue is not None:queue.close()
+        if work is not None:os.close(work)
+        os.close(lock)
+
+
+def mq_restart_terminal(config,queue,job,record):
+    """Prove issued execution ended; operator abandonment needs no answer classification."""
+    for previous in [*job.get('rounds',[]),job,{'stages':job.get('retired_preparations',[])}]:
+        stages = previous['stages']
+        for stage in stages:
+            if stage['state']=='failed' and stage.get('error',{}).get('not_started'):
+                continue
+            if (stage['delivery']=='prepared' and not any(stage.get(k) for k in
+                    ('session','turn_id','unit','transport','manifest_digest','background_id'))
+                    and not any(e.get('stage_id')==stage['id'] for e in queue.effects())):
+                continue
+            if not previous.get('workspace'):
+                raise RuntimeError('operator restart cannot prove original native workspace')
+            scoped = mq_workspace_config(config,{**job,**previous})
+            if stage['reviewer']=='codex':
+                native = monitor_native(scoped,'thread/read',{'threadId':stage['session'],'includeTurns':False})['thread']
+                mq_verify_codex_context(scoped,record,native,stage['session'])
+                if native['status']['type'] not in {'idle','notLoaded'}:
+                    raise RuntimeError('operator restart native execution is active or unknown')
+                observed = mq_codex_observe(scoped,stage)
+            else:
+                observed = mq_claude_observe(scoped,stage)
+            if not observed.get('terminal'):
+                raise RuntimeError('operator restart native termination is unknown')
+
+
+def mq_restart_mr(config,identifier,reason):
+    """Explicit operator abandonment of captured automatic work, with one fresh full round."""
+    if not isinstance(reason,str) or not reason.strip():raise RuntimeError('restart requires an operator reason')
+    lock = mq_lock(config,'consumer');queue,work = None,None
+    try:
+        work = mq_lock(config,'work');queue = MonitorQueue(config)
+        saved = queue.meta('operator_mr_restart:'+identifier)
+        if saved is not None:
+            if saved['reason']!=reason:raise RuntimeError('restart request differs from recorded retirement')
+            return saved
+        job = queue.job(identifier)
+        if not job or job['epoch']!=queue.epoch or job['state']!='pending':
+            raise RuntimeError('operator restart requires an original pending job')
+        repository,iid = job['repository_id'],job['iid']
+        scoped = mq_repository(config,repository);mq_admit(scoped,repository)
+        selected = [j for j in queue.jobs() if (j['repository_id'],j['iid'])==(repository,iid)
+                    and j['state']!='completed']
+        if any(j['state']!='pending' or j['kind'] not in {'code','discussion'}
+                or j['source'].get('origin')!='automatic' for j in selected):
+            raise RuntimeError('operator restart cannot discard active or independent human work')
+        ids = {j['id'] for j in selected}
+        record = queue.mr(repository,iid)
+        questions = [q for q in [record.get('hold'),*record.get('held_questions',[])] if q]
+        if record.get('pending_answers') or any(q['job_id'] not in ids for q in questions):
+            raise RuntimeError('operator restart cannot discard independent human answers/questions')
+        effects = [e for e in queue.effects() if (e['repository_id'],e['iid'])==(repository,iid)]
+        lineage = ids|{i for j in selected for i in j.get('coalesced_jobs',[])}
+        unsettled = [e for e in effects if not mq_effect_settled(queue,e)]
+        if any(e.get('job_id') not in lineage for e in unsettled):
+            raise RuntimeError('operator restart found an effect outside captured work')
+        for value in selected:mq_restart_terminal(scoped,queue,value,record)
+        context = mq_context(scoped,iid,with_diff=False)
+        if context['mr']['state']!='opened':raise RuntimeError('operator restart MR is closed or merged')
+        for value in selected:mq_restart_terminal(scoped,queue,value,record)
+        latest = mq_context(scoped,iid,with_diff=False)
+        if latest['mr']['state']!='opened' or latest['head']!=context['head']:
+            raise RuntimeError('operator restart MR head/open state changed')
+        context = latest
+        with queue.atomic():
+            mq_admit(scoped,repository)
+            current = [j for j in queue.jobs() if (j['repository_id'],j['iid'])==(repository,iid)
+                       and j['state']!='completed']
+            if (current!=selected or queue.mr(repository,iid)!=record or
+                    [e for e in queue.effects() if (e['repository_id'],e['iid'])==(repository,iid)]!=effects):
+                raise RuntimeError('operator restart captured work changed')
+            position = queue.db.execute('SELECT COALESCE(MAX(sequence),0)+1 FROM jobs').fetchone()[0]
+            receipt = {'job':identifier,'epoch':queue.epoch,'repository_id':repository,'iid':iid,
+                'reason':reason,'at':mq_stamp(),'head':context['head'],'sequence':position,'restarted':True,
+                'retired_jobs':[j['id'] for j in selected],'effects':[e['key'] for e in unsettled],
+                'effect_states':{e['key']:e['state'] for e in unsettled}}
+            queue.set_meta('operator_mr_restart:'+identifier,receipt)
+            for effect in unsettled:
+                effect.update(abandoned_from=effect['state'],state='abandoned',operator_abandonment=receipt)
+                queue.put_effect(effect)
+            for value in selected:
+                archive = {k:v for k,v in value.items() if k!='rounds'}
+                archive.update(reason='operator MR restart: '+reason,operator_retirement=receipt)
+                rounds = [*value.get('rounds',[]),archive]
+                if value['id']==identifier:
+                    old_sequence = value['sequence']
+                    value = {k:value[k] for k in ('id','epoch','repository_id','iid','repository_path',
+                                                  'source','created_at')}
+                    value.update(admission=queue.admission(job),kind='code',head=context['head'],context=context,
+                        state='pending',sequence=position,original_sequence=job.get('original_sequence',old_sequence),
+                        stages=[],batch=None,prepared=None,workspace=None,outcome=None,wait_reason=None,retry_at=0,
+                        reviewers=mq_reviewers(config['reviewers']),protocol='direct',coalescing_frozen=True,
+                        rounds=rounds,operator_restart=receipt)
+                    for key in ('retired_preparations','operator_restarts','completion_history'):
+                        if key in job:value[key]=job[key]
+                    queue.db.execute('UPDATE jobs SET sequence=? WHERE id=?',(position,identifier))
+                else:
+                    value.update(state='completed',outcome='abandoned by operator; not reviewed',
+                        completed_at=receipt['at'],operator_retired_into=identifier,operator_retirement=receipt,
+                        stages=[],batch=None,prepared=None,workspace=None,wait_reason=None,retry_at=0,rounds=rounds)
+                    for key in ('review_attempt','needs_round_reset','pending_question','question_scope_pending'):
+                        value.pop(key,None)
+                queue.save(value)
+            for question in questions:
+                record.setdefault('retired_questions',[]).append({'question':question,'restart':receipt})
+            for provider,session in record['chats'].items():
+                if provider=='codex':record.setdefault('codex_contexts',{})[session]=mq_codex_context(record,session)
+                elif session not in record.setdefault('claude_history',[]):record['claude_history'].append(session)
+            record.setdefault('operator_retirements',[]).append({'restart':receipt,'questions':questions})
+            for key in ('pending_answers','held_questions','codex_context','codex_initial_stage',
+                        'codex_assigned','codex_restart_job','codex_instructions_version','codex_historical_intake'):
+                record.pop(key,None)
+            signature,raw = mq_inventory_notes(queue,context)
+            record.update(chats={},hold=None,observed_head=context['head'],observed_notes=signature,
+                observed_note_versions=raw,observation_generation=record.get('observation_generation',0)+1,
+                title=context['mr']['title'])
+            queue.put_mr(record)
         return receipt
     finally:
         if queue is not None:queue.close()
@@ -6521,6 +6673,9 @@ def mq_main():
     restart.add_argument('job')
     restart.add_argument('--stage',required=True)
     restart.add_argument('--reason',required=True)
+    restart_mr = commands.add_parser('restart-mr',help='abandon captured automatic MR work and enqueue one full review in fresh chats')
+    restart_mr.add_argument('job')
+    restart_mr.add_argument('--reason',required=True)
     launch = commands.add_parser('launch-app',help='launch Codex GUI with its existing native relay')
     launch.add_argument('--app',type=Path,required=True)
     launch.add_argument('--codex',type=Path,required=True)
@@ -6577,6 +6732,8 @@ def mq_main():
                 result = mq_snapshot(mq_repository(config,repository),arguments.mr,arguments.file,arguments.ref,arguments.discussion)
             elif arguments.action=='restart-review':
                 result = mq_restart_review(config,arguments.job,arguments.stage,arguments.reason)
+            elif arguments.action=='restart-mr':
+                result = mq_restart_mr(config,arguments.job,arguments.reason)
             elif arguments.action=='recover':
                 result = mq_recover(config,arguments.job)
             elif arguments.action=='select-project':
@@ -6632,7 +6789,8 @@ def mq_job_status(job, config=None):
             value['continuations'] = stage['continuations']
         return value
     fields = ('id','sequence','repository_id','iid','kind','head','state','wait_reason','retry_at','outcome','validation_error',
-        'admission','coalesced_jobs','coalesced_into','target_event','last_error','original_sequence','review_attempt')
+        'admission','coalesced_jobs','coalesced_into','target_event','last_error','original_sequence','review_attempt',
+        'operator_restart','operator_retired_into','operator_retirement')
     return {**{k:job.get(k) for k in fields},'reviewers':job['reviewers'],
         'source':{k:job['source'].get(k) for k in ('origin','provider','session','source_id','turn_id')},
         'stages':[stage_status(stage,job.get('workspace')) for stage in job['stages']],
@@ -6660,7 +6818,7 @@ def mq_consume_locked(config,queue):
                 job['last_error'] = {'at':mq_stamp(),'error':str(failure)[:3000]}
                 queue.save(job)
             if not any(s['state']=='running' for s in job['stages']):
-                uncertain = any(e.get('job_id')==job['id'] and e['state'] not in {'prepared','confirmed','cancelled'}
+                uncertain = any(e.get('job_id')==job['id'] and e['state']!='prepared' and not mq_effect_settled(queue,e)
                                 for e in queue.effects())
                 queue.park(job,'effect_unknown' if uncertain else 'retry',
                     retry_at=0 if uncertain else mq_stamp()+config['interval_minutes']*60)

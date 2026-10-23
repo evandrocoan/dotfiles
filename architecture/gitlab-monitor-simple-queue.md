@@ -28,13 +28,14 @@ authenticated discussion snapshot before their anchored hold is established; sna
 blocks that MR until recovery without occupying capacity after proven termination. Human scope
 never expands from that snapshot.
 
-Passive collection of authenticated ordinary native tool results records self-created note
-revisions and proven resolution deltas solely for inventory filtering. Normalize raw before/after
-observations against the same evidence. Retire only never-issued automatic discussion events
-proved entirely self-generated, retaining their original admissions. The installed service returns text-only resolution success, so those unproved deltas stay
-eligible for an extra ordinary pass. Unknown output stays eligible;
-same-account human activity must not be ignored. This is not a durable send journal or an
-exactly-once guarantee. Existing uncertain historical effects remain read-back-only fences.
+Passive collection of authenticated ordinary native tool results records self-created note revisions
+and proven resolution deltas solely for inventory filtering. Normalize raw before/after observations
+against the same evidence. Retire only never-issued automatic discussion events proved entirely
+self-generated, retaining their original admissions. The installed service returns text-only
+resolution success, so those unproved deltas stay eligible for an extra ordinary pass. Unknown
+output stays eligible; same-account human activity must not be ignored. This is not a durable send
+journal or an exactly-once guarantee. Normal recovery keeps uncertain historical effects as read-
+back-only fences; explicit operator MR abandonment is the scoped exception defined below.
 
 Retire proven-unissued old preparations transactionally outside executed attempts. Preserve
 successes, selective-retry bounds, original source lookup, questions and original collectors for
@@ -47,14 +48,15 @@ execution through the ordinary GitLab MCP. The monitor owns admission and native
 recovery; new direct publications belong to the native reviewers, while old journals retain read-back; it does not judge semantic duplicates or choose between
 reviewers. No final JSON review report or all-reviewer publication barrier is required.
 
-Preserve repository identity, human requests and holds admitted by this consumer, actual reviewed
-progress and publication provenance. The original fresh-queue cutover left predecessor state and
-chats untouched. Subsequent tool adoption retains this consumer's queue and original sources.
-New chats receive current instructions; never rewrite loaded historical instructions. Codex and
-Claude use the existing shared HTTP GitLab service and its initial MR and CI-read catalog, with
-per-launch review tool permissions and the same validated credential source. The shared Compose
-configuration individually enables required CI readers; it does not activate pipeline mutations.
-Native clients need these reads in the initial catalog, without relying on mid-turn discovery.
+Preserve repository identity, independently admitted human requests, actual reviewed progress and
+publication provenance. Automatic questions and holds remain authoritative unless explicitly retired
+by the operator. The original fresh-queue cutover left predecessor state and chats untouched.
+Subsequent tool adoption retains this consumer's queue and original sources. New chats receive
+current instructions; never rewrite loaded historical instructions. Codex and Claude use the
+existing shared HTTP GitLab service and its initial MR and CI-read catalog, with per-launch review
+tool permissions and the same validated credential source. The shared Compose configuration
+individually enables required CI readers; it does not activate pipeline mutations. Native clients
+need these reads in the initial catalog, without relying on mid-turn discovery.
 
 **Workspace execution amendment:** Reviewers may execute commands, edit files, change
 branches and run tests in the configured workspace folders and their necessary shared Git
@@ -125,7 +127,8 @@ after completed review. A discussion at another head cannot fabricate code prove
 receive one current review context and a real contributing source, without notification history.
 Unfinished human/noneligible work and incompatible reviewer policies divide chronological segments
 of outstanding same-MR work; completed historical requests are retained outside those segments.
-Prior execution/history, results, waits, effects and held jobs cannot be absorbed. Reservation
+Normal automatic coalescence cannot absorb prior execution/history, results, waits, effects or held
+jobs. Explicit operator MR abandonment is a separate transition. Reservation
 freezes membership durably; later arrivals form subsequent work even if the current round retries.
 Existing pending events are consolidated through normal consumer controls, without migration.
 
@@ -162,7 +165,8 @@ before establishing its anchored hold. A failed scope read leaves that exact que
 blocks the MR; proven termination lets other MRs proceed. Preserve an existing human grant instead
 of enlarging it from the snapshot. Recover this handoff before another reviewer or human intake.
 
-Historical uncertain public delivery fences that MR. After exact native termination, subsequent
+Historical uncertain public delivery fences that MR until read-back recovery or explicit operator
+abandonment. After exact native termination, subsequent
 cycles perform read-back only, retaining remaining reviewers and checkpoints. New direct uncertain
 sends are read back by the model before retry; the monitor has no send journal for them.
 
@@ -192,11 +196,12 @@ capacity. Human questions retain their sufficient-answer hold; they are not auth
 publish. Reviewer stages are fields of one job, not another queue or capacity authority.
 
 The consumer also re-admits its previously completed partial-success review jobs once through this
-same transition. Administrative, explanation, superseded and closed outcomes do not reopen.
-Retain existing checkpoints and completion history. A valid successful review can advance the
-normal code checkpoint before requeue; interrupted settlement is recovered through the same
-completed-job check. Revalidate repository admission, native human scope, current head and open
-state before launching the retry. Original human holds and uncertain sends remain authoritative.
+same transition. Administrative, explanation, superseded and closed outcomes do not reopen. Retain
+existing checkpoints and completion history. A valid successful review can advance the normal code
+checkpoint before requeue; interrupted settlement is recovered through the same completed-job check.
+Revalidate repository admission, native human scope, current head and open state before launching
+the retry. Original human holds and uncertain sends remain authoritative outside explicit operator
+abandonment.
 
 New Claude stages use a finite signed-in CLI process in print stream-JSON mode, owned by a
 transient user systemd service. Preserve native session history and an explicit session UUID for
@@ -265,7 +270,8 @@ selection, prior summaries/status and actual code credit. No extra counted stage
 attempt or event is fabricated for manually executed work. A resumed operational failure releases
 the answered domain hold, runs remaining reviewers and receives ordinary failure-only retry.
 A real newer-head review settles the original work without credit for its admitted head.
-Uncertain historical-publication fences remain independent of every answer.
+Uncertain historical-publication fences remain independent of every answer. Only explicit operator
+MR abandonment can retire such a fence without confirming delivery.
 
 Loaded historical chats retain their original instructions and readers. Consume an already
 produced original assessment only for its existing held question or already admitted work;
@@ -285,7 +291,7 @@ sufficient answers. Preserve original admission/source, original contexts, publi
 actual code checkpoint. Reset active stages/attempt/workspace; every configured reviewer runs in
 the replacement round. This explicit full restart is separate from failed-reviewer selective retry.
 Repetition cannot repeat the transition; no fake automatic event or human answer is created.
-Changed context or uncertainty rejects without dispatch. Genuine holds outside the selected round
+Changed native/head context or unresolved active uncertainty rejects without dispatch. Genuine holds outside the selected round
 remain authoritative; models cannot request this administration through their review tools.
 
 Operator restart authenticates both the issued original final and the effective current native
@@ -295,6 +301,49 @@ frontier. Native answer observation is not atomic with operator retirement. Rech
 and preserve its identity in retirement history. A late answer to that exact retired question is
 handled read-only with its original scope and source; it cannot become unrelated mutable work or
 an answer to another hold. Retired chats produce no new monitor work.
+
+### Explicit operator MR abandonment
+
+`restart-mr JOB --reason TEXT` uses one original pending automatic job as the identity of an
+operator request to abandon that MR's captured pending automatic code/discussion work. This is
+separate from normal retry, read-back recovery and strict single-held-round restart. Those controls
+cannot abandon effects themselves; their native-source, question, head and active-effect gates
+remain unchanged. Effects explicitly retired here remain historical and no longer block new work.
+
+Under the existing consumer/work locks, capture and revalidate the selected jobs, MR record and
+effects. Reject independent human/intake/presentation work or pending human answers. Prove all
+selected issued native executions terminal, including retained earlier rounds; a saved queue state
+alone is not proof. Proven-unissued preparations need no execution. Verify original Codex context
+and current idle/notLoaded chat state; original Claude execution evidence must prove termination.
+Authenticate the configured repository and current open MR/head, and reject a changed head/open
+state during preparation. This control does not classify answers or treat abandonment as consent
+in an old chat. Unrelated running work remains untouched.
+
+One SQLite transaction archives the captured active stages, attempts, diagnostics, workspaces,
+questions, answers and scope, retaining original admissions and coalesced lineage. Keep native
+sessions and contexts inspectable without rewriting their histories. Retired questions keep their
+original anchors and scopes; late replies cannot revive them or release another question. Every
+unsettled historical effect belonging to captured work receives an explicit administrative
+abandonment with its prior state, identity and operator receipt. Unresolved public-effect delivery
+remains unknown, never confirmed or resent. A shared settled-effect predicate recognizes only
+abandonment backed by that durable receipt across settlement, retry, reset and recovery. Unsettled
+effects outside captured work reject the operation.
+
+Reuse one representative with a distinct operator receipt authorizing a full code review of the
+authenticated current head. Preserve its immutable original admission, and retire other captured
+jobs with an administrative outcome that gives no review credit. Remove stale active source-target,
+coalescence, answer and scope assumptions; the operator authority supplies both native input context
+and checkpoint provenance for the new round. Existing code checkpoints remain unchanged until a
+new actual code review completes. Return exactly one representative to the FIFO tail, snapshot
+current configured reviewers and create fresh chats. Resolve the live project's workspace once
+at that round's first launch, through the existing shared snapshot owner.
+
+Persist the authenticated inventory observation using the same note normalization as ordinary
+inventory. The identical snapshot cannot create another event; real later commits/comments remain
+eligible. A receipt keyed by the original job and exact reason makes repetition return the original
+result without absorbing later arrivals, including after interruption or completion. A conflicting
+reason rejects. Per-MR transaction rollback preserves all prior state. Status exposes the receipt,
+representative, retired jobs, target head, reason and previous states of abandoned public effects.
 
 ## Publications and passive observation
 
@@ -318,7 +367,8 @@ same-account human activity, unknown revisions and missing results remain eligib
 cannot resend or authorize a write and does not guarantee duplicate-free convergence.
 
 Historical confirmed receipts still filter their original notes, and uncertain old effects retain
-read-back-only reconciliation. No direct result replays an old public action.
+read-back-only reconciliation unless explicitly abandoned by the operator control. No direct result
+replays an old public action.
 
 ## Instructions and scheduling
 
@@ -379,8 +429,9 @@ local commits finish. Prove issued native executions terminal before editing the
 Retain original `message-v1` and older file validators and finish/question intent readers for
 issued results. New inputs use `message-v3` and fresh instructions; `message-v2` retains its exact renderer. Transactionally archive only
 proven-unissued old preparations outside executed attempts, preserving original lookup, successful
-stages and selective retry bounds. Unknown delivery is reconciled exactly, never relaunched.
-Existing holds and confirmed/uncertain journals remain authoritative. No old chat is rewritten.
+stages and selective retry bounds. Unknown native delivery is reconciled exactly, never relaunched.
+Existing holds and confirmed/uncertain journals remain authoritative outside the explicit operator
+abandonment transition. No old chat is rewritten.
 
 | Invariant | Owner | Required evidence |
 | --- | --- | --- |
@@ -396,6 +447,7 @@ Existing holds and confirmed/uncertain journals remain authoritative. No old cha
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
 | Visible native requests  | Existing stage input, native dispatch, input validation and question continuation | Exact message/context, historical reader, large Claude stdin, pre-exec failure and native creation/cold-resume checks |
 | Explicit full-round restart  | Operator control, original native question, existing queue and intake | Native-answer frontier/races, late replies, exact target, fresh complete review/chat, FIFO/history/effect preservation and rejection controls |
+| Explicit MR abandonment | `mq_restart_mr`, durable operator authority and settled-effect predicate | `test_codex_gitlab_restart_mr.py`: multi-job/head reset, unknown delivery, native denials, rollback, concurrency, idempotence, inventory and real worker progression |
 | Shared editable workspace | Round snapshot and native launch policy | Same roots across reviewers/restart, linked Git metadata, read-only intake, original-chat answers |
 
 The standalone CLI owns `MonitorQueue`, the ordered worker and one shared instruction producer.
