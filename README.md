@@ -695,12 +695,13 @@ codex-session-stats monitor-gitlab configure \
   --project-url https://gitlab.example.com/group/project --project-id 123 --mcp-server gitlab
 ```
 
-The existing installation can keep its `analysis_config` reference. Model, reviewer order, projects
-and schedule belong in that TOML. For example:
+The existing installation can keep its `analysis_config` reference. In that TOML, rename `model`
+to `codex_model` and `model_reasoning_effort` to `codex_effort`, preserving their values. Model,
+reviewer order, projects and schedule belong in that TOML. For example:
 
 ```toml
-model = "gpt-6.1-sol"
-model_reasoning_effort = "xhigh"
+codex_model = "gpt-6.1-sol"
+codex_effort = "xhigh"
 codex_project_name = "example-review-project"
 reviewers = ["claude", "codex"]
 parallel = 1

@@ -18,7 +18,7 @@ def configured(tmp_path):
     target=tmp_path/'config.json';target.write_text(json.dumps(raw));target.chmod(0o600)
     analysis=tmp_path/'analysis.toml'
     def write(entries):
-        text='model="gpt-6.1-sol"\nmodel_reasoning_effort="xhigh"\nworkspace='+json.dumps(str(tmp_path))+'\ngitlab_url="https://gitlab.example.test"\nreviewers=["claude","codex"]\n'
+        text='codex_model="gpt-6.1-sol"\ncodex_effort="xhigh"\nworkspace='+json.dumps(str(tmp_path))+'\ngitlab_url="https://gitlab.example.test"\nreviewers=["claude","codex"]\n'
         text+='projects = ['+','.join('{ id = '+str(e['id'])+', path = '+json.dumps(e['path'])+' }' for e in entries)+']\n'
         analysis.write_text(text);analysis.chmod(0o600)
     write([{'id':11,'path':'team/one'},{'id':22,'path':'team/two'}])

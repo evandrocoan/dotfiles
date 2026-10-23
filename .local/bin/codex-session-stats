@@ -2345,7 +2345,7 @@ def monitor_verify_thread_context(config: dict, thread: dict, thread_id: str):
 
 
 def monitor_analysis_values(settings: dict, path: Path, state_dir: Path) -> dict:
-    required = {"model", "model_reasoning_effort"}
+    required = {"codex_model", "codex_effort"}
     if not required <= set(settings) or set(settings) - required - {"workspace", "codex_project_name"} - MONITOR_TOML_OPTIONS:
         raise RuntimeError("unknown or missing TOML settings")
     project_group = {"gitlab_url"} if "projects" in settings else MONITOR_TOML_PROJECT
@@ -2354,11 +2354,11 @@ def monitor_analysis_values(settings: dict, path: Path, state_dir: Path) -> dict
     for group in (project_group, MONITOR_TOML_SCHEDULE):
         if set(settings) & group and not group <= set(settings):
             raise RuntimeError("incomplete TOML project or schedule group")
-    if not isinstance(settings["model"], str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", settings["model"]):
-        raise RuntimeError("invalid model")
-    if settings["model_reasoning_effort"] not in {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}:
-        raise RuntimeError("invalid model_reasoning_effort")
-    result = {"model": settings["model"], "effort": settings["model_reasoning_effort"],
+    if not isinstance(settings["codex_model"], str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", settings["codex_model"]):
+        raise RuntimeError("invalid codex_model")
+    if settings["codex_effort"] not in {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}:
+        raise RuntimeError("invalid codex_effort")
+    result = {"model": settings["codex_model"], "effort": settings["codex_effort"],
               **{k: v for k, v in settings.items() if k in MONITOR_TOML_OPTIONS}}
     if "codex_project_name" in settings:
         name = settings["codex_project_name"]
@@ -6698,7 +6698,7 @@ def mq_main():
             if path.exists() or target.exists():
                 raise RuntimeError('configuration already exists; no files overwritten')
             values = {**{k:data.pop(k) for k in (*MONITOR_TOML_PROJECT,*MONITOR_TOML_SCHEDULE)},
-                'model':data.pop('model'),'model_reasoning_effort':data.pop('effort'),
+                'codex_model':data.pop('model'),'codex_effort':data.pop('effort'),
                 'workspace':'~','parallel':1,'reviewers':['claude','codex']}
             data.pop('cwd')
             data['analysis_config'] = os.path.relpath(target,path.parent)

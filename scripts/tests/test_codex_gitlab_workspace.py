@@ -25,7 +25,7 @@ def project(flow, monkeypatch):
     raw['codex_project_binding'] = {'id':identifier,'name':'workspace 7','roots':roots[:],
                                     'existing_threads':{}}
     analysis = base/'analysis.toml'
-    analysis.write_text('model="gpt-6.1-sol"\nmodel_reasoning_effort="xhigh"\ncodex_project_name="workspace 7"\n')
+    analysis.write_text('codex_model="gpt-6.1-sol"\ncodex_effort="xhigh"\ncodex_project_name="workspace 7"\n')
     analysis.chmod(0o600)
     f.config_path.write_text(json.dumps(raw))
     f.config.clear()
@@ -80,6 +80,27 @@ def test_claude_default_and_toml_override_reach_native_cli(project,model,expecte
     assert args.count('--model')==1
     assert args[args.index('--model')+1]==expected
     assert f.q.jobs()[0]['state']=='completed'
+    assert f.sends==[]
+
+
+@pytest.mark.parametrize('model,effort',[('gpt-6.1-sol','xhigh'),('gpt-6-astra','medium')])
+def test_codex_toml_settings_reach_native_dispatch(project,model,effort):
+    f=project
+    analysis=f.config_path.parent/'analysis.toml'
+    analysis.write_text('codex_model='+json.dumps(model)+'\ncodex_effort='+json.dumps(effort)+
+                        '\ncodex_project_name="workspace 7"\n')
+    loaded=f.m['mq_config'](f.config_path)
+    f.config.clear();f.config.update(loaded)
+    enqueue(f);f.drain()
+    starts=[p for method,p in f.wire if method=='thread/start']
+    turns=[p for method,p in f.wire if method=='turn/start']
+    assert len(starts)==len(turns)==1
+    assert starts[0]['model']==turns[0]['model']==model
+    assert starts[0]['config']['model_reasoning_effort']==turns[0]['effort']==effort
+    job=f.q.jobs()[0]
+    codex=next(stage for stage in job['stages'] if stage['reviewer']=='codex')
+    assert codex['model_selection']=={'model':model,'effort':effort}
+    assert job['state']=='completed'
     assert f.sends==[]
 
 

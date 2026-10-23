@@ -415,6 +415,10 @@ def configure(tmp_path):
 
 def test_mq_configure_is_private_and_status_does_not_initialize_state(tmp_path):
     config = configure(tmp_path)
+    analysis = tomllib.loads((tmp_path / "analysis.toml").read_text())
+    assert analysis["codex_model"] == config["model"] == "gpt-6.1-sol"
+    assert analysis["codex_effort"] == config["effort"] == "xhigh"
+    assert not {"model", "model_reasoning_effort"} & analysis.keys()
     assert config["project_id"] == 42
     assert config["project_path"] == "engineering/project"
     assert config["weekdays"] == [0, 1, 2, 3, 4, 5]
@@ -428,6 +432,26 @@ def test_mq_configure_is_private_and_status_does_not_initialize_state(tmp_path):
     assert json.loads(result.stdout)["initialized"] is False
     assert not Path(config["state_file"]).exists()
     assert (tmp_path / "monitor.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("original,replacement,error", [
+    ('codex_model = "gpt-6.1-sol"', 'model = "gpt-6.1-sol"', "unknown or missing TOML settings"),
+    ('codex_effort = "xhigh"', 'model_reasoning_effort = "xhigh"', "unknown or missing TOML settings"),
+    ('codex_model = "gpt-6.1-sol"', '', "unknown or missing TOML settings"),
+    ('codex_effort = "xhigh"', '', "unknown or missing TOML settings"),
+    ('codex_model = "gpt-6.1-sol"', 'codex_model = ""', "invalid codex_model"),
+    ('codex_effort = "xhigh"', 'codex_effort = "invalid"', "invalid codex_effort"),
+])
+def test_invalid_codex_toml_settings_fail_before_queue_creation(tmp_path, original, replacement, error):
+    config = configure(tmp_path)
+    analysis = tmp_path / "analysis.toml"
+    text = analysis.read_text()
+    assert text.count(original) == 1
+    analysis.write_text(text.replace(original, replacement))
+    result = run_monitor(tmp_path, "initialize")
+    assert result.returncode == 1
+    assert error in result.stderr
+    assert not Path(config["queue_file"]).exists()
 
 
 def test_mq_configure_never_overwrites_existing_configuration(tmp_path):
