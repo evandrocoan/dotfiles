@@ -8,6 +8,7 @@ Type=simple
 Restart=always
 RestartSec=3600
 WorkingDirectory=%h/scripts/
+Environment=SSH_AUTH_SOCK=%t/gcr/ssh
 ExecStart=/bin/bash --login %h/scripts/check_ci
 
 [Install]
