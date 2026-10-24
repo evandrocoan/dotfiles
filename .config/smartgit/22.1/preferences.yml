@@ -145,9 +145,9 @@ proxy: {autoDetect: true, authenticate: false, port: 3128, enabled: false}
 proxyPassword: 114
 spellCheck:
   dictionaries:
-  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   - {name: Portuguese (Brazilian), file: /myfiles/Programs/SpellCheckDicts/Portuguese
       (Brazilian).dic}
+  - {name: en_US, file: '${smartgit.install}/dictionaries/en_US.dic', file.absolute: /usr/share/smartgit/dictionaries/en_US.dic}
   personalFile: ${smartgit.settings}/my-words.dic
   personalFile.absolute: /home/evandro/.config/smartgit/18.2/my-words.dic
   useOnlyBestOfficial: true

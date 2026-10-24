@@ -33,9 +33,9 @@
         <property name="Y" type="double" value="1"/>
       </property>
     </property>
-    <property name="DP-1" type="string" value="Samsung Electric Company 23&quot;">
+    <property name="DP-1" type="string" value="Link Tech Inc 15&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="EDID" type="string" value="f2bb99017a1c62aca0826c1f52f441671a74bc9f"/>
+      <property name="EDID" type="string" value="a255044fd7b2df91f1bcc05725ab5b58f929c458"/>
       <property name="Resolution" type="string" value="1920x1080"/>
       <property name="RefreshRate" type="double" value="60"/>
       <property name="Rotation" type="int" value="0"/>
@@ -80,9 +80,9 @@
         <property name="Y" type="int" value="0"/>
       </property>
     </property>
-    <property name="DP-3" type="string" value="Philips Consumer Electronics Company 23&quot;">
+    <property name="DP-3" type="string" value="Link Tech Inc 15&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="EDID" type="string" value="5be7f3be374902f1a667da3256bc682e2048e2c4"/>
+      <property name="EDID" type="string" value="a255044fd7b2df91f1bcc05725ab5b58f929c458"/>
       <property name="Resolution" type="string" value="1920x1080"/>
       <property name="RefreshRate" type="double" value="60"/>
       <property name="Rotation" type="int" value="0"/>
@@ -163,9 +163,9 @@
         <property name="Y" type="double" value="1"/>
       </property>
     </property>
-    <property name="DP-1" type="string" value="Samsung Electric Company 23&quot;">
+    <property name="DP-1" type="string" value="Link Tech Inc 15&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="EDID" type="string" value="f2bb99017a1c62aca0826c1f52f441671a74bc9f"/>
+      <property name="EDID" type="string" value="a255044fd7b2df91f1bcc05725ab5b58f929c458"/>
       <property name="Resolution" type="string" value="1920x1080"/>
       <property name="RefreshRate" type="double" value="60"/>
       <property name="Rotation" type="int" value="0"/>
@@ -210,9 +210,9 @@
         <property name="Y" type="int" value="0"/>
       </property>
     </property>
-    <property name="DP-3" type="string" value="Philips Consumer Electronics Company 23&quot;">
+    <property name="DP-3" type="string" value="Link Tech Inc 15&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="EDID" type="string" value="5be7f3be374902f1a667da3256bc682e2048e2c4"/>
+      <property name="EDID" type="string" value="a255044fd7b2df91f1bcc05725ab5b58f929c458"/>
       <property name="Resolution" type="string" value="1920x1080"/>
       <property name="RefreshRate" type="double" value="60"/>
       <property name="Rotation" type="int" value="0"/>

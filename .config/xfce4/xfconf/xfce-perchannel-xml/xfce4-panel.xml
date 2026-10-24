@@ -19,6 +19,7 @@
         <value type="int" value="14"/>
         <value type="int" value="6"/>
         <value type="int" value="7"/>
+        <value type="int" value="9"/>
         <value type="int" value="8"/>
         <value type="int" value="3"/>
         <value type="int" value="10"/>
@@ -115,7 +116,7 @@
     <property name="plugin-5" type="string" value="pulseaudio">
       <property name="items" type="empty"/>
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="known-players" type="string" value="Chrome"/>
+      <property name="known-players" type="string" value="Chrome;Code"/>
     </property>
     <property name="plugin-6" type="empty">
       <property name="show-handle" type="empty"/>
@@ -148,6 +149,8 @@
         <value type="string" value="TeamViewer"/>
       </property>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="claude-desktop"/>
+        <value type="string" value="copyq"/>
         <value type="string" value="ferdium"/>
         <value type="string" value="flameshot"/>
         <value type="string" value="localsend_app"/>
@@ -170,12 +173,14 @@
       <property name="square-icons" type="bool" value="false"/>
       <property name="single-row" type="bool" value="true"/>
       <property name="hidden-legacy-items" type="array">
-        <value type="string" value="xfce4-power-manager"/>
+        <value type="string" value="copyq"/>
+        <value type="string" value="claude-desktop"/>
         <value type="string" value="autokey-gtk"/>
         <value type="string" value="networkmanager applet"/>
-        <value type="string" value="anydesk"/>
         <value type="string" value="twinkle"/>
+        <value type="string" value="anydesk"/>
         <value type="string" value="teamviewer"/>
+        <value type="string" value="xfce4-power-manager"/>
       </property>
     </property>
     <property name="plugin-9" type="empty"/>
