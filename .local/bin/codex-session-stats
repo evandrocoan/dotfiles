@@ -2910,7 +2910,7 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 7
+MQ_INSTRUCTIONS_VERSION = 8
 MQ_COMPACT_ASSESSMENT_VERSION = 3
 
 
@@ -3444,6 +3444,15 @@ the supplied workspace, preserve existing work and verify the actual SHAs used f
 Do not delegate, commit, reset, clean, stash or create worktrees unless explicitly requested.
 The operator has already selected the configured model and thinking effort for this dispatched
 stage. Do not offer model changes or ask for confirmation. This does not answer domain questions.
+For the automatic review, also review child MRs explicitly linked as dependencies in the supplied
+parent MR's description or corresponding to changed submodules. Resolve submodule repositories
+from .gitmodules at the relevant parent revisions and inspect the old/new gitlink SHAs and exact
+commit range. Verify the corresponding child MRs and review them in the same task/chat, including
+child projects not independently monitored. Examine each related MR once. Read child diffs and
+complete discussions, applying the same publication/resolution rules in the MR owning the code.
+Closed or merged child MRs are read-only context. If no child MR exists, inspect the changed
+commits. Summarize child MR links, examined commits/ranges and coverage gaps. These instructions
+do not expand an unrelated human follow-up's scope.
 Read the current MR, diff and complete discussions, including the other reviewer's comments.
 Publish actionable findings inline when possible. Reuse a thread only for the same concern;
 different defects on the same line stay separate. Supplement other people's findings when useful.
@@ -3471,7 +3480,9 @@ For the dispatched automatic review or an actual continuation of its held questi
 a readable Portuguese summary including tests and limitations, then exactly one plain
 terminal status line: Estado da revisão: concluída; Estado da revisão: não concluída; or
 Estado da revisão: aguardando resposta. Emit the selected line alone, without quoting or fencing.
-For completed code review, also emit Commit revisado: followed by the full actual reviewed SHA.
+For completed code review, also emit Commit revisado: followed by
+the full actual reviewed SHA of the supplied parent MR. Put child SHAs only in the readable
+summary; reviewing a child alone never completes the parent review.
 For an operational failure use não concluída and explain why. For a real human decision use
 aguardando resposta followed by the complete question, stop mutable work and await a sufficient
 native human answer. Head changes, closed MRs and transport failures are not human decisions.

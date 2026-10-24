@@ -90,6 +90,55 @@ def test_shared_instructions_require_peer_and_whole_thread_review(module):
     assert 'call finish_review' not in text and 'gitlab_review' not in text
 
 
+def assert_child_review_instructions(text):
+    for requirement in ('child MRs explicitly linked as dependencies', 'old/new gitlink SHAs',
+                        'same task/chat', 'MR owning the code',
+                        'Closed or merged child MRs are read-only context',
+                        'child MR links, examined commits/ranges and coverage gaps',
+                        'full actual reviewed SHA of the supplied parent MR'):
+        assert requirement in text
+
+
+def test_codex_dispatch_receives_child_review_instructions(flow,monkeypatch):
+    f=flow;request=f.m['monitor_native'];instructions=[]
+    def native(c,method,params,**kw):
+        if method=='thread/start':instructions.append(params['developerInstructions'])
+        return request(c,method,params,**kw)
+    monkeypatch.setitem(f.m,'monitor_native',native)
+    job=automatic(f,reviewers=['codex']);f.step()
+    assert f.launched==['codex'] and len(instructions)==1
+    assert_child_review_instructions(instructions[0])
+    assert f.q.job(job['id'])['stages'][0]['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
+
+
+def test_claude_dispatch_receives_child_review_instructions(flow):
+    f=flow;job=automatic(f,reviewers=['claude']);f.step()
+    command=next(c for c in f.service.commands if c[0]=='systemd-run')
+    assert f.launched==['claude']
+    assert_child_review_instructions(command[command.index('--append-system-prompt')+1])
+    assert f.q.job(job['id'])['stages'][0]['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
+
+
+def test_new_instructions_rotate_codex_chat_preserving_previous_round(flow,monkeypatch):
+    f=flow
+    # Arrange a completed release-7 dispatch through the real worker, then upgrade its version.
+    with monkeypatch.context() as previous_release:
+        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',7)
+        first=automatic(f,reviewers=['codex']);f.drain()
+    original=f.q.job(first['id']);old_session=original['stages'][0]['session']
+    old_turns=copy.deepcopy(f.turns[old_session]);old_items=copy.deepcopy(f.items)
+    next_job=f.q.enqueue(11,82,source_key='later-discussion',kind='discussion',head='a'*40,
+        source={'origin':'automatic','head':'a'*40},context=copy.deepcopy(f.context),reviewers=['codex'])
+    f.drain()
+    record=f.q.mr(11,82);stage=f.q.job(next_job['id'])['stages'][0]
+    assert stage['session']!=old_session and record['chats']['codex']==stage['session']
+    assert record['instruction_versions'][old_session]==7
+    assert stage['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
+    assert f.q.job(first['id'])==original and f.turns[old_session]==old_turns
+    assert {key:f.items[key] for key in old_items}==old_items
+    assert len(f.q.jobs())==2 and record['reviewed_head']=='a'*40 and f.sends==[]
+
+
 def test_question_scope_includes_thread_created_by_previous_reviewer(flow):
     flow.results['claude']=domain(actions=[{'kind':'finding','body':'First concern','key':'one'}])
     flow.results['codex']=domain(outcome='question',question='Qual regra deve valer nesta discussão?')
@@ -559,7 +608,7 @@ def test_unissued_frozen_v2_uses_actual_new_chat_instruction_policy(flow,monkeyp
     monkeypatch.setitem(f.m,key,external);f.drain()
     held=f.q.mr(11,82)['hold'];issued=f.q.job(job['id'])['stages'][0]
     assert issued['input']==original and issued['input_format']=='message-v2'
-    assert issued['instructions_version']==7
+    assert issued['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
     assert f.m['mq_input_context'](f.q,issued)==data
     if reviewer=='codex':native_answer(f)
     else:claude_answer(f,held)
