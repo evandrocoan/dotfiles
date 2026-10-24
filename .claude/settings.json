@@ -103,12 +103,18 @@
     ]
   },
   "effortLevel": "xhigh",
-  "advisorModel": "fable",
-  "theme": "dark",
   "modelSettings": {
     "claude-opus-5-5": {
       "effortLevel": "xhigh"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "xhigh"
+    },
+    "claude-fable-5-1": {
+      "effortLevel": "xhigh"
     }
   },
-  "model": "opus[1m]"
+  "advisorModel": "fable",
+  "theme": "dark",
+  "agentPushNotifEnabled": true
 }
