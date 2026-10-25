@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh native core dump metadata and recover missed events
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=core-dump-publish.service
+
+[Install]
+WantedBy=timers.target

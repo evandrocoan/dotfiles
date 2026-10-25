@@ -1,0 +1,9 @@
+[Unit]
+Description=Detect changes in the native core dump directory
+
+[Path]
+PathChanged=/root/coredumps
+Unit=core-dump-publish.service
+
+[Install]
+WantedBy=multi-user.target

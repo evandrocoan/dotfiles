@@ -1,0 +1,12 @@
+[Unit]
+Description=Notify the desktop about pending native core dumps
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I %h/scripts/core_dump_alert.py notify
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
+MemoryMax=64M
+TasksMax=16
+TimeoutStartSec=30

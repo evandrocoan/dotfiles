@@ -1,0 +1,9 @@
+[Unit]
+Description=Notify when pending native core dump metadata changes
+
+[Path]
+PathChanged=/run/core-dump-alert/status.json
+Unit=core-dump-alert.service
+
+[Install]
+WantedBy=default.target

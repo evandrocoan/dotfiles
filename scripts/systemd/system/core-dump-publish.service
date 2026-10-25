@@ -1,0 +1,27 @@
+[Unit]
+Description=Publish metadata about pending native core dumps
+After=local-fs.target
+RequiresMountsFor=/root/coredumps
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/local/lib/core-dump-alert/core_dump_alert.py publish
+RuntimeDirectory=core-dump-alert
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+UMask=0022
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=/root/coredumps
+PrivateTmp=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+MemoryMax=64M
+TasksMax=16
+TimeoutStartSec=15

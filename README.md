@@ -37,6 +37,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Check the NVMe SSD health](#check-the-nvme-ssd-health)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
+      - [Core dump alerts](#core-dump-alerts)
       - [Restore GNOME Keyring SSH after a crash](#restore-gnome-keyring-ssh-after-a-crash)
       - [Manual XFCE recovery](#manual-xfce-recovery)
       - [Shared XFWM launcher](#shared-xfwm-launcher)
@@ -104,10 +105,8 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
    1. Use `journalctl -o short-precise -k -b -1 -p 4` to view system logs errors (-p 4). It also use colors, so it is better than directly opening `/var/log/syslog`.
    1. https://unix.stackexchange.com/questions/181067/how-to-read-dmesg-from-previous-session-dmesg-0
 
-1. Enable core dump generation on `/var/crash/` by with `sudo systemctl enable apport`
-   1. `ulimit -c`
-   1. ` cat /proc/sys/kernel/core_pattern`
-   1. https://askubuntu.com/questions/966407/where-do-i-find-the-core-dump-in-ubuntu-16-04lts
+1. Use native core files in `/root/coredumps/`; see [Core dump alerts](#core-dump-alerts)
+   for capture checks and recurring desktop notifications.
 
 1. Disable `Ctrl+Space` keybind to disable input!
    1. `gsettings set org.freedesktop.ibus.general.hotkey triggers []`
@@ -1991,6 +1990,114 @@ Review the proposed package removal list. Historical files under `/var/log/atop`
 and `/var/cache/netdata` can be removed separately once they are no longer needed.
 
 ### Fix system crash
+
+#### Core dump alerts
+
+The [core dump monitor](scripts/core_dump_alert.py) reports new native core files and reminds the
+desktop user every hour while files remain in `/root/coredumps/`. Moving the last core elsewhere
+stops future reminders. The monitor reads file metadata only and never moves or deletes dumps.
+The hourly interval includes time spent suspended; a fresh check after resume handles overdue alerts.
+
+This requires native core capture to be configured already: `kernel.core_pattern` must name files
+under `/root/coredumps/`, and the crashing process needs a nonzero core limit. Check the pattern
+with `sysctl kernel.core_pattern` and a process with `prlimit --pid PID --core`. A shell's `ulimit -c`
+does not describe unrelated services. The monitor considers regular files named `core-*`, matching
+the native filename pattern, and ignores symlinks and subdirectories.
+
+The host configuration is in `/etc/sysctl.d/99-local-coredumps.conf`, with
+`kernel.core_pattern=/root/coredumps/core-%e-%s-%u-%g-%p-%t`; `/etc/tmpfiles.d/local-coredumps.conf`
+creates `/root/coredumps` as `root:root` with mode `1733`. `/root` has mode `0711`, allowing traversal
+of known paths without directory listing or creation of other entries. Before opening traversal,
+group and other access was removed from its existing direct children, preserving root's own access.
+Keep future content outside `coredumps` private too: directories need mode `0700`, and regular
+files must not grant group or other access. Native core files have mode `0600`.
+
+The kernel resolves the destination in the crashing process's filesystem namespace. Services
+that hide `/root`, use a different root, or mount it read-only need a compatible capture location
+in that namespace. Containers with their own `/root` bind mounts keep their dumps in those mounts;
+the host monitor watches only the host directory.
+
+The root-owned publisher can enumerate the protected directory. Its sandbox exposes only a
+read-only bind of `/root/coredumps` inside an otherwise hidden home directory tree.
+It publishes anonymous file identities under `/run/core-dump-alert/`; the user service uses those
+identities to detect new arrivals and suppress duplicate notifications. Private reminder state is
+under `~/.local/state/core-dump-alert/`. Only the root-owned installed script copy runs as root.
+
+Install or update from a terminal in the graphical user session. Before an update, save any local
+changes to the installed files being replaced. These commands use the existing system Python,
+systemd and `notify-send`; no additional Python packages are needed.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo install -d -o root -g root -m 0755 /usr/local/lib/core-dump-alert
+sudo install -o root -g root -m 0644 ~/scripts/core_dump_alert.py /usr/local/lib/core-dump-alert/
+sudo install -o root -g root -m 0644 ~/scripts/systemd/system/core-dump-publish.service /etc/systemd/system/
+sudo install -o root -g root -m 0644 ~/scripts/systemd/system/core-dump-publish.path /etc/systemd/system/
+sudo install -o root -g root -m 0644 ~/scripts/systemd/system/core-dump-publish.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now core-dump-publish.path core-dump-publish.timer
+sudo systemctl start core-dump-publish.service
+install -d ~/.config/systemd/user
+install -m 0644 ~/scripts/install/systemd/user/core-dump-alert.service ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/systemd/user/core-dump-alert.path ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/systemd/user/core-dump-alert.timer ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now core-dump-alert.path core-dump-alert.timer
+systemctl --user start core-dump-alert.service
+```
+
+Path watchers normally trigger new-file checks immediately. Both sides also check periodically for
+missed events, login and notification retries; these checks do not send a popup every minute.
+An empty directory stays quiet. Desktop delivery failure leaves the reminder pending. Missing,
+invalid or stale publisher data produces a journal error rather than a false empty-directory result.
+After resume, notification waits for fresh publisher data. A successful notification command means
+the desktop notification service accepted the request; desktop quiet mode can still hide the popup.
+
+Check the installed units and recent results with:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo systemctl show core-dump-publish.path core-dump-publish.timer core-dump-publish.service -p Id -p ActiveState -p Result
+systemctl --user show core-dump-alert.path core-dump-alert.timer core-dump-alert.service -p Id -p ActiveState -p Result
+sudo journalctl -u core-dump-publish.service -n 20 --no-pager
+journalctl --user -u core-dump-alert.service -n 20 --no-pager
+sudo ls -lh /root/coredumps/
+```
+
+A path watcher stopped by its start-rate limit needs an explicit restart. Timers provide fallback
+checks, but do not repair failed watchers. Recover the affected units with:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo systemctl reset-failed core-dump-publish.service core-dump-publish.path
+sudo systemctl restart core-dump-publish.path core-dump-publish.timer
+sudo systemctl start core-dump-publish.service
+systemctl --user reset-failed core-dump-alert.service core-dump-alert.path
+systemctl --user restart core-dump-alert.path core-dump-alert.timer
+systemctl --user start core-dump-alert.service
+```
+
+To remove the monitor, disable its triggers before removing only its installed files:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+systemctl --user disable --now core-dump-alert.path core-dump-alert.timer
+systemctl --user stop core-dump-alert.service
+rm ~/.config/systemd/user/core-dump-alert.service ~/.config/systemd/user/core-dump-alert.path ~/.config/systemd/user/core-dump-alert.timer
+systemctl --user daemon-reload
+sudo systemctl disable --now core-dump-publish.path core-dump-publish.timer
+sudo systemctl stop core-dump-publish.service
+sudo rm /etc/systemd/system/core-dump-publish.service /etc/systemd/system/core-dump-publish.path /etc/systemd/system/core-dump-publish.timer
+sudo rm /usr/local/lib/core-dump-alert/core_dump_alert.py
+sudo systemctl daemon-reload
+```
+
+This preserves native capture, all pending core files, and private reminder state. There is no
+automatic dump retention or storage cap. Keep archived dumps outside the watched directory.
 
 #### Restore GNOME Keyring SSH after a crash
 
