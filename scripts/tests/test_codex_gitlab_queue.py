@@ -3,6 +3,7 @@ import copy
 import os
 from pathlib import Path
 import runpy
+import sqlite3
 
 import pytest
 
@@ -28,6 +29,30 @@ def queue(module, tmp_path):
 def enqueue(q, repository=11, iid=82, *, kind='code', marker='one'):
     return q.enqueue(repository, iid, source_key=f'{repository}:{iid}:{kind}:{marker}', kind=kind,
         head='a' * 40, source={'native_input': marker}, context={'head': 'a' * 40})
+
+
+def finish_history_job(q, marker, *, session=None, exact_input=None, hold_context=None):
+    job=enqueue(q,kind='code',marker=marker)
+    job=q.reserve({11})
+    if session:
+        stage=q.stage_start(job,job['reviewers'][0],exact_input or 'registered input',session=session)
+        job=q.job(job['id']);stage=job['stages'][-1]
+        if exact_input is None:
+            stage['input']=None
+        else:
+            import hashlib
+            import json
+            target=q.path.parent/'inputs'/(stage['id']+'.json')
+            target.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+            raw=json.dumps({'hold':hold_context},separators=(',',':')).encode()
+            target.write_bytes(raw);target.chmod(0o600)
+            digest=hashlib.sha256(raw).hexdigest()
+            stage['input']=exact_input+' (SHA-256 '+digest+')'
+        stage['output_collected']=True
+        q.save(job)
+        q.stage_end(job,stage['id'],result={'head':'a'*40,'outcome':'complete'},terminal=True)
+    q.finish(q.job(job['id']),'MR closed or merged')
+    return q.job(job['id'])
 
 
 @pytest.mark.parametrize('reviewers', [['claude', 'codex'], ['codex', 'claude']])
@@ -204,6 +229,434 @@ def test_foreign_database_is_rejected_without_modification(queue, module, tmp_pa
         assert connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == [('predecessor',)]
     finally:
         connection.close()
+
+
+def test_history_limit_rotates_oldest_jobs_and_keeps_source_identity(queue,module):
+    retired=[finish_history_job(queue,f'history-{i}') for i in range(4)]
+    module['mq_rotate_jobs'](queue,2)
+    assert [job['id'] for job in queue.jobs()]==[retired[2]['id'],retired[3]['id']]
+    assert [item['job_id'] for item in queue.retired_jobs()]==[retired[0]['id'],retired[1]['id']]
+    assert enqueue(queue,marker='history-0') is None
+    with pytest.raises(RuntimeError,match='repeated source identity changed'):
+        queue.enqueue(11,82,source_key='11:82:code:history-0',kind='code',head='a'*40,
+            source={'native_input':'changed'},context={})
+
+
+def test_history_limit_preserves_protected_jobs_even_over_limit(queue,module):
+    for i in range(3):
+        job=enqueue(queue,marker=f'unknown-{i}')
+        running=queue.reserve({11})
+        queue.finish(running,'not a recognized terminal outcome')
+    module['mq_rotate_jobs'](queue,1)
+    assert len(queue.jobs())==3
+    assert queue.retired_jobs()==[]
+
+
+def test_active_mr_hold_protects_its_completed_job_history(queue,module):
+    jobs=[finish_history_job(queue,f'held-history-{index}') for index in range(2)]
+    record=queue.mr(11,82)
+    record['hold']={'job_id':jobs[0]['id'],'session':'held-chat','question':'Need a decision'}
+    with queue.atomic():queue.put_mr(record)
+    module['mq_rotate_jobs'](queue,1)
+    assert len(queue.jobs())==2
+    assert queue.retired_jobs()==[]
+
+
+def test_concurrent_duplicate_admission_keeps_one_source_identity(queue):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    barrier=threading.Barrier(2)
+    def admit():
+        local=queue.__class__(queue.config)
+        try:
+            barrier.wait(timeout=5)
+            return enqueue(local,marker='concurrent-source')
+        finally:local.close()
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        left,right=[future.result(timeout=20) for future in
+                    (workers.submit(admit),workers.submit(admit))]
+    assert left['id']==right['id']
+    assert queue.db.execute("SELECT COUNT(*) FROM jobs WHERE source_key=?",
+        ('11:82:code:concurrent-source',)).fetchone()[0]==1
+
+
+def test_concurrent_duplicate_admission_and_rotation_keep_one_identity(queue,module):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    original=finish_history_job(queue,'rotation-race')
+    source_key='11:82:code:rotation-race'
+    barrier=threading.Barrier(2)
+    def duplicate():
+        local=queue.__class__(queue.config)
+        try:
+            barrier.wait(timeout=5)
+            return enqueue(local,marker='rotation-race')
+        finally:local.close()
+    def rotate():
+        local=queue.__class__(queue.config)
+        try:
+            barrier.wait(timeout=5)
+            module['mq_rotate_jobs'](local,0)
+        finally:local.close()
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        duplicate_result, _ = [future.result(timeout=20) for future in
+            (workers.submit(duplicate),workers.submit(rotate))]
+    rows=queue.db.execute('SELECT COUNT(*) FROM jobs WHERE source_key=?',(source_key,)).fetchone()[0]
+    markers=queue.db.execute('SELECT COUNT(*) FROM retired_jobs WHERE source_key=?',(source_key,)).fetchone()[0]
+    assert rows+markers==1
+    assert duplicate_result is None or duplicate_result['id']==original['id']
+
+
+def test_job_and_identity_marker_rotation_roll_back_together(queue,module,monkeypatch):
+    jobs=[finish_history_job(queue,f'rollback-history-{index}') for index in range(2)]
+    original=queue.put_retired_job
+    def fail_after_marker(marker):
+        original(marker)
+        raise RuntimeError('simulated transaction interruption')
+    monkeypatch.setattr(queue,'put_retired_job',fail_after_marker)
+    with pytest.raises(RuntimeError,match='simulated transaction interruption'):
+        module['mq_rotate_jobs'](queue,1)
+    assert queue.jobs()==jobs
+    assert queue.retired_jobs()==[]
+
+
+def test_retryable_human_job_keeps_old_chat_until_retry_source_is_verified(queue,module,monkeypatch):
+    import uuid
+    old,new=str(uuid.uuid4()),str(uuid.uuid4())
+    queue.config.update(reviewers=['claude','codex'],cwd='/tmp/review-work',
+        projects=[{'id':11,'path':'team/project'}],project_id=11,project_path='team/project',interval_minutes=15)
+    source={'origin':'human','provider':'claude','session':old,'source_id':'human-source',
+        'cwd':'/tmp/review-work','texts':['Please review the changed behavior.'],'mixed':False,'automated':False}
+    job=queue.enqueue(11,82,source_key='11:82:human:retry-source',kind='human',head='a'*40,
+        source=source,context={'head':'a'*40})
+    record=queue.mr(11,82);record['chats']['claude']=new
+    record['claude_history']=[old,new]
+    with queue.atomic():queue.put_mr(record)
+    job=queue.reserve({11})
+    first=queue.stage_start(job,'claude','review input',session=old)
+    job=queue.job(job['id']);job['stages'][-1].update(input=None,output_collected=True);queue.save(job)
+    queue.stage_end(queue.job(job['id']),first['id'],error={'message':'temporary failure'},terminal=True)
+    second=queue.stage_start(queue.job(job['id']),'codex','review input')
+    job=queue.job(job['id']);job['stages'][-1].update(input=None,output_collected=True);queue.save(job)
+    queue.stage_end(queue.job(job['id']),second['id'],result={'head':'a'*40,'outcome':'complete'},terminal=True)
+    queue.finish(queue.job(job['id']),'reviewed')
+    queue.put_effect({'key':'other-unsettled-effect','repository_id':11,'iid':82,'head':'a'*40,
+        'body':'uncertain','kind':'finding','target_discussion':None,'position':None,'actor_id':7,
+        'state':'prepared','job_id':'different-job'})
+    assert not module['mq_expire_chat'](queue,11,82,'claude',old)
+    assert old in queue.mr(11,82)['claude_history']
+    monkeypatch.setitem(module['mq_verify_source'].__globals__,'mq_claude_records',lambda config,session:[
+        {'uuid':'human-source','type':'user','cwd':'/tmp/review-work',
+         'message':{'content':'Please review the changed behavior.'}}])
+    queue.put_effect({'key':'other-unsettled-effect','repository_id':11,'iid':82,'head':'a'*40,
+        'body':'uncertain','kind':'finding','target_discussion':None,'position':None,'actor_id':7,
+        'state':'cancelled','job_id':'different-job'})
+    module['mq_rotate_jobs'](queue,1)
+    retried=queue.job(job['id'])
+    assert retried['state']=='pending' and old in queue.mr(11,82)['claude_history']
+    module['mq_verify_job_sources'](queue.config,queue,retried)
+
+
+def test_retired_marker_keeps_registered_input_until_old_chat_expires(queue,module):
+    import uuid
+    queue.config['reviewers']=['codex']
+    old,new=str(uuid.uuid4()),str(uuid.uuid4())
+    record=queue.mr(11,82)
+    record['chats']['codex']=new
+    record['codex_contexts']={old:{'cwd':'/tmp','project_id':None,'roots':['/tmp']},
+                              new:{'cwd':'/tmp','project_id':None,'roots':['/tmp']}}
+    with queue.atomic():queue.put_mr(record)
+    completed=[finish_history_job(queue,f'session-{i}',session=old,
+        exact_input=f'registered exact input {i}') for i in range(3)]
+    module['mq_rotate_jobs'](queue,1)
+    markers=queue.retired_jobs()
+    assert len(markers)==2
+    first=markers[0]
+    source_input=completed[0]['stages'][0]['input']
+    assert module['mq_registered_source'](queue,[source_input])
+    module['mq_rotate_retired_jobs'](queue,1)
+    assert queue.mr(11,82)['codex_contexts']=={new:{'cwd':'/tmp','project_id':None,'roots':['/tmp']}}
+    assert queue.retired_jobs()==[]
+    assert not module['mq_registered_source'](queue,[source_input])
+    assert len(queue.jobs())==1
+    assert completed[0]['id']==first['job_id']
+
+
+def test_retained_current_chat_can_keep_marker_group_over_limit(queue,module):
+    import uuid
+    queue.config['reviewers']=['codex']
+    session=str(uuid.uuid4())
+    record=queue.mr(11,82);record['chats']['codex']=session
+    record.setdefault('codex_contexts',{})
+    record['codex_contexts'][session]={'cwd':'/tmp','project_id':None,'roots':['/tmp']}
+    with queue.atomic():queue.put_mr(record)
+    for i in range(3):finish_history_job(queue,f'current-{i}',session=session)
+    module['mq_rotate_jobs'](queue,1)
+    module['mq_rotate_retired_jobs'](queue,1)
+    assert len(queue.retired_jobs())==2
+    assert queue.mr(11,82)['chats']['codex']==session
+
+
+def test_retired_question_answer_uses_marker_then_stops_after_expiry(queue,module):
+    import uuid
+    queue.config['reviewers']=['codex']
+    old,new,question_session=[str(uuid.uuid4()) for _ in range(3)]
+    record=queue.mr(11,82);record['chats']['codex']=new
+    record['codex_contexts']={old:{'cwd':'/tmp','project_id':None,'roots':['/tmp']},
+                              new:{'cwd':'/tmp','project_id':None,'roots':['/tmp']}}
+    with queue.atomic():queue.put_mr(record)
+    hold={'job_id':None,'provider':'claude','session':question_session,
+        'question':'Which behavior is intended?','anchor':'question-anchor','native_anchor':'native-anchor',
+        'turn_id':'question-turn'}
+    held=queue.enqueue(11,82,source_key='held-job-source',kind='human',head='a'*40,
+        source={'native_input':'held source'},context={})
+    hold['job_id']=held['id']
+    queue.finish(queue.reserve({11}),'retain owner for setup')
+    finish_history_job(queue,'question-surface',session=old,exact_input='question surface',hold_context=hold)
+    module['mq_rotate_jobs'](queue,1)
+    markers=queue.retired_jobs()
+    assert len(markers)==1
+    assert markers[0]['hold_surfaces']==[{'provider':'codex','session':old,
+        'hold_digest':module['monitor_digest'](hold)}]
+    with queue.atomic():queue.db.execute('DELETE FROM jobs WHERE id=?',(held['id'],))
+    current=queue.mr(11,82)
+    current['retired_questions']=[{'question':hold,'restart':{'restarted':True}}]
+    with queue.atomic():queue.put_mr(current)
+    source={'provider':'codex','session':old,'source_id':'answer-id','turn_id':'answer-turn'}
+    assert any(marker['repository_id']==11 and marker['iid']==82
+        and any(surface['session']==old and surface['hold_digest']==module['monitor_digest'](hold)
+            for surface in marker['hold_surfaces']) for marker in queue.retired_jobs())
+    assert module['mq_retired_question']({},queue,queue.mr(11,82),source)==hold
+    module['mq_rotate_retired_jobs'](queue,0)
+    assert module['mq_retired_question']({},queue,queue.mr(11,82),source) is None
+
+
+def test_effect_history_rotates_only_settled_absent_receipts(queue,module):
+    def effect(key,present=False,state='confirmed'):
+        queue.put_effect({'key':key,'repository_id':11,'iid':82,'head':'a'*40,'body':'comment '+key,
+            'kind':'finding','target_discussion':None,'position':None,'actor_id':7,'state':state,
+            'inventory_checked_at':1,'inventory_present':present})
+    effect('absent-old')
+    effect('present',present=True)
+    effect('uncertain',state='prepared')
+    module['mq_rotate_effects'](queue,1)
+    assert [item['key'] for item in queue.effects()]==['present','uncertain']
+
+
+def test_operator_restart_receipt_pins_its_effect_identity(queue,module):
+    receipt={'job':'restart-job','epoch':queue.epoch,'repository_id':11,'iid':82,
+        'head':'a'*40,'reason':'retry the MR','effects':['abandoned']}
+    with queue.atomic():queue.set_meta('operator_mr_restart:restart-job',receipt)
+    queue.put_effect({'key':'abandoned','repository_id':11,'iid':82,'head':'a'*40,'body':'old note',
+        'kind':'finding','target_discussion':None,'position':None,'actor_id':7,'state':'abandoned',
+        'operator_abandonment':receipt,'inventory_checked_at':1,'inventory_present':False})
+    queue.put_effect({'key':'cancelled','repository_id':11,'iid':82,'head':'a'*40,'body':'never sent',
+        'kind':'finding','target_discussion':None,'position':None,'actor_id':7,'state':'cancelled'})
+    module['mq_rotate_effects'](queue,1)
+    assert [effect['key'] for effect in queue.effects()]==['abandoned']
+
+
+def test_inventory_effect_cleanup_requires_successful_absence_read(queue,module):
+    effect={'key':'visible-note','repository_id':11,'iid':82,'head':'a'*40,'body':'I fixed this',
+        'kind':'finding','target_discussion':None,'position':None,'actor_id':7,'state':'confirmed'}
+    queue.put_effect(effect)
+    note={'id':4,'body':'I fixed this','author':{'id':7},'system':False,'resolvable':False,
+          'resolved':False,'created_at':'2026-10-20T00:00:00Z'}
+    context={'repository_id':11,'iid':82,'threads':[{'id':'discussion-1','notes':[note]}]}
+    module['mq_update_effect_inventory'](queue,context)
+    assert queue.effect('visible-note')['inventory_present'] is True
+    signature,_=module['mq_inventory_notes'](queue,context)
+    assert signature==module['monitor_digest']([])
+    module['mq_update_effect_inventory'](queue,{**context,'threads':[]})
+    assert queue.effect('visible-note')['inventory_present'] is False
+    module['mq_rotate_effects'](queue,0)
+    assert queue.effect('visible-note') is None
+    reappeared={**context,'threads':[{'id':'discussion-1','notes':[note]}]}
+    signature,_=module['mq_inventory_notes'](queue,reappeared)
+    assert signature!=module['monitor_digest']([])
+
+
+def test_same_comment_text_in_another_discussion_keeps_inventory_signature_stable(queue,module):
+    effect={'key':'threaded-note','repository_id':11,'iid':82,'head':'a'*40,'body':'same text',
+        'kind':'finding','target_discussion':None,'discussion':'discussion-1','position':None,
+        'actor_id':7,'state':'confirmed'}
+    queue.put_effect(effect)
+    note={'id':8,'body':'same text','author':{'id':7},'system':False,'resolvable':False,
+        'resolved':False,'created_at':'2026-10-20T00:00:00Z'}
+    context={'repository_id':11,'iid':82,'threads':[{'id':'discussion-2','notes':[note]}]}
+    before,_=module['mq_inventory_notes'](queue,context)
+    module['mq_update_effect_inventory'](queue,context)
+    assert queue.effect('threaded-note')['inventory_present'] is False
+    module['mq_rotate_effects'](queue,0)
+    after,_=module['mq_inventory_notes'](queue,context)
+    assert before==after
+
+
+def test_metadata_rotation_drops_old_diagnostics_but_protects_active_state(queue,module):
+    for index in range(3):
+        with queue.atomic():queue.set_meta(f'inventory_error:{index}',{'at':index,'error':'offline'})
+    with queue.atomic():queue.set_meta('active_cursor',{'page':2})
+    with queue.atomic():queue.set_meta('custom_error_state',{'identity':'unknown'})
+    module['mq_rotate_metadata'](queue,1)
+    rows={row['key'] for row in queue.db.execute('SELECT key FROM metadata')}
+    assert rows=={'identity','epoch','active_cursor','custom_error_state'}
+    assert len(rows)>1
+
+
+def test_mr_history_requires_current_validated_closed_state(queue,module):
+    for iid in (82,83):
+        record=queue.mr(11,iid);record.update(mr_state='unknown')
+        with queue.atomic():queue.put_mr(record)
+    config={'project_id':11,'project_path':'team/project','projects':[{'id':11,'path':'team/project'}],
+        'history_limit':1,'_checked_mr_states':{}}
+    module['mq_rotate_mrs'](queue,config,1)
+    assert len(queue.mrs())==2
+    config['_checked_mr_states']={(11,82):'closed'}
+    module['mq_rotate_mrs'](queue,config,1)
+    assert [(r['repository_id'],r['iid']) for r in queue.mrs()]==[(11,83)]
+
+
+def test_saved_closed_mr_reopen_is_respected_by_fresh_status_read(queue,module,monkeypatch):
+    for iid in (82,83):
+        record=queue.mr(11,iid);record.update(mr_state='closed')
+        with queue.atomic():queue.put_mr(record)
+    globals_=module['mq_refresh_saved_mr_state'].__globals__
+    monkeypatch.setitem(globals_,'mq_repositories',lambda config:[{'id':11,'path':'team/project'}])
+    monkeypatch.setitem(globals_,'mq_repository',lambda config,repository:config)
+    class API:
+        def __init__(self,config):pass
+        def mr(self,iid):return {'iid':iid,'state':'opened','title':'reopened'}
+    monkeypatch.setitem(globals_,'MonitorGitLab',API)
+    config={'project_id':11,'project_path':'team/project','projects':[{'id':11,'path':'team/project'}],
+        '_checked_mr_states':{}}
+    assert module['mq_refresh_saved_mr_state'](config,queue)
+    checked=next(iter(config['_checked_mr_states']))
+    assert config['_checked_mr_states'][checked]=='opened'
+    module['mq_rotate_mrs'](queue,config,1)
+    assert len(queue.mrs())==2
+
+
+def test_failed_saved_mr_status_read_never_authorizes_retirement(queue,module,monkeypatch):
+    for iid in (82,83):
+        record=queue.mr(11,iid);record.update(mr_state='closed')
+        with queue.atomic():queue.put_mr(record)
+    globals_=module['mq_refresh_saved_mr_state'].__globals__
+    monkeypatch.setitem(globals_,'mq_repositories',lambda config:[{'id':11,'path':'team/project'}])
+    monkeypatch.setitem(globals_,'mq_repository',lambda config,repository:config)
+    class API:
+        def __init__(self,config):pass
+        def mr(self,iid):raise RuntimeError('offline')
+    monkeypatch.setitem(globals_,'MonitorGitLab',API)
+    config={'project_id':11,'project_path':'team/project','projects':[{'id':11,'path':'team/project'}],
+        '_checked_mr_states':{}}
+    with pytest.raises(RuntimeError,match='offline'):
+        module['mq_refresh_saved_mr_state'](config,queue)
+    module['mq_rotate_mrs'](queue,config,1)
+    assert len(queue.mrs())==2
+
+
+def test_removed_project_mr_history_is_retired_as_one_group(queue,module):
+    for iid in (82,83):
+        record=queue.mr(11,iid);record.update(mr_state='opened')
+        with queue.atomic():queue.put_mr(record)
+    config={'project_id':11,'project_path':'team/project','projects':[],
+        'history_limit':1,'_checked_mr_states':{}}
+    module['mq_rotate_mrs'](queue,config,1)
+    assert [(r['repository_id'],r['iid']) for r in queue.mrs()]==[(11,83)]
+
+
+def test_closed_mr_baseline_jobs_effects_and_markers_retire_atomically(queue,module):
+    job=finish_history_job(queue,'fresh-after-retirement')
+    queue.put_effect({'key':'resolved-thread','repository_id':11,'iid':82,'head':'a'*40,
+        'body':'', 'kind':'resolve','target_discussion':'discussion-1','position':None,
+        'actor_id':7,'state':'confirmed','job_id':job['id']})
+    module['mq_rotate_effects'](queue,0)
+    assert queue.effect('resolved-thread') is not None
+    closed=queue.mr(11,82);closed.update(mr_state='closed')
+    open_mr=queue.mr(11,83);open_mr.update(mr_state='opened')
+    with queue.atomic():queue.put_mr(closed);queue.put_mr(open_mr)
+    config={'project_id':11,'project_path':'team/project','projects':[{'id':11,'path':'team/project'}],
+        'history_limit':1,'_checked_mr_states':{(11,82):'closed'}}
+    module['mq_rotate_mrs'](queue,config,1)
+    assert [(record['repository_id'],record['iid']) for record in queue.mrs()]==[(11,83)]
+    assert queue.db.execute('SELECT COUNT(*) FROM jobs WHERE repository=11 AND iid=82').fetchone()[0]==0
+    assert queue.db.execute('SELECT COUNT(*) FROM effects WHERE repository=11 AND iid=82').fetchone()[0]==0
+    assert queue.db.execute('SELECT COUNT(*) FROM retired_jobs WHERE repository=11 AND iid=82').fetchone()[0]==0
+    fresh=queue.enqueue(11,82,source_key='11:82:code:fresh-after-retirement',kind='code',head='a'*40,
+        source={'native_input':'fresh-after-retirement'},context={})
+    assert fresh['id']!=job['id'] and fresh['state']=='pending'
+
+
+def test_operator_restart_receipt_protects_closed_mr_group_after_job_was_marked(queue,module):
+    job=finish_history_job(queue,'operator-receipt-history')
+    module['mq_rotate_jobs'](queue,0)
+    assert queue.job(job['id']) is None
+    assert queue.retired_jobs(11,82)
+    effect={'key':'abandoned-effect','repository_id':11,'iid':82,'head':'a'*40,'body':'old note',
+        'kind':'finding','target_discussion':None,'position':None,'actor_id':7,'state':'abandoned'}
+    receipt={'job':job['id'],'epoch':queue.epoch,'repository_id':11,'iid':82,
+        'reason':'retry explicitly','effects':[effect['key']],'retired_jobs':[job['id']]}
+    effect['operator_abandonment']=receipt
+    queue.put_effect(effect)
+    with queue.atomic():queue.set_meta('operator_mr_restart:'+job['id'],receipt)
+    module['mq_rotate_effects'](queue,0)
+    record=queue.mr(11,82);record['mr_state']='closed'
+    with queue.atomic():queue.put_mr(record)
+    assert not module['mq_forget_mr'](queue,record)
+    assert queue.mr(11,82)==record
+    assert queue.effect(effect['key']) is not None
+    assert queue.retired_jobs(11,82)
+    assert queue.meta('operator_mr_restart:'+job['id'])==receipt
+
+
+def test_mr_group_retirement_rolls_back_when_effect_delete_fails(queue,module):
+    job=finish_history_job(queue,'mr-retirement-rollback')
+    effect={'key':'settled-effect','repository_id':11,'iid':82,'head':'a'*40,'body':'note',
+        'kind':'finding','target_discussion':None,'position':None,'actor_id':7,'state':'confirmed'}
+    queue.put_effect(effect)
+    record=queue.mr(11,82);record['mr_state']='closed'
+    with queue.atomic():queue.put_mr(record)
+    queue.db.execute("CREATE TRIGGER fail_mr_effect_delete BEFORE DELETE ON effects "
+        "BEGIN SELECT RAISE(ABORT,'simulated retirement interruption'); END")
+    with pytest.raises(sqlite3.IntegrityError,match='simulated retirement interruption'):
+        module['mq_forget_mr'](queue,record)
+    queue.db.execute('DROP TRIGGER fail_mr_effect_delete')
+    assert queue.job(job['id'])==job
+    assert queue.effect(effect['key'])==effect
+    assert queue.mr(11,82)==record
+
+
+def test_next_successful_tick_applies_lowered_history_limit_and_busy_tick_does_not(flow):
+    import json
+    raw=json.loads(flow.config_path.read_text())
+    raw['history_limit']=1
+    flow.config_path.write_text(json.dumps(raw));flow.config_path.chmod(0o600)
+    for index in range(3):finish_history_job(flow.q,f'next-tick-{index}')
+    flow.m['monitor_is_open']=lambda config:False
+    lock=flow.m['mq_lock'](flow.config,'consumer')
+    try:
+        assert flow.tick()['cycle']=='busy'
+        assert len(flow.q.jobs())==3
+    finally:
+        os.close(lock)
+    assert flow.tick()['cycle']=='checked'
+    assert len(flow.q.jobs())==1
+    assert len(flow.q.retired_jobs())==1
+
+
+def test_tick_keeps_database_rotation_when_later_cycle_budget_is_exhausted(flow):
+    import json
+    import time
+    raw=json.loads(flow.config_path.read_text());raw['history_limit']=1
+    flow.config_path.write_text(json.dumps(raw));flow.config_path.chmod(0o600)
+    for index in range(3):finish_history_job(flow.q,f'budget-history-{index}')
+    flow.m['monitor_is_open']=lambda config:False
+    def expire_after_local_rotation(config,queue):
+        config['_cycle_deadline']=time.monotonic()-1
+    flow.m['mq_observe_direct_stages']=expire_after_local_rotation
+    result=flow.tick()
+    assert result['cycle']=='checked' and result['yielded']=='cycle budget'
+    assert len(flow.q.jobs())==1
 
 
 def domain(iid=82, *, outcome='complete', actions=None, assessment=None, question=None):

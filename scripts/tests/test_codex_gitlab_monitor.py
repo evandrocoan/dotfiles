@@ -425,6 +425,7 @@ def test_mq_configure_is_private_and_status_does_not_initialize_state(tmp_path):
     assert config["open_hour"] == 7
     assert config["close_hour"] == 22
     assert config["interval_minutes"] == 15
+    assert analysis["history_limit"] == config["history_limit"] == 2000
     assert (tmp_path / "monitor.json").stat().st_mode & 0o777 == 0o600
     before = (tmp_path / "monitor.json").read_bytes()
     result = run_monitor(tmp_path, "status")
@@ -434,6 +435,16 @@ def test_mq_configure_is_private_and_status_does_not_initialize_state(tmp_path):
     assert (tmp_path / "monitor.json").read_bytes() == before
 
 
+def test_existing_analysis_toml_without_history_limit_uses_default(tmp_path):
+    config=configure(tmp_path)
+    analysis=tmp_path/'analysis.toml'
+    analysis.write_text('\n'.join(line for line in analysis.read_text().splitlines()
+                                  if not line.startswith('history_limit ='))+'\n')
+    loaded=runpy.run_path(str(CLI))['mq_config'](tmp_path/'monitor.json')
+    assert loaded['history_limit']==2000
+    assert not Path(loaded['queue_file']).exists()
+
+
 @pytest.mark.parametrize("original,replacement,error", [
     ('codex_model = "gpt-6.1-sol"', 'model = "gpt-6.1-sol"', "unknown or missing TOML settings"),
     ('codex_effort = "xhigh"', 'model_reasoning_effort = "xhigh"', "unknown or missing TOML settings"),
@@ -441,6 +452,8 @@ def test_mq_configure_is_private_and_status_does_not_initialize_state(tmp_path):
     ('codex_effort = "xhigh"', '', "unknown or missing TOML settings"),
     ('codex_model = "gpt-6.1-sol"', 'codex_model = ""', "invalid codex_model"),
     ('codex_effort = "xhigh"', 'codex_effort = "invalid"', "invalid codex_effort"),
+    ('history_limit = 2000', 'history_limit = 0', "history_limit must be a positive integer"),
+    ('history_limit = 2000', 'history_limit = true', "history_limit must be a positive integer"),
 ])
 def test_invalid_codex_toml_settings_fail_before_queue_creation(tmp_path, original, replacement, error):
     config = configure(tmp_path)

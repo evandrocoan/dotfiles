@@ -5,6 +5,35 @@ The fresh consumer is installed; predecessor state and chats remain untouched an
 
 ## Decision and scope
 
+### Per-group history rotation
+
+`history_limit` defaults to 2,000 and applies independently to each durable queue-history group
+(`jobs`, `effects`, `mrs`, `metadata`, and compact `retired_jobs` markers). It is a row-count limit,
+not one combined total or a byte limit. Lowering it takes effect on the next successful tick.
+
+Ticks remove the oldest eligible rows after the evidence needed for that group is available. A group
+may exceed its limit while rows protect active work, retry/output obligations, human holds, unread
+notices, unsettled effects, checkpoints, source/session provenance, inventory comparison, or operator
+receipts. Completed job details are replaced with non-executable identity markers in the same SQLite
+transaction. A retained native session keeps its markers needed to distinguish agent-authored
+messages; expiring that old session removes it from monitor intake and answer recognition. This
+changes monitor handling only; ordinary manual GitLab MCP use in that chat remains available.
+
+Settled finding/reply receipts remain while their matching comments are present in the latest
+successful discussion read; resolution identities stay with the MR inventory baseline. An
+operator-restart receipt also retains referenced effects and prevents retirement of its MR group.
+A closed MR does not by itself retire this identity: it may reopen. When the MR group needs
+trimming, its full baseline, terminal jobs, settled effects and markers can be removed together
+only after a current identity-validated closed/merged response, or after its project is removed
+from configuration, and no remaining work, receipt, output or question dependencies. Failed or
+unknown state reads keep a configured project's record. Reopened or rediscovered MRs after full
+retirement start as fresh admissions.
+
+Metadata rotation discards only explicitly recognized diagnostics; unknown keys remain protected.
+Active cursors, proofs and identities remain. The
+limit does not cap large values or nested history inside a row and does not shrink the SQLite file
+physically. It adds no parallel queue and does not change reviewer order or publication protocols.
+
 ### Direct GitLab publication ownership
 
 The operator selected direct use of the existing ordinary GitLab HTTP MCP for newly prepared

@@ -646,9 +646,11 @@ configured GitLab repositories. Each configured reviewer runs in order after eit
 any terminal failure. Unstarted automatic events for the same MR share one pending round at the
 first event's FIFO position, using the latest admitted commit and current discussions. Original
 events remain visible with an administrative coalescing outcome; that outcome does not claim a
-completed review. Human requests and already-started work remain separate. There is no credit
-classifier or fallback mode. Each reviewer receives the MR link and workspace, reads context as
-needed, investigates and tests, and publishes findings during its review directly through the existing ordinary GitLab MCP. It finishes with a readable summary, without a final JSON review report. The next reviewer
+completed review. Previously admitted human work and already-started work remain separate. There is
+no credit classifier or fallback mode. Each reviewer receives the MR link and workspace, reads
+context as needed, investigates and tests, and publishes findings during its review directly through
+the existing ordinary GitLab MCP. It finishes with a readable summary, without a final JSON review
+report. The next reviewer
 reads the actual discussions and earlier summary: separate defects on the same line can have
 separate threads; the model decides whether a concern duplicates or supplements an existing one.
 All failures remain visible; an entirely failed round waits for the configured interval before
@@ -705,6 +707,7 @@ codex_effort = "xhigh"
 codex_project_name = "example-review-project"
 reviewers = ["claude", "codex"]
 parallel = 1
+history_limit = 2000
 
 gitlab_url = "https://gitlab.example.com"
 projects = [{ id = 123, path = "group/project" }, { id = 456, path = "group/other" }]
@@ -724,8 +727,20 @@ execution is interrupted and observed before the next reviewer starts. Existing 
 `project_id`/`project_path` settings are also accepted instead of `projects`. Both forms share the
 same FIFO, keyed by repository ID plus MR IID. New jobs snapshot their reviewer order.
 
+`history_limit` defaults to 2,000 rows **per group**, independently for jobs, effect receipts, MR
+records, metadata, and compact retired-job identity markers. Lowering it takes effect on the next
+successful tick. Active work, retries, holds, unread notices, uncertain effects, operator-restart
+receipts, and identities still needed by recognized chats stay in place, so a protected group can
+exceed the limit. Closed/merged MRs require a validated state read before retirement; a project
+removed from configuration can be retired only after its remaining work and receipt dependencies
+are gone. When an old chat expires from monitor intake, it remains usable manually with the ordinary
+GitLab MCP. This counts database rows, not bytes: large values can still occupy space inside a row,
+and SQLite may keep freed pages in the database file for reuse instead of shrinking it.
+
 A named Codex project supplies its ordered folders and primary directory to both reviewers.
-Bind a new installation by name with `select-project --name NAME`; an existing binding is retained.
+For a new installation, replace the generated `workspace` setting in the analysis TOML with
+`codex_project_name = "NAME"` (the two settings cannot coexist). Then bind it with
+`codex-session-stats monitor-gitlab select-project --name NAME`; an existing binding is retained.
 Each new round reads the current project folders and saves one list for both reviewers, including
 across restarts. Add or remove folders in Codex; the next round follows that change automatically.
 Without a named project, `workspace` selects the local directory relative to the TOML.
@@ -851,13 +866,16 @@ from exact native tool results; same-account human edits remain observable. Exis
 their original native reader; old proposals are not replayed as publications. Existing chats and
 human questions remain valid original sources, without editing their loaded instructions.
 
-Diagnostics and read-only recovery:
+Diagnostics and recovery by authenticated read-back:
+
+`recover` reads GitLab and updates local effect receipts and retry state when it confirms delivery.
+The other commands below only inspect queue state or GitLab data.
 
 ```bash
 codex-session-stats monitor-gitlab status
 codex-session-stats monitor-gitlab instructions
 codex-session-stats monitor-gitlab snapshot --project 123 --mr 82
-codex-session-stats monitor-gitlab recover JOB_UUID
+codex-session-stats monitor-gitlab recover --job JOB_UUID
 journalctl --user -u codex-gitlab-monitor.service -n 100 --no-pager
 ```
 

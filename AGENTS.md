@@ -110,6 +110,16 @@ history. Original consumer chats remain valid human and hold sources. Only actua
 review advances a code checkpoint. Explicit restart preserves retired questions and late answers as
 read-only.
 
+Rotate monitor history on successful ticks using `history_limit` independently for
+`jobs`, `effects`, `mrs`, `metadata`, and compact `retired_jobs` identity markers. Count rows, not
+bytes. Never delete active work, retry/output obligations, holds, unread notices, unsettled effects,
+or source/session identities still needed by recognized chats; protected groups may exceed the
+limit. Retired-chat expiry stops monitor intake and answer recognition for that chat but does not
+revoke ordinary manual GitLab MCP use. Keep effect identities while matching comments, operator
+restart receipts, or an MR inventory baseline may still need them. Retire a closed/merged MR and
+its settled effects atomically after a validated state read, or a removed project group after its
+configuration removal is confirmed, and only when no work, receipt, or question dependency remains.
+
 An explicit local operator MR restart may retire captured pending automatic work, questions and
 unresolved historical public-effect delivery after proven native termination and a fresh open-MR/head
 read. Preserve original evidence and uncertainty as abandoned, never as an acknowledgment, human

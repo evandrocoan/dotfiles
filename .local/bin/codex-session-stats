@@ -2184,7 +2184,7 @@ def monitor_default_config(project_url: str, project_id: int, server: str) -> di
 
 MONITOR_TOML_PROJECT = {"gitlab_url", "project_path", "project_id"}
 MONITOR_TOML_SCHEDULE = {"timezone", "weekdays", "open_hour", "close_hour", "interval_minutes"}
-MONITOR_TOML_OPTIONS = MONITOR_TOML_PROJECT | MONITOR_TOML_SCHEDULE | {"parallel", "projects"}
+MONITOR_TOML_OPTIONS = MONITOR_TOML_PROJECT | MONITOR_TOML_SCHEDULE | {"parallel", "projects", "history_limit"}
 
 
 def monitor_project_roots(roots, state_dir: Path, *, existing=True) -> list:
@@ -2360,6 +2360,9 @@ def monitor_analysis_values(settings: dict, path: Path, state_dir: Path) -> dict
         raise RuntimeError("invalid codex_effort")
     result = {"model": settings["codex_model"], "effort": settings["codex_effort"],
               **{k: v for k, v in settings.items() if k in MONITOR_TOML_OPTIONS}}
+    result.setdefault("history_limit", 2000)
+    if type(result["history_limit"]) is not int or result["history_limit"] < 1:
+        raise RuntimeError("history_limit must be a positive integer")
     if "codex_project_name" in settings:
         name = settings["codex_project_name"]
         if ("workspace" in settings or not isinstance(name, str) or not name.strip()
@@ -2428,6 +2431,7 @@ def monitor_config_data(path: Path, data: dict, *, diagnostic=False, analysis_se
         data.update(settings)
         data["analysis_config"] = str(target)
     data.setdefault("parallel", 1)
+    data.setdefault("history_limit", 2000)
     if data.get("codex_project_name"):
         monitor_trusted_control_path(path, Path(data["state_file"]).expanduser().resolve().parent,
                                      private=True, diagnostic=diagnostic)
@@ -2446,7 +2450,7 @@ def monitor_config_data(path: Path, data: dict, *, diagnostic=False, analysis_se
         raise RuntimeError("noncanonical monitor project identity")
     for name in ("project_id", "parallel", "interval_minutes", "http_timeout", "native_timeout",
                  "max_response_bytes", "max_pages", "max_notes_per_mr", "max_mrs",
-                 "cycle_seconds", "max_history_pages"):
+                 "cycle_seconds", "max_history_pages", "history_limit"):
         if type(data.get(name)) is not int or data[name] < 1:
             raise RuntimeError(f"{name} must be a positive integer")
     if (type(data.get("open_hour")) is not int or type(data.get("close_hour")) is not int
@@ -2973,8 +2977,15 @@ class MonitorQueue:
                 CREATE TABLE IF NOT EXISTS effects (
                     key TEXT PRIMARY KEY, repository INTEGER NOT NULL, iid INTEGER NOT NULL,
                     value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS retired_jobs (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_key TEXT NOT NULL UNIQUE, repository INTEGER NOT NULL, iid INTEGER NOT NULL,
+                    job_id TEXT NOT NULL, value TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS retired_jobs_mr ON retired_jobs(repository,iid);
             ''')
         self.db.row_factory = sqlite3.Row
+        self.has_retired_jobs = self.db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='retired_jobs'").fetchone() is not None
         saved = self.meta('identity')
         if saved is None and not readonly:
             with self.atomic():
@@ -3011,7 +3022,8 @@ class MonitorQueue:
         return json.loads(row['value']) if row else None
 
     def set_meta(self, key, value):
-        self.db.execute('INSERT INTO metadata VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        # SQLite row order is the recency order for small groups without timestamps.
+        self.db.execute('INSERT OR REPLACE INTO metadata VALUES(?,?)',
                         (key, json.dumps(value, ensure_ascii=False)))
 
     def mr(self, repository, iid):
@@ -3020,11 +3032,36 @@ class MonitorQueue:
             'chats': {}, 'reviewed_head': None, 'hold': None}
 
     def put_mr(self, record):
-        self.db.execute('INSERT INTO mrs VALUES(?,?,?) ON CONFLICT(repository,iid) DO UPDATE SET value=excluded.value',
+        self.db.execute('INSERT OR REPLACE INTO mrs VALUES(?,?,?)',
             (record['repository_id'], record['iid'], json.dumps(record, ensure_ascii=False)))
 
     def mrs(self):
-        return [json.loads(r['value']) for r in self.db.execute('SELECT value FROM mrs ORDER BY repository,iid')]
+        return [json.loads(r['value']) for r in self.db.execute('SELECT value FROM mrs ORDER BY rowid')]
+
+    def retired_job(self, source_key):
+        if not self.has_retired_jobs:
+            return None
+        row = self.db.execute('SELECT * FROM retired_jobs WHERE source_key=?', (source_key,)).fetchone()
+        if row is None:
+            return None
+        return {**json.loads(row['value']), 'sequence':row['sequence']}
+
+    def retired_jobs(self, repository=None, iid=None):
+        if not self.has_retired_jobs:
+            return []
+        sql, values = 'SELECT * FROM retired_jobs', []
+        if repository is not None:
+            sql += ' WHERE repository=? AND iid=?'
+            values.extend((repository,iid))
+        return [{**json.loads(row['value']), 'sequence':row['sequence']}
+                for row in self.db.execute(sql+' ORDER BY sequence',values)]
+
+    def put_retired_job(self, marker):
+        if not self.has_retired_jobs:
+            raise RuntimeError('retired job identity table is unavailable')
+        self.db.execute('INSERT OR REPLACE INTO retired_jobs(source_key,repository,iid,job_id,value) '
+            'VALUES(?,?,?,?,?)', (marker['source_key'],marker['repository_id'],marker['iid'],marker['job_id'],
+                                  json.dumps(marker,ensure_ascii=False)))
 
     @staticmethod
     def decode(row):
@@ -3125,6 +3162,14 @@ class MonitorQueue:
                         and kind in {'code','discussion'} and original['head']!=head):
                     raise RuntimeError('repeated source identity changed')
                 return saved
+            retired = self.retired_job(source_key)
+            if retired:
+                expected = monitor_digest({'repository_id':repository,'iid':iid,'kind':kind,
+                    'head':head,'source':source})
+                if (retired['repository_id'],retired['iid'],retired['source_identity_digest']) != (
+                        repository,iid,expected):
+                    raise RuntimeError('repeated source identity changed')
+                return None
             job = {'id': monitor_id(), 'epoch': self.epoch, 'repository_id': repository, 'iid': iid,
                 'kind': kind, 'repository_path':next((p['path'] for p in self.config.get('projects',[]) if p['id']==repository),self.config.get('project_path')), 'head': head, 'source': source, 'context': context,
                 'state': 'pending', 'created_at': mq_stamp(), 'wait_reason': None, 'retry_at': 0,
@@ -3299,7 +3344,7 @@ class MonitorQueue:
         return json.loads(row['value']) if row else None
 
     def effects(self):
-        return [json.loads(r['value']) for r in self.db.execute('SELECT value FROM effects ORDER BY key')]
+        return [json.loads(r['value']) for r in self.db.execute('SELECT value FROM effects ORDER BY rowid')]
 
     def put_effect(self, effect):
         saved = self.effect(effect['key'])
@@ -3310,7 +3355,7 @@ class MonitorQueue:
                 saved['kind']=='finding' and saved.get('discussion') is None and effect['state']=='confirmed'
                 and isinstance(effect.get('discussion'),str) and effect.get('note_id')):
             raise RuntimeError('public effect receipt discussion changed')
-        self.db.execute('INSERT INTO effects VALUES(?,?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        self.db.execute('INSERT OR REPLACE INTO effects VALUES(?,?,?,?)',
             (effect['key'], effect['repository_id'], effect['iid'], json.dumps(effect, ensure_ascii=False)))
 
 MONITOR_TOML_OPTIONS = MONITOR_TOML_OPTIONS | {"reviewers", "claude_model", "claude_effort", "review_timeout_seconds"}
@@ -4923,8 +4968,14 @@ def mq_texts(content):
 
 def mq_registered_source(queue, texts, client_ids=()):
     stages = list(mq_all_stages(queue))
-    return (any(s['id'] in client_ids for s in stages)
-            or any(s.get('input') and s['input'] in texts for s in stages))
+    if (any(s['id'] in client_ids for s in stages)
+            or any(s.get('input') and s['input'] in texts for s in stages)):
+        return True
+    text_digests = {hashlib.sha256(text.encode('utf-8')).hexdigest() for text in texts}
+    ids = set(client_ids)
+    return any(ids.intersection(marker.get('stage_ids',[]))
+        or text_digests.intersection(marker.get('input_digests',[]))
+        for marker in queue.retired_jobs())
 
 
 def mq_verify_source(config,queue,source,repository,iid):
@@ -5131,9 +5182,15 @@ def mq_retired_question(config,queue,record,source,result=None):
         for stage in mq_all_stages(queue):
             if stage.get('session')==source['session'] and stage.get('input'):
                 if mq_input_context(queue,stage).get('hold')==hold:surfaces.add(stage['session'])
+        if any(any(surface.get('session')==source['session']
+                and surface.get('hold_digest')==monitor_digest(hold)
+                for surface in marker.get('hold_surfaces',[]))
+                for marker in queue.retired_jobs(record['repository_id'],record['iid'])):
+            surfaces.add(source['session'])
         if source['session'] not in surfaces:continue
         if result:mq_human_assessment(result,source,hold)
-        mq_answer_after_question(config,queue,source,hold)
+        mq_answer_after_question(config,queue,source,hold,
+            repository=record['repository_id'],iid=record['iid'])
         return hold
     return None
 
@@ -5162,7 +5219,7 @@ def mq_held_stage(queue,record):
 def mq_question_turns(config,queue,hold):
     """Durable descending page read, then causal processing; no later-first acceptance."""
     key = 'held_native_history:'+monitor_digest(hold)
-    state = queue.meta(key) or {'cursor':None,'pages':0,'turns':[],'ready':False,'seen':[]}
+    state = queue.meta(key) or {'session':hold['session'],'cursor':None,'pages':0,'turns':[],'ready':False,'seen':[]}
     while not state['ready']:
         mq_budget(config)
         if state['pages']>=config['max_history_pages']:
@@ -5600,11 +5657,31 @@ def mq_prepare_question(config,queue,job):
 def mq_inventory_notes(queue,context):
     owned = [e for e in queue.effects() if e['repository_id']==context['repository_id'] and e['iid']==context['iid']]
     threads = [{'id':t['id'],'notes':[n for n in t['notes'] if not any(
-        e.get('body')==n['body'] and e.get('actor_id')==n['author']['id'] for e in owned)]}
+        mq_effect_matches_note(e,n,t['id']) for e in owned)]}
         for t in context['threads']]
     notes = [monitor_note(n,t['id']) for t in threads for n in t['notes'] if not n.get('system')]
     signature = monitor_digest([{k:n[k] for k in ('id','discussion','revision','author_id')} for n in notes])
     return signature,mq_note_versions(threads)
+
+
+def mq_effect_matches_note(effect,note,discussion):
+    return (effect.get('body')==note.get('body')
+        and effect.get('actor_id')==note.get('author',{}).get('id')
+        and (effect.get('discussion') is None or effect.get('discussion')==discussion))
+
+
+def mq_update_effect_inventory(queue,context):
+    """Record only presence/absence proven by a complete authenticated discussion read."""
+    notes = [(note,thread['id']) for thread in context['threads'] for note in thread['notes']]
+    for effect in queue.effects():
+        if ((effect['repository_id'],effect['iid'])!=(context['repository_id'],context['iid'])
+                or not mq_effect_settled(queue,effect)):
+            continue
+        if effect.get('kind') in {'finding','reply'} and isinstance(effect.get('body'),str) \
+                and effect.get('actor_id') is not None:
+            effect.update(inventory_present=any(mq_effect_matches_note(effect,note,discussion)
+                for note,discussion in notes),inventory_checked_at=mq_stamp())
+            queue.put_effect(effect)
 
 
 def mq_inventory(config,queue):
@@ -5645,8 +5722,14 @@ def mq_inventory(config,queue):
                 try:
                     mq_admit(config,project['id'])
                     context = mq_context(scoped,iid,with_diff=False)
+                    mq_update_effect_inventory(queue,context)
                     if context['mr']['state']!='opened':
+                        config.setdefault('_checked_mr_states',{})[(project['id'],iid)] = context['mr']['state']
+                        closed_record = queue.mr(project['id'],iid)
+                        closed_record.update(mr_state=context['mr']['state'],mr_state_checked_at=mq_stamp())
+                        queue.put_mr(closed_record)
                         continue
+                    config.setdefault('_checked_mr_states',{})[(project['id'],iid)] = 'opened'
                     record = queue.mr(project['id'],context['iid'])
                     signature,raw = mq_inventory_notes(queue,context)
                     own = record.get('own_outputs',{})
@@ -5669,7 +5752,7 @@ def mq_inventory(config,queue):
                         fresh = queue.mr(project['id'],context['iid'])
                         fresh.update(observed_head=context['head'],observed_notes=signature,
                             observed_note_versions=raw,observation_generation=generation if changed else generation-1,
-                            title=context['mr']['title'])
+                            title=context['mr']['title'],mr_state='opened',mr_state_checked_at=mq_stamp())
                         queue.put_mr(fresh)
                         mq_retire_self_activity(queue,fresh)
                 except (OSError,RuntimeError,ValueError) as failure:
@@ -5680,6 +5763,26 @@ def mq_inventory(config,queue):
         except (OSError,RuntimeError,ValueError) as failure:
             mq_diagnostic(queue,'inventory_error:'+str(project['id']),failure)
     return True
+
+
+def mq_refresh_saved_mr_state(config,queue):
+    """Read one saved MR per tick so a retained row is never retired from stale state."""
+    configured = {p['id']:p for p in mq_repositories(config)}
+    candidates = [r for r in queue.mrs() if r['repository_id'] in configured]
+    for record in mq_rotated_sources(queue,'mr_state_next',candidates,
+            lambda r:[r['repository_id'],r['iid']]):
+        mq_budget(config)
+        project = configured[record['repository_id']]
+        scoped = mq_repository(config,project['id'])
+        mr = MonitorGitLab(scoped).mr(record['iid'])
+        fresh = queue.mr(record['repository_id'],record['iid'])
+        if (fresh['repository_id'],fresh['iid'])!=(project['id'],record['iid']):
+            raise RuntimeError('saved MR identity changed during status refresh')
+        fresh.update(mr_state=mr['state'],mr_state_checked_at=mq_stamp(),title=mr['title'])
+        with queue.atomic():queue.put_mr(fresh)
+        config.setdefault('_checked_mr_states',{})[(project['id'],record['iid'])] = mr['state']
+        return True
+    return False
 
 
 def mq_question(queue,job,stage,result):
@@ -6063,7 +6166,7 @@ def mq_cancel_stage(config,stage):
         return bool(mq_codex_observe(config,stage).get('terminal'))
     return False
 
-def mq_answer_after_question(config,queue,source,hold):
+def mq_answer_after_question(config,queue,source,hold,*,repository=None,iid=None):
     if source['provider']==hold['provider'] and source['session']==hold['session']:
         if source['provider']=='codex':
             items = mq_codex_items(config,source['session'],hold['turn_id'])
@@ -6072,7 +6175,7 @@ def mq_answer_after_question(config,queue,source,hold):
             # Only these exact native IDs matter. Retain cursor/order evidence across
             # bounded ticks, and reread original source/question items on every use.
             key = 'human_answer_order:'+monitor_digest(json.dumps([source,hold],sort_keys=True))
-            proof = queue.meta(key) or {'cursor':None,'pages':0,'answer_seen':False,'done':False}
+            proof = queue.meta(key) or {'session':source['session'],'cursor':None,'pages':0,'answer_seen':False,'done':False}
             while not proof['done']:
                 if proof['pages'] >= config['max_history_pages']:
                     with queue.atomic():queue.set_meta(key,None)
@@ -6104,6 +6207,15 @@ def mq_answer_after_question(config,queue,source,hold):
         data = mq_input_context(queue,stage)
         if data.get('hold')==hold:
             return
+    owner=queue.job(hold.get('job_id'))
+    scope=(repository,iid) if repository is not None and iid is not None else (
+        (owner['repository_id'],owner['iid']) if owner else None)
+    if scope and any((marker['repository_id'],marker['iid'])==scope
+            and any(surface.get('session')==source['session']
+            and surface.get('hold_digest')==monitor_digest(hold)
+            for surface in marker.get('hold_surfaces',[]))
+            for marker in queue.retired_jobs()):
+        return
     raise RuntimeError('answer does not belong to the original or a registered question continuation')
 
 
@@ -6219,6 +6331,13 @@ def mq_scan(config,queue):
             pass
         except (OSError,RuntimeError,ValueError) as failure:
             mq_diagnostic(queue,'scan_error',failure)
+    if monitor_is_open(config):
+        try:
+            mq_refresh_saved_mr_state(config,queue)
+        except MonitorCycleYield:
+            pass
+        except (OSError,RuntimeError,ValueError) as failure:
+            mq_diagnostic(queue,'mr_state_error',failure)
     with queue.atomic():queue.set_meta('last_scan',mq_stamp())
 
 
@@ -6239,6 +6358,378 @@ def mq_drain(config,queue):
             return
 
 
+def mq_history_stages(job):
+    yield from job.get('stages',[])
+    yield from job.get('retired_preparations',[])
+    for previous in job.get('rounds',[]):
+        yield from previous.get('stages',[])
+
+
+def mq_history_sources(job):
+    yield job.get('source',{})
+    yield from job.get('answers',[])
+    for stage in mq_history_stages(job):
+        yield from (continuation.get('source',{}) for continuation in stage.get('continuations',[]))
+
+
+def mq_job_terminal_for_history(queue,job,*,check_references=True):
+    """True only when discarding a completed row cannot release work or evidence."""
+    if not job or job['state']!='completed' or not job.get('outcome'):
+        return False
+    terminal_outcomes = {'reviewed','MR closed or merged','superseded by a new head',
+        'answer to an operator-retired question; no mutable work','sufficient answer registered; original hold preserved until reserved',
+        'no sufficient answer; original question remains open','explanation; no mutable work',
+        'context changed; completed publications preserved','self-only discussion activity; not reviewed',
+        'coalesced; not reviewed'}
+    if job['outcome'] not in terminal_outcomes:
+        return False
+    if any(job.get(key) for key in ('pending_question','question_scope_pending','needs_round_reset')):
+        return False
+    if job['kind'] in {'code','discussion','human'} and job['outcome']=='reviewed':
+        if queue.next_reviewer(job) is not None:
+            return False
+        latest = {}
+        for stage in job.get('stages',[]):
+            if stage.get('purpose')!='question':
+                latest[stage['reviewer']] = mq_effective_stage(stage)
+        if any(stage['state']=='failed' for stage in latest.values()):
+            return False
+    stages = list(mq_history_stages(job))
+    if any(stage.get('state')=='running' for stage in stages):
+        return False
+    for stage in stages:
+        if stage.get('protocol')=='direct' and stage.get('session') and not stage.get('output_collected'):
+            return False
+        if stage.get('input'):
+            try:mq_verify_input(queue,stage)
+            except (OSError,RuntimeError,ValueError,KeyError,TypeError):return False
+    record = queue.mr(job['repository_id'],job['iid'])
+    if record.get('hold') or record.get('pending_answers') or record.get('held_questions'):
+        return False
+    if any(effect.get('job_id')==job['id'] and not mq_effect_settled(queue,effect)
+           for effect in queue.effects()):
+        return False
+    if check_references:
+        for other in queue.jobs():
+            if other['id']==job['id']:
+                continue
+            if (other.get('target_event')==job['id'] or job['id'] in other.get('coalesced_jobs',[])):
+                return False
+    return True
+
+
+def mq_retired_marker(queue,job):
+    admission = queue.admission(job)
+    row = queue.db.execute('SELECT source_key FROM jobs WHERE id=?',(job['id'],)).fetchone()
+    if row is None:
+        raise RuntimeError('cannot retire a missing job')
+    sessions,stage_ids,input_digests,hold_surfaces,admitted_sources = [],[],[],[],[]
+    def add_source(source):
+        if source.get('origin')!='human':return
+        reference = {k:source.get(k) for k in ('provider','session','source_id','turn_id') if source.get(k)}
+        if reference and reference not in admitted_sources:admitted_sources.append(reference)
+        if source.get('provider') and source.get('session'):
+            reference = {'provider':source['provider'],'session':source['session']}
+            if reference not in sessions:sessions.append(reference)
+    for source in mq_history_sources(job):add_source(source)
+    for stage in mq_history_stages(job):
+        if not stage.get('id'):raise RuntimeError('job stage identity is missing')
+        stage_ids.append(stage['id'])
+        if stage.get('session') and stage.get('reviewer'):
+            reference = {'provider':stage['reviewer'],'session':stage['session']}
+            if reference not in sessions:sessions.append(reference)
+        if isinstance(stage.get('input'),str):
+            input_digests.append(hashlib.sha256(stage['input'].encode('utf-8')).hexdigest())
+            data = mq_input_context(queue,stage)
+            hold = data.get('hold')
+            if isinstance(hold,dict) and stage.get('session'):
+                surface = {'provider':stage['reviewer'],'session':stage['session'],
+                           'hold_digest':monitor_digest(hold)}
+                if surface not in hold_surfaces:hold_surfaces.append(surface)
+        for continuation in stage.get('continuations',[]):add_source(continuation.get('source',{}))
+    for question in job.get('questions',[]):
+        if question.get('session') and question.get('provider'):
+            surface = {'provider':question['provider'],'session':question['session'],
+                       'hold_digest':monitor_digest(question)}
+            if surface not in hold_surfaces:hold_surfaces.append(surface)
+            session = {'provider':question['provider'],'session':question['session']}
+            if session not in sessions:sessions.append(session)
+    for previous in job.get('rounds',[]):
+        retirement = previous.get('retirement',{})
+        question = retirement.get('question')
+        if isinstance(question,dict) and question.get('session') and question.get('provider'):
+            surface = {'provider':question['provider'],'session':question['session'],
+                       'hold_digest':monitor_digest(question)}
+            if surface not in hold_surfaces:hold_surfaces.append(surface)
+    identity = {'repository_id':job['repository_id'],'iid':job['iid'],'kind':admission['kind'],
+                'head':admission['head'],'source':admission['source']}
+    return {'source_key':row['source_key'],'source_identity_digest':monitor_digest(identity),
+        'repository_id':job['repository_id'],'iid':job['iid'],'job_id':job['id'],
+        'sequence':job['sequence'],'original_sequence':job.get('original_sequence',job['sequence']),
+        'lineage':{'target_event':job.get('target_event'),'coalesced_jobs':job.get('coalesced_jobs',[])},
+        'admitted_sources':admitted_sources,'sessions':sessions,'stage_ids':stage_ids,
+        'input_digests':input_digests,'hold_surfaces':hold_surfaces,'retired_at':mq_stamp()}
+
+
+def mq_expire_chat(queue,repository,iid,provider,session):
+    record = queue.mr(repository,iid)
+    if record.get('chats',{}).get(provider)==session:
+        return False
+    for key in ('hold','pending_answers','held_questions','retired_questions'):
+        values = record.get(key) or []
+        if isinstance(values,dict):values=[values]
+        if any(item.get('session')==session or item.get('source',{}).get('session')==session
+               or item.get('question',{}).get('session')==session for item in values if isinstance(item,dict)):
+            return False
+    if mq_session_has_job_obligation(queue,repository,iid,session):return False
+    unread = queue.meta('app_unread:'+session)
+    if unread and unread.get('pending'):
+        return False
+    with queue.atomic():
+        fresh = queue.mr(repository,iid)
+        if fresh.get('chats',{}).get(provider)==session:
+            return False
+        if mq_session_has_job_obligation(queue,repository,iid,session):return False
+        fresh['chats']={key:value for key,value in fresh.get('chats',{}).items() if value!=session}
+        for field in ('codex_contexts','claude_contexts','instruction_versions'):
+            fresh.get(field,{}).pop(session,None)
+        fresh['claude_history']=[value for value in fresh.get('claude_history',[]) if value!=session]
+        fresh['codex_history']=[value for value in fresh.get('codex_history',[]) if value!=session]
+        queue.put_mr(fresh)
+        for row in list(queue.db.execute('SELECT key,value FROM metadata')):
+            key=row['key']
+            try:value=json.loads(row['value'])
+            except (ValueError,TypeError):value=None
+            if (key.startswith((f'human:{session}:',f'human_history:{session}',f'human_refresh:{session}',
+                    f'human_latest_turn:{session}',f'human_next_source:{session}',f'human_session_error:{provider}:{session}',
+                    f'human_source_error:{session}:',f'unread_error:{session}',f'app_unread:{session}'))
+                    or isinstance(value,dict) and value.get('session')==session):
+                if key=='app_unread:'+session and value and value.get('pending'):continue
+                queue.db.execute('DELETE FROM metadata WHERE key=?',(key,))
+        cursor_key=f'human_next_session:{repository}:{iid}'
+        cursor=queue.meta(cursor_key)
+        if cursor==provider+':'+session:queue.set_meta(cursor_key,None)
+    return True
+
+
+def mq_session_has_job_obligation(queue,repository,iid,session):
+    for job in queue.jobs():
+        if (job['repository_id'],job['iid'])!=(repository,iid):continue
+        uses_session=(any(source.get('session')==session for source in mq_history_sources(job))
+            or any(stage.get('session')==session for stage in mq_history_stages(job)))
+        if uses_session and not mq_job_terminal_for_history(queue,job):return True
+    return False
+
+
+def mq_retire_marker_session(queue,marker):
+    repository,iid=marker['repository_id'],marker['iid']
+    record=queue.mr(repository,iid)
+    owned=mq_owned_sessions(record)
+    expired=[]
+    for reference in marker.get('sessions',[]):
+        provider,session=reference['provider'],reference['session']
+        if session not in owned:continue
+        if record.get('chats',{}).get(provider)==session or not mq_expire_chat(queue,repository,iid,provider,session):
+            return False
+        expired.append(session)
+        record=queue.mr(repository,iid);owned=mq_owned_sessions(record)
+    if expired:
+        for sibling in queue.retired_jobs(repository,iid):
+            if sibling['source_key']==marker['source_key'] or not any(
+                    reference['session'] in expired for reference in sibling.get('sessions',[])):
+                continue
+            if any(reference['session'] in owned for reference in sibling.get('sessions',[])):
+                continue
+            with queue.atomic():
+                queue.db.execute('DELETE FROM retired_jobs WHERE source_key=?',(sibling['source_key'],))
+    return not any(reference['session'] in owned for reference in marker.get('sessions',[]))
+
+
+def mq_rotate_jobs(queue,limit):
+    try:allowed={project['id'] for project in mq_repositories(queue.config)}
+    except (KeyError,RuntimeError,TypeError):allowed=set()
+    for job in queue.jobs('completed'):
+        if job['repository_id'] in allowed:queue.requeue_failed(job)
+    while queue.db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0]>limit:
+        removed=False
+        for job in queue.jobs('completed'):
+            if not mq_job_terminal_for_history(queue,job):continue
+            try:marker=mq_retired_marker(queue,job)
+            except (OSError,RuntimeError,ValueError,KeyError,TypeError):continue
+            with queue.atomic():
+                if queue.job(job['id'])!=job or not mq_job_terminal_for_history(queue,job):continue
+                saved=queue.retired_job(marker['source_key'])
+                if saved and saved.get('source_identity_digest')!=marker['source_identity_digest']:
+                    raise RuntimeError('retired source identity changed')
+                queue.put_retired_job(marker)
+                queue.db.execute('DELETE FROM jobs WHERE id=? AND sequence=?',(job['id'],job['sequence']))
+            removed=True
+            break
+        if not removed:break
+
+
+def mq_operator_receipt_uses_effect(queue,effect):
+    for row in queue.db.execute("SELECT value FROM metadata WHERE key GLOB 'operator_mr_restart:*'"):
+        try:receipt=json.loads(row['value'])
+        except (ValueError,TypeError):continue
+        if effect['key'] in receipt.get('effects',[]):return True
+    return False
+
+
+def mq_operator_receipt_uses_mr(queue,repository,iid):
+    for row in queue.db.execute("SELECT value FROM metadata WHERE key GLOB 'operator_mr_restart:*'"):
+        try:receipt=json.loads(row['value'])
+        except (ValueError,TypeError):continue
+        if (receipt.get('repository_id'),receipt.get('iid'))==(repository,iid):return True
+    return False
+
+
+def mq_effect_retirable(queue,effect):
+    if not mq_effect_settled(queue,effect) or mq_operator_receipt_uses_effect(queue,effect):return False
+    record=queue.mr(effect['repository_id'],effect['iid'])
+    if record.get('hold') or record.get('pending_answers') or record.get('held_questions'):return False
+    owner=queue.job(effect.get('job_id')) if effect.get('job_id') else None
+    if owner and not mq_job_terminal_for_history(queue,owner,check_references=False):return False
+    if effect['state']=='cancelled':return True
+    # Resolutions have no body/author pair to prove absent. Keep their identity
+    # until the MR baseline and its effects are retired atomically.
+    if effect.get('kind')=='resolve':return False
+    return (effect.get('kind') in {'finding','reply'} and effect.get('inventory_checked_at')
+        and effect.get('inventory_present') is False)
+
+
+def mq_rotate_effects(queue,limit):
+    while queue.db.execute('SELECT COUNT(*) FROM effects').fetchone()[0]>limit:
+        removed=False
+        for effect in queue.effects():
+            if not mq_effect_retirable(queue,effect):continue
+            with queue.atomic():
+                current=queue.effect(effect['key'])
+                if current!=effect or not mq_effect_retirable(queue,current):continue
+                queue.db.execute('DELETE FROM effects WHERE key=?',(effect['key'],))
+            removed=True
+            break
+        if not removed:break
+
+
+def mq_forget_mr(queue,record):
+    repository,iid=record['repository_id'],record['iid']
+    jobs=[job for job in queue.jobs() if (job['repository_id'],job['iid'])==(repository,iid)]
+    effects=[effect for effect in queue.effects() if (effect['repository_id'],effect['iid'])==(repository,iid)]
+    if (record.get('hold') or record.get('pending_answers') or record.get('held_questions')
+            or record.get('retired_questions')
+            or mq_operator_receipt_uses_mr(queue,repository,iid)
+            or any(not mq_job_terminal_for_history(queue,job,check_references=False) for job in jobs)
+            or any(not mq_effect_settled(queue,effect) for effect in effects)):
+        return False
+    sessions=[]
+    for provider,session in record.get('chats',{}).items():
+        if session:sessions.append((provider,session))
+    sessions.extend(('codex',session) for session in record.get('codex_contexts',{}))
+    sessions.extend(('claude',session) for session in record.get('claude_history',[]))
+    sessions.extend(('claude',session) for session in record.get('claude_contexts',{}))
+    for provider,session in dict.fromkeys(sessions):
+        unread=queue.meta('app_unread:'+session)
+        if unread and unread.get('pending'):return False
+    job_ids={job['id'] for job in jobs}
+    with queue.atomic():
+        current=queue.mr(repository,iid)
+        if current!=record:return False
+        current_jobs=[job for job in queue.jobs()
+            if (job['repository_id'],job['iid'])==(repository,iid)]
+        current_effects=[effect for effect in queue.effects()
+            if (effect['repository_id'],effect['iid'])==(repository,iid)]
+        if (current.get('hold') or current.get('pending_answers') or current.get('held_questions')
+                or current.get('retired_questions')
+                or mq_operator_receipt_uses_mr(queue,repository,iid)
+                or any(not mq_job_terminal_for_history(queue,job,check_references=False)
+                       for job in current_jobs)
+                or any(not mq_effect_settled(queue,effect) for effect in current_effects)):
+            return False
+        if any((notice:=queue.meta('app_unread:'+session)) and notice.get('pending')
+                for _,session in dict.fromkeys(sessions)):
+            return False
+        queue.db.execute('DELETE FROM jobs WHERE repository=? AND iid=?',(repository,iid))
+        queue.db.execute('DELETE FROM effects WHERE repository=? AND iid=?',(repository,iid))
+        queue.db.execute('DELETE FROM retired_jobs WHERE repository=? AND iid=?',(repository,iid))
+        queue.db.execute('DELETE FROM mrs WHERE repository=? AND iid=?',(repository,iid))
+        for provider,session in dict.fromkeys(sessions):
+            for row in list(queue.db.execute('SELECT key,value FROM metadata')):
+                key=row['key']
+                try:value=json.loads(row['value'])
+                except (ValueError,TypeError):value=None
+                if key.startswith((f'human:{session}:',f'human_history:{session}',f'human_refresh:{session}',
+                        f'human_latest_turn:{session}',f'human_next_source:{session}',f'app_unread:{session}',
+                        f'unread_error:{session}',f'human_session_error:{provider}:{session}',f'human_source_error:{session}:')):
+                    queue.db.execute('DELETE FROM metadata WHERE key=?',(key,))
+                elif isinstance(value,dict) and value.get('session')==session:
+                    queue.db.execute('DELETE FROM metadata WHERE key=?',(key,))
+        queue.db.execute('DELETE FROM metadata WHERE key=?',(f'human_next_session:{repository}:{iid}',))
+        for identifier in job_ids:
+            queue.db.execute('DELETE FROM metadata WHERE key=?',('operator_mr_restart:'+identifier,))
+    return True
+
+
+def mq_rotate_mrs(queue,config,limit):
+    configured={project['id'] for project in mq_repositories(config)}
+    while queue.db.execute('SELECT COUNT(*) FROM mrs').fetchone()[0]>limit:
+        rows=queue.db.execute('SELECT repository,iid,value FROM mrs ORDER BY rowid').fetchall()
+        removed=False
+        for row in rows:
+            record=json.loads(row['value']);key=(record['repository_id'],record['iid'])
+            checked=config.get('_checked_mr_states',{}).get(key)
+            closed=checked in {'closed','merged'}
+            removed_project=record['repository_id'] not in configured
+            if not (closed or removed_project):continue
+            if mq_forget_mr(queue,record):
+                removed=True;break
+        if not removed:break
+
+
+def mq_rotate_metadata(queue,limit):
+    count=queue.db.execute('SELECT COUNT(*) FROM metadata').fetchone()[0]
+    if count<=limit:return
+    # Diagnostics are observational only; active cursors, identities and proofs are retained.
+    exact={'consumer_error','scan_error','mr_state_error'}
+    prefixes=('inventory_error:','intake_error:','recovery_error:','unread_error:',
+        'human_session_error:','human_source_error:','question_continuation:','output_observation:')
+    rows=[row for row in queue.db.execute('SELECT key FROM metadata ORDER BY rowid').fetchall()
+        if row['key'] in exact or row['key'].startswith(prefixes)]
+    for row in rows:
+        if count<=limit:break
+        with queue.atomic():queue.db.execute('DELETE FROM metadata WHERE key=?',(row['key'],))
+        count-=1
+
+
+def mq_rotate_retired_jobs(queue,limit):
+    while queue.db.execute('SELECT COUNT(*) FROM retired_jobs').fetchone()[0]>limit:
+        removed=False
+        for marker in queue.retired_jobs():
+            if not mq_retire_marker_session(queue,marker):continue
+            record=queue.mr(marker['repository_id'],marker['iid'])
+            hold=record.get('hold')
+            if hold and any(surface.get('hold_digest')==monitor_digest(hold)
+                    for surface in marker.get('hold_surfaces',[])):
+                continue
+            with queue.atomic():
+                current=queue.retired_job(marker['source_key'])
+                if current!=marker:continue
+                queue.db.execute('DELETE FROM retired_jobs WHERE source_key=?',(marker['source_key'],))
+            removed=True
+            break
+        if not removed:break
+
+
+def mq_rotate_history(queue,config,*,include_remote=False):
+    limit=config['history_limit']
+    mq_rotate_jobs(queue,limit)
+    mq_rotate_retired_jobs(queue,limit)
+    if include_remote:
+        mq_rotate_effects(queue,limit)
+        mq_rotate_mrs(queue,config,limit)
+    mq_rotate_metadata(queue,limit)
+
+
 def mq_tick(path):
     import time
     config = mq_config(Path(path))
@@ -6249,10 +6740,13 @@ def mq_tick(path):
     queue = None
     try:
         queue = MonitorQueue(config)
+        config['_checked_mr_states'] = {}
         config['_cycle_deadline'] = time.monotonic()+config['cycle_seconds']
         config['_output_budget'] = {'remaining':min(5.0,config['cycle_seconds']/8)}
         config['_io_guard'] = lambda:mq_budget(config)
         config['_native_guard'] = lambda:mq_budget(config)
+        # Retry durable transitions first; history trimming is database/local-file work only.
+        mq_rotate_history(queue,config)
         mq_observe_direct_stages(config,queue)
         # Ready native progression precedes potentially slow read-back and intake.
         mq_drain(config,queue)
@@ -6276,6 +6770,7 @@ def mq_tick(path):
         mq_scan(config,queue)
         mq_drain(config,queue)
         mq_notify_unread(config,queue)
+        mq_rotate_history(queue,config,include_remote=True)
         return {'cycle':'checked','queue_file':config['queue_file']}
     except MonitorCycleYield:
         return {'cycle':'checked','yielded':'cycle budget','queue_file':config['queue_file']}
@@ -6359,6 +6854,8 @@ def mq_restart_frontier(config,queue,record):
                  and j['iid']==record['iid'] for a in j.get('answers',[])]
     admitted += [o['source'] for j in queue.jobs() if (j['repository_id'],j['iid'])==(record['repository_id'],record['iid'])
                  for stage in j['stages'] for o in stage.get('continuations',[])]
+    admitted += [source for marker in queue.retired_jobs(record['repository_id'],record['iid'])
+                 for source in marker.get('admitted_sources',[])]
     sessions = [('codex',v) for v in set(record.get('codex_contexts',{}))|{record['chats'].get('codex')} if v]
     sessions += [('claude',v) for v in set(record.get('claude_history',[]))|{record['chats'].get('claude')} if v]
     if native_policy:sessions=[(hold['provider'],hold['session'])]
@@ -6710,7 +7207,7 @@ def mq_main():
                 raise RuntimeError('configuration already exists; no files overwritten')
             values = {**{k:data.pop(k) for k in (*MONITOR_TOML_PROJECT,*MONITOR_TOML_SCHEDULE)},
                 'codex_model':data.pop('model'),'codex_effort':data.pop('effort'),
-                'workspace':'~','parallel':1,'reviewers':['claude','codex']}
+                'workspace':'~','parallel':1,'history_limit':2000,'reviewers':['claude','codex']}
             data.pop('cwd')
             data['analysis_config'] = os.path.relpath(target,path.parent)
             for directory in (path.parent,target.parent):
