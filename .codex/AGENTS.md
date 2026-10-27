@@ -104,79 +104,62 @@ answer resolves the question it addresses; request only information or choices i
 
 ## Model and reasoning effort at task entry
 
-### Identify the acting settings
+### Shared identification and recommendation
 
-After applying the question-only gate, identify the acting model and reasoning effort before a
-substantive answer, plan, project command, or edit. Use trustworthy current runtime metadata;
-otherwise run `codex-session-stats current --client <acting-client> --format json` in the acting
-agent's environment. Select `codex`, `claude`, or `copilot` explicitly from the actual runtime:
-child clients can inherit their parent's identity variables.
+Apply the question-only gate first. Identify settings from trustworthy current runtime metadata;
+otherwise use `codex-session-stats current --client <acting-client> --format json` when available.
+Select the actual client explicitly: child clients can inherit their parent's identity variables.
 
-- For Copilot CLI, include `--session-id` from its session-context hook or trusted runtime metadata.
-  Native Claude/Copilot subagents also need their own `--agent-id`, not the root hook's ID.
-- For delegated agents, use their own runtime metadata, command result, or accepted launcher
-  assignment. If none is available, ask the parent; never substitute the parent's command result
-  or `CODEX_SESSION_ID` for the child's identity.
+- For Copilot CLI, supply its own `--session-id` from the hook or trusted runtime metadata.
+  Native Claude/Copilot subagents also need their own `--agent-id`.
+- Delegated agents use their own metadata, command result, or accepted launcher assignment,
+  never the parent's command result or `CODEX_SESSION_ID`. If unavailable, Codex leaves settings
+  unknown; other clients ask the parent.
 
-Accept only successful CLI output with a nonempty model and either known effort or explicit
-`unsupported` effort status. The CLI validates identity and current evidence; do not repeat that
-comparison. Establish when a client has no configurable thinking level rather than inventing one.
-Never infer settings from saved defaults, repository settings, model lists, or writing style.
+Accept CLI evidence only on success with a nonempty model and known effort or explicit
+`unsupported` effort status. The CLI validates identity; do not repeat that check.
+Never infer settings from defaults, repository configuration, model lists, or writing style,
+or invent a thinking level for a client without one.
 
-Carry identified settings across turns, but recheck after a handoff, a new agent, conflicting
-runtime evidence, or a reply to a model/effort recommendation as described below.
+For each new task or role, including explanation-only questions, assess the lowest adequate
+supported model and effort for its scope, uncertainty, consequences, and selected reviews.
+Reassess after a material change; retain the user's choice for unchanged follow-ups without
+repeating the notice or question. Compare effort only within the same model's supported levels
+and honor an exact selected pair. A recommendation is neither a prerequisite nor a capability
+limit; preferring a stronger model does not prevent the task.
 
-### Recommend once for the current scope
+Carry known settings across turns; recheck after handoffs, new agents, conflicting evidence,
+or a user-reported change. Fresh evidence takes precedence over a recommendation or reply.
+Report a mismatch briefly and continue the authorized task without another confirmation.
+When verification fails, label an explicit user-reported setting as such; leave other values
+unknown. A reply, recommendation, or postponed switch does not configure the client, authorize
+task actions, bypass plan/review/permission choices, or release question-only deferred work.
 
-On every new user request, including question-only turns, assess the lowest adequate supported
-model and effort from the role, scope, uncertainty, consequences, and selected reviews. Make this
-recommendation yourself. The user may choose above or below it; a recommended minimum is not a
-prerequisite. Compare effort only within the same model's supported levels, and never silently
-substitute another model/provider or override an exact selected pair.
+### Codex: inform and continue
 
-A new outcome or role creates a task boundary, including explanation-only questions after a
-completed implementation. Reconsider the recommendation after a material change in task, risk,
-or role. Follow-ups in an unchanged role and scope retain the user's choice, including a pinned
-setting. Keep reassessment internal when no setting change is warranted.
+At a new task boundary, briefly state the current settings only when known and the recommendation
+with its reason, in the user's language. Continue the task in the same turn with the actual
+settings, even when detection is unavailable, fails, or leaves values unknown. Do not ask about
+settings, offer a switch/keep menu, request acknowledgment, or wait for a reply. The user decides
+whether to interrupt, discuss the recommendation, or change settings; never change them
+automatically. This informational behavior also governs model/effort prerequisites in skills.
 
-Offer a sufficient lower setting once at the task boundary unless the user already chose to keep
-the current setting for that scope. For either an upgrade or a downgrade, ask one question stating
-the role, target model and thinking level (if configurable), and the reason/tradeoff. Include
-instructions to change the client setting before replying. When automatic detection is available,
-explain that the next turn will verify the actual setting without another user report. Present
-these options as ordinary text in the final response, in the user's language:
+### Other clients: confirm settings
 
-1. Switch to the named model and thinking level (recommended).
-2. Keep the current named model and thinking level.
+Identify settings before a substantive answer, plan, project command, or edit. If verification
+and an explicit user report leave a value unknown, ask only for that missing value and wait.
+A bare "ok" identifies a pair only when answering a pending recommendation naming it.
 
-Invite another model/level in free text. While the choice is unanswered, retain the known identity
-and wait under the visible-question rule. Explain material limitations once, honor the user's
-choice, and do not treat a preference for a stronger model as a technical inability. Actual tool
-availability and authorization still apply.
+At a task boundary, offer a sufficient lower setting unless the user already chose to keep the
+current pair for that scope. For an upgrade or downgrade, ask once using the visible-question
+rules: name the role, target pair, reason/tradeoff, and options to switch (recommended) or keep
+the current pair, allowing another pair in free text. Ask the user to change the client setting
+before replying; when detection is available, explain that the next turn will verify it
+automatically. Wait for the answer.
 
-### Verify after the user's reply
-
-Accept one unambiguous selection, option number, "switch", or named pair without asking the user
-for another confirmation, manual inspection, or separate "ok". At the start of the next assistant
-turn, automatically recheck using the identity rules above. Rerun the command when available even
-if the user says "keep" or "continue" or supplies a pair. Fresh current-turn evidence takes
-precedence over both the reply and the remembered pre-switch setting.
-
-If the detected pair differs from the reply or recommendation, briefly report it and continue the
-authorized task. Do not insist on the recommendation or reopen the choice solely for that
-difference. A numeric selection does not configure the client or prove a switch; neither silence
-nor an explicitly postponed switch changes the effective setting.
-
-Choosing or verifying settings does not authorize changing the client or performing task actions,
-replace the user's review of a linked plan, or release question-only deferred implementation.
-
-### If verification is unavailable
-
-If automatic verification is unavailable or unsuccessful, use an unambiguous pair from the user's
-answer and context, labelled user-reported rather than verified. A bare "ok" identifies a pair
-only when it answers a pending recommendation naming that pair. If either model or effort remains
-unknown, ask only for the missing information displayed for the active session and wait; silence
-is not a fallback.
+Accept one unambiguous option, "switch", or named pair without a second acknowledgment.
+At the next turn, recheck automatically even after "keep" or "continue"; use the evidence and
+fallback rules above. A declined downgrade cannot block an answer the current setting can provide.
 
 ## Mandatory question-only gate
 
@@ -204,10 +187,7 @@ request to edit, implement, test, run, continue, or otherwise act.
 
 In a question-only turn:
 
-- Answer only the question or questions. The model and effort gate may first ask for missing
-  session information or recommend a setting change. A declined downgrade cannot block an answer
-  the current setting can provide; an unanswered choice follows the visible-question rule above.
-  These prompts never release deferred implementation.
+- Answer only the question or questions, applying the client-specific model and effort rules above.
 - Do not announce work, create or execute a plan, edit anything, run tests,
   implement changes, resume pending work, or perform any action that changes local
   or remote state.

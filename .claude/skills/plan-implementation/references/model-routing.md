@@ -1,7 +1,7 @@
 # Model-aware planning route
 
-Use this after identifying the acting model/effort and classifying the request, risk, persistence,
-and inherited plan. Group labels express planning and review recommendations, not a
+Use this after applying the global client-specific model/effort rules and classifying the request,
+risk, persistence, and inherited plan. Group labels express planning and review recommendations, not a
 universal ranking of model quality or permission to skip safety checks.
 
 The entrypoint's **Determine the planning mode** loads the canonical global rules for settings
@@ -19,7 +19,9 @@ user decides independently whether to have a formal plan and a review, including
 | --- | --- | --- |
 | Supervised: Terra, Sonnet, Opus, Luna, Haiku | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Offer each independently. |
 | Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and offer each independently. |
-| Identity or effort unknown | Obtain the effective setting before task work. | Obtain the effective setting before task work. |
+
+When settings remain unknown under the global fallback, base the recommendation on task risk and
+persistence without assigning an unverified model group.
 
 Direct work means implementation without a formal plan artifact, after the chat summary has been
 presented and explicitly approved under
