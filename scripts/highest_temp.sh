@@ -1,20 +1,34 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# 1. Find the highest temperature across all sensors
-# Use formatted `sensors` output and extract only the first (input) temp per sensor line,
-# skipping indented threshold lines (high/crit/hyst etc.)
-MAX_TEMP=$(sensors | awk '!/^ / && /°C/ {
-    if (match($0, /\+[0-9]+\.[0-9]+/)) {
-        val = substr($0, RSTART+1, RLENGTH-1) + 0
-        if (val > max) max = val
+# Capture one sample with a stable decimal separator, preserving errors on stderr.
+if ! SENSOR_OUTPUT=$(LC_ALL=C sensors); then
+    SENSOR_OUTPUT=''
+fi
+
+# 1. Find the highest actual reading, accepting C and °C, signs and integers.
+# Require the reading immediately after the label, excluding alarm thresholds.
+MAX_TEMP=$(LC_ALL=C awk '
+    /^[^:]+:[[:space:]]*[+-]?[0-9]+([.][0-9]+)?[[:space:]]*(°)?C([[:space:]]|$)/ {
+        reading = $0
+        sub(/^[^:]+:[[:space:]]*/, "", reading)
+        val = reading + 0
+        if (!found || val > max) max = val
+        found = 1
     }
-} END {printf "%.0f", max}')
+    END {if (found) printf "%.0f", max}
+' <<< "$SENSOR_OUTPUT")
 
 # 2. Get the full list of temperatures for the hover tooltip
-ALL_TEMPS=$(sensors | grep "°C" | sed 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g')
+ALL_TEMPS=$(LC_ALL=C awk '/[0-9][[:space:]]*(°)?C([[:space:])]|$)/' <<< "$SENSOR_OUTPUT" |
+    sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
 
 # 3. Format the output for the XFCE panel
-if [ "$MAX_TEMP" -ge 80 ]; then
+if [ -z "$MAX_TEMP" ]; then
+    printf 'Error: No valid temperature readings available from sensors.\n' >&2
+    printf '<txt>N/A</txt>\n'
+    ALL_TEMPS='No temperature readings available.'
+elif [ "$MAX_TEMP" -ge 80 ]; then
     # If it hits 80C or higher, make the text red to warn you!
     echo "<txt><span fgcolor='red'>${MAX_TEMP}°C</span></txt>"
 else
