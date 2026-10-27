@@ -192,6 +192,7 @@
 !/scripts/gcr-build/sources.json
 !/scripts/gcr-build/system-prompt-lifetime.patch
 !/scripts/gcr-build/keyring-prompt-consumer.patch
+/scripts/gcr-build/build/
 !/scripts/**/.env.example
 /scripts/**/.venv/
 /scripts/**/__pycache__/

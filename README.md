@@ -2155,11 +2155,12 @@ Docker. Compilation and native package tests run as an unprivileged user; tests 
 desktop sockets or network access. No command below automatically restarts the session or changes PAM.
 
 ```sh
-python3 scripts/gcr-build/rebuild.py build --output scripts/gcr-build/output
-python3 scripts/gcr-build/rebuild.py verify scripts/gcr-build/output/packages
+python3 scripts/gcr-build/rebuild.py build --output scripts/gcr-build/build/output
+python3 scripts/gcr-build/rebuild.py verify scripts/gcr-build/build/output/packages
 ```
 
-The output directory must not exist. Each run retains authenticated source inputs, extracted patched
+Generated files live under the Git-ignored `scripts/gcr-build/build/` directory. The output directory
+must not exist. Each run retains authenticated source inputs, extracted patched
 trees, build/test logs, image identities, all native packaging outputs and a selected package directory
 with its checksums. Only the daemon, coupled GCR/GCK runtime group and matching debug packages listed
 in the source manifest are selected; PAM and PKCS#11 packages are not selected. Source extraction also
@@ -2172,7 +2173,7 @@ Before installing, preserve the currently installed package group in a new rollb
 
 ```sh
 python3 scripts/gcr-build/rebuild.py snapshot \
-    --output scripts/gcr-build/rollback --cache /var/cache/apt/archives
+    --output scripts/gcr-build/build/rollback --cache /var/cache/apt/archives
 ```
 
 The snapshot requires the existing package group, including its debug symbols. It copies matching
@@ -2196,7 +2197,7 @@ To remove the local repair, verify the saved originals and use the printed APT c
 the complete original group, reviewing the intended downgrade before confirming it:
 
 ```sh
-python3 scripts/gcr-build/rebuild.py verify --rollback scripts/gcr-build/rollback
+python3 scripts/gcr-build/rebuild.py verify --rollback scripts/gcr-build/build/rollback
 ```
 
 Log out and back in after restoration. Keep the rollback archives and manifests outside Git, along

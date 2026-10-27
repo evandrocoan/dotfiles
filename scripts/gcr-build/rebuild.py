@@ -241,7 +241,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     build = commands.add_parser("build", help="authenticate, build, test and export; never installs")
-    build.add_argument("--output", type=Path, default=HERE / "output", help="new output directory")
+    build.add_argument("--output", type=Path, default=HERE / "build" / "output",
+                       help="new output directory (default: %(default)s)")
     build.add_argument("--source-cache", type=Path, action="append", default=[],
                        help="optional downloaded source directory; hashes are always checked")
     verify = commands.add_parser("verify", help="check the exact exported package set and hashes")
