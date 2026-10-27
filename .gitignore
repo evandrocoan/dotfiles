@@ -175,6 +175,23 @@
 !/scripts/performance-monitoring/**
 
 /scripts/**/.env*
+!/scripts/gnome-keyring-build/
+!/scripts/gnome-keyring-build/build.Dockerfile
+!/scripts/gnome-keyring-build/isolated_run.py
+!/scripts/gnome-keyring-build/opensession-crash.patch
+!/scripts/gcr-build/
+!/scripts/gcr-build/.dockerignore
+!/scripts/gcr-build/build.Dockerfile
+!/scripts/gcr-build/consumer.Dockerfile
+!/scripts/gcr-build/packaging.Dockerfile
+!/scripts/gcr-build/package_changelog.py
+!/scripts/gcr-build/export_packages.py
+!/scripts/gcr-build/rebuild.py
+!/scripts/gcr-build/test_rebuild.py
+!/scripts/gcr-build/source.dockerignore
+!/scripts/gcr-build/sources.json
+!/scripts/gcr-build/system-prompt-lifetime.patch
+!/scripts/gcr-build/keyring-prompt-consumer.patch
 !/scripts/**/.env.example
 /scripts/**/.venv/
 /scripts/**/__pycache__/

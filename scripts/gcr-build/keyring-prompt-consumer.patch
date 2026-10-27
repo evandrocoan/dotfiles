@@ -1,0 +1,96 @@
+--- a/daemon/ssh-agent/test-gkd-ssh-agent-interaction.c
++++ b/daemon/ssh-agent/test-gkd-ssh-agent-interaction.c
+@@ -183,6 +183,85 @@
+ 	g_object_unref (result);
+ }
+ 
++typedef struct {
++	guint count;
++	GAsyncResult *result;
++} CountedResult;
++
++static void
++on_counted_result (GObject *source, GAsyncResult *result, gpointer data)
++{
++	CountedResult *counted = data;
++	counted->count++;
++	if (counted->result == NULL)
++		counted->result = g_object_ref (result);
++}
++
++static gboolean
++on_callbacks_drained (gpointer data)
++{
++	*(gboolean *)data = TRUE;
++	return G_SOURCE_REMOVE;
++}
++
++static void
++test_ask_password_timeout (Test *test, gconstpointer unused)
++{
++	GcrPrompt *held;
++	GTlsInteraction *interaction;
++	CountedResult timeout = { 0 }, next = { 0 };
++	GError *error = NULL;
++	GTlsInteractionResult ret;
++	const guchar *value;
++	gsize length;
++	gboolean drained = FALSE;
++
++	held = gcr_system_prompt_open_for_prompter (test->prompter_name, -1, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (held);
++	interaction = gkd_ssh_agent_interaction_new (test->prompter_name);
++	g_tls_password_set_value (test->password, (const guchar *)"unchanged", 9);
++
++	/* Exercise the real GkdSshAgentInteraction, GkdLoginPassword and GCR
++	 * timeout. Only the prompter and password are disposable fixtures.
++	 */
++	g_tls_interaction_ask_password_async (interaction, test->password, NULL,
++	                                      on_counted_result, &timeout);
++	while (timeout.count == 0)
++		g_main_context_iteration (NULL, TRUE);
++	g_idle_add_full (G_PRIORITY_LOW, on_callbacks_drained, &drained, NULL);
++	while (!drained)
++		g_main_context_iteration (NULL, TRUE);
++	ret = g_tls_interaction_ask_password_finish (interaction, timeout.result, &error);
++	g_assert_cmpint (ret, ==, G_TLS_INTERACTION_FAILED);
++	g_assert_error (error, GCR_SYSTEM_PROMPT_ERROR, GCR_SYSTEM_PROMPT_IN_PROGRESS);
++	g_clear_error (&error);
++	g_assert_cmpuint (timeout.count, ==, 1);
++	value = g_tls_password_get_value (test->password, &length);
++	g_assert_cmpmem ("unchanged", 9, value, length);
++	g_assert_false (gkd_login_password_get_store_password (GKD_LOGIN_PASSWORD (test->password)));
++
++	g_assert_true (gcr_system_prompt_close (GCR_SYSTEM_PROMPT (held), NULL, &error));
++	g_assert_no_error (error);
++	g_object_unref (held);
++	gcr_mock_prompter_expect_password_ok ("after-timeout", NULL);
++	g_tls_interaction_ask_password_async (interaction, test->password, NULL,
++	                                      on_counted_result, &next);
++	while (next.count == 0)
++		g_main_context_iteration (NULL, TRUE);
++	ret = g_tls_interaction_ask_password_finish (interaction, next.result, &error);
++	g_assert_cmpint (ret, ==, G_TLS_INTERACTION_HANDLED);
++	g_assert_no_error (error);
++	value = g_tls_password_get_value (test->password, &length);
++	g_assert_cmpmem ("after-timeout", 13, value, length);
++	g_assert_false (gkd_login_password_get_store_password (GKD_LOGIN_PASSWORD (test->password)));
++	g_assert_cmpuint (timeout.count, ==, 1);
++	g_assert_cmpuint (next.count, ==, 1);
++	g_clear_object (&timeout.result);
++	g_clear_object (&next.result);
++	g_object_unref (interaction);
++}
++
+ int
+ main (int argc, char **argv)
+ {
+@@ -191,6 +270,7 @@
+ 	g_test_add ("/ssh-agent/interaction/ask_password_no_login", Test, NULL, setup_no_login, test_ask_password_no_login, teardown);
+ 	g_test_add ("/ssh-agent/interaction/ask_password_login", Test, NULL, setup_login, test_ask_password_login, teardown);
+ 	g_test_add ("/ssh-agent/interaction/ask_password_cancel", Test, NULL, setup_no_login, test_ask_password_cancel, teardown);
++	g_test_add ("/ssh-agent/interaction/ask_password_timeout", Test, NULL, setup_no_login, test_ask_password_timeout, teardown);
+ 
+ 	return egg_tests_run_with_loop ();
+ }

@@ -1,0 +1,67 @@
+{
+  "architecture": "amd64",
+  "base_image": "ubuntu:24.04@sha256:24737cef17f4e22b1977df7d9a05e77c4e28b7da5b8911f8d8ccda136bf3573c",
+  "sources": {
+    "gnome-keyring": {
+      "version": "46.1-2ubuntu0.2",
+      "package_version": "46.1-2ubuntu0.2+keyringfix1",
+      "archives": [
+        {
+          "file": "gnome-keyring_46.1-2ubuntu0.2.debian.tar.xz",
+          "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gnome-keyring/gnome-keyring_46.1-2ubuntu0.2.debian.tar.xz",
+          "sha256": "8ba42f582bbad08b90161325da3cc60d6962929d9c9c9e8d25742d5e1806c171"
+        },
+        {
+          "file": "gnome-keyring_46.1-2ubuntu0.2.dsc",
+          "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gnome-keyring/gnome-keyring_46.1-2ubuntu0.2.dsc",
+          "sha256": "4478823a8403d4aa41861a706596ea2dbeb8b1144efdc5880349d80a6844c1de"
+        },
+        {
+          "file": "gnome-keyring_46.1.orig.tar.xz",
+          "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gnome-keyring/gnome-keyring_46.1.orig.tar.xz",
+          "sha256": "b1d3ae9132ff2f8b3f25a190790892968e3d0acf952a487e40f644a8550ce3f6"
+        }
+      ],
+      "patches": [
+        "../gnome-keyring-build/opensession-crash.patch",
+        "keyring-prompt-consumer.patch"
+      ],
+      "packages": [
+        "gnome-keyring",
+        "gnome-keyring-dbgsym"
+      ]
+    },
+    "gcr": {
+      "version": "3.41.2-1build3",
+      "package_version": "3.41.2-1build3+keyringfix1",
+      "archives": [
+        {
+          "file": "gcr_3.41.2-1build3.debian.tar.xz",
+          "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcr/gcr_3.41.2-1build3.debian.tar.xz",
+          "sha256": "aa155847ccd318778b22a33b2f6f47bd12bde15f2990c06c7866fb3f85704bfb"
+        },
+        {
+          "file": "gcr_3.41.2-1build3.dsc",
+          "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcr/gcr_3.41.2-1build3.dsc",
+          "sha256": "f0af6c097a4c8644ceedfabb41896d0312b257cd0af9d53d517477cebd98c9f5"
+        },
+        {
+          "file": "gcr_3.41.2.orig.tar.xz",
+          "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcr/gcr_3.41.2.orig.tar.xz",
+          "sha256": "bad10f3c553a0e1854649ab59c5b2434da22ca1a54ae6138f1f53961567e1ab7"
+        }
+      ],
+      "patches": [
+        "system-prompt-lifetime.patch"
+      ],
+      "packages": [
+        "gcr",
+        "libgck-1-0",
+        "libgcr-base-3-1",
+        "libgcr-ui-3-1",
+        "libgck-1-0-dbgsym",
+        "libgcr-base-3-1-dbgsym"
+      ]
+    }
+  }
+}

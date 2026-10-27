@@ -1,0 +1,665 @@
+--- a/gcr/gcr-system-prompt.c
++++ b/gcr/gcr-system-prompt.c
+@@ -133,19 +133,28 @@
+ } CallClosure;
+ 
+ static void
+-call_closure_free (gpointer data)
+-{
+-	CallClosure *closure = data;
++call_closure_stop (CallClosure *closure)
++{
+ 	if (closure->timeout) {
+ 		g_source_destroy (closure->timeout);
+-		g_source_unref (closure->timeout);
++		g_clear_pointer (&closure->timeout, g_source_unref);
+ 	}
+ 	if (closure->waiting) {
+ 		g_source_destroy (closure->waiting);
+-		g_source_unref (closure->waiting);
+-	}
+-	if (closure->watch_id)
++		g_clear_pointer (&closure->waiting, g_source_unref);
++	}
++	if (closure->watch_id) {
+ 		g_bus_unwatch_name (closure->watch_id);
++		closure->watch_id = 0;
++	}
++}
++
++static void
++call_closure_free (gpointer data)
++{
++	CallClosure *closure = data;
++	call_closure_stop (closure);
++	g_main_context_unref (closure->context);
+ 	g_object_unref (closure->cancellable);
+ 	g_free (data);
+ }
+@@ -170,6 +179,7 @@
+ 	 */
+ 
+ 	call = g_new0 (CallClosure, 1);
++	call->context = g_main_context_ref_thread_default ();
+ 	call->cancellable = g_cancellable_new ();
+ 
+ 	if (cancellable) {
+@@ -456,6 +466,12 @@
+ 		res = g_object_ref (self->pv->pending);
+ 		g_clear_object (&self->pv->pending);
+ 		closure = g_simple_async_result_get_op_res_gpointer (res);
++		/* A retained result must not keep events capable of completing it
++		 * again, or of closing a later operation on this prompt.
++		 */
++		call_closure_stop (closure);
++		g_free (self->pv->last_response);
++		self->pv->last_response = g_strdup (GCR_DBUS_PROMPT_REPLY_NONE);
+ 		g_cancellable_cancel (closure->cancellable);
+ 		g_simple_async_result_complete_in_idle (res);
+ 		g_object_unref (res);
+@@ -641,6 +657,9 @@
+ 
+ 	g_return_if_fail (G_IS_SIMPLE_ASYNC_RESULT (self->pv->pending));
+ 
++	res = g_object_ref (self->pv->pending);
++	call_closure_stop (g_simple_async_result_get_op_res_gpointer (res));
++
+ 	g_free (self->pv->last_response);
+ 	g_variant_get (parameters, "(sa{sv}s)",
+ 	               &self->pv->last_response,
+@@ -651,16 +670,20 @@
+ 	update_properties_from_iter (self, iter);
+ 	g_variant_iter_free (iter);
+ 
+-	exchange = gcr_system_prompt_get_secret_exchange (self);
+-	if (gcr_secret_exchange_receive (exchange, received))
+-		self->pv->received = TRUE;
+-	else
+-		g_warning ("received invalid secret exchange string");
++	/* Property notifications can close the prompt reentrantly. That close
++	 * owns completion in that case; do not consume or complete its result.
++	 */
++	if (self->pv->pending == res) {
++		exchange = gcr_system_prompt_get_secret_exchange (self);
++		if (gcr_secret_exchange_receive (exchange, received))
++			self->pv->received = TRUE;
++		else
++			g_warning ("received invalid secret exchange string");
++
++		g_clear_object (&self->pv->pending);
++		g_simple_async_result_complete (res);
++	}
+ 	g_free (received);
+-
+-	res = g_object_ref (self->pv->pending);
+-	g_clear_object (&self->pv->pending);
+-	g_simple_async_result_complete (res);
+ 	g_object_unref (res);
+ }
+ 
+@@ -835,6 +858,7 @@
+ 	if (error == NULL) {
+ 		perform_init_async (self, res);
+ 	} else {
++		call_closure_stop (closure);
+ 		g_simple_async_result_take_error (res, error);
+ 		g_simple_async_result_complete (res);
+ 	}
+@@ -869,6 +893,7 @@
+ 		g_debug ("failed to register prompt %s: %s",
+ 		         self->pv->prompter_bus_name, egg_error_message (error));
+ 
++		call_closure_stop (g_simple_async_result_get_op_res_gpointer (res));
+ 		g_simple_async_result_take_error (res, error);
+ 		g_simple_async_result_complete (res);
+ 	}
+@@ -881,20 +906,15 @@
+ on_call_timeout (gpointer user_data)
+ {
+ 	GSimpleAsyncResult *res = G_SIMPLE_ASYNC_RESULT (user_data);
+-	CallClosure *closure = g_simple_async_result_get_op_res_gpointer (res);
+ 	GcrSystemPrompt *self = GCR_SYSTEM_PROMPT (g_async_result_get_source_object (user_data));
+ 
+-	g_source_destroy (closure->timeout);
+-	g_source_unref (closure->timeout);
+-	closure->timeout = NULL;
+-
+-	/* Tell the prompter we're no longer interested */
+-	gcr_system_prompt_close_async (self, NULL, NULL, NULL);
+-
+-	g_simple_async_result_set_error (res, GCR_SYSTEM_PROMPT_ERROR,
+-	                                 GCR_SYSTEM_PROMPT_IN_PROGRESS,
+-	                                 _("Another prompt is already in progress"));
+-	g_simple_async_result_complete (res);
++	if (self->pv->pending == res) {
++		g_simple_async_result_set_error (res, GCR_SYSTEM_PROMPT_ERROR,
++		                                 GCR_SYSTEM_PROMPT_IN_PROGRESS,
++		                                 _("Another prompt is already in progress"));
++		/* Closing disarms sources and schedules the only completion. */
++		gcr_system_prompt_close_async (self, NULL, NULL, NULL);
++	}
+ 
+ 	g_object_unref (self);
+ 	return FALSE; /* Don't call this function again */
+@@ -905,18 +925,13 @@
+                    gpointer user_data)
+ {
+ 	GSimpleAsyncResult *async = G_SIMPLE_ASYNC_RESULT (user_data);
+-	CallClosure *call = g_simple_async_result_get_op_res_gpointer (async);
+ 	GcrSystemPrompt *self = GCR_SYSTEM_PROMPT (g_async_result_get_source_object (user_data));
+ 
+-	g_source_destroy (call->waiting);
+-	g_source_unref (call->waiting);
+-	call->waiting = NULL;
+-
+-	g_simple_async_result_set_error (async, G_IO_ERROR, G_IO_ERROR_CANCELLED,
+-	                                 _("The operation was cancelled"));
+-
+-	/* Tell the prompter we're no longer interested */
+-	gcr_system_prompt_close_async (self, NULL, NULL, NULL);
++	if (self->pv->pending == async) {
++		g_simple_async_result_set_error (async, G_IO_ERROR, G_IO_ERROR_CANCELLED,
++		                                 _("The operation was cancelled"));
++		gcr_system_prompt_close_async (self, NULL, NULL, NULL);
++	}
+ 
+ 	g_object_unref (self);
+ 	return FALSE; /* Don't call this function again */
+@@ -990,9 +1005,6 @@
+ 	res = g_simple_async_result_new (G_OBJECT (self), callback, user_data,
+ 	                                 gcr_system_prompt_real_init_async);
+ 	closure = call_closure_new (cancellable);
+-	closure->context = g_main_context_get_thread_default ();
+-	if (closure->context)
+-		g_main_context_ref (closure->context);
+ 	g_simple_async_result_set_op_res_gpointer (res, closure, call_closure_free);
+ 
+ 	perform_init_async (self, res);
+@@ -1128,8 +1140,12 @@
+ 	GVariant *retval;
+ 
+ 	retval = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source), result, &error);
+-	if (error != NULL) {
+-		self->pv->pending = NULL;
++	if (self->pv->pending != res) {
++		/* A close or PromptReady may precede the PerformPrompt reply. */
++		g_clear_error (&error);
++	} else if (error != NULL) {
++		call_closure_stop (call);
++		g_clear_object (&self->pv->pending);
+ 		g_simple_async_result_take_error (res, error);
+ 		g_simple_async_result_complete (res);
+ 	} else {
+@@ -1579,9 +1595,6 @@
+ 	res = g_simple_async_result_new (NULL, callback, user_data,
+ 	                                 gcr_system_prompt_close_async);
+ 	closure = call_closure_new (cancellable);
+-	closure->context = g_main_context_get_thread_default ();
+-	if (closure->context != NULL)
+-		g_main_context_ref (closure->context);
+ 	g_simple_async_result_set_op_res_gpointer (res, closure, call_closure_free);
+ 
+ 	perform_close (self, res, closure->cancellable);
+--- a/gcr/meson.build
++++ b/gcr/meson.build
+@@ -350,6 +350,7 @@
+   'gnupg-collection',
+   'gnupg-process',
+   'system-prompt',
++  'system-prompt-lifetime',
+   'ssh-askpass',
+ ]
+ 
+--- /dev/null
++++ b/gcr/test-system-prompt-lifetime.c
+@@ -0,0 +1,450 @@
++/* Async prompt lifetime regressions. SPDX-License-Identifier: LGPL-2.1-or-later */
++#include "config.h"
++
++#include "gcr/gcr-base.h"
++#include "gcr/gcr-mock-prompter.h"
++
++typedef struct {
++	const gchar *prompter;
++	guint watchdog;
++} Test;
++
++typedef struct {
++	guint count;
++	GAsyncResult *result;
++} Completion;
++
++static gboolean
++watchdog_expired (gpointer unused)
++{
++	g_error ("prompt lifetime regression exceeded its deadline");
++	return G_SOURCE_REMOVE;
++}
++
++static void
++setup (Test *test, gconstpointer unused)
++{
++	test->watchdog = g_timeout_add_seconds (15, watchdog_expired, NULL);
++	test->prompter = gcr_mock_prompter_start ();
++}
++
++static void
++teardown (Test *test, gconstpointer unused)
++{
++	gcr_mock_prompter_stop ();
++	g_source_remove (test->watchdog);
++}
++
++static void
++on_complete (GObject *source, GAsyncResult *result, gpointer data)
++{
++	Completion *completion = data;
++	completion->count++;
++	if (completion->result == NULL)
++		completion->result = g_object_ref (result);
++}
++
++static void
++wait_complete (Completion *completion)
++{
++	while (completion->count == 0)
++		g_main_context_iteration (NULL, TRUE);
++}
++
++static gboolean
++mark_drained (gpointer data)
++{
++	*(gboolean *)data = TRUE;
++	return G_SOURCE_REMOVE;
++}
++
++static void
++drain_ready (void)
++{
++	gboolean drained = FALSE;
++	g_idle_add_full (G_PRIORITY_LOW, mark_drained, &drained, NULL);
++	while (!drained)
++		g_main_context_iteration (NULL, TRUE);
++}
++
++static void
++on_bus_barrier (GObject *source, GAsyncResult *result, gpointer data)
++{
++	GError *error = NULL;
++	GVariant *reply;
++	reply = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source), result, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (reply);
++	g_variant_unref (reply);
++	*(gboolean *)data = TRUE;
++}
++
++static void
++bus_barrier (GDBusConnection *connection)
++{
++	gboolean done = FALSE;
++	/* A reply on this same connection fences earlier incoming replies. Unlike
++	 * a local idle alone, this waits for transport delivery after a held reply.
++	 */
++	g_dbus_connection_call (connection, "org.freedesktop.DBus",
++	                        "/org/freedesktop/DBus", "org.freedesktop.DBus",
++	                        "GetId", NULL, G_VARIANT_TYPE ("(s)"),
++	                        G_DBUS_CALL_FLAGS_NONE, 5000, NULL, on_bus_barrier, &done);
++	while (!done)
++		g_main_context_iteration (NULL, TRUE);
++	drain_ready ();
++}
++
++static GcrPrompt *
++open_prompt (Test *test)
++{
++	GError *error = NULL;
++	GcrPrompt *prompt;
++	prompt = gcr_system_prompt_open_for_prompter (test->prompter, -1, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (prompt);
++	return prompt;
++}
++
++static void
++test_timeout_once (Test *test, gconstpointer unused)
++{
++	GcrPrompt *held = open_prompt (test);
++	GcrPrompt *prompt;
++	Completion completion = { 0 };
++	GError *error = NULL;
++
++	gcr_system_prompt_open_for_prompter_async (test->prompter, 1, NULL,
++	                                           on_complete, &completion);
++	wait_complete (&completion);
++	drain_ready ();
++	g_assert_cmpuint (completion.count, ==, 1);
++	prompt = gcr_system_prompt_open_finish (completion.result, &error);
++	g_assert_null (prompt);
++	g_assert_error (error, GCR_SYSTEM_PROMPT_ERROR, GCR_SYSTEM_PROMPT_IN_PROGRESS);
++	g_clear_error (&error);
++	g_clear_object (&completion.result);
++	gcr_prompt_close (held);
++	g_object_unref (held);
++}
++
++static void
++test_retained_open (Test *test, gconstpointer unused)
++{
++	Completion opened = { 0 }, password = { 0 };
++	GcrPrompt *prompt;
++	GError *error = NULL;
++	const gchar *value;
++
++	gcr_system_prompt_open_for_prompter_async (test->prompter, 1, NULL,
++	                                           on_complete, &opened);
++	wait_complete (&opened);
++	prompt = gcr_system_prompt_open_finish (opened.result, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (prompt);
++	/* Keep the open result alive past its original one-second deadline while
++	 * a real second operation waits for the mock's delayed response.
++	 */
++	gcr_mock_prompter_set_delay_msec (3000);
++	gcr_mock_prompter_expect_password_ok ("second-operation", NULL);
++	gcr_prompt_password_async (prompt, NULL, on_complete, &password);
++	wait_complete (&password);
++	value = gcr_prompt_password_finish (prompt, password.result, &error);
++	g_assert_no_error (error);
++	g_assert_cmpstr (value, ==, "second-operation");
++	g_assert_cmpuint (opened.count, ==, 1);
++	g_assert_cmpuint (password.count, ==, 1);
++	g_clear_object (&opened.result);
++	g_clear_object (&password.result);
++	gcr_prompt_close (prompt);
++	g_object_unref (prompt);
++}
++
++static void
++test_retained_password (Test *test, gconstpointer unused)
++{
++	GcrPrompt *prompt = open_prompt (test);
++	GCancellable *cancel = g_cancellable_new ();
++	Completion first = { 0 }, second = { 0 };
++	GError *error = NULL;
++	const gchar *value;
++
++	gcr_mock_prompter_expect_password_ok ("first-operation", NULL);
++	gcr_prompt_password_async (prompt, cancel, on_complete, &first);
++	wait_complete (&first);
++	value = gcr_prompt_password_finish (prompt, first.result, &error);
++	g_assert_no_error (error);
++	g_assert_cmpstr (value, ==, "first-operation");
++	gcr_mock_prompter_set_delay_msec (100);
++	gcr_mock_prompter_expect_password_ok ("second-operation", NULL);
++	gcr_prompt_password_async (prompt, NULL, on_complete, &second);
++	g_cancellable_cancel (cancel);
++	wait_complete (&second);
++	drain_ready ();
++	value = gcr_prompt_password_finish (prompt, second.result, &error);
++	g_assert_no_error (error);
++	g_assert_cmpstr (value, ==, "second-operation");
++	g_assert_false (g_simple_async_result_propagate_error (
++	                G_SIMPLE_ASYNC_RESULT (first.result), &error));
++	g_assert_no_error (error);
++	g_assert_cmpuint (first.count, ==, 1);
++	g_assert_cmpuint (second.count, ==, 1);
++	g_clear_object (&first.result);
++	g_clear_object (&second.result);
++	g_object_unref (cancel);
++	gcr_prompt_close (prompt);
++	g_object_unref (prompt);
++}
++
++static void
++test_close_password (Test *test, gconstpointer unused)
++{
++	GcrPrompt *prompt = open_prompt (test);
++	Completion completion = { 0 };
++	GError *error = NULL;
++	const gchar *value;
++
++	gcr_mock_prompter_expect_password_ok ("previous-operation", NULL);
++	value = gcr_prompt_password_run (prompt, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_cmpstr (value, ==, "previous-operation");
++	gcr_mock_prompter_set_delay_msec (1000);
++	gcr_mock_prompter_expect_password_ok ("must-not-be-returned", NULL);
++	gcr_prompt_password_async (prompt, NULL, on_complete, &completion);
++	gcr_prompt_close (prompt);
++	wait_complete (&completion);
++	value = gcr_prompt_password_finish (prompt, completion.result, &error);
++	g_assert_no_error (error);
++	g_assert_null (value);
++	g_assert_cmpuint (completion.count, ==, 1);
++	g_clear_object (&completion.result);
++	g_object_unref (prompt);
++}
++
++static void
++test_close_confirm (Test *test, gconstpointer unused)
++{
++	GcrPrompt *prompt = open_prompt (test);
++	Completion completion = { 0 };
++	GError *error = NULL;
++	GcrPromptReply reply;
++
++	gcr_mock_prompter_expect_confirm_ok (NULL);
++	reply = gcr_prompt_confirm_run (prompt, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_cmpint (reply, ==, GCR_PROMPT_REPLY_CONTINUE);
++	gcr_mock_prompter_set_delay_msec (1000);
++	gcr_mock_prompter_expect_confirm_ok (NULL);
++	gcr_prompt_confirm_async (prompt, NULL, on_complete, &completion);
++	gcr_prompt_close (prompt);
++	wait_complete (&completion);
++	reply = gcr_prompt_confirm_finish (prompt, completion.result, &error);
++	g_assert_no_error (error);
++	g_assert_cmpint (reply, ==, GCR_PROMPT_REPLY_CANCEL);
++	g_assert_cmpuint (completion.count, ==, 1);
++	g_clear_object (&completion.result);
++	g_object_unref (prompt);
++}
++
++typedef struct {
++	GMutex mutex;
++	GCond condition;
++	guint32 serial;
++	gboolean held;
++	gboolean release;
++	gboolean announced;
++	guint captured;
++} ReplyBarrier;
++
++static void
++reply_barrier_free (gpointer data)
++{
++	ReplyBarrier *barrier = data;
++	g_cond_clear (&barrier->condition);
++	g_mutex_clear (&barrier->mutex);
++	g_free (barrier);
++}
++
++static gboolean
++announce_held (gpointer data)
++{
++	ReplyBarrier *barrier = data;
++	barrier->announced = TRUE;
++	return G_SOURCE_REMOVE;
++}
++
++static GDBusMessage *
++hold_perform_reply (GDBusConnection *connection, GDBusMessage *message,
++                    gboolean incoming, gpointer data)
++{
++	ReplyBarrier *barrier = data;
++	if (!incoming && g_strcmp0 (g_dbus_message_get_member (message), "PerformPrompt") == 0)
++		barrier->serial = g_dbus_message_get_serial (message);
++	if (incoming && barrier->serial != 0 &&
++	    g_dbus_message_get_reply_serial (message) == barrier->serial) {
++		g_assert_cmpint (g_dbus_message_get_message_type (message), ==,
++		                 G_DBUS_MESSAGE_TYPE_METHOD_RETURN);
++		g_mutex_lock (&barrier->mutex);
++		barrier->held = TRUE;
++		barrier->captured++;
++		g_idle_add (announce_held, barrier);
++		while (!barrier->release)
++			g_cond_wait (&barrier->condition, &barrier->mutex);
++		g_mutex_unlock (&barrier->mutex);
++	}
++	return message;
++}
++
++static void
++test_late_reply (Test *test, gconstpointer cancel_reply)
++{
++	GcrPrompt *prompt = open_prompt (test);
++	GDBusConnection *connection;
++	GCancellable *cancel = g_cancellable_new ();
++	Completion completion = { 0 };
++	ReplyBarrier *barrier = g_new0 (ReplyBarrier, 1);
++	GError *error = NULL;
++	const gchar *value;
++	guint filter;
++
++	g_mutex_init (&barrier->mutex);
++	g_cond_init (&barrier->condition);
++	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
++	g_assert_no_error (error);
++	filter = g_dbus_connection_add_filter (connection, hold_perform_reply, barrier, reply_barrier_free);
++	gcr_mock_prompter_set_delay_msec (10000);
++	gcr_mock_prompter_expect_password_ok ("must-not-be-returned", NULL);
++	gcr_prompt_password_async (prompt, cancel, on_complete, &completion);
++	while (!barrier->announced)
++		g_main_context_iteration (NULL, TRUE);
++	/* The real transport reply is held before the production callback can
++	 * run. Close and deliver the pending operation's terminal result first.
++	 */
++	gcr_prompt_close (prompt);
++	wait_complete (&completion);
++	value = gcr_prompt_password_finish (prompt, completion.result, &error);
++	g_assert_no_error (error);
++	g_assert_null (value);
++	if (GPOINTER_TO_INT (cancel_reply))
++		g_cancellable_cancel (cancel);
++	g_mutex_lock (&barrier->mutex);
++	g_assert_true (barrier->held);
++	barrier->release = TRUE;
++	g_cond_signal (&barrier->condition);
++	g_mutex_unlock (&barrier->mutex);
++	bus_barrier (connection);
++	/* Also cancel after a late successful reply: it must not have rearmed
++	 * a cancellation source that can mutate the already delivered result.
++	 */
++	g_cancellable_cancel (cancel);
++	drain_ready ();
++	g_assert_cmpuint (barrier->captured, ==, 1);
++	g_assert_cmpuint (completion.count, ==, 1);
++	value = gcr_prompt_password_finish (prompt, completion.result, &error);
++	g_assert_no_error (error);
++	g_assert_null (value);
++	g_dbus_connection_remove_filter (connection, filter);
++	g_clear_object (&completion.result);
++	g_object_unref (cancel);
++	g_object_unref (connection);
++	g_object_unref (prompt);
++}
++
++static void
++test_pending_cancel (Test *test, gconstpointer vanished)
++{
++	GcrPrompt *prompt = open_prompt (test);
++	GDBusConnection *connection;
++	GCancellable *cancel = g_cancellable_new ();
++	Completion completion = { 0 };
++	ReplyBarrier *barrier = g_new0 (ReplyBarrier, 1);
++	GError *error = NULL;
++	const gchar *value;
++	guint filter;
++
++	g_mutex_init (&barrier->mutex);
++	g_cond_init (&barrier->condition);
++	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
++	g_assert_no_error (error);
++	filter = g_dbus_connection_add_filter (connection, hold_perform_reply, barrier, reply_barrier_free);
++	gcr_mock_prompter_set_delay_msec (10000);
++	gcr_mock_prompter_expect_password_ok ("must-not-be-returned", NULL);
++	gcr_prompt_password_async (prompt, cancel, on_complete, &completion);
++	while (!barrier->announced)
++		g_main_context_iteration (NULL, TRUE);
++	g_mutex_lock (&barrier->mutex);
++	barrier->release = TRUE;
++	g_cond_signal (&barrier->condition);
++	g_mutex_unlock (&barrier->mutex);
++	bus_barrier (connection);
++	g_assert_cmpuint (barrier->captured, ==, 1);
++	g_assert_cmpuint (completion.count, ==, 0);
++	/* Arrange cancellation only after the real PerformPrompt reply has been
++	 * dispatched. The operation is then waiting on its cancellable/name watch.
++	 */
++	if (GPOINTER_TO_INT (vanished))
++		gcr_mock_prompter_disconnect ();
++	else
++		g_cancellable_cancel (cancel);
++	wait_complete (&completion);
++	drain_ready ();
++	value = gcr_prompt_password_finish (prompt, completion.result, &error);
++	g_assert_error (error, G_IO_ERROR, G_IO_ERROR_CANCELLED);
++	g_assert_null (value);
++	g_assert_cmpuint (completion.count, ==, 1);
++	g_clear_error (&error);
++	g_dbus_connection_remove_filter (connection, filter);
++	g_clear_object (&completion.result);
++	g_object_unref (cancel);
++	g_object_unref (connection);
++	g_object_unref (prompt);
++}
++
++static void
++close_on_notify (GObject *object, GParamSpec *pspec, gpointer data)
++{
++	guint *count = data;
++	(*count)++;
++	gcr_prompt_close (GCR_PROMPT (object));
++}
++
++static void
++test_reentrant_close (Test *test, gconstpointer unused)
++{
++	GcrPrompt *prompt = open_prompt (test);
++	Completion completion = { 0 };
++	GError *error = NULL;
++	const gchar *value;
++	guint notifications = 0;
++
++	g_signal_connect (prompt, "notify::password-strength", G_CALLBACK (close_on_notify),
++	                  &notifications);
++	gcr_mock_prompter_expect_password_ok ("disposable-password", NULL);
++	gcr_prompt_password_async (prompt, NULL, on_complete, &completion);
++	wait_complete (&completion);
++	drain_ready ();
++	value = gcr_prompt_password_finish (prompt, completion.result, &error);
++	g_assert_no_error (error);
++	g_assert_null (value);
++	g_assert_cmpuint (notifications, ==, 1);
++	g_assert_cmpuint (completion.count, ==, 1);
++	g_clear_object (&completion.result);
++	g_object_unref (prompt);
++}
++
++int
++main (int argc, char **argv)
++{
++	g_test_init (&argc, &argv, NULL);
++	g_test_add ("/gcr/prompt-lifetime/timeout-once", Test, NULL, setup, test_timeout_once, teardown);
++	g_test_add ("/gcr/prompt-lifetime/retained-open", Test, NULL, setup, test_retained_open, teardown);
++	g_test_add ("/gcr/prompt-lifetime/retained-password", Test, NULL, setup, test_retained_password, teardown);
++	g_test_add ("/gcr/prompt-lifetime/close-password", Test, NULL, setup, test_close_password, teardown);
++	g_test_add ("/gcr/prompt-lifetime/close-confirm", Test, NULL, setup, test_close_confirm, teardown);
++	g_test_add ("/gcr/prompt-lifetime/late-success", Test, GINT_TO_POINTER (0), setup, test_late_reply, teardown);
++	g_test_add ("/gcr/prompt-lifetime/late-error", Test, GINT_TO_POINTER (1), setup, test_late_reply, teardown);
++	g_test_add ("/gcr/prompt-lifetime/cancel-pending", Test, GINT_TO_POINTER (0), setup, test_pending_cancel, teardown);
++	g_test_add ("/gcr/prompt-lifetime/prompter-vanished", Test, GINT_TO_POINTER (1), setup, test_pending_cancel, teardown);
++	g_test_add ("/gcr/prompt-lifetime/reentrant-close", Test, NULL, setup, test_reentrant_close, teardown);
++	return g_test_run ();
++}

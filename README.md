@@ -39,6 +39,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Fix system crash](#fix-system-crash)
       - [Core dump alerts](#core-dump-alerts)
       - [Restore GNOME Keyring SSH after a crash](#restore-gnome-keyring-ssh-after-a-crash)
+      - [Rebuild GNOME Keyring and GCR repairs](#rebuild-gnome-keyring-and-gcr-repairs)
       - [Manual XFCE recovery](#manual-xfce-recovery)
       - [Shared XFWM launcher](#shared-xfwm-launcher)
       - [Recover VS Code from a stuck Crashpad handler](#recover-vs-code-from-a-stuck-crashpad-handler)
@@ -2138,6 +2139,72 @@ at the next daemon start; the password service remains enabled:
 rm ~/.config/systemd/user/gnome-keyring-daemon.service.d/ssh.conf
 systemctl --user daemon-reload
 ```
+
+#### Rebuild GNOME Keyring and GCR repairs
+
+The maintained [source manifest](scripts/gcr-build/sources.json) pins the Ubuntu sources, archive
+checksums, package versions and target architecture for the local OpenSession and GCR prompt-lifetime
+repairs. The patches include their regression tests. The
+[rebuild tool](scripts/gcr-build/rebuild.py) reconstructs the Docker image chain from the pinned
+public Ubuntu image; it needs no previously built local image or extracted source checkout.
+
+Run from the root of a cloned dotfiles checkout. The host needs Python 3.11 or newer,
+the normal Ubuntu Debian package tools and a working native Linux amd64 Docker daemon with BuildKit.
+Run as the desktop user with existing Docker access. Build dependencies are installed only inside
+Docker. Compilation and native package tests run as an unprivileged user; tests have no host mounts,
+desktop sockets or network access. No command below automatically restarts the session or changes PAM.
+
+```sh
+python3 scripts/gcr-build/rebuild.py build --output scripts/gcr-build/output
+python3 scripts/gcr-build/rebuild.py verify scripts/gcr-build/output/packages
+```
+
+The output directory must not exist. Each run retains authenticated source inputs, extracted patched
+trees, build/test logs, image identities, all native packaging outputs and a selected package directory
+with its checksums. Only the daemon, coupled GCR/GCK runtime group and matching debug packages listed
+in the source manifest are selected; PAM and PKCS#11 packages are not selected. Source extraction also
+checks the pinned `.dsc`; `dpkg-source --no-check` avoids requiring the publisher's individual signing
+key after every downloaded artifact has already passed its pinned checksum. For offline source reuse,
+repeat `--source-cache DIRECTORY` for existing archive directories; cached inputs receive the same
+hash checks. Dependency acquisition still needs authenticated Ubuntu APT repositories.
+
+Before installing, preserve the currently installed package group in a new rollback directory:
+
+```sh
+python3 scripts/gcr-build/rebuild.py snapshot \
+    --output scripts/gcr-build/rollback --cache /var/cache/apt/archives
+```
+
+The snapshot requires the existing package group, including its debug symbols. It copies matching
+cached `.deb`/`.ddeb` files or downloads the exact installed versions using APT, without installing
+anything. Repeat `--cache DIRECTORY` to supply earlier build outputs or retained original packages.
+This is necessary for locally versioned packages that Ubuntu cannot supply. If an original version
+is unavailable or the installed package group differs, stop before installation and preserve the
+existing environment; the snapshot must complete and verify successfully first.
+
+`verify` checks actual Debian package identities, the exact selected set and every payload hash. It
+prints an APT simulation command and an interactive installation command with explicit package paths.
+Review and run the simulation first. Stop if it proposes changes outside the intended package group.
+Then run the printed installation command and check `sudo apt-get check`. Installation does not
+restart the live keyring; log out and back in to renew session processes and loaded libraries.
+Check `systemctl --user status gnome-keyring-daemon.service` and its journal after activation.
+Native package tests establish regression behavior, not attribution of every historical crash or
+long-term stability on a different host. The keyring suite reports PAM tests skipped when its
+disposable PAM configuration is absent; no host PAM configuration is exposed to tests.
+
+To remove the local repair, verify the saved originals and use the printed APT commands to restore
+the complete original group, reviewing the intended downgrade before confirming it:
+
+```sh
+python3 scripts/gcr-build/rebuild.py verify --rollback scripts/gcr-build/rollback
+```
+
+Log out and back in after restoration. Keep the rollback archives and manifests outside Git, along
+with any corrected packages needed for later reinstallation. The build does not delete images or
+output directories; preserve needed archives before manually removing its generated files. When
+updating the repair, change the source manifest/pins and patches together and validate a new output
+directory before replacing installed packages. Authenticated source pins do not freeze future
+APT build-dependency versions or guarantee byte-identical package rebuilds.
 
 #### Manual XFCE recovery
 

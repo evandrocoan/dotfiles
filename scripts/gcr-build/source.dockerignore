@@ -1,0 +1,9 @@
+.git
+.env*
+**/__pycache__
+**/*.pyc
+autom4te.cache
+obj-*
+debian/.debhelper
+debian/tmp
+debian/files

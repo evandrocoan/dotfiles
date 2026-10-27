@@ -1,0 +1,512 @@
+--- a/daemon/dbus/gkd-secret-service.c
++++ b/daemon/dbus/gkd-secret-service.c
+@@ -426,13 +426,21 @@
+ 	GVariant *input_payload;
+ 
+ 	caller = g_dbus_method_invocation_get_sender (invocation);
++	/* NameOwnerChanged can remove the client after the message filter ran. */
++	if (!g_hash_table_contains (self->clients, caller)) {
++		g_dbus_method_invocation_return_error_literal (invocation, G_DBUS_ERROR,
++		                                               G_DBUS_ERROR_FAILED,
++		                                               "The calling client has disconnected");
++		return TRUE;
++	}
+ 
+ 	/* Now we can create a session with this information */
+ 	session = gkd_secret_session_new (self, caller);
+ 	input_payload = g_variant_get_variant (input);
+-	gkd_secret_session_handle_open (session, algorithm, input_payload,
+-					&output, &result,
+-					&error);
++	if (!gkd_secret_session_handle_open (session, algorithm, input_payload,
++	                                     &output, &result, &error) && error == NULL)
++		g_set_error_literal (&error, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
++		                     "Failed to negotiate a secret session");
+ 	g_variant_unref (input_payload);
+ 
+ 	if (error != NULL) {
+--- a/daemon/dbus/gkd-secret-session.c
++++ b/daemon/dbus/gkd-secret-session.c
+@@ -183,7 +183,11 @@
+ 	gboolean ret;
+ 
+ 	session = gkd_secret_service_get_pkcs11_session (self->service, self->caller);
+-	g_return_val_if_fail (session, FALSE);
++	if (session == NULL) {
++		g_set_error_literal (error_out, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
++		                     "Failed to open a PKCS#11 session");
++		return FALSE;
++	}
+ 
+ 	if (!aes_create_dh_keys (session, "ietf-ike-grp-modp-1024", &pub, &priv)) {
+ 		g_set_error_literal (error_out, G_DBUS_ERROR,
+@@ -250,7 +254,11 @@
+ 	GckSession *session;
+ 
+ 	session = gkd_secret_service_get_pkcs11_session (self->service, self->caller);
+-	g_return_val_if_fail (session, FALSE);
++	if (session == NULL) {
++		g_set_error_literal (error_out, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
++		                     "Failed to open a PKCS#11 session");
++		return FALSE;
++	}
+ 
+ 	gck_builder_add_ulong (&builder, CKA_CLASS, CKO_SECRET_KEY);
+ 	gck_builder_add_ulong (&builder, CKA_KEY_TYPE, CKK_G_NULL);
+--- a/daemon/dbus/Makefile.am
++++ b/daemon/dbus/Makefile.am
+@@ -148,6 +148,7 @@
+ 
+ daemon_dbus_TESTS = \
+ 	test-dbus-util \
++	test-dbus-session \
+ 	test-dbus-search \
+ 	test-dbus-items \
+ 	test-dbus-signals \
+@@ -157,6 +158,10 @@
+ test_dbus_util_SOURCES = daemon/dbus/test-dbus-util.c
+ test_dbus_util_LDADD = $(daemon_dbus_LIBS)
+ test_dbus_util_CFLAGS = $(daemon_dbus_CFLAGS)
++
++test_dbus_session_SOURCES = daemon/dbus/test-dbus-session.c daemon/gkd-util.c
++test_dbus_session_LDADD = $(daemon_dbus_LIBS) libgkd-login.la libgkm-secret-store.la libgkm.la $(DAEMON_LIBS)
++test_dbus_session_CFLAGS = $(DAEMON_CFLAGS)
+ 
+ test_dbus_search_SOURCES = daemon/dbus/test-dbus-search.c
+ test_dbus_search_LDADD = $(daemon_dbus_LIBS)
+--- a/daemon/dbus/test-dbus-session.c
++++ b/daemon/dbus/test-dbus-session.c
+@@ -0,0 +1,433 @@
++/*
++ * Regression tests for failed OpenSession negotiation.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++
++#include "config.h"
++
++/* Include the implementation so the test can deterministically remove a client
++ * between preparation and method dispatch, without adding production test APIs.
++ * The real exported handler and PKCS#11 implementation still process each call.
++ */
++#include "gkd-secret-service.c"
++#include "daemon/gkd-main.h"
++#include "daemon/gkd-pkcs11.h"
++#include "pkcs11/secret-store/gkm-secret-store.h"
++#include "egg/egg-secure-memory.h"
++#include "egg/egg-testing.h"
++#include "egg/egg-hkdf.h"
++
++EGG_SECURE_DEFINE_GLIB_GLOBALS ();
++
++typedef enum {
++	FAULT_NONE,
++	FAULT_DEPARTED,
++	FAULT_OPEN,
++	FAULT_LOGIN
++} Fault;
++
++typedef struct {
++	const gchar *algorithm;
++	Fault fault;
++} Scenario;
++
++typedef struct {
++	GkdSecretService *service;
++	GDBusConnection *server;
++	GDBusConnection *client;
++	GckModule *module;
++	CK_FUNCTION_LIST functions;
++	gchar *directory;
++	Fault fault;
++	guint injections;
++} Test;
++
++static CK_FUNCTION_LIST_PTR real_functions;
++static Test *active_test;
++
++/* The login helper's module boundary is the same disposable secrets module. */
++CK_FUNCTION_LIST_PTR
++gkd_pkcs11_get_base_functions (void)
++{
++	return real_functions;
++}
++
++void
++gkd_main_quit (void)
++{
++	g_assert_not_reached ();
++}
++
++static CK_RV
++open_session (CK_SLOT_ID slot, CK_FLAGS flags, CK_VOID_PTR app,
++              CK_NOTIFY notify, CK_SESSION_HANDLE_PTR session)
++{
++	if (active_test->fault == FAULT_OPEN) {
++		active_test->injections++;
++		return CKR_DEVICE_ERROR;
++	}
++	return real_functions->C_OpenSession (slot, flags, app, notify, session);
++}
++
++static CK_RV
++login (CK_SESSION_HANDLE session, CK_USER_TYPE user,
++       CK_UTF8CHAR_PTR pin, CK_ULONG length)
++{
++	if (active_test->fault == FAULT_LOGIN) {
++		active_test->injections++;
++		return CKR_DEVICE_ERROR;
++	}
++	return real_functions->C_Login (session, user, pin, length);
++}
++
++static gboolean
++remove_departed_client (GkdExportedService *skeleton,
++                        GDBusMethodInvocation *invocation,
++                        gchar *algorithm, GVariant *input, Test *test)
++{
++	const gchar *caller = g_dbus_method_invocation_get_sender (invocation);
++
++	if (test->fault == FAULT_DEPARTED) {
++		g_assert_true (g_hash_table_remove (test->service->clients, caller));
++		test->injections++;
++	}
++	return FALSE;
++}
++
++static gboolean
++expected_diagnostic (const gchar *domain, GLogLevelFlags level,
++                     const gchar *message, gpointer unused)
++{
++	/* Allow only the baseline's known precursor diagnostics, so a failure at
++	 * g_variant_new is distinguished from an earlier fatal-warning abort.
++	 * Production fatal checks are unchanged. The final invalid reply is fatal.
++	 */
++	if (g_strcmp0 (domain, NULL) == 0 &&
++	    (g_str_equal (message, "gkd_secret_service_get_pkcs11_session: assertion 'client' failed") ||
++	     g_str_equal (message, "plain_negotiate: assertion 'session' failed") ||
++	     g_str_equal (message, "aes_negotiate: assertion 'session' failed") ||
++	     g_str_equal (message, "gkd_secret_service_publish_dispatch: assertion 'client' failed") ||
++	     g_str_has_prefix (message, "couldn't open pkcs11 session for secret service: ") ||
++	     g_str_has_prefix (message, "couldn't log in to pkcs11 session for secret service: ")))
++		return FALSE;
++	return TRUE;
++}
++
++static GDBusConnection *
++connect_bus (void)
++{
++	GError *error = NULL;
++	GDBusConnection *connection;
++
++	connection = g_dbus_connection_new_for_address_sync (
++		g_getenv ("DBUS_SESSION_BUS_ADDRESS"),
++		G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
++		G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, NULL, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (connection);
++	return connection;
++}
++
++static void
++setup (Test *test, gconstpointer data)
++{
++	CK_C_INITIALIZE_ARGS args = { 0 };
++	GList *slots;
++	gchar *reserved;
++	CK_RV rv;
++
++	test->directory = egg_tests_create_scratch_directory (NULL);
++	reserved = g_strdup_printf ("directory='%s'", test->directory);
++	args.flags = CKF_OS_LOCKING_OK;
++	args.pReserved = reserved;
++	real_functions = gkm_secret_store_get_functions ();
++	rv = real_functions->C_Initialize (&args);
++	g_assert_cmpuint (rv, ==, CKR_OK);
++	g_free (reserved);
++
++	active_test = test;
++	test->functions = *real_functions;
++	test->functions.C_OpenSession = open_session;
++	test->functions.C_Login = login;
++	test->module = gck_module_new (&test->functions);
++	slots = gck_module_get_slots (test->module, TRUE);
++	g_assert_nonnull (slots);
++	test->server = connect_bus ();
++	test->client = connect_bus ();
++	test->service = g_object_new (GKD_SECRET_TYPE_SERVICE,
++	                             "connection", test->server,
++	                             "pkcs11-slot", slots->data, NULL);
++	gck_list_unref_free (slots);
++
++	/* Force the recorded ordering on the main context, just before the real
++	 * handler. Do not race another thread or simulate a successful reply.
++	 */
++	g_signal_handlers_disconnect_by_func (test->service->skeleton,
++	                                     service_method_open_session, test->service);
++	g_signal_connect (test->service->skeleton, "handle-open-session",
++	                  G_CALLBACK (remove_departed_client), test);
++	g_signal_connect (test->service->skeleton, "handle-open-session",
++	                  G_CALLBACK (service_method_open_session), test->service);
++	g_test_log_set_fatal_handler (expected_diagnostic, NULL);
++}
++
++static void
++teardown (Test *test, gconstpointer unused)
++{
++	GError *error = NULL;
++	CK_RV rv;
++
++	test->fault = FAULT_NONE;
++	g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON (test->service->skeleton));
++	g_clear_object (&test->service->skeleton);
++	g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON (test->service->internal_skeleton));
++	g_clear_object (&test->service->internal_skeleton);
++	g_object_run_dispose (G_OBJECT (test->service));
++	g_dbus_connection_close_sync (test->client, NULL, &error);
++	g_assert_no_error (error);
++	g_dbus_connection_close_sync (test->server, NULL, &error);
++	g_assert_no_error (error);
++	while (g_main_context_iteration (NULL, FALSE));
++	g_clear_object (&test->service);
++	g_clear_object (&test->client);
++	g_clear_object (&test->server);
++	g_clear_object (&test->module);
++	rv = real_functions->C_Finalize (NULL);
++	g_assert_cmpuint (rv, ==, CKR_OK);
++	egg_tests_remove_scratch_directory (test->directory);
++	g_free (test->directory);
++	active_test = NULL;
++	g_test_log_set_fatal_handler (NULL, NULL);
++}
++
++static void
++on_reply (GObject *source, GAsyncResult *result, gpointer data)
++{
++	GAsyncResult **reply = data;
++	g_assert_null (*reply);
++	*reply = g_object_ref (result);
++}
++
++static GVariant *
++call (Test *test, const gchar *path, const gchar *interface,
++      const gchar *method, GVariant *parameters, const GVariantType *type,
++      GError **error)
++{
++	GAsyncResult *reply = NULL;
++	GVariant *value;
++
++	g_dbus_connection_call (test->client,
++	                        g_dbus_connection_get_unique_name (test->server),
++	                        path, interface, method, parameters, type,
++	                        G_DBUS_CALL_FLAGS_NO_AUTO_START, 5000, NULL,
++	                        on_reply, &reply);
++	while (!reply)
++		g_main_context_iteration (NULL, TRUE);
++	value = g_dbus_connection_call_finish (test->client, reply, error);
++	g_object_unref (reply);
++	return value;
++}
++
++static GVariant *
++open_parameters (const gchar *algorithm)
++{
++	const guchar public_key[] = { 2 };
++	GVariant *input;
++
++	if (g_str_equal (algorithm, "plain"))
++		input = g_variant_new_string ("");
++	else
++		input = g_variant_new_fixed_array (G_VARIANT_TYPE_BYTE, public_key, 1, 1);
++	return g_variant_new ("(sv)", algorithm, input);
++}
++
++static void
++assert_secret_roundtrip (Test *test, const gchar *path,
++                         const gchar *algorithm, GVariant *output)
++{
++	static const guchar value[] = "regress!";
++	guchar ciphertext[16], plaintext[16], key[16], iv[16] = { 0 };
++	gcry_cipher_hd_t cipher = NULL;
++	gboolean encrypted = !g_str_equal (algorithm, "plain");
++	GVariant *payload, *secret, *reply, *returned, *parameters, *contents;
++	GVariantBuilder properties, attributes;
++	gconstpointer data;
++	gsize length;
++	gchar *item, *prompt;
++	const gchar *returned_session, *content_type;
++	GError *error = NULL;
++
++	if (encrypted) {
++		/* The fixture's DH public value is 2 (private exponent 1), so its
++		 * shared value is the server's public value. Never use this fixture
++		 * exponent or fixed IV for real secrets.
++		 */
++		payload = g_variant_get_variant (output);
++		data = g_variant_get_fixed_array (payload, &length, 1);
++		while (length > 0 && *(const guchar *)data == 0) {
++			data = (const guchar *)data + 1;
++			length--;
++		}
++		g_assert_cmpuint (length, >, 0);
++		g_assert_true (egg_hkdf_perform ("sha256", data, length, NULL, 0, NULL, 0,
++		                               key, sizeof (key)));
++		g_variant_unref (payload);
++		memcpy (plaintext, value, sizeof (value) - 1);
++		memset (plaintext + sizeof (value) - 1, 16 - (sizeof (value) - 1),
++		        16 - (sizeof (value) - 1));
++		g_assert_cmpint (gcry_cipher_open (&cipher, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CBC, 0), ==, 0);
++		g_assert_cmpint (gcry_cipher_setkey (cipher, key, sizeof (key)), ==, 0);
++		g_assert_cmpint (gcry_cipher_setiv (cipher, iv, sizeof (iv)), ==, 0);
++		g_assert_cmpint (gcry_cipher_encrypt (cipher, ciphertext, sizeof (ciphertext), plaintext, sizeof (plaintext)), ==, 0);
++		parameters = g_variant_new_fixed_array (G_VARIANT_TYPE_BYTE, iv, sizeof (iv), 1);
++		contents = g_variant_new_fixed_array (G_VARIANT_TYPE_BYTE, ciphertext, sizeof (ciphertext), 1);
++	} else {
++		parameters = g_variant_new_fixed_array (G_VARIANT_TYPE_BYTE, NULL, 0, 1);
++		contents = g_variant_new_fixed_array (G_VARIANT_TYPE_BYTE, value, sizeof (value) - 1, 1);
++	}
++	secret = g_variant_new ("(o@ay@ays)", path, parameters, contents, "text/plain");
++	g_variant_builder_init (&properties, G_VARIANT_TYPE_VARDICT);
++	g_variant_builder_add (&properties, "{sv}", SECRET_ITEM_INTERFACE ".Label",
++	                       g_variant_new_string ("OpenSession regression"));
++	g_variant_builder_init (&attributes, G_VARIANT_TYPE ("a{ss}"));
++	g_variant_builder_add (&properties, "{sv}", SECRET_ITEM_INTERFACE ".Attributes",
++	                       g_variant_builder_end (&attributes));
++	reply = call (test, SECRET_COLLECTION_PREFIX "/session", SECRET_COLLECTION_INTERFACE,
++	              "CreateItem", g_variant_new ("(@a{sv}@(oayays)b)",
++	                                          g_variant_builder_end (&properties), secret, FALSE),
++	              G_VARIANT_TYPE ("(oo)"), &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (reply);
++	g_variant_get (reply, "(oo)", &item, &prompt);
++	g_assert_cmpstr (prompt, ==, "/");
++	g_free (prompt);
++	g_variant_unref (reply);
++
++	reply = call (test, item, SECRET_ITEM_INTERFACE, "GetSecret", g_variant_new ("(o)", path),
++	              G_VARIANT_TYPE ("((oayays))"), &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (reply);
++	returned = g_variant_get_child_value (reply, 0);
++	g_variant_get (returned, "(&o@ay@ay&s)", &returned_session, &parameters, &contents, &content_type);
++	g_assert_cmpstr (returned_session, ==, path);
++	g_assert_cmpstr (content_type, ==, "text/plain");
++	if (encrypted) {
++		data = g_variant_get_fixed_array (parameters, &length, 1);
++		g_assert_cmpuint (length, ==, sizeof (iv));
++		g_assert_cmpint (gcry_cipher_reset (cipher), ==, 0);
++		g_assert_cmpint (gcry_cipher_setiv (cipher, data, length), ==, 0);
++		data = g_variant_get_fixed_array (contents, &length, 1);
++		g_assert_cmpuint (length, ==, sizeof (plaintext));
++		g_assert_cmpint (gcry_cipher_decrypt (cipher, plaintext, sizeof (plaintext), data, length), ==, 0);
++		g_assert_cmpmem (plaintext, sizeof (value) - 1, value, sizeof (value) - 1);
++		g_assert_cmpuint (plaintext[15], ==, 16 - (sizeof (value) - 1));
++		gcry_cipher_close (cipher);
++	} else {
++		g_assert_cmpuint (g_variant_n_children (parameters), ==, 0);
++		data = g_variant_get_fixed_array (contents, &length, 1);
++		g_assert_cmpmem (data, length, value, sizeof (value) - 1);
++	}
++	g_variant_unref (parameters);
++	g_variant_unref (contents);
++	g_variant_unref (returned);
++	g_variant_unref (reply);
++
++	reply = call (test, item, SECRET_ITEM_INTERFACE, "Delete", NULL, G_VARIANT_TYPE ("(o)"), &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (reply);
++	g_variant_get (reply, "(o)", &prompt);
++	g_assert_cmpstr (prompt, ==, "/");
++	g_free (prompt);
++	g_variant_unref (reply);
++	g_free (item);
++}
++
++static void
++assert_usable_session (Test *test, const gchar *algorithm)
++{
++	GError *error = NULL;
++	GVariant *reply, *output;
++	gchar *path;
++	const gchar *caller = g_dbus_connection_get_unique_name (test->client);
++
++	reply = call (test, SECRET_SERVICE_PATH, SECRET_SERVICE_INTERFACE, "OpenSession",
++	              open_parameters (algorithm), G_VARIANT_TYPE ("(vo)"), &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (reply);
++	g_variant_get (reply, "(@vo)", &output, &path);
++	g_assert_nonnull (gkd_secret_service_lookup_session (test->service, path, caller));
++	assert_secret_roundtrip (test, path, algorithm, output);
++	g_variant_unref (output);
++	g_variant_unref (reply);
++
++	reply = call (test, path, SECRET_SESSION_INTERFACE, "Close", NULL,
++	              G_VARIANT_TYPE_UNIT, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (reply);
++	g_variant_unref (reply);
++	g_assert_null (gkd_secret_service_lookup_session (test->service, path, caller));
++	g_free (path);
++}
++
++static void
++test_failed_open (Test *test, gconstpointer data)
++{
++	const Scenario *scenario = data;
++	const gchar *caller = g_dbus_connection_get_unique_name (test->client);
++	ServiceClient *client;
++	GError *error = NULL;
++	GVariant *reply;
++
++	test->fault = scenario->fault;
++	if (scenario->fault == FAULT_OPEN)
++		g_test_expect_message (NULL, G_LOG_LEVEL_WARNING, "couldn't open pkcs11 session for secret service: *");
++	else if (scenario->fault == FAULT_LOGIN)
++		g_test_expect_message (NULL, G_LOG_LEVEL_WARNING, "couldn't log in to pkcs11 session for secret service: *");
++	reply = call (test, SECRET_SERVICE_PATH, SECRET_SERVICE_INTERFACE, "OpenSession",
++	              open_parameters (scenario->algorithm), G_VARIANT_TYPE ("(vo)"), &error);
++	g_assert_null (reply);
++	g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_FAILED);
++	g_test_assert_expected_messages ();
++	g_dbus_error_strip_remote_error (error);
++	if (scenario->fault == FAULT_DEPARTED)
++		g_assert_cmpstr (error->message, ==, "The calling client has disconnected");
++	else
++		g_assert_cmpstr (error->message, ==, "Failed to open a PKCS#11 session");
++	g_assert_cmpuint (test->injections, ==, 1);
++	g_clear_error (&error);
++	client = g_hash_table_lookup (test->service->clients, caller);
++	if (scenario->fault == FAULT_DEPARTED)
++		g_assert_null (client);
++	else {
++		g_assert_nonnull (client);
++		g_assert_cmpuint (g_hash_table_size (client->dispatch), ==, 0);
++	}
++
++	test->fault = FAULT_NONE;
++	assert_usable_session (test, "plain");
++	assert_usable_session (test, "dh-ietf1024-sha256-aes128-cbc-pkcs7");
++}
++
++int
++main (int argc, char **argv)
++{
++	static const Scenario scenarios[] = {
++		{ "plain", FAULT_DEPARTED },
++		{ "dh-ietf1024-sha256-aes128-cbc-pkcs7", FAULT_DEPARTED },
++		{ "plain", FAULT_OPEN },
++		{ "dh-ietf1024-sha256-aes128-cbc-pkcs7", FAULT_OPEN },
++		{ "plain", FAULT_LOGIN },
++		{ "dh-ietf1024-sha256-aes128-cbc-pkcs7", FAULT_LOGIN },
++	};
++	static const gchar *names[] = {
++		"/dbus/session/departed/plain", "/dbus/session/departed/aes",
++		"/dbus/session/open-failed/plain", "/dbus/session/open-failed/aes",
++		"/dbus/session/login-failed/plain", "/dbus/session/login-failed/aes",
++	};
++	guint i;
++
++	g_test_init (&argc, &argv, NULL);
++	for (i = 0; i < G_N_ELEMENTS (scenarios); i++)
++		g_test_add (names[i], Test, &scenarios[i], setup, test_failed_open, teardown);
++	return g_test_run ();
++}
