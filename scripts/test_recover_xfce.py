@@ -231,6 +231,21 @@ class RecoveryTests(unittest.TestCase):
             self.assertFalse(any(arg.startswith("LD_PRELOAD=") for arg in argv))
             self.assertNotIn("--replace", argv)
 
+    def test_recovered_components_preserve_session_locale_and_diagnostics_use_c(self):
+        locale = {"LANG": "en_US.UTF-8", "LANGUAGE": "en_US:pt_BR", "LC_ALL": "en_US.UTF-8",
+                  "LC_NUMERIC": "pt_BR.UTF-8", "LC_MEASUREMENT": "pt_BR.UTF-8"}
+        self.desktop.env.update(locale)
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        result = self.recover(start=True)
+        self.assertEqual(len(result), 5)
+        self.assertEqual(len(self.desktop.submissions), 5)
+        for command in self.desktop.submissions:
+            for key, value in locale.items():
+                self.assertIn(f"{key}={value}", command)
+                self.assertGreater(command.index(f"{key}={value}"), command.index("-i"))
+        for argv, env in self.desktop.calls:
+            self.assertEqual(env["LC_ALL"], "C", argv)
+
     def test_recovery_disables_sm_even_for_trusted_caller(self):
         (self.desktop.proc / "self/cgroup").write_text(f"0::{self.desktop.scope}\n")
         with patch.dict(os.environ, {"SESSION_MANAGER": "local/host:@/tmp/.ICE-unix/102"}):

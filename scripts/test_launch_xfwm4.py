@@ -170,6 +170,51 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(len(self.desktop.submissions), 1)
         self.assertEqual(lock.stat().st_ino, inode)
 
+    def test_graphical_launch_preserves_verified_session_locale(self):
+        locale = {
+            "LANG": "en_US.UTF-8", "LANGUAGE": "en_US:pt_BR", "LC_ALL": "en_US.UTF-8",
+            "LC_CTYPE": "pt_BR.UTF-8", "LC_NUMERIC": "pt_BR.UTF-8", "LC_TIME": "pt_BR.UTF-8",
+            "LC_COLLATE": "pt_BR.UTF-8", "LC_MONETARY": "pt_BR.UTF-8", "LC_MESSAGES": "pt_BR.UTF-8",
+            "LC_PAPER": "pt_BR.UTF-8", "LC_NAME": "pt_BR.UTF-8", "LC_ADDRESS": "pt_BR.UTF-8",
+            "LC_TELEPHONE": "pt_BR.UTF-8", "LC_MEASUREMENT": "pt_BR.UTF-8", "LC_IDENTIFICATION": "pt_BR.UTF-8",
+        }
+        self.desktop.env.update(locale, LD_PRELOAD="untrusted", LC_NOT_A_CATEGORY="untrusted")
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
+        self.assertEqual(len(self.desktop.submissions), 1)
+        command = self.desktop.submissions[0]
+        environment = dict(value.split("=", 1) for value in
+                           command[command.index("-i") + 1:command.index("/usr/bin/xfwm4")])
+        self.assertEqual({key: value for key, value in environment.items()
+                          if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, locale)
+        self.assertNotIn("LD_PRELOAD", environment)
+        for argv, env in self.desktop.calls:
+            self.assertEqual(env["LC_ALL"], "C", argv)
+
+    def test_graphical_launch_preserves_unset_lc_all_and_ignores_caller_locale(self):
+        locale = {"LANG": "pt_BR.UTF-8", "LANGUAGE": "pt_BR:en_US", "LC_NUMERIC": "en_US.UTF-8"}
+        self.desktop.env.update(locale)
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        with patch.dict(os.environ, {"LANG": "de_DE.UTF-8", "LANGUAGE": "de_DE", "LC_ALL": "C"}):
+            self.assertIn("XFWM ready", self.run_launcher(start=True))
+        command = self.desktop.submissions[0]
+        environment = dict(value.split("=", 1) for value in
+                           command[command.index("-i") + 1:command.index("/usr/bin/xfwm4")])
+        self.assertEqual({key: value for key, value in environment.items()
+                          if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, locale)
+        for argv, env in self.desktop.calls:
+            self.assertEqual(env["LC_ALL"], "C", argv)
+
+    def test_graphical_launch_does_not_invent_locale_variables(self):
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
+        command = self.desktop.submissions[0]
+        environment = dict(value.split("=", 1) for value in
+                           command[command.index("-i") + 1:command.index("/usr/bin/xfwm4")])
+        self.assertEqual({key: value for key, value in environment.items()
+                          if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, {})
+        for argv, env in self.desktop.calls:
+            self.assertEqual(env["LC_ALL"], "C", argv)
+
     def test_non_ewmh_manager_blocks_submission(self):
         self.desktop.events = self.desktop.events.replace("PropertyChange", "SubstructureRedirect")
         self.assert_refused("Root redirection is occupied")

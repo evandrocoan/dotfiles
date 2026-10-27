@@ -21,6 +21,13 @@ import time
 from dataclasses import dataclass
 
 
+LOCALE_VARIABLES = (
+    "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE", "LC_NUMERIC", "LC_TIME", "LC_COLLATE",
+    "LC_MONETARY", "LC_MESSAGES", "LC_PAPER", "LC_NAME", "LC_ADDRESS", "LC_TELEPHONE",
+    "LC_MEASUREMENT", "LC_IDENTIFICATION",
+)
+
+
 class Refused(RuntimeError):
     """Missing evidence: leave all desktop processes untouched."""
 
@@ -74,16 +81,18 @@ class Host:
         self.runtime = Path(f"/run/user/{self.uid}") if runtime is None else runtime
         self.base_env = {
             "HOME": account.pw_dir, "USER": account.pw_name,
-            "LOGNAME": account.pw_name, "PATH": "/usr/bin:/bin", "LC_ALL": "C",
+            "LOGNAME": account.pw_name, "PATH": "/usr/bin:/bin",
             "XDG_RUNTIME_DIR": str(self.runtime),
             "DBUS_SESSION_BUS_ADDRESS": f"unix:path={self.runtime}/bus",
         }
         self.runner = subprocess.run if runner is None else runner
 
     def command(self, argv, env=None, *, allowed=(0,)) -> str:
+        command_env = dict(self.base_env if env is None else env)
+        command_env["LC_ALL"] = "C"  # Stabilize diagnostic output, not the GUI launch environment.
         try:
             result = self.runner(
-                argv, env=self.base_env if env is None else env,
+                argv, env=command_env,
                 stdin=subprocess.DEVNULL, capture_output=True, text=True,
                 timeout=5, check=False,
             )
@@ -207,7 +216,7 @@ class Host:
                 raise Refused("Empty X authority file")
         env = dict(self.base_env)
         for key in ("DISPLAY", "XAUTHORITY", "XDG_CONFIG_HOME", "XDG_CONFIG_DIRS",
-                    "XDG_DATA_HOME", "XDG_DATA_DIRS", "XDG_CURRENT_DESKTOP", "LANG"):
+                    "XDG_DATA_HOME", "XDG_DATA_DIRS", "XDG_CURRENT_DESKTOP", *LOCALE_VARIABLES):
             if key in source:
                 env[key] = source[key]
         bus_pid = self.command([
