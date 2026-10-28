@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -36,7 +37,7 @@ class RecoveryDesktop(Desktop):
         self.after_ping = None
         self.component_submit = self.make_component_ready
         self.host = recovery.RecoveryHost(proc=self.proc, runtime=self.runtime,
-                                          filesystem=self.disk, runner=self.run)
+                                          filesystem=self.disk, runner=self.run, spawner=self.spawn)
         self.host.base_env["HOME"] = self.home
         self.service_path = self.disk / "home/fixture/.local/share/dbus-1/services/org.xfce.Xfconf.service"
         self.service_path.parent.mkdir(parents=True)
@@ -55,11 +56,22 @@ class RecoveryDesktop(Desktop):
         self.specs = self.host.components(self.host.discover())
         self.calls.clear()
 
+    def spawn(self, argv, **kwargs):
+        unit = next(arg.split("=", 1)[1] for arg in argv if arg.startswith("--unit="))
+        if unit.startswith("xfwm4-launch-"):
+            return super().spawn(argv, **kwargs)
+        self.calls.append((list(argv), dict(kwargs["env"])))
+        self.submissions.append(list(argv))
+        self.submission_environments.append(dict(kwargs["env"]))
+        self.write_process(110, "systemd-run", "/caller.scope")
+        self.component_submit(unit.removeprefix("xfce-recovery-").split("-c7-")[0])
+        return SimpleNamespace(pid=110, poll=lambda: None)
+
     def make_component_ready(self, name):
         spec = self.specs[name]
         pid = {"conf": 201, "settings": 202, "desktop": 203, "panel": 204}[name]
-        unit = f"xfce-recovery-{name}-c7.service"
-        group = "/user.slice/user-1000.slice/user@1000.service/app.slice/" + unit
+        unit = f"xfce-recovery-{name}-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"
+        group = f"/user.slice/user-{self.uid}.slice/user@{self.uid}.service/app.slice/{unit}"
         self.write_process(pid, spec.process_name, group, executable=spec.executable)
         self.owners[spec.bus_name] = (f":1.{pid}", pid)
         self.units[unit] = dict(LoadState="loaded", ActiveState="active", SubState="running",
@@ -77,13 +89,12 @@ class RecoveryDesktop(Desktop):
         for path in directory.iterdir():
             path.unlink()
         directory.rmdir()
-        self.units.pop(f"xfce-recovery-{name}-c7.service", None)
+        self.units.pop(f"xfce-recovery-{name}-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", None)
 
     def run(self, argv, **kwargs):
         tool = Path(argv[0]).name
         custom = ((tool == "busctl" and "get-property" not in argv and argv[-1] != "org.xfce.SessionManager")
-                  or (tool == "systemctl" and argv[4] != self.unit)
-                  or (tool == "systemd-run" and f"--unit={self.unit}" not in argv))
+                  or (tool == "systemctl" and argv[4] != self.unit))
         if not custom:
             return super().run(argv, **kwargs)
         self.calls.append((list(argv), dict(kwargs["env"])))
@@ -119,12 +130,6 @@ class RecoveryDesktop(Desktop):
             state = self.units.get(argv[4], dict(LoadState="not-found", ActiveState="inactive",
                                                MainPID="0", ControlGroup="", Transient="no"))
             output = "\n".join(f"{key}={value}" for key, value in state.items())
-        elif tool == "systemd-run":
-            self.submissions.append(list(argv))
-            unit = next(arg.split("=", 1)[1] for arg in argv if arg.startswith("--unit="))
-            name = unit.removeprefix("xfce-recovery-").removesuffix("-c7.service")
-            self.component_submit(name)
-            output = f"Running as unit: {unit}"
         else:
             raise AssertionError(argv)
         return subprocess.CompletedProcess(argv, 0, output + ("\n" if output else ""), "")
@@ -154,6 +159,8 @@ class RecoveryTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.desktop = RecoveryDesktop(Path(temporary.name))
         self.addCleanup(patch.stopall)
+        patch.object(wm.uuid, "uuid4", return_value=SimpleNamespace(hex="a" * 32)).start()
+        patch("subprocess.Popen", side_effect=AssertionError("Real spawn forbidden in fixtures")).start()
         patch("subprocess.run", side_effect=AssertionError("Real subprocess forbidden in fixtures")).start()
         patch.dict(os.environ, {"DISPLAY": ":99", "SESSION_MANAGER": "stale", "LD_PRELOAD": "bad"}).start()
 
@@ -188,9 +195,9 @@ class RecoveryTests(unittest.TestCase):
 
     def test_complete_recovery_order_and_repeat_are_idempotent(self):
         result = self.recover(start=True)
-        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service", "xfwm4-launch-c7.service",
-                                                 "xfce-recovery-settings-c7.service", "xfce-recovery-desktop-c7.service",
-                                                 "xfce-recovery-panel-c7.service"])
+        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", "xfwm4-launch-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope",
+                                                 "xfce-recovery-settings-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", "xfce-recovery-desktop-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope",
+                                                 "xfce-recovery-panel-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
         self.assertEqual(len(result), 5)
         self.assertIn("started and responsive", result[-1])
         repeat = self.recover(start=True)
@@ -200,13 +207,13 @@ class RecoveryTests(unittest.TestCase):
 
     def test_selective_panel_includes_prerequisites_but_not_desktop(self):
         self.recover(start=True, component="panel")
-        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service", "xfwm4-launch-c7.service",
-                                                 "xfce-recovery-settings-c7.service", "xfce-recovery-panel-c7.service"])
+        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", "xfwm4-launch-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope",
+                                                 "xfce-recovery-settings-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", "xfce-recovery-panel-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
         self.assertNotIn("org.xfce.xfdesktop", self.desktop.owners)
 
     def test_selective_conf_does_not_start_gui(self):
         self.recover(start=True, component="conf")
-        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service"])
+        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
         self.assertIsNone(self.desktop.owner)
 
     def test_existing_healthy_components_are_untouched(self):
@@ -225,7 +232,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(panel_env["XFCE_PANEL_PLUGIN_PATH"], "/home/fixture/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins")
         for argv in self.desktop.submissions:
             environment = self.desktop.submitted_environment(argv)
-            self.assertIn("--property=Restart=no", argv)
+            self.assertIn("--scope", argv)
             self.assertEqual(environment["DISPLAY"], ":0.0")
             self.assertEqual(environment["XAUTHORITY"], str(self.desktop.authority))
             self.assertEqual(environment["XDG_CONFIG_DIRS"], "/etc/xdg/xdg-xfce:/etc/xdg")
@@ -245,7 +252,7 @@ class RecoveryTests(unittest.TestCase):
             for key, value in locale.items():
                 self.assertEqual(environment[key], value)
         for argv, env in self.desktop.calls:
-            if Path(argv[0]).name != "systemd-run":
+            if Path(argv[0]).name != "systemd-cat":
                 self.assertEqual(env["LC_ALL"], "C", argv)
 
     def test_every_recovered_component_receives_complete_session_environment(self):
@@ -403,13 +410,13 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(wm.Refused, "prerequisite conf disappeared") as caught:
             self.recover(start=True)
         self.assertIn("settings: started and responsive", str(caught.exception))
-        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service", "xfwm4-launch-c7.service",
-                                                 "xfce-recovery-settings-c7.service"])
+        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", "xfwm4-launch-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope",
+                                                 "xfce-recovery-settings-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
 
     def test_failed_component_leaves_prior_progress_without_rollback(self):
         def submit(name):
             if name == "desktop":
-                self.desktop.units["xfce-recovery-desktop-c7.service"] = dict(
+                self.desktop.units["xfce-recovery-desktop-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"] = dict(
                     LoadState="loaded", ActiveState="failed", MainPID="0", ControlGroup="", Transient="yes")
             else:
                 self.desktop.make_component_ready(name)
@@ -417,19 +424,16 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(wm.Refused, "desktop: startup not confirmed") as caught:
             self.recover(start=True, timeout=0)
         self.assertIn("settings: started and responsive", str(caught.exception))
-        self.assertEqual(self.submission_units()[-1], "xfce-recovery-desktop-c7.service")
+        self.assertEqual(self.submission_units()[-1], "xfce-recovery-desktop-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope")
         self.assertEqual(len(self.desktop.submissions), 4)
         self.assertIn("org.xfce.SettingsDaemon", self.desktop.owners)
         self.assertFalse(any("stop" in argv or "kill" in argv or "reset-failed" in argv for argv, _ in self.desktop.calls))
 
-    def test_lost_submission_ack_is_reconciled_without_second_submit(self):
-        def submit(name):
-            self.desktop.make_component_ready(name)
-            raise subprocess.TimeoutExpired("systemd-run", 5)
-        self.desktop.component_submit = submit
-        result = self.recover(start=True, component="conf", timeout=0)
-        self.assertIn("started and responsive", result[0])
-        self.assertEqual(len(self.desktop.submissions), 1)
+    def test_spawn_failure_is_reported_without_retry(self):
+        self.desktop.host.spawner = lambda *a, **kw: (_ for _ in ()).throw(OSError("cannot exec"))
+        with self.assertRaisesRegex(wm.Refused, "cannot exec"):
+            self.recover(start=True, component="conf", timeout=0)
+        self.assertEqual(self.desktop.submissions, [])
 
     def test_malformed_config_after_partial_start_preserves_failure_context(self):
         def submit(name):
@@ -440,15 +444,15 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(wm.Refused, "settings: startup not confirmed") as caught:
             self.recover(start=True, timeout=0)
         self.assertIn("conf: started and responsive", str(caught.exception))
-        self.assertIn("xfce-recovery-settings-c7.service", str(caught.exception))
+        self.assertIn("xfce-recovery-settings-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope", str(caught.exception))
         self.assertEqual(len(self.desktop.submissions), 3)
         self.assertIn("org.xfce.SettingsDaemon", self.desktop.owners)
 
     def test_unresolved_submission_stops_without_retry(self):
         self.desktop.component_submit = lambda name: None
-        with self.assertRaisesRegex(wm.Refused, "xfce-recovery-conf-c7.service.*No retry or rollback"):
+        with self.assertRaisesRegex(wm.Refused, "xfce-recovery-conf-c7-.*scope.*No retry or rollback"):
             self.recover(start=True, timeout=0)
-        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service"])
+        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
 
     def test_slow_readiness_is_awaited_before_next_component(self):
         self.desktop.component_submit = lambda name: None
@@ -462,19 +466,18 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("started and responsive", result[0])
         self.assertEqual(len(self.desktop.submissions), 1)
 
-    def test_wrong_mainpid_cannot_be_reported_ready(self):
+    def test_daemonized_owner_in_scope_is_ready_without_mainpid(self):
         def submit(name):
             self.desktop.make_component_ready(name)
-            self.desktop.units[f"xfce-recovery-{name}-c7.service"]["MainPID"] = "999"
+            del self.desktop.units[f"xfce-recovery-{name}-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"]["MainPID"]
         self.desktop.component_submit = submit
-        with self.assertRaisesRegex(wm.Refused, "startup not confirmed"):
-            self.recover(start=True, component="conf", timeout=0)
+        self.assertIn("started and responsive", self.recover(start=True, component="conf")[0])
         self.assertEqual(len(self.desktop.submissions), 1)
 
     def test_wrong_unit_cgroup_cannot_be_reported_ready(self):
         def submit(name):
             self.desktop.make_component_ready(name)
-            self.desktop.units[f"xfce-recovery-{name}-c7.service"]["ControlGroup"] = "/wrong/group"
+            self.desktop.units[f"xfce-recovery-{name}-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"]["ControlGroup"] = "/wrong/group"
         self.desktop.component_submit = submit
         with self.assertRaisesRegex(wm.Refused, "startup not confirmed"):
             self.recover(start=True, component="conf", timeout=0)
@@ -487,7 +490,7 @@ class RecoveryTests(unittest.TestCase):
         self.desktop.component_submit = submit
         with self.assertRaisesRegex(wm.Refused, "Graphical session changed"):
             self.recover(start=True, timeout=0)
-        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service"])
+        self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
 
     def test_owner_appearing_before_submit_is_preserved(self):
         probes = 0
@@ -523,7 +526,7 @@ class RecoveryTests(unittest.TestCase):
                 self.assertTrue(entered.wait(5))
                 other = pool.submit(second)
                 self.assertTrue(contended.wait(5), "second caller bypassed the real shared lock")
-                self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7.service"])
+                self.assertEqual(self.submission_units(), ["xfce-recovery-conf-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope"])
             finally:
                 release.set()
             self.assertEqual(len(first.result(5)), 5)
@@ -546,6 +549,104 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual(recovery.main([]), 0)
         self.assertIn("panel: absent; no action taken.", output.getvalue())
         self.assertEqual(list(self.desktop.runtime.iterdir()), [])
+        self.assertEqual(self.desktop.submissions, [])
+
+    def test_restart_signals_only_verified_panel_and_keeps_dependencies(self):
+        self.desktop.make_all_ready()
+        before = {name: self.desktop.host.component_process(self.desktop.host.discover(), self.desktop.specs[name])
+                  for name in ("conf", "settings", "desktop")}
+        descriptor = os.open(os.devnull, os.O_RDONLY)
+        def terminate(fd, sig):
+            self.assertEqual(fd, descriptor)
+            self.assertEqual(sig, recovery.signal.SIGTERM)
+            self.desktop.remove_component("panel")
+        with patch.object(recovery.os, "pidfd_open", return_value=descriptor) as opened, \
+                patch.object(recovery.signal, "pidfd_send_signal", side_effect=terminate) as signalled:
+            result = recovery.restart_panel(self.desktop.host)
+        opened.assert_called_once_with(204)
+        signalled.assert_called_once()
+        self.assertIn("panel: started and responsive", result[-1])
+        self.assertEqual(len(self.desktop.submissions), 1)
+        for name, process in before.items():
+            self.assertEqual(self.desktop.host.process(process.pid), process)
+
+    def test_restart_of_absent_panel_starts_it_once_without_signalling(self):
+        with patch.object(recovery.os, "pidfd_open") as opened:
+            result = recovery.restart_panel(self.desktop.host)
+        self.assertIn("panel: started and responsive", result[-1])
+        opened.assert_not_called()
+        self.assertEqual(len(self.desktop.submissions), 4)
+
+    def test_restart_after_rebuild_accepts_running_retired_panel_binary(self):
+        self.desktop.make_all_ready()
+        self.desktop.write_process(204, "xfce4-panel", self.desktop.scope,
+                                   executable=self.desktop.specs["panel"].executable + " (deleted)")
+        descriptor = os.open(os.devnull, os.O_RDONLY)
+        with patch.object(recovery.os, "pidfd_open", return_value=descriptor), \
+                patch.object(recovery.signal, "pidfd_send_signal", side_effect=lambda *a: self.desktop.remove_component("panel")):
+            self.assertIn("panel: started", recovery.restart_panel(self.desktop.host)[-1])
+        self.assertEqual(self.desktop.submissions[0][-2], self.desktop.specs["panel"].executable)
+
+    def test_restart_handles_loss_of_panel_as_environment_source(self):
+        self.desktop.make_all_ready()
+        self.desktop.remove_process(106)
+        self.desktop.write_process(204, "xfce4-panel", self.desktop.scope,
+                                   executable=self.desktop.specs["panel"].executable,
+                                   env=dict(self.desktop.env, SSH_AUTH_SOCK="/session/agent"))
+        descriptor = os.open(os.devnull, os.O_RDONLY)
+        with patch.object(recovery.os, "pidfd_open", return_value=descriptor), \
+                patch.object(recovery.signal, "pidfd_send_signal", side_effect=lambda *a: self.desktop.remove_component("panel")):
+            self.assertIn("panel: started", recovery.restart_panel(self.desktop.host)[-1])
+        self.assertEqual(self.desktop.submitted_environment(self.desktop.submissions[0])["SSH_AUTH_SOCK"],
+                         "/session/agent")
+
+    def test_restart_preserves_bound_environment_when_next_donor_differs(self):
+        self.desktop.make_all_ready()
+        self.desktop.write_process(204, "xfce4-panel", self.desktop.scope,
+                                   executable=self.desktop.specs["panel"].executable,
+                                   env=dict(self.desktop.env, SSH_AUTH_SOCK="/session/agent",
+                                            DESKTOP_AUTOSTART_ID="panel", EXTRA="keep this"))
+        descriptor = os.open(os.devnull, os.O_RDONLY)
+        with patch.object(recovery.os, "pidfd_open", return_value=descriptor), \
+                patch.object(recovery.signal, "pidfd_send_signal", side_effect=lambda *a: self.desktop.remove_component("panel")):
+            self.assertIn("panel: started", recovery.restart_panel(self.desktop.host)[-1])
+        environment = self.desktop.submitted_environment(self.desktop.submissions[0])
+        self.assertEqual(environment["EXTRA"], "keep this")
+        self.assertEqual(environment["SSH_AUTH_SOCK"], "/session/agent")
+        self.desktop.remove_component("panel")
+        self.assertIn("panel: started", self.recover(start=True, component="panel")[-1])
+        environment = self.desktop.submitted_environment(self.desktop.submissions[-1])
+        self.assertEqual(environment["EXTRA"], "keep this")
+        self.assertEqual(environment["SSH_AUTH_SOCK"], "/session/agent")
+
+    def test_unresponsive_panel_exit_never_escalates_or_starts_duplicate(self):
+        self.desktop.make_all_ready()
+        descriptor = os.open(os.devnull, os.O_RDONLY)
+        with patch.object(recovery.os, "pidfd_open", return_value=descriptor), \
+                patch.object(recovery.signal, "pidfd_send_signal") as signalled:
+            with self.assertRaisesRegex(wm.Refused, "Panel did not exit"):
+                recovery.restart_panel(self.desktop.host, timeout=0)
+        signalled.assert_called_once_with(descriptor, recovery.signal.SIGTERM)
+        self.assertEqual(self.desktop.submissions, [])
+
+    def test_unknown_service_blocks_panel_signal(self):
+        self.desktop.make_all_ready()
+        self.desktop.write_process(204, "xfce4-panel", "/user.slice/unfamiliar.service",
+                                   executable=self.desktop.specs["panel"].executable)
+        with patch.object(recovery.os, "pidfd_open") as opened:
+            with self.assertRaisesRegex(wm.Refused, "unfamiliar service"):
+                recovery.restart_panel(self.desktop.host)
+        opened.assert_not_called()
+        self.assertEqual(self.desktop.submissions, [])
+
+    def test_delegated_subgroup_of_unknown_service_blocks_panel_signal(self):
+        self.desktop.make_all_ready()
+        self.desktop.write_process(204, "xfce4-panel", "/user.slice/unfamiliar.service/gui",
+                                   executable=self.desktop.specs["panel"].executable)
+        with patch.object(recovery.os, "pidfd_open") as opened:
+            with self.assertRaisesRegex(wm.Refused, "unfamiliar service"):
+                recovery.restart_panel(self.desktop.host)
+        opened.assert_not_called()
         self.assertEqual(self.desktop.submissions, [])
 
 

@@ -1326,7 +1326,7 @@ before returning `.git`.
    ```bash
    # if: ls /usr/local/lib/xfce4/panel-plugins is a file
    # move it: mv /usr/local/lib/xfce4/panel-plugins{,old}
-   xfce4-panel -q && PANEL_DEBUG=1 xfce4-panel
+   python3 ~/scripts/recover_xfce.py --restart-panel
 
    # May be install it from source: https://github.com/gottcode/xfce4-whiskermenu-plugin/blob/master/INSTALL
    sudo rsync -ar /usr/lib/x86_64-linux-gnu/xfce4/panel/plugins/ /usr/local/lib/xfce4/panel-plugins/
@@ -1349,11 +1349,8 @@ before returning `.git`.
    grep -q XFCE_PANEL_PLUGIN_PATH ~/.profile || \
    echo 'export XFCE_PANEL_PLUGIN_PATH="$HOME/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins"' >> ~/.profile
 
-   # Then restart the panel
-   pkill xfce4-panel; sleep 1
-   NO_AT_BRIDGE=1 \
-   XFCE_PANEL_PLUGIN_PATH=$HOME/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins \
-   ~/.local/bin/xfce4-panel &
+   # Restart only the panel, preserving applications opened through it
+   python3 ~/scripts/recover_xfce.py --restart-panel
    ```
 
 1. **`xfce4-notifyd` panel plugin** (fork that lists the notification log oldest first)
@@ -2222,6 +2219,7 @@ Run as the desktop user, without sudo, from any working directory:
 | `python3 ~/scripts/recover_xfce.py --component panel` | Diagnose the panel and its prerequisites |
 | `python3 ~/scripts/recover_xfce.py --start` | Start missing components in dependency order |
 | `python3 ~/scripts/recover_xfce.py --start --component panel` | Recover the panel and its configuration/WM/settings prerequisites |
+| `python3 ~/scripts/recover_xfce.py --restart-panel` | Restart only the panel with the preserved session environment; keep its applications running |
 
 Start with diagnosis: `running` means the existing component was verified, `absent` means it can be
 considered for startup, and `blocked` means a check prevented that decision. An absent component in
@@ -2233,7 +2231,10 @@ Exit status `0` means diagnosis completed or the selected recovery completed; di
 `0` while components are absent. Status `1` reports a refused or unconfirmed operation, and `2`
 reports invalid command-line arguments. Healthy components are preserved. Unresponsive services,
 ambiguous ownership or an outstanding unit block new starts. A failure stops the remaining sequence
-and reports completed steps; it never kills, replaces or rolls back components. Readiness confirms
+and reports completed steps. Normal recovery never kills, replaces or rolls back components.
+The explicit `--restart-panel` operation sends SIGTERM only to the verified panel through a PID
+descriptor, waits for its exit, then starts its replacement. It never force-kills an unresponsive
+panel. Readiness confirms
 process identity and service responsiveness, not the visual state of every window or panel plugin.
 
 The command uses the configured local/vendor xfconf daemon and the custom panel with its plugin
@@ -2241,12 +2242,27 @@ paths. Manual recovery disables session-manager registration for new GUI process
 existing XFWM lock with [`launch_xfwm4.py`](scripts/launch_xfwm4.py), including while other components
 are starting. Direct launches and D-Bus activation remain outside that cooperative lock.
 
-New components use transient user units named `xfce-recovery-COMPONENT-SESSION.service`; the WM
-retains `xfwm4-launch-SESSION.service`. Use the exact unit reported by an error with
-`systemctl --user status UNIT` and `journalctl --user -u UNIT`. No unit is enabled for login, and
-collection after process exit is not a logout hook. These scripts do not modify startup or saved
-sessions. Startup tests use isolated fixtures; development validation on the real desktop is
-limited to read-only diagnosis.
+New components use a distinct transient `.scope` for each attempt. A component's exit leaves its
+applications running, and a later recovery can create another scope. Do not stop the whole scope
+to restart the panel: use `--restart-panel`. Inspect the exact scope reported by an error with
+`systemctl --user status UNIT`; command output goes to `journalctl --user -t UNIT`.
+
+On `--start` or `--restart-panel`, old recovery `.service` units are authenticated and protected
+with a runtime-only `KillMode=process`/`Restart=no` override before any explicit panel restart.
+This migration preserves their existing processes. New launches use scopes, not this legacy policy.
+No unit is enabled for login, and the scripts do not modify saved XFCE sessions.
+
+The complete environment is captured from a verified original session client and saved privately
+under the user's runtime directory, bound to the login's session-manager PID and start time.
+Later recoveries reuse that snapshot even after the original clients exit. If neither a valid
+snapshot nor an original client remains, recovery refuses rather than inventing a partial
+environment. Pending launch receipts prevent duplicate attempts after uncertain startup; inspect
+the reported scope before retrying. Do not delete a pending receipt to bypass that check.
+
+Automated desktop tests use isolated fixtures. Opt-in process-lifecycle tests use disposable
+Python processes and systemd units, without starting X clients:
+`cd ~/scripts && XFCE_RECOVERY_SYSTEMD_TESTS=1 poetry run python -B -m unittest test_launch_xfwm4.ScopeLifecycleTests`.
+Development tests do not restart the real desktop.
 
 #### Shared XFWM launcher
 
@@ -2257,11 +2273,12 @@ existing manager and refuses ambiguous sessions, unverifiable ownership or an ou
 It currently supports one graphical session and one X screen (multiple monitors on that screen
 are supported).
 
-Startup uses a per-session lock and a transient user unit named `xfwm4-launch-SESSION.service`.
-If startup is not confirmed, inspect that exact unit with `systemctl --user status UNIT` and
-`journalctl --user -u UNIT`; the script does not retry, replace processes or undo a partial start.
-The unit is collected after the component exits, not automatically at logout. No permanent service,
-timer or watcher is installed. Keep the runtime lock file in place while the user session runs.
+Startup uses the shared per-session lock, environment snapshot and attempt receipts described
+above, with a distinct `xfwm4-launch-SESSION-ATTEMPT.scope` for each start. If startup is not
+confirmed, inspect the reported scope and its journal identifier; the script does not retry,
+replace processes or undo a partial start. The scope is collected when its last process exits.
+No permanent service, timer or watcher is installed. Keep the runtime lock file in place while
+the user session runs.
 
 Creating or updating this script does not change XFCE login, saved-session restoration or restart
 commands. Those paths still need deliberate integration before all XFWM starts share the lock;

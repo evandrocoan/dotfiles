@@ -202,10 +202,7 @@ The panel (`~/.local/bin/xfce4-panel`) is built from source. After
 rebuilding with `build_xfce4.sh`, sync system plugins with the loop in
 README.md. Restart the panel with:
 ```bash
-pkill xfce4-panel; sleep 1
-NO_AT_BRIDGE=1 \
-XFCE_PANEL_PLUGIN_PATH=$HOME/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins \
-~/.local/bin/xfce4-panel &
+python3 ~/scripts/recover_xfce.py --restart-panel
 ```
 
 ## Claude Code config

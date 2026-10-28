@@ -1,6 +1,6 @@
 """Launcher orchestration with external-command/proc fixtures and real flock.
 
-These tests never launch X clients or contact a service manager. Run the repository
+These tests never launch X clients. Opt-in lifecycle tests use disposable systemd units. Run the repository
 gate inside the documented PID/socket isolation when working on desktop recovery.
 """
 
@@ -9,10 +9,15 @@ import contextlib
 import io
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import threading
+import time
+import uuid
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -31,7 +36,7 @@ class Desktop:
         self.authority = root / "Xauthority"
         self.authority.write_bytes(b"fixture-cookie")
         self.uid = os.getuid()
-        self.scope = "/user.slice/user-1000.slice/session-c7.scope"
+        self.scope = f"/user.slice/user-{self.uid}.slice/session-c7.scope"
         self.env = {"DISPLAY": ":0.0", "XAUTHORITY": str(self.authority),
                     "XDG_CONFIG_DIRS": "/etc/xdg/xdg-xfce:/etc/xdg",
                     "XDG_DATA_DIRS": "/usr/share/xfce4:/usr/share", "XDG_CURRENT_DESKTOP": "XFCE"}
@@ -42,7 +47,7 @@ class Desktop:
                             Active="yes", State="active")
         self.sessions = f"c7 {self.uid} fixture seat0 - active no -\n"
         self.unit = "xfwm4-launch-c7.service"
-        self.unit_group = f"/user.slice/user-1000.slice/user@1000.service/app.slice/{self.unit}"
+        self.unit_group = f"/user.slice/user-{self.uid}.slice/user@{self.uid}.service/app.slice/{self.unit}"
         self.state = dict(LoadState="not-found", ActiveState="inactive", SubState="dead",
                           MainPID="0", ControlGroup="", Transient="no")
         self.bus_pid = 102
@@ -55,10 +60,11 @@ class Desktop:
                        "  Do not propagate these events:\n  Override redirection?: No\n")
         self.calls = []
         self.submissions = []
+        self.submission_environments = []
         self.manager_environment = ["MANAGER_ONLY=stale", "LC_ALL=C", "SESSION_MANAGER=stale"]
         self.on_submit = self.make_ready
         self.on_command = None
-        self.host = launcher.Host(proc=self.proc, runtime=self.runtime, runner=self.run)
+        self.host = launcher.Host(proc=self.proc, runtime=self.runtime, runner=self.run, spawner=self.spawn)
 
     def write_process(self, pid, name, group, *, ticks=500, env=None, executable=None):
         directory = self.proc / str(pid)
@@ -74,12 +80,31 @@ class Desktop:
         if target.is_symlink():
             target.unlink()
         target.symlink_to(executable or f"/usr/bin/{name}")
+        if pid == 102:
+            self.write_process(106, "xfce4-terminal", group, ticks=ticks, env=environment)
+
+    def spawn(self, argv, **kwargs):
+        self.calls.append((list(argv), dict(kwargs["env"])))
+        self.submissions.append(list(argv))
+        self.submission_environments.append(dict(kwargs["env"]))
+        self.unit = next(arg.split("=", 1)[1] for arg in argv if arg.startswith("--unit="))
+        self.unit_group = f"/user.slice/user-{self.uid}.slice/user@{self.uid}.service/app.slice/{self.unit}"
+        self.write_process(110, "systemd-run", "/caller.scope")
+        self.on_submit()
+        return SimpleNamespace(pid=110, poll=lambda: None)
 
     def make_ready(self):
         self.write_process(103, "xfwm4", self.unit_group)
         self.owner = 103
         self.state.update(LoadState="loaded", ActiveState="active", SubState="running",
-                          MainPID="103", ControlGroup=self.unit_group, Transient="yes")
+                          MainPID="103", ControlGroup=self.unit_group, Transient="yes",
+                          KillMode="process", Restart="no")
+
+    def remove_process(self, pid):
+        directory = self.proc / str(pid)
+        for path in directory.iterdir():
+            path.unlink()
+        directory.rmdir()
 
     def run(self, argv, **kwargs):
         self.calls.append((list(argv), dict(kwargs["env"])))
@@ -110,19 +135,15 @@ class Desktop:
                 output = self.owner_override or ("_NET_SUPPORTING_WM_CHECK(WINDOW): window id # 0x123\n"
                                                 f"_NET_WM_PID(CARDINAL) = {self.owner}\n")
         elif tool == "systemctl":
-            output = "\n".join(f"{key}={value}" for key, value in self.state.items()) + "\n"
-        elif tool == "systemd-run":
-            self.submissions.append(list(argv))
-            self.on_submit()
-            output = f"Running as unit: {self.unit}\n"
+            state = self.state if argv[4] == self.unit else dict(LoadState="not-found", ActiveState="inactive", MainPID="0", ControlGroup="", Transient="no")
+            output = "\n".join(f"{key}={value}" for key, value in state.items()) + "\n"
         else:
             raise AssertionError(f"Unexpected command: {argv}")
         return subprocess.CompletedProcess(argv, 0, output, "")
 
     def submitted_environment(self, command):
-        environment = next(env for argv, env in self.calls if argv == command)
-        keys = [arg.removeprefix("--setenv=") for arg in command if arg.startswith("--setenv=")]
-        return {key: environment[key] for key in keys}
+        index = next(index for index, submission in enumerate(self.submissions) if submission is command)
+        return self.submission_environments[index]
 
 
 class LauncherTests(unittest.TestCase):
@@ -131,6 +152,8 @@ class LauncherTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.desktop = Desktop(Path(temporary.name))
         self.addCleanup(patch.stopall)
+        patch.object(launcher.uuid, "uuid4", return_value=SimpleNamespace(hex="a" * 32)).start()
+        patch("subprocess.Popen", side_effect=AssertionError("Real spawn forbidden in fixtures")).start()
         patch("subprocess.run", side_effect=AssertionError("Real subprocess forbidden in fixtures")).start()
         patch.dict(os.environ, {"DISPLAY": ":99", "SESSION_MANAGER": "untrusted", "LD_PRELOAD": "untrusted"}).start()
 
@@ -157,12 +180,13 @@ class LauncherTests(unittest.TestCase):
 
     def test_absent_manager_starts_once_with_verified_unit_and_session_environment(self):
         self.assertEqual(self.run_launcher(start=True),
-                         "Session c7: XFWM ready (PID 103, xfwm4-launch-c7.service).")
+                         "Session c7: XFWM ready (PID 103, xfwm4-launch-c7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.scope).")
         self.assertEqual(len(self.desktop.submissions), 1)
         command = self.desktop.submissions[0]
-        self.assertEqual(command[:8], ["/usr/bin/systemd-run", "--user", "--no-ask-password",
-                                       "--collect", "--service-type=exec", "--expand-environment=no",
-                                       "--unit=xfwm4-launch-c7.service", "--property=Restart=no"])
+        self.assertEqual(command[:3], ["/usr/bin/systemd-cat",
+                         "--identifier=xfwm4-launch-c7-" + "a" * 32 + ".scope", "/usr/bin/systemd-run"])
+        self.assertIn("--scope", command)
+        self.assertNotIn("--service-type=exec", command)
         end = command.index("/usr/bin/xfwm4")
         environment = self.desktop.submitted_environment(command)
         self.assertEqual(environment["DISPLAY"], ":0.0")
@@ -170,7 +194,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(environment["XDG_CONFIG_DIRS"], "/etc/xdg/xdg-xfce:/etc/xdg")
         self.assertNotIn("LD_PRELOAD", environment)
         self.assertNotIn("SESSION_MANAGER", environment)
-        self.assertIn("--property=UnsetEnvironment=LC_ALL MANAGER_ONLY SESSION_MANAGER", command)
+        self.assertNotIn("MANAGER_ONLY", environment)
         self.assertEqual(command[end:], ["/usr/bin/xfwm4", "--sm-client-disable"])
         self.assertNotIn("--replace", command)
         lock = self.desktop.runtime / "xfwm4-launch-c7.lock"
@@ -197,7 +221,7 @@ class LauncherTests(unittest.TestCase):
                           if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, locale)
         self.assertNotIn("LD_PRELOAD", environment)
         for argv, env in self.desktop.calls:
-            if Path(argv[0]).name != "systemd-run":
+            if Path(argv[0]).name != "systemd-cat":
                 self.assertEqual(env["LC_ALL"], "C", argv)
 
     def test_graphical_launch_preserves_complete_session_environment(self):
@@ -257,15 +281,76 @@ class LauncherTests(unittest.TestCase):
         self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
         self.assertIn("XFWM ready", self.run_launcher(start=True))
         command = self.desktop.submissions[0]
-        self.assertIn("--setenv=SESSION_SECRET", command)
+        self.assertFalse(any(arg.startswith("--setenv=") for arg in command))
         self.assertEqual(self.desktop.submitted_environment(command)["SESSION_SECRET"],
                          "secret value\nwith spaces = and $literal")
         self.assertFalse(any("secret value" in argument for argument in command))
         self.assertNotIn("SESSION_MANAGER", self.desktop.submitted_environment(command))
 
-    def test_invalid_manager_environment_blocks_submission(self):
+    def test_manager_environment_does_not_affect_scope_inheritance(self):
         self.desktop.manager_environment = [7]
-        self.assert_refused("Malformed systemd manager environment")
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
+        self.assertFalse(any("get-property" in argv for argv, _ in self.desktop.calls))
+
+    def test_initial_session_snapshot_is_not_used_as_post_login_environment(self):
+        self.desktop.remove_process(106)
+        self.assert_refused("cannot reconstruct the post-login environment")
+
+    def test_saved_environment_survives_loss_of_original_clients(self):
+        self.desktop.env["SSH_AUTH_SOCK"] = "/session/agent"
+        self.desktop.env["SESSION_CUSTOM"] = "complete environment"
+        self.desktop.write_process(106, "xfce4-terminal", self.desktop.scope)
+        self.run_launcher(start=True)
+        self.desktop.remove_process(106)
+        session = self.desktop.host.discover()
+        self.assertIsNone(session.environment_source)
+        self.assertEqual(dict(session.environment)["SSH_AUTH_SOCK"], "/session/agent")
+        self.assertEqual(dict(session.environment)["SESSION_CUSTOM"], "complete environment")
+        self.assertEqual(self.desktop.host.environment_path(session.identifier, session.anchor).stat().st_mode & 0o777, 0o600)
+
+    def test_environment_cache_is_bound_to_session_process_identity(self):
+        session = self.desktop.host.discover()
+        self.desktop.host.save_environment(session)
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope, ticks=501)
+        self.desktop.remove_process(106)
+        self.assert_refused("cannot reconstruct")
+
+    def test_environment_cache_symlink_is_refused(self):
+        session = self.desktop.host.discover()
+        self.desktop.host.environment_path(session.identifier, session.anchor).symlink_to(self.desktop.authority)
+        self.desktop.remove_process(106)
+        with self.assertRaises(OSError):
+            self.run_launcher(start=True)
+        self.assertEqual(self.desktop.authority.read_bytes(), b"fixture-cookie")
+        self.assertEqual(self.desktop.submissions, [])
+
+    def test_confirmed_exit_allows_new_scope_while_old_scope_remains_active(self):
+        self.run_launcher(start=True)
+        old_unit = self.desktop.unit
+        self.desktop.remove_process(103)
+        self.desktop.owner = None
+        with patch.object(launcher.uuid, "uuid4", return_value=SimpleNamespace(hex="b" * 32)):
+            self.assertIn("XFWM ready", self.run_launcher(start=True))
+        self.assertNotEqual(old_unit, self.desktop.unit)
+        self.assertEqual(len(self.desktop.submissions), 2)
+        self.assertFalse(any("stop" in argv or "kill" in argv for argv, _ in self.desktop.calls))
+
+    def test_late_ready_launch_is_reconciled_before_its_later_exit(self):
+        self.desktop.on_submit = lambda: None
+        with self.assertRaisesRegex(launcher.Refused, "Startup not confirmed"):
+            self.run_launcher(start=True, timeout=0)
+        self.desktop.make_ready()
+        self.assertIn("unchanged", self.run_launcher(start=True))
+        record = self.desktop.host.read_record(self.desktop.host.receipt_path("xfwm4-launch-c7.service"))
+        self.assertIs(record["ready"], True)
+        self.assertEqual(record["owner"], [103, 500])
+
+    def test_interrupted_submission_before_pid_record_blocks_duplicate(self):
+        host = self.desktop.host
+        host.write_record(host.receipt_path("xfwm4-launch-c7.service"),
+                          {"unit": "xfwm4-launch-c7-" + "a" * 32 + ".scope", "ready": False,
+                           "launcher": None, "owner": None})
+        self.assert_refused("Outstanding launch")
 
     def test_graphical_launch_preserves_unset_lc_all_and_ignores_caller_locale(self):
         locale = {"LANG": "pt_BR.UTF-8", "LANGUAGE": "pt_BR:en_US", "LC_NUMERIC": "en_US.UTF-8"}
@@ -278,7 +363,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual({key: value for key, value in environment.items()
                           if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, locale)
         for argv, env in self.desktop.calls:
-            if Path(argv[0]).name != "systemd-run":
+            if Path(argv[0]).name != "systemd-cat":
                 self.assertEqual(env["LC_ALL"], "C", argv)
 
     def test_graphical_launch_does_not_invent_locale_variables(self):
@@ -288,7 +373,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual({key: value for key, value in environment.items()
                           if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, {})
         for argv, env in self.desktop.calls:
-            if Path(argv[0]).name != "systemd-run":
+            if Path(argv[0]).name != "systemd-cat":
                 self.assertEqual(env["LC_ALL"], "C", argv)
 
     def test_non_ewmh_manager_blocks_submission(self):
@@ -431,19 +516,11 @@ class LauncherTests(unittest.TestCase):
                 self.desktop.state.update(LoadState="loaded", ActiveState=state)
                 self.assert_refused("already exists")
 
-    def test_submission_timeout_reconciles_ready_owner(self):
-        def delayed_ack():
-            self.desktop.make_ready()
-            raise subprocess.TimeoutExpired("systemd-run", 5)
-        self.desktop.on_submit = delayed_ack
-        self.assertIn("XFWM ready", self.run_launcher(start=True))
-        self.assertEqual(len(self.desktop.submissions), 1)
-
-    def test_no_ack_and_collected_unit_is_uncertain_without_retry(self):
-        def lost_ack():
-            raise subprocess.TimeoutExpired("systemd-run", 5)
-        self.desktop.on_submit = lost_ack
-        with self.assertRaisesRegex(launcher.Refused, "Startup not confirmed.*not-found/inactive.*No retry"):
+    def test_pending_submission_blocks_another_invocation(self):
+        self.desktop.on_submit = lambda: None
+        with self.assertRaisesRegex(launcher.Refused, "Startup not confirmed.*No retry"):
+            self.run_launcher(start=True, timeout=0)
+        with self.assertRaisesRegex(launcher.Refused, "Outstanding launch"):
             self.run_launcher(start=True, timeout=0)
         self.assertEqual(len(self.desktop.submissions), 1)
 
@@ -456,13 +533,12 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(len(self.desktop.submissions), 1)
         self.assertFalse(any("stop" in command or "reset-failed" in command for command, _ in self.desktop.calls))
 
-    def test_mainpid_mismatch_is_never_reported_ready(self):
-        def wrong_pid():
+    def test_scope_readiness_uses_owner_membership_without_mainpid(self):
+        def no_mainpid():
             self.desktop.make_ready()
-            self.desktop.state["MainPID"] = "999"
-        self.desktop.on_submit = wrong_pid
-        with self.assertRaisesRegex(launcher.Refused, "Startup not confirmed.*owner=103"):
-            self.run_launcher(start=True, timeout=0)
+            del self.desktop.state["MainPID"]
+        self.desktop.on_submit = no_mainpid
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
         self.assertEqual(len(self.desktop.submissions), 1)
 
     def test_wrong_cgroup_is_never_reported_ready(self):
@@ -574,6 +650,154 @@ class LauncherTests(unittest.TestCase):
         self.assertIn("No action taken", output.getvalue())
         self.assertEqual(list(self.desktop.runtime.iterdir()), [])
         self.assertEqual(self.desktop.submissions, [])
+
+
+
+@unittest.skipUnless(os.environ.get("XFCE_RECOVERY_SYSTEMD_TESTS") == "1",
+                     "opt-in tests need the user's systemd manager; only disposable processes are started")
+class ScopeLifecycleTests(unittest.TestCase):
+    """Real production scope transport and process lifetime, without X or desktop clients."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="xfce-scope-test-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.runtime = self.root / "runtime"
+        self.runtime.mkdir(mode=0o700)
+        real_runtime = f"/run/user/{os.getuid()}"
+        self.env = {"HOME": str(self.root), "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8",
+                    "XDG_RUNTIME_DIR": real_runtime,
+                    "DBUS_SESSION_BUS_ADDRESS": f"unix:path={real_runtime}/bus",
+                    "SSH_AUTH_SOCK": str(self.root / "fixture-agent"),
+                    "FIXTURE_CUSTOM": "spaces = and $literal\nsecond line"}
+        self.host = launcher.Host(runtime=self.runtime)
+        self.host.base_env.update(self.env)
+        self.session = SimpleNamespace(environment=tuple(self.env.items()))
+        self.units = []
+        self.addCleanup(self.cleanup_units)
+        self.payload = self.root / "payload.py"
+        self.payload.write_text("""
+import json, os, subprocess, sys, time
+from pathlib import Path
+root = Path(sys.argv[1])
+def publish(name, value):
+    path = root / name
+    temporary = root / (name + ".tmp")
+    temporary.write_text(json.dumps(value))
+    temporary.replace(path)
+if len(sys.argv) == 2:
+    subprocess.Popen([sys.executable, __file__, str(root), "child"], stdin=subprocess.DEVNULL)
+    publish("parent.json", {"pid": os.getpid()})
+else:
+    publish("child.json", {"pid": os.getpid(),
+        "env": {k: os.environ.get(k) for k in ("SSH_AUTH_SOCK", "FIXTURE_CUSTOM", "LANG", "LC_ALL")}})
+while True:
+    time.sleep(3600)
+""")
+
+    def wait_for(self, predicate, message):
+        deadline = time.monotonic() + 8
+        while True:
+            result = predicate()
+            if result:
+                return result
+            if time.monotonic() >= deadline:
+                self.fail(message)
+            time.sleep(0.02)  # Poll an explicit process/file condition, not an ordering assumption.
+
+    def cleanup_units(self):
+        for unit in self.units:
+            result = subprocess.run(["/usr/bin/systemctl", "--user", "stop", unit],
+                                    env=self.env, capture_output=True, text=True, timeout=10)
+            if result.returncode and "not loaded" not in result.stderr:
+                self.fail(result.stderr)
+        for child in self.host.children:
+            child.wait(timeout=5)
+
+    def payload_processes(self, directory):
+        self.wait_for(lambda: all((directory / name).exists() for name in ("parent.json", "child.json")),
+                      "fixture processes did not publish their identities")
+        parent = json.loads((directory / "parent.json").read_text())
+        child = json.loads((directory / "child.json").read_text())
+        return self.host.process(parent["pid"]), self.host.process(child["pid"]), child["env"]
+
+    def exercise_exit(self, termination_signal):
+        legacy = f"xfce-recovery-test-{uuid.uuid4().hex}.service"
+        first = self.root / "first"
+        first.mkdir()
+        unit = self.host.submit_unit(legacy, self.env, [sys.executable, str(self.payload), str(first)])
+        self.units.append(unit)
+        parent, child, environment = self.payload_processes(first)
+        self.assertEqual(environment, {"SSH_AUTH_SOCK": self.env["SSH_AUTH_SOCK"],
+                                       "FIXTURE_CUSTOM": self.env["FIXTURE_CUSTOM"],
+                                       "LANG": "C.UTF-8", "LC_ALL": None})
+        state = self.host.unit_state(self.session, unit=unit)
+        self.assertTrue(self.host.scope_ready(state, unit, parent))
+        self.host.confirm_launch(legacy, unit, parent)
+        os.kill(parent.pid, termination_signal)
+        self.wait_for(lambda: not self.host.same_process([parent.pid, parent.ticks]), "parent did not exit")
+        self.assertTrue(self.host.same_process([child.pid, child.ticks]), "parent exit killed its child")
+        self.assertEqual(self.host.unit_state(self.session, unit=unit)["ActiveState"], "active")
+        self.host.available(self.session, legacy)
+        second = self.root / "second"
+        second.mkdir()
+        new_unit = self.host.submit_unit(legacy, self.env, [sys.executable, str(self.payload), str(second)])
+        self.units.append(new_unit)
+        new_parent, _, _ = self.payload_processes(second)
+        self.assertNotEqual(new_unit, unit)
+        self.assertTrue(self.host.scope_ready(self.host.unit_state(self.session, unit=new_unit), new_unit, new_parent))
+        self.assertTrue(self.host.same_process([child.pid, child.ticks]), "new launch killed the old application")
+
+    def test_parent_termination_preserves_child_and_allows_another_launch(self):
+        self.exercise_exit(signal.SIGTERM)
+
+    def test_parent_crash_preserves_child_and_allows_another_launch(self):
+        self.exercise_exit(signal.SIGKILL)
+
+    def test_old_service_lifecycle_reproduces_child_loss(self):
+        unit = f"xfce-recovery-test-control-{uuid.uuid4().hex}.service"
+        self.units.append(unit)
+        command = ["/usr/bin/systemd-run", "--user", "--no-ask-password", "--collect",
+                   "--service-type=exec", f"--unit={unit}", "--", sys.executable,
+                   str(self.payload), str(self.root)]
+        result = subprocess.run(command, env=self.env, capture_output=True, text=True, timeout=8)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        parent, child, _ = self.payload_processes(self.root)
+        os.kill(parent.pid, signal.SIGTERM)
+        self.wait_for(lambda: not self.host.same_process([child.pid, child.ticks]),
+                      "negative control did not reproduce the old service killing its child")
+
+    def test_legacy_protection_preserves_child_without_restarting_parent(self):
+        unit = f"xfce-recovery-test-migration-{uuid.uuid4().hex}.service"
+        self.units.append(unit)
+        result = subprocess.run(["/usr/bin/systemd-run", "--user", "--no-ask-password", "--collect",
+                                 "--service-type=exec", f"--unit={unit}", "--", sys.executable,
+                                 str(self.payload), str(self.root)],
+                                env=self.env, capture_output=True, text=True, timeout=8)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        parent, child, _ = self.payload_processes(self.root)
+        actual_host = launcher.Host()
+        dropin = actual_host.runtime / "systemd/user" / (unit + ".d") / "90-xfce-recovery-preserve-apps.conf"
+        def cleanup_dropin():
+            if dropin.exists():
+                dropin.unlink()
+                dropin.parent.rmdir()
+                result = subprocess.run(["/usr/bin/systemctl", "--user", "daemon-reload"],
+                                        env=self.env, capture_output=True, text=True, timeout=8)
+                self.assertEqual(result.returncode, 0, result.stderr)
+        self.addCleanup(cleanup_dropin)
+        self.assertTrue(actual_host.protect_legacy_unit(self.session, unit, parent))
+        self.assertEqual(actual_host.process(parent.pid), parent)
+        self.assertEqual(actual_host.unit_state(self.session, unit=unit)["KillMode"], "process")
+        os.kill(parent.pid, signal.SIGTERM)
+        self.wait_for(lambda: actual_host.unit_state(self.session, unit=unit)["ActiveState"] == "inactive",
+                      "legacy unit did not retire after main process exit")
+        self.assertTrue(actual_host.same_process([child.pid, child.ticks]))
+        self.host.available(self.session, unit)
+        # Cleanup must still terminate the disposable leftover child: after the
+        # migration, stopping the service deliberately no longer does so.
+        os.kill(child.pid, signal.SIGTERM)
+        self.wait_for(lambda: not actual_host.same_process([child.pid, child.ticks]), "fixture child did not exit")
 
 
 if __name__ == "__main__":

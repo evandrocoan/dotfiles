@@ -18,8 +18,10 @@ import re
 import stat
 import subprocess
 import sys
+import tempfile
 import time
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 
 
 class Refused(RuntimeError):
@@ -51,13 +53,19 @@ class Process:
     cgroup: str
     environment: tuple[tuple[str, str], ...]
 
+    def matches_executable(self, expected: str) -> bool:
+        # Package upgrades and custom rebuilds can replace a running binary.
+        # proc retains its original path with this kernel-supplied suffix.
+        return self.executable in {expected, expected + " (deleted)"}
+
 
 @dataclass(frozen=True)
 class Session:
     identifier: str
     leader: tuple[int, int, int, str]
     anchor: Process
-    environment_source: Process
+    environment_source: Process | None = field(compare=False)
+    environment_identity: tuple[int, int]
     environment: tuple[tuple[str, str], ...]
     authority_identity: tuple[int, int, int, int]
 
@@ -69,7 +77,7 @@ class Session:
 class Host:
     """OS boundaries are injectable for tests; CLI never accepts alternate roots."""
 
-    def __init__(self, *, proc=Path("/proc"), runtime=None, uid=None, runner=None):
+    def __init__(self, *, proc=Path("/proc"), runtime=None, uid=None, runner=None, spawner=None):
         self.uid = os.getuid() if uid is None else uid
         self.proc = proc
         account = pwd.getpwuid(self.uid)
@@ -81,6 +89,8 @@ class Host:
             "DBUS_SESSION_BUS_ADDRESS": f"unix:path={self.runtime}/bus",
         }
         self.runner = subprocess.run if runner is None else runner
+        self.spawner = subprocess.Popen if spawner is None else spawner
+        self.children = []
 
     def command(self, argv, env=None, *, allowed=(0,), diagnostic_locale=True) -> str:
         command_env = dict(self.base_env if env is None else env)
@@ -112,7 +122,7 @@ class Host:
         environment = {}
         for entry in (directory / "environ").read_bytes().split(b"\0"):
             if entry:
-                key, separator, value = entry.decode().partition("=")
+                key, separator, value = os.fsdecode(entry).partition("=")
                 if not separator or key in environment:
                     raise Refused(f"PID {pid} has ambiguous environment")
                 environment[key] = value
@@ -142,7 +152,7 @@ class Host:
         return any(scope in line.split(":", 2)[-1].split("/")
                    for line in process.cgroup.splitlines())
 
-    def session_environment_source(self, anchor: Process, scope: str) -> Process:
+    def session_environment_source(self, anchor: Process, scope: str) -> Process | None:
         # /proc exposes the session manager's initial environment, before its
         # keyring/SSH setup. Original XFCE clients inherit those later additions.
         # Never use recovered clients in transient units or the invoking tool.
@@ -150,23 +160,60 @@ class Host:
         home = self.base_env["HOME"]
         clients = (("xfsettingsd", {"/usr/bin/xfsettingsd"}),
                    ("xfdesktop", {"/usr/bin/xfdesktop"}),
-                   ("xfce4-panel", {"/usr/bin/xfce4-panel", f"{home}/.local/bin/xfce4-panel"}))
+                   ("xfce4-panel", {"/usr/bin/xfce4-panel", f"{home}/.local/bin/xfce4-panel"}),
+                   ("xfwm4", {"/usr/bin/xfwm4"}),
+                   ("xfce4-terminal", {"/usr/bin/xfce4-terminal"}))
         for name, executables in clients:
             candidates = []
             for process in self.named_processes(name):
                 env = dict(process.environment)
-                if (self.in_scope(process, scope) and process.executable in executables
+                if (self.in_scope(process, scope) and any(process.matches_executable(path) for path in executables)
                         and process.ticks >= anchor.ticks
                         and env.get("HOME", home) == home
                         and env.get("XAUTHORITY") == original.get("XAUTHORITY")
-                        and env.get("DISPLAY")
+                        and re.fullmatch(r"(?:unix)?:[0-9]+(?:\.0)?", env.get("DISPLAY", ""))
                         and display_number(env["DISPLAY"]) == display_number(original["DISPLAY"])):
                     candidates.append(process)
             if len(candidates) > 1:
                 raise Refused(f"Ambiguous {name} session environment")
             if candidates:
                 return candidates[0]
-        return anchor
+        return None
+
+    def read_record(self, path: Path):
+        try:
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        except FileNotFoundError:
+            return None
+        with os.fdopen(descriptor) as stream:
+            info = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != self.uid
+                    or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1
+                    or info.st_size > 1024 * 1024):
+                raise Refused(f"Unsafe recovery record: {path}")
+            return json.load(stream)
+
+    def write_record(self, path: Path, record) -> None:
+        # The runtime directory is private; atomic replacement never follows a
+        # symlink and leaves an interrupted launch conservatively pending.
+        descriptor, temporary = tempfile.mkstemp(prefix=path.name + ".", dir=self.runtime)
+        try:
+            with os.fdopen(descriptor, "w") as stream:
+                json.dump(record, stream)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
+    def environment_path(self, identifier: str, anchor: Process) -> Path:
+        return self.runtime / f"xfce-environment-{identifier}-{anchor.pid}-{anchor.ticks}.json"
+
+    def save_environment(self, session: Session) -> None:
+        self.write_record(self.environment_path(session.identifier, session.anchor),
+                          {"source": list(session.environment_identity),
+                           "environment": dict(session.environment)})
 
     def discover(self) -> Session:
         if self.uid == 0 or os.geteuid() != self.uid:
@@ -222,7 +269,7 @@ class Host:
                                          for line in leader_group.splitlines()):
             raise Refused("Cannot identify one live XFCE session process in the logind scope")
         anchor = anchors[0]
-        if anchor.executable != "/usr/bin/xfce4-session":
+        if not anchor.matches_executable("/usr/bin/xfce4-session"):
             raise Refused("Unexpected XFCE session executable")
         source = dict(anchor.environment)
         if display_number(source.get("DISPLAY", "")) != display_number(info.get("Display", "")):
@@ -236,12 +283,33 @@ class Host:
         with authority.open("rb") as stream:
             if not stream.read(1):
                 raise Refused("Empty X authority file")
-        environment_source = self.session_environment_source(anchor, scope)
+        # Once captured, one complete snapshot owns the environment for this
+        # login. Switching to a surviving client's smaller/per-app environment
+        # would silently lose keyring/custom variables on a later recovery.
+        cached = self.read_record(self.environment_path(identifier, anchor))
+        environment_source = self.session_environment_source(anchor, scope) if cached is None else None
+        if environment_source is None and cached is None:
+            raise Refused("No surviving session client or saved session environment; "
+                          "cannot reconstruct the post-login environment")
+        if cached is not None:
+            if (not isinstance(cached, dict) or not isinstance(cached.get("environment"), dict)
+                    or not cached["environment"] or not isinstance(cached.get("source"), list)
+                    or len(cached["source"]) != 2
+                    or any(type(value) is not int or value <= 0 for value in cached["source"])
+                    or any(not isinstance(k, str) or not isinstance(v, str)
+                           or not k or "=" in k or "\0" in k + v
+                           for k, v in cached["environment"].items())):
+                raise Refused("Malformed saved session environment")
+            environment_identity = tuple(cached["source"])
+        else:
+            environment_identity = (environment_source.pid, environment_source.ticks)
         env = dict(self.base_env)
-        env.update(environment_source.environment)
+        env.update(environment_source.environment if environment_source else cached["environment"])
         if (env["HOME"] != self.base_env["HOME"]
                 or env["XDG_RUNTIME_DIR"] != str(self.runtime)
-                or env["DBUS_SESSION_BUS_ADDRESS"] != self.base_env["DBUS_SESSION_BUS_ADDRESS"]):
+                or env["DBUS_SESSION_BUS_ADDRESS"] != self.base_env["DBUS_SESSION_BUS_ADDRESS"]
+                or env.get("XAUTHORITY") != str(authority)
+                or display_number(env.get("DISPLAY", "")) != display_number(source["DISPLAY"])):
             raise Refused("Session environment disagrees with the authenticated user runtime")
         # Registration is controlled separately by start(); recovery disables it.
         env.pop("SESSION_MANAGER", None)
@@ -256,7 +324,7 @@ class Host:
         screens = self.command(["/usr/bin/xdpyinfo"], env)
         if re.findall(r"^number of screens:\s+(\d+)\s*$", screens, re.MULTILINE) != ["1"]:
             raise Refused("Exactly one X screen is required")
-        return Session(identifier, leader, anchor, environment_source, tuple(sorted(env.items())),
+        return Session(identifier, leader, anchor, environment_source, environment_identity, tuple(sorted(env.items())),
                        (auth_stat.st_dev, auth_stat.st_ino, auth_stat.st_size, auth_stat.st_mtime_ns))
 
     def manager(self, session: Session) -> Process | None:
@@ -306,37 +374,145 @@ class Host:
     def unit_state(self, session: Session, *, unit: str | None = None) -> dict[str, str]:
         state = properties(self.command([
             "/usr/bin/systemctl", "--user", "--no-pager", "show", unit or session.unit,
-            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,Transient",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,Transient,Restart,KillMode",
         ], dict(session.environment), allowed=(0, 4)))
-        if not {"LoadState", "ActiveState", "MainPID", "ControlGroup", "Transient"} <= state.keys():
+        if not {"LoadState", "ActiveState", "ControlGroup", "Transient"} <= state.keys():
             raise Refused("Incomplete transient-unit state")
         return state
 
-    def submit_unit(self, unit: str, env: dict[str, str], arguments: list[str]) -> None:
-        result = json.loads(self.command([
-            "/usr/bin/busctl", f"--address={self.base_env['DBUS_SESSION_BUS_ADDRESS']}",
-            "--auto-start=no", "--timeout=5", "--json=short", "get-property",
-            "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-            "org.freedesktop.systemd1.Manager", "Environment",
-        ]))
-        if (not isinstance(result, dict) or result.get("type") != "as"
-                or not isinstance(result.get("data"), list)
-                or any(not isinstance(value, str) or "=" not in value for value in result["data"])):
-            raise Refused("Malformed systemd manager environment")
-        inherited = {value.split("=", 1)[0] for value in result["data"]}
-        # Import values from this process's environment, not command arguments:
-        # a session environment can contain secrets. Remove manager-only values
-        # so stale SSH, locale or registration settings cannot leak into the GUI.
-        self.command([
-            "/usr/bin/systemd-run", "--user", "--no-ask-password", "--collect",
-            "--service-type=exec", "--expand-environment=no", f"--unit={unit}",
-            "--property=Restart=no",
-            *(f"--setenv={key}" for key in sorted(env)),
-            "--property=UnsetEnvironment=" + " ".join(sorted(inherited - env.keys())),
-            "--", *arguments,
-        ], env, diagnostic_locale=False)
+    def receipt_path(self, legacy_unit: str) -> Path:
+        return self.runtime / (legacy_unit + ".launch.json")
 
-    def start(self, session: Session, sm_client_id: str | None, *, register_session=True) -> None:
+    def same_process(self, identity) -> bool:
+        if (not isinstance(identity, list) or len(identity) != 2
+                or any(type(value) is not int or value <= 0 for value in identity)):
+            raise Refused("Invalid launch process identity")
+        try:
+            directory = self.proc / str(identity[0])
+            fields = (directory / "stat").read_text().rsplit(")", 1)[1].split()
+            return (directory.stat().st_uid == self.uid and int(fields[19]) == identity[1]
+                    and fields[0] not in {"Z", "X"})
+        except FileNotFoundError:
+            return False
+
+    def available(self, session: Session, legacy_unit: str) -> None:
+        state = self.unit_state(session, unit=legacy_unit)
+        retired = (state["Transient"] == "yes" and state["ActiveState"] in {"inactive", "failed"}
+                   and state.get("MainPID") == "0" and state.get("Restart") == "no")
+        if state["LoadState"] != "not-found" and not retired:
+            raise Refused(f"{legacy_unit} already exists ({state['ActiveState']}); no duplicate submission")
+        record = self.read_record(self.receipt_path(legacy_unit))
+        if record is None:
+            return
+        if (not isinstance(record, dict) or not isinstance(record.get("unit"), str)
+                or not re.fullmatch(re.escape(legacy_unit.removesuffix('.service')) + r"-[0-9a-f]{32}\.scope",
+                                    record["unit"]) or type(record.get("ready")) is not bool):
+            raise Refused("Malformed launch receipt")
+        identity = record.get("owner") if record["ready"] else record.get("launcher")
+        if (identity is None and record.get("exited") is not True) or (identity is not None and self.same_process(identity)):
+            raise Refused(f"Outstanding launch {record['unit']}; inspect it before retrying")
+        if not record["ready"]:
+            prior = self.unit_state(session, unit=record["unit"])
+            if prior["LoadState"] != "not-found":
+                raise Refused(f"Unconfirmed launch {record['unit']}; no duplicate submission")
+
+    def submit_unit(self, legacy_unit: str, env: dict[str, str], arguments: list[str]) -> str:
+        unit = legacy_unit.removesuffix(".service") + "-" + uuid.uuid4().hex + ".scope"
+        record = {"unit": unit, "ready": False, "launcher": None, "owner": None}
+        path = self.receipt_path(legacy_unit)
+        self.write_record(path, record)
+        # Scope lifetime follows all its processes, not the GUI parent's exit.
+        # systemd-cat connects stdout AND stderr to the journal before exec.
+        # Popen must not use communicate(timeout): that would kill a slow launch.
+        command = ["/usr/bin/systemd-cat", f"--identifier={unit}",
+                   "/usr/bin/systemd-run", "--user", "--no-ask-password", "--scope", "--collect",
+                   "--quiet", "--expand-environment=no", f"--unit={unit}", "--slice=app.slice",
+                   "--property=OOMPolicy=continue", "--", *arguments]
+        try:
+            child = self.spawner(command, env=dict(env), cwd=env["HOME"],
+                                 stdin=subprocess.DEVNULL, start_new_session=True)
+        except OSError as error:
+            path.unlink()  # Popen guarantees that no child was successfully exec'd.
+            raise Refused(f"Cannot launch {unit}: {error}") from error
+        self.children.append(child)
+        try:
+            process = self.process(child.pid)
+        except (FileNotFoundError, Refused):
+            # A fast failure is still reported through readiness and the journal.
+            if child.poll() is not None:
+                record["exited"] = True
+                self.write_record(path, record)
+            return unit
+        record["launcher"] = [process.pid, process.ticks]
+        self.write_record(path, record)
+        return unit
+
+    def confirm_launch(self, legacy_unit: str, unit: str, process: Process) -> None:
+        path = self.receipt_path(legacy_unit)
+        record = self.read_record(path)
+        if not isinstance(record, dict) or record.get("unit") != unit:
+            raise Refused("Launch receipt changed during startup")
+        record.update(ready=True, owner=[process.pid, process.ticks])
+        self.write_record(path, record)
+
+    def observe_launch(self, session: Session, legacy_unit: str, process: Process) -> None:
+        record = self.read_record(self.receipt_path(legacy_unit))
+        if isinstance(record, dict) and record.get("ready") is False:
+            unit = record.get("unit", "")
+            if isinstance(unit, str) and re.fullmatch(
+                    re.escape(legacy_unit.removesuffix('.service')) + r"-[0-9a-f]{32}\.scope", unit):
+                if self.scope_ready(self.unit_state(session, unit=unit), unit, process):
+                    self.confirm_launch(legacy_unit, unit, process)
+
+    def scope_ready(self, state: dict[str, str], unit: str, process: Process) -> bool:
+        return (state["LoadState"] == "loaded" and state["Transient"] == "yes"
+                and state["ActiveState"] == "active" and unit.endswith(".scope")
+                and state["ControlGroup"].endswith("/" + unit)
+                and any(line.split(":", 2)[-1] == state["ControlGroup"]
+                        for line in process.cgroup.splitlines()))
+
+    def protect_legacy_unit(self, session: Session, unit: str, process: Process) -> bool:
+        """Retire old service supervision without stopping its GUI or applications."""
+        if not self.in_scope(process, unit):
+            return False
+        state = self.unit_state(session, unit=unit)
+        if (state["LoadState"] != "loaded" or state["Transient"] != "yes"
+                or state["ActiveState"] != "active" or state.get("MainPID") != str(process.pid)
+                or not state["ControlGroup"].endswith("/" + unit)
+                or not any(line.split(":", 2)[-1] == state["ControlGroup"]
+                           for line in process.cgroup.splitlines())):
+            raise Refused(f"Cannot authenticate legacy service {unit}")
+        if state.get("KillMode") == "process" and state.get("Restart") == "no":
+            return False
+        directory = self.runtime
+        for name in ("systemd", "user", unit + ".d"):
+            directory = directory / name
+            directory.mkdir(mode=0o700, exist_ok=True)
+            info = directory.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != self.uid or info.st_mode & 0o022:
+                raise Refused(f"Unsafe runtime unit directory: {directory}")
+        path = directory / "90-xfce-recovery-preserve-apps.conf"
+        content = "[Service]\nKillMode=process\nRestart=no\n"
+        try:
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        except FileExistsError:
+            info = path.lstat()
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != self.uid or info.st_mode & 0o022
+                    or info.st_nlink != 1 or path.read_text() != content):
+                raise Refused(f"Preserve conflicting runtime override: {path}")
+        else:
+            with os.fdopen(descriptor, "w") as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+        self.command(["/usr/bin/systemctl", "--user", "daemon-reload"], dict(session.environment))
+        current = self.unit_state(session, unit=unit)
+        if (current.get("KillMode") != "process" or current.get("Restart") != "no"
+                or current.get("MainPID") != str(process.pid) or self.process(process.pid) != process):
+            raise Refused(f"Legacy protection not confirmed for {unit}; no process was stopped")
+        return True
+
+    def start(self, session: Session, sm_client_id: str | None, *, register_session=True) -> str:
         env = dict(session.environment)
         scope = f"session-{session.identifier}.scope"
         caller_group = (self.proc / "self" / "cgroup").read_text()
@@ -353,7 +529,7 @@ class Host:
             raise Refused("A session-client ID requires an authenticated XFCE session caller")
         else:
             arguments.append("--sm-client-disable")
-        self.submit_unit(session.unit, env, ["/usr/bin/xfwm4", *arguments])
+        return self.submit_unit(session.unit, env, ["/usr/bin/xfwm4", *arguments])
 
 
 @contextlib.contextmanager
@@ -399,35 +575,30 @@ def _launch_locked(host: Host, session: Session, *, sm_client_id=None,
         raise Refused("Graphical session changed while waiting; no startup submitted")
     manager = host.manager(session)
     if manager:
+        host.observe_launch(session, session.unit, manager)
+        host.save_environment(session)
+        if manager.matches_executable("/usr/bin/xfwm4"):
+            host.protect_legacy_unit(session, session.unit, manager)
         return f"Session {session.identifier}: window manager present (PID {manager.pid}); unchanged."
-    state = host.unit_state(session)
-    if state["LoadState"] != "not-found":
-        raise Refused(f"{session.unit} already exists ({state['ActiveState']}); inspect it before retrying")
+    host.available(session, session.unit)
     if host.discover() != session:
         raise Refused("Graphical session changed before launch; no startup submitted")
     if host.manager(session) is not None:
         return f"Session {session.identifier}: window manager appeared; unchanged."
-    attempted_unit = session.unit
-    submission_error = ""
-    try:
-        host.start(session, sm_client_id, register_session=register_session)
-    except Refused as error:
-        submission_error = str(error)
+    host.save_environment(session)
+    attempted_unit = host.start(session, sm_client_id, register_session=register_session)
     deadline = time.monotonic() + timeout
     evidence = "no verified owner"
     while True:
         try:
             if host.discover() != session:
                 raise Refused("Graphical session changed after submission")
-            state = host.unit_state(session)
+            state = host.unit_state(session, unit=attempted_unit)
             manager = host.manager(session)
-            if (manager is not None and manager.executable == "/usr/bin/xfwm4"
-                    and state["LoadState"] == "loaded" and state["Transient"] == "yes"
-                    and state["ActiveState"] == "active" and state["MainPID"] == str(manager.pid)
-                    and state["ControlGroup"].endswith("/" + attempted_unit)
-                    and any(line.split(":", 2)[-1] == state["ControlGroup"]
-                            for line in manager.cgroup.splitlines())
+            if (manager is not None and manager.matches_executable("/usr/bin/xfwm4")
+                    and host.scope_ready(state, attempted_unit, manager)
                     and host.process(manager.pid) == manager):
+                host.confirm_launch(session.unit, attempted_unit, manager)
                 return f"Session {session.identifier}: XFWM ready (PID {manager.pid}, {attempted_unit})."
             evidence = f"unit={state['LoadState']}/{state['ActiveState']}; owner={manager.pid if manager else 'absent'}"
             if state["ActiveState"] == "failed":
@@ -436,7 +607,7 @@ def _launch_locked(host: Host, session: Session, *, sm_client_id=None,
             evidence = str(error)
         if time.monotonic() >= deadline:
             raise Refused(f"Startup not confirmed for {attempted_unit}: {evidence}. "
-                          f"No retry or rollback performed. {submission_error}".rstrip())
+                          "No retry or rollback performed.")
         time.sleep(0.1)
 
 

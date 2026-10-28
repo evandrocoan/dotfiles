@@ -11,8 +11,10 @@ import argparse
 import configparser
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import re
 import shlex
+import signal
 import stat
 import sys
 import time
@@ -79,7 +81,8 @@ class RecoveryHost(wm.Host):
         return {
             "conf": Component("conf", "xfconfd", command[0], "org.xfce.Xfconf", ()),
             "wm": Component("wm", "xfwm4", "/usr/bin/xfwm4", ""),
-            "settings": Component("settings", "xfsettingsd", "/usr/bin/xfsettingsd", "org.xfce.SettingsDaemon"),
+            "settings": Component("settings", "xfsettingsd", "/usr/bin/xfsettingsd", "org.xfce.SettingsDaemon",
+                                  ("--no-daemon", "--sm-client-disable")),
             "desktop": Component("desktop", "xfdesktop", "/usr/bin/xfdesktop", "org.xfce.xfdesktop"),
             "panel": Component("panel", "xfce4-panel", str(home / ".local/bin/xfce4-panel"),
                                "org.xfce.Panel", environment=(("NO_AT_BRIDGE", "1"),
@@ -133,7 +136,7 @@ class RecoveryHost(wm.Host):
         process = self.process(int(pid_match[1]))
         if len(processes) != 1 or processes[0] != process:
             raise wm.Refused(f"{component.name}: ambiguous process/bus ownership")
-        if process.executable != component.executable:
+        if not process.matches_executable(component.executable):
             raise wm.Refused(f"{component.name}: unexpected executable; leaving it untouched")
         env = dict(process.environment)
         expected = dict(session.environment)
@@ -157,11 +160,11 @@ class RecoveryHost(wm.Host):
         if self.components(session) != components:
             raise wm.Refused("Component configuration changed; no further component will be started")
 
-    def submit_component(self, session: wm.Session, component: Component) -> None:
+    def submit_component(self, session: wm.Session, component: Component) -> str:
         env = dict(session.environment)
         env.update(component.environment)
-        self.submit_unit(component.unit(session), env,
-                         [component.executable, *component.arguments])
+        return self.submit_unit(component.unit(session), env,
+                                [component.executable, *component.arguments])
 
 
 def selected_components(component: str) -> tuple[str, ...]:
@@ -184,20 +187,14 @@ def available_to_start(host: RecoveryHost, session: wm.Session,
     process = inspect_component(host, session, components, name)
     if process is None:
         unit = session.unit if name == "wm" else components[name].unit(session)
-        state = host.unit_state(session, unit=unit)
-        if state["LoadState"] != "not-found":
-            raise wm.Refused(f"{name}: {unit} already exists ({state['ActiveState']}); no duplicate submission")
+        host.available(session, unit)
     return process
 
 
 def start_component(host: RecoveryHost, session: wm.Session, component: Component,
                     components: dict[str, Component], timeout: float) -> str:
-    attempted_unit = component.unit(session)
-    submission_error = ""
-    try:
-        host.submit_component(session, component)
-    except wm.Refused as error:
-        submission_error = str(error)
+    host.save_environment(session)
+    attempted_unit = host.submit_component(session, component)
     deadline = time.monotonic() + timeout
     evidence = "no confirmed service owner"
     while True:
@@ -207,18 +204,15 @@ def start_component(host: RecoveryHost, session: wm.Session, component: Componen
             state = host.unit_state(session, unit=attempted_unit)
             terminal_failure = state["ActiveState"] == "failed"
             process = host.component_process(session, component)
-            if (process is not None and state["LoadState"] == "loaded" and state["Transient"] == "yes"
-                    and state["ActiveState"] == "active" and state["MainPID"] == str(process.pid)
-                    and state["ControlGroup"].endswith("/" + attempted_unit)
-                    and any(line.split(":", 2)[-1] == state["ControlGroup"]
-                            for line in process.cgroup.splitlines())):
+            if process is not None and host.scope_ready(state, attempted_unit, process):
+                host.confirm_launch(component.unit(session), attempted_unit, process)
                 return f"{component.name}: started and responsive (PID {process.pid}, {attempted_unit})."
             evidence = f"unit={state['LoadState']}/{state['ActiveState']}; owner={process.pid if process else 'absent'}"
         except (wm.Refused, OSError, ValueError, KeyError, IndexError, configparser.Error) as error:
             evidence = str(error)
         if terminal_failure or time.monotonic() >= deadline:
             raise wm.Refused(f"{component.name}: startup not confirmed for {attempted_unit}: {evidence}. "
-                             f"No retry or rollback. {submission_error}".rstrip())
+                             "No retry or rollback.")
         time.sleep(0.1)
 
 
@@ -246,6 +240,7 @@ def recover(host: RecoveryHost, *, start=False, component="all", timeout=10.0) -
             host.revalidate(session, components)
             for name in selected:
                 available_to_start(host, session, components, name)
+            host.save_environment(session)
             for name in selected:
                 host.revalidate(session, components)
                 for dependency in DEPENDENCIES[name]:
@@ -253,6 +248,10 @@ def recover(host: RecoveryHost, *, start=False, component="all", timeout=10.0) -
                         raise wm.Refused(f"{name}: prerequisite {dependency} disappeared; stopping recovery")
                 process = available_to_start(host, session, components, name)
                 if process is not None:
+                    unit = session.unit if name == "wm" else components[name].unit(session)
+                    host.observe_launch(session, unit, process)
+                    if process.matches_executable(components[name].executable):
+                        host.protect_legacy_unit(session, unit, process)
                     results.append(f"{name}: running (PID {process.pid}); unchanged.")
                     continue
                 host.revalidate(session, components)
@@ -271,14 +270,64 @@ def recover(host: RecoveryHost, *, start=False, component="all", timeout=10.0) -
         raise wm.Refused(f"{progress}\nRecovery stopped: {error}") from error
 
 
+def restart_panel(host: RecoveryHost, *, timeout=10.0) -> list[str]:
+    """Explicit panel-only restart; never signal a unit or a process group."""
+    initial_session = host.discover()
+    initial_components = host.components(initial_session)
+    initial_panel = host.component_process(initial_session, initial_components["panel"])
+    results = recover(host, start=True, component="panel", timeout=timeout)
+    if initial_panel is None:
+        return results  # An absent panel needs one start, not an immediate second launch.
+    session = host.discover()
+    components = host.components(session)
+    with wm.session_lock(host, session, timeout):
+        host.revalidate(session, components)
+        panel = host.component_process(session, components["panel"])
+        if session != initial_session or panel != initial_panel:
+            raise wm.Refused("Session or panel changed before restart; inspect before retrying")
+        host.protect_legacy_unit(session, components["panel"].unit(session), panel)
+        groups = [line.split(":", 2)[-1] for line in panel.cgroup.splitlines()]
+        legacy = components["panel"].unit(session)
+        if any(part.endswith(".service") and part != f"user@{host.uid}.service"
+               and not (part == legacy and group.endswith("/" + legacy))
+               for group in groups for part in group.split("/")):
+            raise wm.Refused("Panel belongs to an unfamiliar service; cannot safely restart it")
+        descriptor = os.pidfd_open(panel.pid)
+        try:
+            if host.process(panel.pid) != panel:
+                raise wm.Refused("Panel identity changed before restart")
+            signal.pidfd_send_signal(descriptor, signal.SIGTERM)
+        finally:
+            os.close(descriptor)
+        deadline = time.monotonic() + timeout
+        while host.same_process([panel.pid, panel.ticks]):
+            if time.monotonic() >= deadline:
+                raise wm.Refused("Panel did not exit; no forced kill or second panel was started")
+            time.sleep(0.05)
+        host.revalidate(session, components)
+        for dependency in DEPENDENCIES["panel"]:
+            if inspect_component(host, session, components, dependency) is None:
+                raise wm.Refused(f"Panel restart stopped: prerequisite {dependency} disappeared")
+        if available_to_start(host, session, components, "panel") is not None:
+            raise wm.Refused("Another panel appeared during restart; leaving it untouched")
+        results.append(start_component(host, session, components["panel"], components, timeout))
+    return results
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", action="store_true", help="start missing components; default is read-only")
+    parser.add_argument("--restart-panel", action="store_true",
+                        help="explicitly restart only the panel, preserving its applications")
     parser.add_argument("--component", choices=("all", *ORDER), default="all",
                         help="select a component and its prerequisites (default: all)")
     args = parser.parse_args(argv)
+    if args.restart_panel and (args.start or args.component != "all"):
+        parser.error("--restart-panel is used by itself")
     try:
-        for line in recover(RecoveryHost(), start=args.start, component=args.component):
+        host = RecoveryHost()
+        results = restart_panel(host) if args.restart_panel else recover(host, start=args.start, component=args.component)
+        for line in results:
             print(line)
         return 0
     except (wm.Refused, OSError, ValueError, KeyError, IndexError, configparser.Error) as error:
