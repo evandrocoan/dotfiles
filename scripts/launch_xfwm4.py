@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import fcntl
+import json
 import os
 from pathlib import Path
 import pwd
@@ -19,13 +20,6 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-
-
-LOCALE_VARIABLES = (
-    "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE", "LC_NUMERIC", "LC_TIME", "LC_COLLATE",
-    "LC_MONETARY", "LC_MESSAGES", "LC_PAPER", "LC_NAME", "LC_ADDRESS", "LC_TELEPHONE",
-    "LC_MEASUREMENT", "LC_IDENTIFICATION",
-)
 
 
 class Refused(RuntimeError):
@@ -63,6 +57,7 @@ class Session:
     identifier: str
     leader: tuple[int, int, int, str]
     anchor: Process
+    environment_source: Process
     environment: tuple[tuple[str, str], ...]
     authority_identity: tuple[int, int, int, int]
 
@@ -87,9 +82,10 @@ class Host:
         }
         self.runner = subprocess.run if runner is None else runner
 
-    def command(self, argv, env=None, *, allowed=(0,)) -> str:
+    def command(self, argv, env=None, *, allowed=(0,), diagnostic_locale=True) -> str:
         command_env = dict(self.base_env if env is None else env)
-        command_env["LC_ALL"] = "C"  # Stabilize diagnostic output, not the GUI launch environment.
+        if diagnostic_locale:
+            command_env["LC_ALL"] = "C"  # Only diagnostic output needs a fixed locale.
         try:
             result = self.runner(
                 argv, env=command_env,
@@ -145,6 +141,32 @@ class Host:
     def in_scope(self, process: Process, scope: str) -> bool:
         return any(scope in line.split(":", 2)[-1].split("/")
                    for line in process.cgroup.splitlines())
+
+    def session_environment_source(self, anchor: Process, scope: str) -> Process:
+        # /proc exposes the session manager's initial environment, before its
+        # keyring/SSH setup. Original XFCE clients inherit those later additions.
+        # Never use recovered clients in transient units or the invoking tool.
+        original = dict(anchor.environment)
+        home = self.base_env["HOME"]
+        clients = (("xfsettingsd", {"/usr/bin/xfsettingsd"}),
+                   ("xfdesktop", {"/usr/bin/xfdesktop"}),
+                   ("xfce4-panel", {"/usr/bin/xfce4-panel", f"{home}/.local/bin/xfce4-panel"}))
+        for name, executables in clients:
+            candidates = []
+            for process in self.named_processes(name):
+                env = dict(process.environment)
+                if (self.in_scope(process, scope) and process.executable in executables
+                        and process.ticks >= anchor.ticks
+                        and env.get("HOME", home) == home
+                        and env.get("XAUTHORITY") == original.get("XAUTHORITY")
+                        and env.get("DISPLAY")
+                        and display_number(env["DISPLAY"]) == display_number(original["DISPLAY"])):
+                    candidates.append(process)
+            if len(candidates) > 1:
+                raise Refused(f"Ambiguous {name} session environment")
+            if candidates:
+                return candidates[0]
+        return anchor
 
     def discover(self) -> Session:
         if self.uid == 0 or os.geteuid() != self.uid:
@@ -214,11 +236,15 @@ class Host:
         with authority.open("rb") as stream:
             if not stream.read(1):
                 raise Refused("Empty X authority file")
+        environment_source = self.session_environment_source(anchor, scope)
         env = dict(self.base_env)
-        for key in ("DISPLAY", "XAUTHORITY", "XDG_CONFIG_HOME", "XDG_CONFIG_DIRS",
-                    "XDG_DATA_HOME", "XDG_DATA_DIRS", "XDG_CURRENT_DESKTOP", *LOCALE_VARIABLES):
-            if key in source:
-                env[key] = source[key]
+        env.update(environment_source.environment)
+        if (env["HOME"] != self.base_env["HOME"]
+                or env["XDG_RUNTIME_DIR"] != str(self.runtime)
+                or env["DBUS_SESSION_BUS_ADDRESS"] != self.base_env["DBUS_SESSION_BUS_ADDRESS"]):
+            raise Refused("Session environment disagrees with the authenticated user runtime")
+        # Registration is controlled separately by start(); recovery disables it.
+        env.pop("SESSION_MANAGER", None)
         bus_pid = self.command([
             "/usr/bin/busctl", f"--address={env['DBUS_SESSION_BUS_ADDRESS']}",
             "--auto-start=no", "--timeout=5", "call", "org.freedesktop.DBus",
@@ -230,7 +256,7 @@ class Host:
         screens = self.command(["/usr/bin/xdpyinfo"], env)
         if re.findall(r"^number of screens:\s+(\d+)\s*$", screens, re.MULTILINE) != ["1"]:
             raise Refused("Exactly one X screen is required")
-        return Session(identifier, leader, anchor, tuple(sorted(env.items())),
+        return Session(identifier, leader, anchor, environment_source, tuple(sorted(env.items())),
                        (auth_stat.st_dev, auth_stat.st_ino, auth_stat.st_size, auth_stat.st_mtime_ns))
 
     def manager(self, session: Session) -> Process | None:
@@ -286,6 +312,30 @@ class Host:
             raise Refused("Incomplete transient-unit state")
         return state
 
+    def submit_unit(self, unit: str, env: dict[str, str], arguments: list[str]) -> None:
+        result = json.loads(self.command([
+            "/usr/bin/busctl", f"--address={self.base_env['DBUS_SESSION_BUS_ADDRESS']}",
+            "--auto-start=no", "--timeout=5", "--json=short", "get-property",
+            "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+            "org.freedesktop.systemd1.Manager", "Environment",
+        ]))
+        if (not isinstance(result, dict) or result.get("type") != "as"
+                or not isinstance(result.get("data"), list)
+                or any(not isinstance(value, str) or "=" not in value for value in result["data"])):
+            raise Refused("Malformed systemd manager environment")
+        inherited = {value.split("=", 1)[0] for value in result["data"]}
+        # Import values from this process's environment, not command arguments:
+        # a session environment can contain secrets. Remove manager-only values
+        # so stale SSH, locale or registration settings cannot leak into the GUI.
+        self.command([
+            "/usr/bin/systemd-run", "--user", "--no-ask-password", "--collect",
+            "--service-type=exec", "--expand-environment=no", f"--unit={unit}",
+            "--property=Restart=no",
+            *(f"--setenv={key}" for key in sorted(env)),
+            "--property=UnsetEnvironment=" + " ".join(sorted(inherited - env.keys())),
+            "--", *arguments,
+        ], env, diagnostic_locale=False)
+
     def start(self, session: Session, sm_client_id: str | None, *, register_session=True) -> None:
         env = dict(session.environment)
         scope = f"session-{session.identifier}.scope"
@@ -303,13 +353,7 @@ class Host:
             raise Refused("A session-client ID requires an authenticated XFCE session caller")
         else:
             arguments.append("--sm-client-disable")
-        self.command([
-            "/usr/bin/systemd-run", "--user", "--no-ask-password", "--collect",
-            "--service-type=exec", "--expand-environment=no", f"--unit={session.unit}",
-            "--property=Restart=no", "--", "/usr/bin/env", "-i",
-            *(f"{key}={value}" for key, value in sorted(env.items())),
-            "/usr/bin/xfwm4", *arguments,
-        ], dict(session.environment))
+        self.submit_unit(session.unit, env, ["/usr/bin/xfwm4", *arguments])
 
 
 @contextlib.contextmanager

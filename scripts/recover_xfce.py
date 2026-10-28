@@ -160,13 +160,8 @@ class RecoveryHost(wm.Host):
     def submit_component(self, session: wm.Session, component: Component) -> None:
         env = dict(session.environment)
         env.update(component.environment)
-        self.command([
-            "/usr/bin/systemd-run", "--user", "--no-ask-password", "--collect",
-            "--service-type=exec", "--expand-environment=no", f"--unit={component.unit(session)}",
-            "--property=Restart=no", "--", "/usr/bin/env", "-i",
-            *(f"{key}={value}" for key, value in sorted(env.items())),
-            component.executable, *component.arguments,
-        ], dict(session.environment))
+        self.submit_unit(component.unit(session), env,
+                         [component.executable, *component.arguments])
 
 
 def selected_components(component: str) -> tuple[str, ...]:

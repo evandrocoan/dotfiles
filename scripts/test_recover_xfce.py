@@ -81,7 +81,7 @@ class RecoveryDesktop(Desktop):
 
     def run(self, argv, **kwargs):
         tool = Path(argv[0]).name
-        custom = ((tool == "busctl" and argv[-1] != "org.xfce.SessionManager")
+        custom = ((tool == "busctl" and "get-property" not in argv and argv[-1] != "org.xfce.SessionManager")
                   or (tool == "systemctl" and argv[4] != self.unit)
                   or (tool == "systemd-run" and f"--unit={self.unit}" not in argv))
         if not custom:
@@ -220,15 +220,16 @@ class RecoveryTests(unittest.TestCase):
         panel = self.desktop.submissions[-1]
         self.assertEqual(conf[-1], "/home/fixture/.local/lib/xfce4/xfconf/xfconfd")
         self.assertEqual(panel[-2:], ["/home/fixture/.local/bin/xfce4-panel", "--sm-client-disable"])
-        self.assertIn("NO_AT_BRIDGE=1", panel)
-        self.assertIn("XFCE_PANEL_PLUGIN_PATH=/home/fixture/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins", panel)
+        panel_env = self.desktop.submitted_environment(panel)
+        self.assertEqual(panel_env["NO_AT_BRIDGE"], "1")
+        self.assertEqual(panel_env["XFCE_PANEL_PLUGIN_PATH"], "/home/fixture/.local/lib/xfce4/panel/plugins:/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins")
         for argv in self.desktop.submissions:
+            environment = self.desktop.submitted_environment(argv)
             self.assertIn("--property=Restart=no", argv)
-            self.assertIn("-i", argv)
-            self.assertIn("DISPLAY=:0.0", argv)
-            self.assertIn(f"XAUTHORITY={self.desktop.authority}", argv)
-            self.assertIn("XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg", argv)
-            self.assertFalse(any(arg.startswith("LD_PRELOAD=") for arg in argv))
+            self.assertEqual(environment["DISPLAY"], ":0.0")
+            self.assertEqual(environment["XAUTHORITY"], str(self.desktop.authority))
+            self.assertEqual(environment["XDG_CONFIG_DIRS"], "/etc/xdg/xdg-xfce:/etc/xdg")
+            self.assertNotIn("LD_PRELOAD", environment)
             self.assertNotIn("--replace", argv)
 
     def test_recovered_components_preserve_session_locale_and_diagnostics_use_c(self):
@@ -240,18 +241,46 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(len(result), 5)
         self.assertEqual(len(self.desktop.submissions), 5)
         for command in self.desktop.submissions:
+            environment = self.desktop.submitted_environment(command)
             for key, value in locale.items():
-                self.assertIn(f"{key}={value}", command)
-                self.assertGreater(command.index(f"{key}={value}"), command.index("-i"))
+                self.assertEqual(environment[key], value)
         for argv, env in self.desktop.calls:
-            self.assertEqual(env["LC_ALL"], "C", argv)
+            if Path(argv[0]).name != "systemd-run":
+                self.assertEqual(env["LC_ALL"], "C", argv)
+
+    def test_every_recovered_component_receives_complete_session_environment(self):
+        additions = {"SSH_AUTH_SOCK": "/run/session/keyring/ssh",
+                     "PATH": "/home/fixture/bin:/usr/bin:/bin",
+                     "CUSTOM_DESKTOP_VALUE": "not a predefined variable"}
+        self.desktop.env.update(additions)
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        self.assertEqual(len(self.recover(start=True)), 5)
+        self.assertEqual(len(self.desktop.submissions), 5)
+        for command in self.desktop.submissions:
+            environment = self.desktop.submitted_environment(command)
+            for key, value in additions.items():
+                self.assertEqual(environment[key], value)
+
+    def test_panel_inherits_post_login_environment_from_surviving_desktop(self):
+        environment = dict(self.desktop.env, SSH_AUTH_SOCK="/run/session/keyring/ssh",
+                           CUSTOM_DESKTOP_VALUE="added after login",
+                           SESSION_MANAGER="local/host:@/tmp/.ICE-unix/102")
+        self.desktop.write_process(205, "xfdesktop", self.desktop.scope, ticks=510, env=environment)
+        result = self.recover(start=True, component="panel")
+        self.assertEqual(len(result), 4)
+        self.assertEqual(len(self.desktop.submissions), 4)
+        for command in self.desktop.submissions:
+            environment = self.desktop.submitted_environment(command)
+            self.assertEqual(environment["SSH_AUTH_SOCK"], "/run/session/keyring/ssh")
+            self.assertEqual(environment["CUSTOM_DESKTOP_VALUE"], "added after login")
+            self.assertNotIn("SESSION_MANAGER", environment)
 
     def test_recovery_disables_sm_even_for_trusted_caller(self):
         (self.desktop.proc / "self/cgroup").write_text(f"0::{self.desktop.scope}\n")
         with patch.dict(os.environ, {"SESSION_MANAGER": "local/host:@/tmp/.ICE-unix/102"}):
             self.recover(start=True)
         for argv in self.desktop.submissions:
-            self.assertFalse(any(arg.startswith("SESSION_MANAGER=") for arg in argv), argv)
+            self.assertNotIn("SESSION_MANAGER", self.desktop.submitted_environment(argv))
         for argv in self.desktop.submissions[1:]:
             self.assertEqual(argv[-1], "--sm-client-disable")
 

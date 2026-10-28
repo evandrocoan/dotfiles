@@ -7,6 +7,7 @@ gate inside the documented PID/socket isolation when working on desktop recovery
 import concurrent.futures
 import contextlib
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -54,6 +55,7 @@ class Desktop:
                        "  Do not propagate these events:\n  Override redirection?: No\n")
         self.calls = []
         self.submissions = []
+        self.manager_environment = ["MANAGER_ONLY=stale", "LC_ALL=C", "SESSION_MANAGER=stale"]
         self.on_submit = self.make_ready
         self.on_command = None
         self.host = launcher.Host(proc=self.proc, runtime=self.runtime, runner=self.run)
@@ -92,7 +94,10 @@ class Desktop:
                 keys = [arg.removeprefix("--property=") for arg in argv if arg.startswith("--property=")]
                 output = "\n".join(f"{key}={self.session[key]}" for key in keys if key in self.session) + "\n"
         elif tool == "busctl":
-            output = f"u {self.bus_pid}\n"
+            if "get-property" in argv:
+                output = json.dumps({"type": "as", "data": self.manager_environment})
+            else:
+                output = f"u {self.bus_pid}\n"
         elif tool == "xdpyinfo":
             output = self.screens
         elif tool == "xwininfo":
@@ -113,6 +118,11 @@ class Desktop:
         else:
             raise AssertionError(f"Unexpected command: {argv}")
         return subprocess.CompletedProcess(argv, 0, output, "")
+
+    def submitted_environment(self, command):
+        environment = next(env for argv, env in self.calls if argv == command)
+        keys = [arg.removeprefix("--setenv=") for arg in command if arg.startswith("--setenv=")]
+        return {key: environment[key] for key in keys}
 
 
 class LauncherTests(unittest.TestCase):
@@ -145,23 +155,22 @@ class LauncherTests(unittest.TestCase):
                          "Session c7: window manager present (PID 103); unchanged.")
         self.assertEqual(self.desktop.submissions, [])
 
-    def test_absent_manager_starts_once_with_verified_unit_and_clean_environment(self):
+    def test_absent_manager_starts_once_with_verified_unit_and_session_environment(self):
         self.assertEqual(self.run_launcher(start=True),
                          "Session c7: XFWM ready (PID 103, xfwm4-launch-c7.service).")
         self.assertEqual(len(self.desktop.submissions), 1)
         command = self.desktop.submissions[0]
-        self.assertEqual(command[:10], ["/usr/bin/systemd-run", "--user", "--no-ask-password",
+        self.assertEqual(command[:8], ["/usr/bin/systemd-run", "--user", "--no-ask-password",
                                        "--collect", "--service-type=exec", "--expand-environment=no",
-                                       "--unit=xfwm4-launch-c7.service", "--property=Restart=no",
-                                       "--", "/usr/bin/env"])
-        start = command.index("-i") + 1
+                                       "--unit=xfwm4-launch-c7.service", "--property=Restart=no"])
         end = command.index("/usr/bin/xfwm4")
-        environment = dict(value.split("=", 1) for value in command[start:end])
+        environment = self.desktop.submitted_environment(command)
         self.assertEqual(environment["DISPLAY"], ":0.0")
         self.assertEqual(environment["XAUTHORITY"], str(self.desktop.authority))
         self.assertEqual(environment["XDG_CONFIG_DIRS"], "/etc/xdg/xdg-xfce:/etc/xdg")
         self.assertNotIn("LD_PRELOAD", environment)
         self.assertNotIn("SESSION_MANAGER", environment)
+        self.assertIn("--property=UnsetEnvironment=LC_ALL MANAGER_ONLY SESSION_MANAGER", command)
         self.assertEqual(command[end:], ["/usr/bin/xfwm4", "--sm-client-disable"])
         self.assertNotIn("--replace", command)
         lock = self.desktop.runtime / "xfwm4-launch-c7.lock"
@@ -178,18 +187,85 @@ class LauncherTests(unittest.TestCase):
             "LC_PAPER": "pt_BR.UTF-8", "LC_NAME": "pt_BR.UTF-8", "LC_ADDRESS": "pt_BR.UTF-8",
             "LC_TELEPHONE": "pt_BR.UTF-8", "LC_MEASUREMENT": "pt_BR.UTF-8", "LC_IDENTIFICATION": "pt_BR.UTF-8",
         }
-        self.desktop.env.update(locale, LD_PRELOAD="untrusted", LC_NOT_A_CATEGORY="untrusted")
+        self.desktop.env.update(locale)
         self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
         self.assertIn("XFWM ready", self.run_launcher(start=True))
         self.assertEqual(len(self.desktop.submissions), 1)
         command = self.desktop.submissions[0]
-        environment = dict(value.split("=", 1) for value in
-                           command[command.index("-i") + 1:command.index("/usr/bin/xfwm4")])
+        environment = self.desktop.submitted_environment(command)
         self.assertEqual({key: value for key, value in environment.items()
                           if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, locale)
         self.assertNotIn("LD_PRELOAD", environment)
         for argv, env in self.desktop.calls:
-            self.assertEqual(env["LC_ALL"], "C", argv)
+            if Path(argv[0]).name != "systemd-run":
+                self.assertEqual(env["LC_ALL"], "C", argv)
+
+    def test_graphical_launch_preserves_complete_session_environment(self):
+        additions = {"SSH_AUTH_SOCK": "/run/session/keyring/ssh",
+                     "PATH": "/home/fixture/bin:/usr/bin:/bin",
+                     "SESSION_CUSTOM_VALUE": "spaces = equals\nand a newline",
+                     "LD_LIBRARY_PATH": "/home/fixture/lib", "LC_CUSTOM": "session-value"}
+        self.desktop.env.update(additions)
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
+        command = self.desktop.submissions[0]
+        environment = self.desktop.submitted_environment(command)
+        for key, value in additions.items():
+            self.assertEqual(environment.get(key), value, key)
+        self.assertNotIn("LD_PRELOAD", environment)
+
+    def test_session_client_supplies_environment_added_after_session_start(self):
+        environment = dict(self.desktop.env, SSH_AUTH_SOCK="/run/session/keyring/ssh",
+                           SESSION_LATE_VALUE="from the desktop session",
+                           SESSION_MANAGER="local/host:@/tmp/.ICE-unix/102")
+        self.desktop.write_process(105, "xfsettingsd", self.desktop.scope, ticks=510, env=environment)
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
+        command = self.desktop.submissions[0]
+        submitted = self.desktop.submitted_environment(command)
+        self.assertEqual(submitted["SSH_AUTH_SOCK"], "/run/session/keyring/ssh")
+        self.assertEqual(submitted["SESSION_LATE_VALUE"], "from the desktop session")
+        self.assertNotIn("SESSION_MANAGER", submitted)
+
+    def test_unrelated_or_recovered_clients_do_not_supply_session_environment(self):
+        cases = ((self.desktop.unit_group, "/usr/bin/xfsettingsd", ":0.0", 510),
+                 (self.desktop.scope, "/tmp/xfsettingsd", ":0.0", 510),
+                 (self.desktop.scope, "/usr/bin/xfsettingsd", ":1", 510),
+                 (self.desktop.scope, "/usr/bin/xfsettingsd", ":0.0", 499))
+        for group, executable, display, ticks in cases:
+            with self.subTest(group=group, executable=executable, display=display, ticks=ticks):
+                self.desktop.write_process(105, "xfsettingsd", group, executable=executable,
+                                           ticks=ticks, env=dict(self.desktop.env, DISPLAY=display,
+                                                                SESSION_LATE_VALUE="wrong source"))
+                environment = dict(self.desktop.host.discover().environment)
+                self.assertNotIn("SESSION_LATE_VALUE", environment)
+
+    def test_environment_source_change_before_submission_is_rejected(self):
+        self.desktop.write_process(105, "xfsettingsd", self.desktop.scope, ticks=510)
+        calls = 0
+        def change(argv):
+            nonlocal calls
+            if Path(argv[0]).name == "loginctl" and argv[1] == "list-sessions":
+                calls += 1
+                if calls == 3:
+                    self.desktop.write_process(105, "xfsettingsd", self.desktop.scope, ticks=511)
+        self.desktop.on_command = change
+        self.assert_refused("session changed before launch")
+
+    def test_environment_values_are_imported_without_command_line_exposure(self):
+        self.desktop.env.update(SESSION_SECRET="secret value\nwith spaces = and $literal",
+                                SESSION_MANAGER="local/host:@/tmp/.ICE-unix/102")
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        self.assertIn("XFWM ready", self.run_launcher(start=True))
+        command = self.desktop.submissions[0]
+        self.assertIn("--setenv=SESSION_SECRET", command)
+        self.assertEqual(self.desktop.submitted_environment(command)["SESSION_SECRET"],
+                         "secret value\nwith spaces = and $literal")
+        self.assertFalse(any("secret value" in argument for argument in command))
+        self.assertNotIn("SESSION_MANAGER", self.desktop.submitted_environment(command))
+
+    def test_invalid_manager_environment_blocks_submission(self):
+        self.desktop.manager_environment = [7]
+        self.assert_refused("Malformed systemd manager environment")
 
     def test_graphical_launch_preserves_unset_lc_all_and_ignores_caller_locale(self):
         locale = {"LANG": "pt_BR.UTF-8", "LANGUAGE": "pt_BR:en_US", "LC_NUMERIC": "en_US.UTF-8"}
@@ -198,22 +274,22 @@ class LauncherTests(unittest.TestCase):
         with patch.dict(os.environ, {"LANG": "de_DE.UTF-8", "LANGUAGE": "de_DE", "LC_ALL": "C"}):
             self.assertIn("XFWM ready", self.run_launcher(start=True))
         command = self.desktop.submissions[0]
-        environment = dict(value.split("=", 1) for value in
-                           command[command.index("-i") + 1:command.index("/usr/bin/xfwm4")])
+        environment = self.desktop.submitted_environment(command)
         self.assertEqual({key: value for key, value in environment.items()
                           if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, locale)
         for argv, env in self.desktop.calls:
-            self.assertEqual(env["LC_ALL"], "C", argv)
+            if Path(argv[0]).name != "systemd-run":
+                self.assertEqual(env["LC_ALL"], "C", argv)
 
     def test_graphical_launch_does_not_invent_locale_variables(self):
         self.assertIn("XFWM ready", self.run_launcher(start=True))
         command = self.desktop.submissions[0]
-        environment = dict(value.split("=", 1) for value in
-                           command[command.index("-i") + 1:command.index("/usr/bin/xfwm4")])
+        environment = self.desktop.submitted_environment(command)
         self.assertEqual({key: value for key, value in environment.items()
                           if key in {"LANG", "LANGUAGE"} or key.startswith("LC_")}, {})
         for argv, env in self.desktop.calls:
-            self.assertEqual(env["LC_ALL"], "C", argv)
+            if Path(argv[0]).name != "systemd-run":
+                self.assertEqual(env["LC_ALL"], "C", argv)
 
     def test_non_ewmh_manager_blocks_submission(self):
         self.desktop.events = self.desktop.events.replace("PropertyChange", "SubstructureRedirect")
@@ -424,7 +500,7 @@ class LauncherTests(unittest.TestCase):
         with patch.dict(os.environ, {"SESSION_MANAGER": manager}):
             self.assertIn("XFWM ready", self.run_launcher(start=True, sm_client_id="saved-client"))
         command = self.desktop.submissions[0]
-        self.assertIn(f"SESSION_MANAGER={manager}", command)
+        self.assertEqual(self.desktop.submitted_environment(command)["SESSION_MANAGER"], manager)
         self.assertEqual(command[-2:], ["/usr/bin/xfwm4", "--sm-client-id=saved-client"])
 
     def test_session_client_id_requires_matching_caller_scope(self):
