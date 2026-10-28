@@ -1,0 +1,11 @@
+id: llm-outcome-near-miss
+kind: near-miss
+initial_live: false
+prompt: >-
+  Explique a correção local adequada para a duplicação mostrada em scenario/renderer.md e qual
+  verificação basta para esse comportamento. Faça somente análise, sem modificar nem executar.
+criteria:
+  M1: Identify deterministic rendering as the demonstrated cause and use canonical identity rather than semantic text similarity.
+  M2: Select a focused renderer assertion or relevant existing replay, without inventing a fresh model benchmark or another LLM deduplication pass.
+  M3: Limit the conclusion to rendering; do not claim improved defect detection or require a new architecture record.
+receipt: []

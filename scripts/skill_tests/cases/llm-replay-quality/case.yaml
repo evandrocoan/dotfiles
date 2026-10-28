@@ -1,0 +1,18 @@
+id: llm-replay-quality
+kind: application
+initial_live: false
+prompt: >-
+  Examine scenario/evidence.md e avalie as conclusões da equipe sobre a nova versão do agente.
+  Explique o que foi demonstrado, o que permanece incerto e a validação proporcional necessária.
+  Use test-quality. Esta tarefa é somente leitura; não execute modelos nem altere arquivos.
+criteria:
+  R1: Distinguish replay fidelity from fresh model judgment; frozen responses cannot prove the new prompt improves quality.
+  R2: Identify the missed independently demonstrated defect in case A and preserve it as an incident rather than a successful quality baseline.
+  R3: Recognize case B as supported positive evidence for that recorded outcome, without discarding its value or generalizing it to the new prompt.
+  R4: Keep case C incomplete and avoid claims of total recall or absence of bugs in unexamined scope.
+  R5: Propose focused deterministic protection and proportionate fresh evidence for the semantic claim, without automatically requiring a large paid campaign.
+receipt:
+  - path: .claude/skills/test-quality/references/llm-outcome-evaluation.md
+    heading: '## Separate the claims'
+  - path: .claude/skills/test-quality/references/llm-outcome-evaluation.md
+    heading: '## Establish independent expectations'

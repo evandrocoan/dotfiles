@@ -1,0 +1,20 @@
+id: llm-outcome-trigger
+kind: trigger
+initial_live: false
+prompt: >-
+  Compare a qualidade e o custo dos agentes descritos em scenario/comparison.md. Diga quais
+  conclusões os dados permitem e se é necessário repetir imediatamente a comparação.
+  Consulte as instruções compartilhadas pertinentes. Faça somente análise, sem executar modelos.
+criteria:
+  T1: Discover test-quality for an LLM outcome comparison without the prompt naming the skill.
+  T2: Report observed delivered known defects and incomplete work rather than interpreting smaller cost alone as better quality.
+  T3: Include retries and the independent pass in scenario cost and distinguish estimated usage from measured charges.
+  T4: Qualify different tools and stages, one run per case, and missing clean controls; do not claim model-only causality or universal superiority.
+  T5: Reuse the recent baseline for questions it answers; tie any proposed repetition to a concrete remaining uncertainty.
+receipt:
+  - path: .claude/skills/test-quality/SKILL.md
+    heading: '## Evaluate LLM outcomes'
+  - path: .claude/skills/test-quality/references/llm-outcome-evaluation.md
+    heading: '## Compare the actual systems'
+  - path: .claude/skills/test-quality/references/llm-outcome-evaluation.md
+    heading: '## Measure what reached the user'

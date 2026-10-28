@@ -1,0 +1,16 @@
+id: agentic-native-layer
+kind: application
+initial_live: false
+prompt: >-
+  Avalie a necessidade das camadas propostas em scenario/design.md e indique uma correção
+  proporcional para os dois incidentes. Use architecture-records. Preserve as fronteiras
+  necessárias e explique como verificar o resultado. Não implemente nada.
+criteria:
+  N1: Identify that native handling already supplies human-message interpretation and ordinary publication, so duplicated classifier/report/transport need a concrete unmet requirement.
+  N2: Preserve application-owned permission, snapshot, queue identity, and resource boundaries instead of removing all deterministic controls.
+  N3: Distinguish the unused failed observation from invalid evidence actually consumed by a conclusion; retain independent supported results without accepting an unsupported one.
+  N4: Correct the partial-queue failure locally and suggest cases that test independent progress and consumed-evidence rejection.
+  N5: Avoid prescribing an additional model call, broad veto, or architecture record solely because the incident exists.
+receipt:
+  - path: .claude/skills/architecture-records/references/agentic-incident-diagnosis.md
+    heading: '## Choose the smallest correction that preserves the contract'

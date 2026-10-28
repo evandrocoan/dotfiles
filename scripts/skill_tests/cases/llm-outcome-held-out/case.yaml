@@ -1,0 +1,15 @@
+id: llm-outcome-held-out
+kind: held-out
+initial_live: false
+prompt: >-
+  Avalie por leitura as conclusões em scenario/results.md. Diferencie as alegações sustentadas
+  das que precisam de evidência e indique como tratar a comparação já existente. Não execute
+  modelos nem altere os artefatos.
+criteria:
+  H1: Treat changed behavior as a defect only against the intended contract; the signed requirement supports the routing change while the maintainer's assertion alone would not suffice.
+  H2: Recognize that an independently reproduced leak invalidates the supposedly clean case label and requires consistent regrading of affected comparisons.
+  H3: Distinguish checking the truth of observed findings from establishing a false-positive rate on clean inputs; there are no verified clean controls here.
+  H4: Preserve the measured improvement on the local rendering contract without extending it to semantic quality or assuming all findings are invalid.
+receipt:
+  - path: .claude/skills/test-quality/references/llm-outcome-evaluation.md
+    heading: '## Establish independent expectations'

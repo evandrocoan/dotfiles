@@ -9,7 +9,11 @@ from skill_tests.runner import child_environment, process_identity, reconcile, r
 
 def test_all_cases_valid_and_live_budget_exact():
     corpus = cases()
-    assert len(corpus) == 6
+    assert set(corpus) == {
+        "architecture", "authorization", "references", "held-out", "natural-trigger", "near-miss",
+        "llm-replay-quality", "agentic-causal-diagnosis", "agentic-native-layer",
+        "llm-outcome-trigger", "llm-outcome-near-miss", "llm-outcome-held-out",
+    }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
     cells = schedule(selected, PROFILES, ["current"], 2)
@@ -19,6 +23,16 @@ def test_all_cases_valid_and_live_budget_exact():
         for model in ["sonnet", "luna"]:
             assert {c["repeat"] for c in cells if c["case"] == name and c["profile"] == model} == {1, 2}
     assert [c["profile"] for c in cells[:4]] == ["sonnet", "luna", "luna", "sonnet"]
+
+
+def test_case_receipts_resolve_in_authoritative_sources():
+    repo = Path(__file__).resolve().parents[3]
+    for key, case in cases().items():
+        for selector in case["receipt"]:
+            name = selector["path"]
+            source = (CORPUS / key / name) if name.startswith("scenario/") else repo / name
+            span = select_span(source.read_text(), selector["heading"])
+            assert span["lines"][0] == selector["heading"]
 
 
 def test_comparison_arms_are_counterbalanced():

@@ -118,6 +118,13 @@ storage is operational and disposable according to retention policy; promoted
 fixtures are reviewed test data. Promotion should be equivalent to copying one
 directory plus adding explicit expectations, not running a bespoke extractor.
 
+Derive quality expectations from independently verified requirements and outcomes, not solely from
+the recorded answer or a fixture name. A faithful replay can reproduce a false negative or an
+unsupported finding; preserve that execution as an incident rather than certifying it as a quality
+baseline. For semantic quality claims, apply
+[LLM outcome evaluation](llm-outcome-evaluation.md). Replaying frozen model responses does not
+measure how the current model or prompt would decide.
+
 ## Preserve incidents honestly
 
 A successful baseline fixture must reach and validate its public terminal

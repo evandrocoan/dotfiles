@@ -183,6 +183,11 @@ fidelity, partial captures, interaction consumption, and external-access isolati
 
 ### 7. Diagnose incidents before changing architecture
 
+For recurring lost results, excessive work, or disputed model failures in an LLM-based system,
+read [agentic incident diagnosis](references/agentic-incident-diagnosis.md). Use it to locate the
+observed failure across the actual model, tools, and orchestration before selecting a correction.
+This diagnostic route does not by itself require a new record, plan, review, or model call.
+
 Classify the observed failure from evidence before deciding whether to amend an
 existing record or create a new one:
 

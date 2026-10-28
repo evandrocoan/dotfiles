@@ -1,0 +1,18 @@
+id: agentic-causal-diagnosis
+kind: application
+initial_live: false
+prompt: >-
+  Analise por leitura o incidente em scenario/evidence.md. Avalie o diagnóstico e a correção
+  propostos, localizando as diferenças demonstradas no caminho executado. Use architecture-records.
+  Não implemente, não crie registros e não execute chamadas externas.
+criteria:
+  D1: Attribute the missing contract to tool restrictions and undelivered content rather than demonstrating model incapacity.
+  D2: Recognize the analyst had extra URL access, so that comparison does not isolate model capability.
+  D3: Count two processed candidates in both requests; the third identifier is an alias, not extra candidate work.
+  D4: State that the later clean run bypassed research and therefore does not validate the URL repair.
+  D5: Reject an unsupported global candidate veto or automatic model upgrade; propose checking the affected delivery boundary and label remaining causes unknown.
+receipt:
+  - path: .claude/skills/architecture-records/references/agentic-incident-diagnosis.md
+    heading: '## Locate the first demonstrated divergence'
+  - path: .claude/skills/architecture-records/references/agentic-incident-diagnosis.md
+    heading: '## Trace unnecessary work to its cause'

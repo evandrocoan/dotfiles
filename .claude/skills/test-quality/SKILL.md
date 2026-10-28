@@ -5,23 +5,33 @@ description: >-
   reason. Use for unit, integration, end-to-end, regression, smoke, live, paid, async, mocked,
   recorded-replay, or data-backed tests; complete test-suite execution; continuous replay
   recording, retention, rotation, promotion, and CI fixture design; test-related code review;
-  false-positive audits; flaky-test investigation; assertion design; and any code change that
-  adds, modifies, or executes tests.
+  false-positive audits; LLM outcome evaluations and agent comparisons; flaky-test investigation;
+  assertion design; and any code change that adds, modifies, or executes tests.
 ---
 
 # Test quality
 
-Make every test prove one deterministic behavior through an observable result. Treat a passing
-test as evidence only when the same test would fail after the behavior under test is broken.
+Make deterministic tests prove observable behavior and fail when that behavior is broken.
+For probabilistic behavior, establish independent acceptance criteria and report the observed
+outcomes and uncertainty instead of treating one successful response as a deterministic guarantee.
 
 ## Establish the contract
 
 1. Read the repository instructions and authoritative CI configuration.
 2. Identify the system under test, the behavior being claimed, and the observable result controlled
    by that behavior.
-3. Define one exact expected outcome for each test case before writing assertions.
-4. Parameterize genuinely different scenarios. Never branch inside one test to accept multiple
-   outcomes.
+3. Define the expected outcome before inspecting results or writing assertions. Use exact values
+   for deterministic behavior and fixed, evidence-based criteria for probabilistic outcomes.
+4. Parameterize genuinely different scenarios. Never branch on the observed result to invent a
+   passing expectation.
+
+## Evaluate LLM outcomes
+
+Read [LLM outcome evaluation](references/llm-outcome-evaluation.md) when assessing a model,
+prompt, or agent's delivered quality, comparing agentic systems, or claiming that a replay proves
+better semantic decisions. It separates replay fidelity from fresh model behavior and defines
+independent expectations, comparison controls, and useful-result accounting. Ordinary deterministic
+tests do not require a model evaluation merely because the application uses an LLM.
 
 ## Build deterministic arrangements
 
@@ -125,7 +135,8 @@ Apply these rules to both levels:
   is absent.
 - Reuse and extend an existing fixture when it already represents the same artifact or session.
   Use the repository's replay marker or suite convention when one exists, and keep deterministic
-  replays in the normal CI gate. Reserve live provider tests for separate smoke coverage.
+  replays in the normal CI gate. Keep live provider integration tests and fresh model-outcome
+  evaluations separate from deterministic replay.
 - Fail on every unexpected, duplicated, or unconsumed recorded interaction. Preserve strict order
   across causal dependencies and any sequence whose order is part of the contract. Match causally
   independent concurrent interactions by authenticated identity and multiplicity rather than
