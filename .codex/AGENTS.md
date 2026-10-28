@@ -254,6 +254,34 @@ by line count or cleverness. Abstraction, reuse, and additional supporting work 
 when the current requirements justify their cost. Preserve required correctness, safety, and
 validation; simplification must not remove necessary behavior or evidence.
 
+### Prioritize by product impact
+
+Before recommending the next priority or expanding a correction, compare it with the user's
+objective and the other known unresolved problems. Rank work by observed consequences, affected
+use, urgency, confidence in the diagnosis, expected benefit, effort, and regression risk. Recency,
+visibility, and ease of implementation are not substitutes for product impact. Honor explicit
+user priorities and actual prerequisites.
+
+Explain the concrete failure, what happens if it remains, and what the proposed correction changes.
+Assess its expected effect on correctness, robustness, maintainability, cost, latency, and
+complexity. Compare reasonable alternatives, including deferral or no change. Separate measured
+facts from hypotheses and unknowns; do not claim improved detection, savings, or absence of bugs
+without evidence.
+
+Prioritize lost useful results and demonstrated functional, security, or data failures over
+presentation cleanup when their consequences and the user's objective justify that order. Identify
+cosmetic or convenience improvements as such, and state whether their benefit warrants the work
+or would amount to bikeshedding. Do not present them as fixes for underlying analysis failures.
+
+When applicable to a proposed correction, assess test coverage in proportion to the risk and
+available evidence. Identify which existing tests exercise the affected behavior, what they do not
+prove, and what focused regression evidence is missing. State what remains unverified. A passing
+suite alone does not prove end-to-end product quality. When new evidence changes the priority,
+explain why the ranking changed.
+
+Keep this assessment proportional: a concise explanation is sufficient for routine work. This rule
+adds no mandatory report, audit, approval gate, or model call.
+
 ## General safeguards
 
 - When web browsing reaches bot verification, wait for the user to complete it.
