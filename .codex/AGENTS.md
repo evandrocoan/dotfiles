@@ -370,6 +370,11 @@ It never includes merging, force-pushing, rewriting history, or unrelated work.
 For commits, pushes, branches, pull requests, GitLab merge requests, repository
 issues, reviews, or pipelines, load and follow the `git-delivery` skill.
 
+The user has explicitly prohibited the `codex/` branch prefix. Never create or
+publish a branch with that prefix. This standing preference selects a different
+prefix whenever the client permits overriding its default. Use the repository's
+functional naming convention or the `git-delivery` fallback.
+
 ## Plan and review choices
 
 Before creating a formal plan or invoking a separate advisor, independent reviewer,
