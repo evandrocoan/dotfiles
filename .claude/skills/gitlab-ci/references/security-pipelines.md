@@ -64,11 +64,11 @@ to the explicit policy, never silently as clean.
 - Bind inline positions to the merge request's current base, start, and head identifiers.
 - Recheck the head before publication. Do not attach a result for an older snapshot to a newer MR revision.
 - Paginate notes, discussions, jobs, diffs, and other list endpoints.
-- Use a stable private marker and finding identity to update an existing general note or thread. Do not identify a
-  finding by list order.
+- Use a stable private marker and finding identity, not list order, to locate an existing comment.
+  Reuse it only when its type meets the publication rules below.
 - Preserve prior discussion when updating an inline finding; avoid adding an identical reply.
-- Fall back to one bounded general note when GitLab cannot place an inline comment, while keeping the same finding
-  identity and snapshot.
+- Apply `git-delivery`'s [review comment placement](../../git-delivery/SKILL.md#publish-gitlab-review-comments)
+  and read-back checks, preserving the finding identity and snapshot when inline placement fails.
 - Escape untrusted analyzer text before embedding it in HTML and keep public output within GitLab size limits.
 - Separate publication failure from scan verdict. Retry only the idempotent external effect; do not reinterpret the
   report on retry.

@@ -166,6 +166,26 @@ names against the selected convention before pushing.
    above, then verify again. If it cannot be saved or verified, report the MR
    delivery as incomplete.
 
+## Publish GitLab review comments
+
+When publication is authorized, prefer an **inline resolvable discussion** for
+anything requiring resolution, including pre-merge validation. Use a verified
+position in the current MR diff; if none is usable, use a **general resolvable
+discussion**. Reassess stale-head errors before posting. Use **normal general notes**
+only for information requiring no resolution.
+
+Use the discussion capability with a diff position for inline or without one for
+general, following the [GitLab Discussions API](https://docs.gitlab.com/api/discussions/).
+Read existing discussions and reuse a suitable thread for the same concern; keep
+distinct concerns separate.
+
+Read back actionable discussions to verify `resolvable: true`, `resolved: false`,
+and the intended inline position. Report unverifiable publication as incomplete.
+
+Claim merge blocking only when the project's **All threads must be resolved**
+setting and current MR status confirm it. Comment publication does not authorize
+changing project settings.
+
 ## Prepare an issue
 
 When creating an issue through a tool that writes a reviewable local draft,
