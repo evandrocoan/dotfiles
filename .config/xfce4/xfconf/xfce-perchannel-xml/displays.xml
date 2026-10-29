@@ -43,7 +43,7 @@
       <property name="Primary" type="bool" value="true"/>
       <property name="Position" type="empty">
         <property name="X" type="int" value="1920"/>
-        <property name="Y" type="int" value="24"/>
+        <property name="Y" type="int" value="0"/>
       </property>
       <property name="Scale" type="empty">
         <property name="X" type="double" value="1"/>
@@ -173,7 +173,7 @@
       <property name="Primary" type="bool" value="true"/>
       <property name="Position" type="empty">
         <property name="X" type="int" value="1920"/>
-        <property name="Y" type="int" value="24"/>
+        <property name="Y" type="int" value="0"/>
       </property>
       <property name="Scale" type="empty">
         <property name="X" type="double" value="1"/>
