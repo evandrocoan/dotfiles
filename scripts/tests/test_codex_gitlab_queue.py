@@ -706,6 +706,8 @@ def flow(module,tmp_path,monkeypatch):
     class API:
         def __init__(self,c,guard=None): self.config=c
         def project(self): return {'id':11}
+        def mr(self,iid):
+            return {**copy.deepcopy(context['mr']),'iid':iid,'project_id':self.config['project_id']}
         def get(self,route):
             if route.startswith('/users/'): return {'id':int(route.rsplit('/',1)[1]),'bot':True}
             raise AssertionError(route)

@@ -6,6 +6,12 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const test = require('node:test');
+
+if (process.env.CODEX_VSCODE_PATCH_TESTS !== '1') {
+  test('VS Code first-run patch', { skip: 'Patch no longer in use; set CODEX_VSCODE_PATCH_TESTS=1 to run explicitly.' }, () => {});
+  return;
+}
+
 const { stock, patched, normalize, patchSource, loadTarget, update } = require('./patch-first-run.cjs');
 
 const target = loadTarget(process.env.CODEX_EXTENSION_DIR);

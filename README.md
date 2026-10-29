@@ -1001,6 +1001,9 @@ only as long as rollback is required.
 
 ### Codex VS Code history patch
 
+This patch and the two VS Code patches below are retained but no longer in use. Their tests are
+skipped by default; set `CODEX_VSCODE_PATCH_TESTS` to `1` to run them explicitly.
+
 [The local history patcher](scripts/codex-vscode-history-fix/patch.cjs) increases the extension's
 recent local conversation window to the limit defined by `LIMIT` in that file. It preserves the
 extension's existing handling of open conversations, which may remain visible beyond that window.

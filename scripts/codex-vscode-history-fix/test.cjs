@@ -6,6 +6,12 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const test = require('node:test');
+
+if (process.env.CODEX_VSCODE_PATCH_TESTS !== '1') {
+  test('VS Code history patch', { skip: 'Patch no longer in use; set CODEX_VSCODE_PATCH_TESTS=1 to run explicitly.' }, () => {});
+  return;
+}
+
 const { LIMIT, edits, normalize, patchSource, installedExtension, loadTarget, update } = require('./patch.cjs');
 
 const target = loadTarget(process.env.CODEX_EXTENSION_DIR);
