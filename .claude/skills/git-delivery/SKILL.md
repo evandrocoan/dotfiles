@@ -112,6 +112,19 @@ continues through its routine delivery steps.
 
 ## Establish branch publication and upstream
 
+Before creating a branch, read naming conventions in `AGENTS.md`, `CONTRIBUTING*`,
+and `README*`. Identify the category, issue identifier when required, and exact
+name format; recent branches and merged pull or merge requests are supplementary
+evidence. Honor an explicit user choice; otherwise follow the project's convention
+before client defaults.
+
+When neither supplies a name or format, use `<type>/<description>`, adding an
+existing issue identifier as `<type>/<issue-id>-<description>` when available.
+Use full English type names such as `feature`, `fix`, `maintenance`, `documentation`,
+or `refactor`, and lowercase, hyphen-separated descriptions. Do not default to an
+agent or tool prefix such as `codex/`. Recheck both local and publication branch
+names against the selected convention before pushing.
+
 1. Establish the base, MR target, publication destination, and intended upstream
    separately. Inspect existing tracking and preserve deliberate differences
    throughout these steps, including fork workflows.
