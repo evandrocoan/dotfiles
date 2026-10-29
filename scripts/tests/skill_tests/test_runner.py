@@ -108,6 +108,47 @@ def test_claude_read_rule_has_filesystem_absolute_anchor(prepared):
     assert f"Read({Path.home()}/**)" not in settings["permissions"]["deny"]
 
 
+def test_read_instructions_match_the_launched_clients_tools(prepared):
+    output, _, _ = prepared
+    claude = read_json(output / "prepared/run-001/launch.json")
+    codex = read_json(output / "prepared/run-002/launch.json")
+    tools = claude["args"][claude["args"].index("--tools") + 1].split(",")
+    assert "Bash" not in tools
+    assert "cat PATH" not in claude["args"][-1]
+    assert "Read" in claude["args"][-1]
+    assert "cat PATH" in codex["args"][-1]
+
+
+def test_selected_profile_runs_without_the_other_client(prepared, monkeypatch):
+    original, _, _ = prepared
+    which = shutil.which
+    def codex_only(name):
+        assert name != "claude", "An unselected client must not be required"
+        return which(name)
+    monkeypatch.setattr(shutil, "which", codex_only)
+    output = original.parent / "luna-only"
+    seal = protocol.prepare(original.parent / "repo", output,
+                            corpus=original.parent / "corpus", repeats=1, ceiling=1,
+                            profile_keys=["luna"])
+    manifest = read_json(output / "manifest.json")
+    assert [p["key"] for p in manifest["profiles"]] == ["luna"]
+    assert set(manifest["clients"]) == {"codex"}
+    preflight_seal = runner.preflight(output)
+    runner.execute(output, seal, preflight_seal, 1)
+    result = read_json(output / "runs/run-001/result.json")
+    assert result["technical"] == "valid"
+    assert result["cell"]["profile"] == "luna"
+    assert len(list((output / "runs").iterdir())) == 1
+
+
+@pytest.mark.parametrize("keys", [[], ["unknown"], ["luna", "luna"]])
+def test_invalid_profile_selection_fails_before_preparation(tmp_path, keys):
+    output = tmp_path / "round"
+    with pytest.raises(Invalid, match="selected profiles"):
+        protocol.prepare(tmp_path, output, profile_keys=keys)
+    assert not output.exists()
+
+
 def test_interruption_at_launch_consumes_reservation_and_cannot_auto_retry(prepared, monkeypatch):
     output, seal, preflight_seal = prepared
     original = subprocess.Popen

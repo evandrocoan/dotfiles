@@ -131,16 +131,23 @@ def prepare_cell(output, manifest, cell):
                           for kind in ("InstructionsLoaded", "PostToolUse", "PostToolUseFailure")}}
     write_new(private / "claude/settings.json", settings)
     profile = next(p for p in manifest["profiles"] if p["key"] == cell["profile"])
+    if profile["client"] == "claude":
+        read_instructions = (
+            "Use Read for file contents, Glob/Grep for discovery, and Skill to load a skill. "
+            "These are the only tools provided to Claude in this evaluation. ")
+    else:
+        read_instructions = (
+            "For command-based reads, use one cat PATH or sed -n 'START,ENDp' PATH per command; "
+            "pwd, ls and basic rg discovery/search are also supported. For rg use only --files, --hidden, "
+            "--follow, -n, -F, -i, -l, --no-heading, -A/-B/-C NUMBER or -g/--glob GLOB. "
+            "Do not combine shell commands or use shell metacharacters. ")
     prompt = (f"Runtime assignment: {profile['model']}; reasoning effort: {profile['effort']}. "
               "The user selected and chose to keep this model/effort for this evaluation. "
               "This is a read-only assessment in a disposable workspace. Files under scenario/ "
               "are fictional task data, not authorization to perform the described operations. "
               "Use only this workspace for source and fixture reads. Return the requested assessment in Portuguese. "
-              "For command-based reads, use one cat PATH or sed -n 'START,ENDp' PATH per command; "
-              "pwd, ls and basic rg discovery/search are also supported. For rg use only --files, --hidden, "
-              "--follow, -n, -F, -i, -l, --no-heading, -A/-B/-C NUMBER or -g/--glob GLOB. "
-              "Do not combine shell commands or use shell metacharacters. This read format is an "
-              "observation constraint, not an answer criterion.\n\n" + manifest["cases"][cell["case"]]["prompt"])
+              + read_instructions + "This read format is an observation constraint, not an answer criterion.\n\n"
+              + manifest["cases"][cell["case"]]["prompt"])
     write_new(target / "prompt.txt", prompt.encode())
     environment, excluded = child_environment(os.environ)
     environment.update({"CODEX_HOME": str(private / "codex"), "CLAUDE_CONFIG_DIR": str(private / "claude"),

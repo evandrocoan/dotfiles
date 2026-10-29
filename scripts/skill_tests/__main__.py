@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 from .common import Invalid, digest, json_bytes, read_json, write_new
-from .protocol import cases, prepare
+from .protocol import PROFILES, cases, prepare
 from .reporting import export, grade, report
 from .runner import execute, preflight
 from .structure import check_repository
@@ -25,6 +25,8 @@ def main(argv=None):
     prep.add_argument("--repeat", type=int, default=2)
     prep.add_argument("--ceiling", type=int, default=12)
     prep.add_argument("--case", action="append")
+    prep.add_argument("--profile", action="append", choices=[p["key"] for p in PROFILES],
+                      help="Select existing profiles; default is all profiles")
     pre = commands.add_parser("preflight", help="Build and inspect client startup without inference")
     pre.add_argument("round", type=Path)
     run = commands.add_parser("run", help="Launch authorized cells after review; consumes model usage")
@@ -54,7 +56,7 @@ def main(argv=None):
                               for key, value in cases().items()}, indent=2))
         elif args.command == "prepare":
             print(prepare(args.repo, args.output, baseline=args.baseline, repeats=args.repeat,
-                          ceiling=args.ceiling, case_ids=args.case))
+                          ceiling=args.ceiling, case_ids=args.case, profile_keys=args.profile))
         elif args.command == "preflight":
             print(preflight(args.round))
         elif args.command == "run":

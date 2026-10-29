@@ -14,5 +14,5 @@ criteria:
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md
     heading: '## Finish monitoring and return evidence'
-  - path: .claude/skills/long-running-followup/references/clients.md
-    heading: '## Codex'
+  - path: .claude/skills/long-running-followup/references/codex.md
+    heading: '# Codex'

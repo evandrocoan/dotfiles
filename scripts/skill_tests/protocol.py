@@ -104,18 +104,24 @@ def code_fingerprint():
     return {p.name: digest(p.read_bytes()) for p in sorted(Path(__file__).parent.glob("*.py"))}
 
 
-def prepare(repo, output, *, baseline=None, repeats=2, ceiling=12, case_ids=None, corpus=CORPUS):
+def prepare(repo, output, *, baseline=None, repeats=2, ceiling=12, case_ids=None, corpus=CORPUS,
+            profile_keys=None):
     repo, output = Path(repo).resolve(), Path(output).absolute()
     if output.is_symlink() or output.resolve() != output:
         raise Invalid("Output must not traverse symlinks")
     if output.is_relative_to(Path.home()):
         raise Invalid("Live workspaces must be outside the real home instruction-discovery tree")
+    available = {p["key"]: p for p in PROFILES}
+    keys = list(available) if profile_keys is None else profile_keys
+    if not keys or len(keys) != len(set(keys)) or any(k not in available for k in keys):
+        raise Invalid("Unknown, duplicate or empty selected profiles")
+    profiles = [available[k] for k in keys]
     all_cases = cases(corpus)
     selected = case_ids if case_ids is not None else [k for k, c in all_cases.items() if c["initial_live"]]
     if len(selected) != len(set(selected)) or any(x not in all_cases for x in selected):
         raise Invalid("Unknown or duplicate selected cases")
     clients = {}
-    for name in {p["client"] for p in PROFILES}:
+    for name in {p["client"] for p in profiles}:
         executable = shutil.which(name)
         if executable is None:
             raise Invalid(f"Missing client: {name}")
@@ -146,10 +152,10 @@ def prepare(repo, output, *, baseline=None, repeats=2, ceiling=12, case_ids=None
                 source = inside(target, name.removeprefix("scenario/")) if name.startswith("scenario/") else inside(output / "sources" / arm, name)
                 case["spans"][arm].append({"path": name, **select_span(source.read_text(), selector["heading"])})
         selected_cases[key] = case
-    cells = schedule(selected, PROFILES, list(arms), repeats)
+    cells = schedule(selected, profiles, list(arms), repeats)
     if type(ceiling) is not int or ceiling < 1 or len(cells) > ceiling:
         raise Invalid("Schedule exceeds positive attempt ceiling")
-    manifest = {"schema": 1, "round_id": str(uuid.uuid4()), "profiles": PROFILES, "clients": clients, "arms": arms,
+    manifest = {"schema": 1, "round_id": str(uuid.uuid4()), "profiles": profiles, "clients": clients, "arms": arms,
                 "cases": selected_cases, "schedule": cells, "ceiling": ceiling,
                 "corpus": {k: {"kind": v["kind"], "selected": k in selected} for k, v in all_cases.items()},
                 "code": code_fingerprint(), "dependencies": {

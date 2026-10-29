@@ -1181,8 +1181,10 @@ poetry run python -m skill_tests preflight "${SKILL_TEST_ROUND}"
 Keep that directory for diagnosis and resumption; do not delete or recreate it to retry failures.
 Review `manifest.json`, `preflight.json` and the prepared catalog/evidence before running. The
 default schedule is the three initial cases, two model profiles and two repetitions. The corpus
-also contains unexecuted trigger, near-miss and held-out examples. `--case`, `--repeat`, `--baseline`
-and `--ceiling` allow preparing a different experiment; they do not authorize its model usage.
+also contains unexecuted trigger, near-miss and held-out examples. `--case`, `--repeat`, `--baseline`,
+`--profile` and `--ceiling` allow preparing a different experiment; they do not authorize its model
+usage. `--profile` selects existing profiles when a client is unavailable. Prepare a separate
+round for that subset; retain any failed round and its hold rather than editing or resuming it.
 
 After authorization and review, substitute the two reviewed digests and run one scheduled cell:
 
