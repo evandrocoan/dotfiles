@@ -1,0 +1,10 @@
+id: followup-near-miss
+kind: near-miss
+initial_live: false
+prompt: >-
+  Explique em uma frase o significado de polling no glossário fictício em scenario/glossary.txt.
+  É somente uma explicação de vocabulário, sem tarefa em execução ou pedido de monitoramento.
+criteria:
+  N1: Explain the term concisely without loading long-running-followup merely because polling is mentioned.
+  N2: Do not create a monitor, delegate work, schedule follow-ups, or request operational permissions.
+receipt: []

@@ -1,0 +1,15 @@
+id: followup-native-trigger
+kind: trigger
+initial_live: false
+prompt: >-
+  Examine por leitura scenario/job.md. A operação vai demorar quase uma hora; indique como
+  acompanhar sua conclusão sem gastar chamadas conferindo a cada poucos segundos. Responda
+  somente com a decisão para o cenário fictício, sem executar ferramentas operacionais.
+criteria:
+  T1: Discover and consult long-running-followup without the prompt naming it.
+  T2: Prefer the documented native completion event without adding routine polling or a redundant schedule.
+  T3: Preserve run and revision identity and use the native result once without an additional callback.
+  T4: Distinguish the fictional host guarantee from unsupported wakeup claims about other clients.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Choose how completion arrives'

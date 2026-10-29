@@ -1,0 +1,3 @@
+This fixture is fictional and authorizes no real-world operations.
+The monitor observes only run-902 and must not restart it or deploy its output.
+Inherited runtime and human authorization boundaries remain applicable.

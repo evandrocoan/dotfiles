@@ -1,0 +1,2 @@
+Polling: a program periodically asks another component for its current status.
+This entry describes a concept; there is no running job, parent chat, or monitoring request.
