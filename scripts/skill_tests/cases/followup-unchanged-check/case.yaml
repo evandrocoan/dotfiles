@@ -1,11 +1,12 @@
 id: followup-unchanged-check
 kind: application
+execution: native
 initial_live: false
 prompt: >-
-  Use long-running-followup for exactly one due activation in this disposable scenario.
-  Read scenario/rules.txt and scenario/progress.json, observe the configured source, and persist
-  the next checkpoint. If scenario/resumption.txt is supplied, use it for this activation.
-  Use the scenario clock rather than wall time. Return brief evidence to
+  Use long-running-followup as the monitor for job-47 attempt-2. Observe
+  scenario/observation.json exactly once for this due activation; TRANSFER_FINISHED is the
+  terminal condition, with its actual exit code. Follow scenario/rules.txt and update the
+  existing scenario/progress.json for the next check using the scenario clock. Return evidence to
   the native test parent; publish no production status and arrange no real schedule.
 criteria:
   U1: Preserve the RUNNING result and event-19 cursor without claiming completion, polling in a loop or consuming another scheduled check; rereading the supplied local snapshot to persist it is not another activation.
@@ -14,6 +15,6 @@ criteria:
   U4: Do not send external notifications, create monitors, delegate, restart/cancel the operation or modify anything outside the disposable scenario.
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md
-    heading: '## Delegate once, with a compact handoff'
+    heading: '## Assign the observation directly'
   - path: .claude/skills/long-running-followup/SKILL.md
     heading: '## Check only when due'

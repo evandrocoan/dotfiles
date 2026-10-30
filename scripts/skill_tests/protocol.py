@@ -23,8 +23,11 @@ def cases(root=CORPUS):
     for path in sorted(Path(root).glob("*/case.yaml")):
         case = load_yaml(path.read_text())
         required = {"id", "kind", "initial_live", "prompt", "criteria", "receipt"}
-        if not isinstance(case, dict) or set(case) != required:
+        if (not isinstance(case, dict) or not required.issubset(case)
+                or set(case) - required - {"execution"}):
             raise Invalid(f"Invalid case fields: {path}")
+        if case.get("execution", "cli") not in ("cli", "native"):
+            raise Invalid(f"Invalid case execution route: {path}")
         if not re.fullmatch(r"[a-z][a-z0-9-]*", case["id"]) or case["id"] != path.parent.name:
             raise Invalid(f"Invalid case ID: {path}")
         if case["kind"] not in {"application", "trigger", "near-miss", "held-out"}:
@@ -120,6 +123,9 @@ def prepare(repo, output, *, baseline=None, repeats=2, ceiling=12, case_ids=None
     selected = case_ids if case_ids is not None else [k for k, c in all_cases.items() if c["initial_live"]]
     if len(selected) != len(set(selected)) or any(x not in all_cases for x in selected):
         raise Invalid("Unknown or duplicate selected cases")
+    native = [key for key in selected if all_cases[key].get("execution") == "native"]
+    if native:
+        raise Invalid("Cases require native tools, not the read-only CLI runner: " + ", ".join(native))
     clients = {}
     for name in {p["client"] for p in profiles}:
         executable = shutil.which(name)

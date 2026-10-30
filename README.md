@@ -1186,6 +1186,10 @@ also contains unexecuted trigger, near-miss and held-out examples. `--case`, `--
 usage. `--profile` selects existing profiles when a client is unavailable. Prepare a separate
 round for that subset; retain any failed round and its hold rather than editing or resuming it.
 
+Cases marked `execution: native` require native agent tools or writable disposable fixtures.
+The read-only CLI runner rejects them during preparation. Evaluate those cases through native
+agents with the stated permissions, keeping their traces and results separate from CLI runs.
+
 After authorization and review, substitute the two reviewed digests and run one scheduled cell:
 
 ```bash

@@ -1,5 +1,0 @@
-This directory is a disposable test workspace. All hosts, jobs, approvals and schedules are
-fictional. Available shell and native tools are unchanged; task effects belong only in this
-scenario directory. Do not contact hosts or create real automations. All generated references
-must resolve relative to the workspace. The native final response returns evidence to the test
-parent; it is not a production notification or proof of durable wakeup.

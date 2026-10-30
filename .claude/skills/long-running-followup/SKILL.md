@@ -19,30 +19,22 @@ Verify lifetime/return support before yielding; proposed schedules are not activ
 details only if needed: [Codex](references/codex.md), [Claude](references/claude.md),
 [other hosts](references/clients.md).
 
-## Delegate once, with a compact handoff
+## Assign the observation directly
 
-The parent prepares the handoff; the monitor only observes and reports. Reuse one
-authorized monitor, never one per check. For monitoring subagents use `gpt-6-luna` / `high`
-explicitly, with fresh context and inherited tool permissions; report unavailability instead of
-substituting another model. For a simple wait, pass only the operation/status source, exact
-exit-code or log-event condition, and parent/return route. Add only applicable monitoring needs:
+Reuse one authorized monitor, never one per check. For monitoring subagents use `gpt-6-luna` /
+`high` explicitly, with fresh context and inherited tool permissions; report unavailability
+instead of substituting another model.
 
-```text
-Read: exact monitoring instruction references; existing state if resumption/deduplication needs it.
-Bounds, if scheduled: cadence, timezone, deadline/check cap; one due observation, silent if unchanged.
-Stop: deactivate only owned schedule, read back inactivity; preserve operation.
-Chat: copy original no-archive/no-new-chat prohibitions verbatim.
-```
+Pass the operation/status source, exact exit-code or log-event condition, and parent/return route
+directly. Include applicable observation/access instructions, authorization and chat restrictions.
+For scheduled checks, include cadence, timezone and deadline/check cap. Do not add a prompt-rewriting
+step or word budget before monitoring.
 
-Check the draft against these inputs before dispatch.
-
-Do not create or require a checkpoint for a simple wait. Reference existing state instead of
-copying snapshots; do not restate this skill or drop necessary constraints to meet a word target.
-
-Include applicable instructions and required observation/access and return authorization.
-Exclude maintenance plans, future-step checklists and continuation approvals from the assignment
-and monitor reads, even at completion. Missing future-step references do not block observation;
-missing monitoring inputs need clarification. Do not restart or recursively delegate.
+Do not create or require a checkpoint for a simple wait. Reference existing monitoring state only
+when resumption or deduplication needs it. The monitor reads observation/access/return inputs,
+updates needed monitoring state and reports. Do not follow continuation references or search for
+later maintenance context. Missing monitoring inputs need clarification. Do not restart
+or recursively delegate.
 
 ## Check only when due
 
@@ -59,9 +51,12 @@ On completion, failure, deadline, intervention or cancellation, deactivate only 
 if any; verify inactivity by read-back and report failed cleanup. Stopping monitoring does not
 cancel the operation; deadlines report last known state.
 
-Return identity, time/state, exit code or matched event, and concise evidence once through native delivery.
+Return identity, time/state, exit code or matched event, and concise evidence once through the agreed,
+supported route, preferring native delivery when available.
 Completion proves neither downstream validation nor permission to continue.
 Uncertain delivery requires read-back/deduplication or an uncertainty report, never blind resend/restart.
 
-The parent checks identity/freshness, rejects duplicate/stale results and consults only prerequisites
-for its next authorized action. Missing/stale prerequisites and pending approvals still block it.
+The monitoring activation ends with its report, without inspecting continuation prerequisites.
+After receiving it, the originating parent checks identity/freshness, rejects duplicate/stale
+results and consults only prerequisites for its next authorized action. Missing/stale prerequisites
+and pending approvals still block that action.

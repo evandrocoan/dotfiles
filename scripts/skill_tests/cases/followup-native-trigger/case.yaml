@@ -8,7 +8,7 @@ prompt: >-
 criteria:
   T1: Discover and consult long-running-followup without the prompt naming it.
   T2: Prefer the documented native completion event without adding routine polling or a redundant schedule.
-  T3: Preserve run and revision identity and use the native result once without an additional callback.
+  T3: Select the current build-71/rev-a rather than stale build-69/rev-z evidence, and await the native result without an additional callback. This decision scenario does not execute or consume a terminal result.
   T4: Distinguish the fictional host guarantee from unsupported wakeup claims about other clients.
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md

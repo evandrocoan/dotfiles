@@ -1,5 +1,6 @@
 id: followup-simple-wait
 kind: application
+execution: native
 initial_live: false
 prompt: >-
   Use long-running-followup to run the two disposable operations in scenario/jobs.md. Wait for
@@ -13,6 +14,6 @@ criteria:
   W4: Use native completion or bounded blocking waits without repeated fast status polling; do not contact hosts, recursively delegate, create automations or cancel the operations.
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md
-    heading: '## Delegate once, with a compact handoff'
+    heading: '## Assign the observation directly'
   - path: .claude/skills/long-running-followup/SKILL.md
     heading: '## Check only when due'

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from skill_tests.common import Invalid, digest, json_bytes, read_json, write_new
-from skill_tests.protocol import CORPUS, PROFILES, cases, schedule, select_span
+from skill_tests.protocol import CORPUS, PROFILES, cases, prepare, schedule, select_span
 from skill_tests.runner import child_environment, process_identity, reconcile, remaining_processes
 
 
@@ -15,7 +15,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "llm-outcome-trigger", "llm-outcome-near-miss", "llm-outcome-held-out",
         "followup-native-trigger", "followup-scheduled-worker", "followup-uncertain-return",
         "followup-limits", "followup-near-miss",
-        "followup-compact-resumption", "followup-unchanged-check", "followup-stale-reference",
+        "followup-unchanged-check", "followup-stale-reference",
         "followup-monitor-model", "followup-simple-wait",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
@@ -55,6 +55,33 @@ def test_span_requires_unique_real_heading():
 
 def test_empty_corpus_does_not_look_valid(tmp_path):
     with pytest.raises(Invalid, match="Empty corpus"):
+        cases(tmp_path)
+
+
+@pytest.mark.parametrize("case_id", [
+    "followup-monitor-model", "followup-simple-wait",
+    "followup-unchanged-check", "followup-stale-reference",
+])
+def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
+    def unexpected_client_lookup(name):
+        pytest.fail(f"Native case reached CLI lookup: {name}")
+    monkeypatch.setattr("skill_tests.protocol.shutil.which", unexpected_client_lookup)
+    output = tmp_path / "round"
+    with pytest.raises(Invalid, match=f"require native tools.*{case_id}"):
+        prepare(tmp_path, output, case_ids=[case_id], profile_keys=["luna"])
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("execution", ["unsupported", "[native]"])
+def test_invalid_execution_route_is_rejected(tmp_path, execution):
+    fixture = tmp_path / "case/scenario"
+    fixture.mkdir(parents=True)
+    (fixture / "input.txt").write_text("Disposable scenario.\n")
+    (fixture.parent / "case.yaml").write_text(
+        "id: case\nkind: application\ninitial_live: false\n"
+        f"execution: {execution}\nprompt: Observe once.\n"
+        "criteria:\n  A1: Report the observation.\nreceipt: []\n")
+    with pytest.raises(Invalid, match="Invalid case execution route"):
         cases(tmp_path)
 
 
