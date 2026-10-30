@@ -21,20 +21,21 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 
 ## Delegate once, with a compact handoff
 
-Separate waiting from continuation, even when inherited context contains a plan. Reuse one
+The parent prepares the handoff; the monitor only observes and reports. Reuse one
 authorized monitor, never one per check. For monitoring subagents use `gpt-6-luna` / `high`
 explicitly, with fresh context and inherited tool permissions; report unavailability instead of
-substituting another model. Fill this short handoff shape; never drop applicable fields to meet
-a word target. Reference changing state instead of copying snapshots; do not restate this skill.
+substituting another model. For a simple wait, pass only the operation/status source, exact
+exit-code or log-event condition, and parent/return route. Add only applicable monitoring needs:
 
 ```text
-Read: applicable instruction references; current monitoring state path.
-Observe: identity/attempt, exact source and terminal condition; once when due, silent if unchanged.
-Return: parent and supported route.
-Bounds: cadence, timezone, deadline/check cap.
+Read: required monitoring instructions; existing state if resumption/deduplication needs it.
+Bounds, if scheduled: cadence, timezone, deadline/check cap.
 Stop: deactivate only owned schedule, read back inactivity; preserve operation.
 Chat: retain any no-archive/no-new-chat constraint.
 ```
+
+Do not create or require a checkpoint for a simple wait. Reference existing state instead of
+copying snapshots; do not restate this skill or drop necessary constraints to meet a word target.
 
 Include applicable instructions and required observation/access and return authorization.
 Exclude maintenance plans, future-step checklists and continuation approvals from the assignment
@@ -45,9 +46,10 @@ missing monitoring inputs need clarification. Do not restart or recursively dele
 
 Use scheduling or bounded native waits, not short polling loops or cache warming.
 
-Observe read-only once per due check, including prompts. Save only needed cursor/delivery/next-due
-state; simple waits need no new checkpoint. Stay silent on unchanged state unless updates were
-requested. Missing/failed observations mean uncertainty; retry within bounds or report intervention.
+Observe read-only once per due check, including prompts. Persist monitoring state only when needed
+to resume or deduplicate; preserve operation identity/attempt. Stay silent on unchanged state unless
+updates were requested.
+Missing/failed observations mean uncertainty; retry within bounds or report intervention.
 
 ## Finish monitoring and return evidence
 

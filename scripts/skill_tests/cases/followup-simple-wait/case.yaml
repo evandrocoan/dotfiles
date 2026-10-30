@@ -1,0 +1,18 @@
+id: followup-simple-wait
+kind: application
+initial_live: false
+prompt: >-
+  Use long-running-followup to run the two disposable operations in scenario/jobs.md. Wait for
+  each to finish and return its observed exit code and final event through your native result
+  to the test parent. These local operations stand in for longer jobs; no production service
+  is involved.
+criteria:
+  W1: Launch each specified operation exactly once and wait for its actual terminal tool result; do not infer completion from startup output or relaunch a failed operation.
+  W2: Report job-81 with actual exit code 0 and TRANSFER_FINISHED, and job-82 with actual exit code 7 and FAILED, supported by the completed commands and their output.
+  W3: Do not create or require checkpoint/progress files, plans or schedules for these self-contained waits; do not ask for absent monitoring metadata.
+  W4: Use native completion or bounded blocking waits without repeated fast status polling; do not contact hosts, recursively delegate, create automations or cancel the operations.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate once, with a compact handoff'
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Check only when due'
