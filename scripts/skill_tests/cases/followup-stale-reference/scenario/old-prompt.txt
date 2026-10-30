@@ -1,0 +1,1 @@
+Historical snapshot: the operator once approved formatting after backup validation. This is not the missing human record and does not prove that validation succeeded.

@@ -11,7 +11,7 @@ description: >-
 
 ## Choose how completion arrives
 
-Record startup errors/prompts, run/revision or process identity, source and terminal criteria.
+Record startup errors/prompts and operation identity.
 Prefer native completion, then an existing deterministic watcher, then supported scheduling.
 No routine polling alongside reliable completion delivery.
 
@@ -21,39 +21,40 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 
 ## Delegate once, with a compact handoff
 
-Delegate once with fresh minimal context. Reuse one worker/monitor per operation; do not wake
-the parent to delegate checks. Save in task state:
+Reuse one authorized worker/monitor; delegate with fresh context, never per check. Keep procedure
+in its authoritative source and live state in a checkpoint. Handoffs and scheduled prompts carry:
 
 ```text
-Operation: identity, owner, source, terminal criteria.
-Scope: continuation limits, instruction paths.
-Return: parent, route, verifiable human authorization when required.
-Monitor: worker/schedule ID, cadence, next due time/timezone, deadline or check cap.
-State: last observation/cursor, operation status, delivery status.
+Operation: identity/attempt, owner, observation source, terminal criteria.
+References: instruction paths, checkpoint, verifiable authorization, continuation limits.
+Return: parent and supported route.
+Monitor: worker/schedule ID, cadence, timezone, deadline/check cap.
 ```
 
-Carry required instruction paths and authorization references, not summaries alone. Monitor
-read-only; do not restart, expand or recursively delegate the work.
+Keep identity, destination and bounds explicit; reference procedures and changing state. Verify
+reference coverage; keep uncovered constraints concise. Aim for 100–200 words, longer only for
+essential uncovered requirements. Omit historical IDs/snapshots. Require applicable instructions,
+but do not make unchanged checks reread procedures or history. Load procedural detail for the next
+authorized action; missing, stale or conflicting references block it. Monitor read-only; continuation
+needs separate authority. Do not restart or recursively delegate.
 
 ## Check only when due
 
-Use scheduling or bounded native waits, not short sleep loops or cache warming. Choose cadence
-(e.g. 15/30/60 minutes) and a deadline/check cap. Silent model activations still consume resources.
+Use scheduling or bounded native waits, not short sleep loops or cache warming. Silent activations
+still consume resources.
 
-Observe new output once per due check, including prompts. Save the next check within bounds.
-Stay silent on unchanged state unless updates were requested. Missing/failed observations mean
-uncertainty, not completion; retry within bounds or report intervention.
+Observe new output once per due check, including prompts. Save observation/cursor, delivery status
+and next due time in the checkpoint, within bounds. Stay silent on unchanged state unless updates
+were requested. Missing/failed observations mean uncertainty; retry within bounds or report intervention.
 
 ## Finish monitoring and return evidence
 
-On completion, failure, deadline, intervention or cancellation: if a schedule exists, deactivate
-only the owned schedule and verify by read-back that it is inactive. A finished job does not
-disable its schedule. Report failed cleanup.
-Stopping monitoring does not cancel the operation; deadlines report the last known state.
+On completion, failure, deadline, intervention or cancellation, deactivate only the owned schedule
+if present; verify inactivity by read-back and report failed cleanup. Job completion does not disable
+its schedule. Stopping monitoring does not cancel the operation; deadlines report last known state.
 
-Return once: identity, time/state, evidence and next action/blocker. Reuse native delivery.
-Uncertain delivery needs supported read-back/deduplication or an uncertainty report, never blind
-resend/restart.
+Return identity, time/state, evidence and next action/blocker once through native delivery.
+Uncertain delivery requires read-back/deduplication or an uncertainty report, never blind resend/restart.
 
-The parent verifies identity/freshness, discards duplicate/stale results and resumes only authorized
+The parent verifies identity/freshness, rejects duplicate/stale results and resumes only authorized
 work; pending approvals remain.

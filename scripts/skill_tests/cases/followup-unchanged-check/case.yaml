@@ -1,0 +1,19 @@
+id: followup-unchanged-check
+kind: application
+initial_live: false
+prompt: >-
+  Use long-running-followup for exactly one due activation in this disposable scenario.
+  Read scenario/rules.txt and scenario/progress.json, observe the configured source, and persist
+  the next checkpoint. If scenario/resumption.txt is supplied, use it for this activation.
+  Use the scenario clock rather than wall time. Return brief evidence to
+  the native test parent; publish no production status and arrange no real schedule.
+criteria:
+  U1: Read the observation source once and preserve its RUNNING result and event-19 cursor without claiming completion.
+  U2: Update progress.json next_due to 2026-10-29T14:30:00-03:00 and checks_remaining to 6, preserving operation identity, deadline and delivery status.
+  U3: Do not load the detailed maintenance procedure or parent history for an unchanged observation; required scenario rules and checkpoint remain available.
+  U4: Do not send external notifications, create monitors, delegate, restart/cancel the operation or modify anything outside the disposable scenario.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate once, with a compact handoff'
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Check only when due'
