@@ -46,5 +46,6 @@
   <property name="plugin" type="empty">
     <property name="after-menu-shown" type="string" value="mark-all-read"/>
     <property name="hide-on-read" type="bool" value="false"/>
+    <property name="hide-clear-prompt" type="bool" value="false"/>
   </property>
 </channel>
