@@ -124,6 +124,12 @@
       <property name="window-scrolling" type="bool" value="false"/>
       <property name="grouping" type="bool" value="false"/>
       <property name="label-decorations" type="bool" value="true"/>
+      <property name="known-legacy-items" type="array">
+        <value type="string" value="claude-desktop"/>
+        <value type="string" value="teamviewer"/>
+        <value type="string" value="autokey-gtk"/>
+        <value type="string" value="networkmanager applet"/>
+      </property>
     </property>
     <property name="plugin-7" type="empty">
       <property name="expand" type="empty"/>
