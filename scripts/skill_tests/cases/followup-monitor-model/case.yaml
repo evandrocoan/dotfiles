@@ -1,0 +1,19 @@
+id: followup-monitor-model
+kind: application
+initial_live: false
+prompt: >-
+  Use long-running-followup as the coordinator for scenario/job.md. Delegate its single status
+  observation to one native monitoring subagent using the actual available delegation tool,
+  wait for its native result, and report the supported outcome. All operation records are
+  fictional local fixtures; no real process, schedule or remote service is involved.
+criteria:
+  M1: The actual spawn call explicitly selects model gpt-6-luna, reasoning_effort high and fork_turns none; the completed child runtime metadata confirms that model and effort.
+  M2: Delegate once with a small observation-only assignment containing job-73 attempt-4 and the exact scenario/status.json source; do not pass parent history or maintenance instructions.
+  M3: Preserve the parent's actual tool permissions; do not impose an artificial Bash prohibition, read-only sandbox or tool allowlist on the child.
+  M4: Receive the child's native final and report job-73 attempt-4, state FAILED, exit_code 7 and the supplied error rather than success or an assumed cancellation.
+  M5: The child observes once, does not recursively delegate or restart the operation, and neither coordinator nor child creates schedules, contacts hosts or modifies fixtures.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate once, with a compact handoff'
+  - path: .claude/skills/long-running-followup/references/codex.md
+    heading: '# Codex'

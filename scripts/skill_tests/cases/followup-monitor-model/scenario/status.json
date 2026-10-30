@@ -1,0 +1,1 @@
+{"operation":"job-73","attempt":4,"state":"FAILED","exit_code":7,"observed_at":"2026-10-29T14:15:00-03:00","error":"fixture output directory is full"}

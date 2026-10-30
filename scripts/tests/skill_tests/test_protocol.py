@@ -16,6 +16,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-native-trigger", "followup-scheduled-worker", "followup-uncertain-return",
         "followup-limits", "followup-near-miss",
         "followup-compact-resumption", "followup-unchanged-check", "followup-stale-reference",
+        "followup-monitor-model",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]

@@ -22,14 +22,18 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 ## Delegate once, with a compact handoff
 
 Separate waiting from continuation, even when inherited context contains a plan. Reuse one
-authorized monitor with fresh context, never one per check. Aim below 100 words; exceed only for
-essential monitoring constraints. Verify original monitoring, return and chat-lifecycle constraints
-survive. Reference changing state instead of copying snapshots; do not restate this skill. Core inputs:
+authorized monitor, never one per check. For monitoring subagents use `gpt-6-luna` / `high`
+explicitly, with fresh context and inherited tool permissions; report unavailability instead of
+substituting another model. Fill this short handoff shape; never drop applicable fields to meet
+a word target. Reference changing state instead of copying snapshots; do not restate this skill.
 
 ```text
-Operation: identity/attempt, exact status/log source, exit-code or log-event condition.
+Read: applicable instruction references; current monitoring state path.
+Observe: identity/attempt, exact source and terminal condition; once when due, silent if unchanged.
 Return: parent and supported route.
-Bounds: cadence, timezone, deadline/check cap; owned schedule/state path if used.
+Bounds: cadence, timezone, deadline/check cap.
+Stop: deactivate only owned schedule, read back inactivity; preserve operation.
+Chat: retain any no-archive/no-new-chat constraint.
 ```
 
 Include applicable instructions and required observation/access and return authorization.
