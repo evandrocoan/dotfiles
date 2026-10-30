@@ -22,6 +22,7 @@ import time
 # Even a diagnostic invocation must not write a cache beside the shared launcher.
 sys.dont_write_bytecode = True
 import launch_xfwm4 as wm
+import xfce_panel_startup as panel_startup
 
 
 ORDER = ("conf", "wm", "settings", "desktop", "panel")
@@ -70,16 +71,14 @@ class RecoveryHost(wm.Host):
         config = configparser.ConfigParser(interpolation=None)
         config.read_string(service.read_text())
         entry = config["D-BUS Service"]
-        command = shlex.split(entry["Exec"])
-        allowed_conf = {str(home / ".local/lib/xfce4/xfconf/xfconfd"),
-                        "/usr/lib/x86_64-linux-gnu/xfce4/xfconf/xfconfd"}
-        if (entry.get("Name") != "org.xfce.Xfconf" or len(command) != 1
-                or command[0] not in allowed_conf or "SystemdService" in entry):
-            raise wm.Refused("Unsupported xfconf activation command; preserve it and inspect manually")
+        try:
+            executable, conf_environment = panel_startup.parse_activation(entry, home)
+        except panel_startup.Refused as error:
+            raise wm.Refused(str(error)) from error
         plugins = (str(home / ".local/lib/xfce4/panel/plugins")
                    + ":/usr/lib/x86_64-linux-gnu/xfce4/panel/plugins")
         return {
-            "conf": Component("conf", "xfconfd", command[0], "org.xfce.Xfconf", ()),
+            "conf": Component("conf", "xfconfd", executable, "org.xfce.Xfconf", (), conf_environment),
             "wm": Component("wm", "xfwm4", "/usr/bin/xfwm4", ""),
             "settings": Component("settings", "xfsettingsd", "/usr/bin/xfsettingsd", "org.xfce.SettingsDaemon",
                                   ("--no-daemon", "--sm-client-disable")),

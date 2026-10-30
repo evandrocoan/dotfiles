@@ -41,6 +41,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Restore GNOME Keyring SSH after a crash](#restore-gnome-keyring-ssh-after-a-crash)
       - [Rebuild GNOME Keyring and GCR repairs](#rebuild-gnome-keyring-and-gcr-repairs)
       - [Manual XFCE recovery](#manual-xfce-recovery)
+      - [Prevent panel layout resets at login](#prevent-panel-layout-resets-at-login)
       - [Shared XFWM launcher](#shared-xfwm-launcher)
       - [Recover VS Code from a stuck Crashpad handler](#recover-vs-code-from-a-stuck-crashpad-handler)
       - [Increase the VS Code GPU watchdog timeout](#increase-the-vs-code-gpu-watchdog-timeout)
@@ -2218,7 +2219,8 @@ APT build-dependency versions or guarantee byte-identical package rebuilds.
 [`scripts/recover_xfce.py`](scripts/recover_xfce.py) provides manual recovery of the configuration
 daemon, window manager, settings daemon, desktop and custom panel. It requires a surviving local
 XFCE X11 session and X server; it does not restore applications or rebuild a terminated login.
-Keep it beside `launch_xfwm4.py` under `~/scripts/`. No service installation or enablement is needed.
+Keep it beside `launch_xfwm4.py` and `xfce_panel_startup.py` under `~/scripts/`. No service installation
+or enablement is needed.
 Run as the desktop user, without sudo, from any working directory:
 
 | Command | Purpose |
@@ -2272,6 +2274,100 @@ Automated desktop tests use isolated fixtures. Opt-in process-lifecycle tests us
 Python processes and systemd units, without starting X clients:
 `cd ~/scripts && XFCE_RECOVERY_SYSTEMD_TESTS=1 poetry run python -B -m unittest test_launch_xfwm4.ScopeLifecycleTests`.
 Development tests do not restart the real desktop.
+
+#### Prevent panel layout resets at login
+
+A panel XML can inherit essential properties from Linux Mint's system defaults. If an early
+notification activates Xfconf before the graphical session supplies its configuration search path,
+those inherited values are missing and the panel can import generic defaults over the user's
+layout. Restoring the XML alone does not repair the next login's environment.
+
+[`scripts/xfce_panel_startup.py`](scripts/xfce_panel_startup.py) repairs the existing local-build
+setup: its D-Bus entry starts the same daemon with the Mint configuration path, and its recognized
+autostart entry stops killing and relaunching Xfconf. The settings/panel startup sequence remains.
+Manual recovery recognizes this exact environment overlay while retaining its executable and
+session checks. Unknown launch commands are refused instead of rewritten.
+
+Run as the desktop user without sudo. The repair requires the existing local Xfconf executable,
+Mint defaults and GLib; it installs no packages. It saves private original launcher bytes and
+metadata under `~/.local/state/xfce-panel-startup/`. The generated launchers contain paths for the
+current account; reusable source stays portable.
+
+```bash
+python3 ~/scripts/xfce_panel_startup.py status
+python3 ~/scripts/xfce_panel_startup.py apply
+```
+
+`status` is read-only. `apply` is repeatable, verifies its writes, and changes only startup files;
+it does not restart running applications or restore the panel XML. A currently running daemon
+retains its old environment. Reboot to exercise the repaired activation. If the panel layout is
+already damaged, prepare the controlled restoration below before that reboot.
+
+For a one-boot diagnosis, use
+[`scripts/diagnose_xfce_panel_boot.py`](scripts/diagnose_xfce_panel_boot.py), kept beside
+`xfce_panel_startup.py`. Capture additionally requires the installed `strace`. Preparation saves a
+fresh private baseline and prints a run identifier; it does not install hooks. To observe without
+restoring anything, omit the restoration option. To restore the committed panel XML, explicitly
+select the desired Git revision:
+
+```bash
+python3 ~/scripts/diagnose_xfce_panel_boot.py prepare --restore-from-git HEAD
+```
+
+Preparation pins the commit and XML checksum; later changes to `HEAD` do not change that snapshot.
+Alternatively, use `--expected-xml PATH` with a saved panel XML. Inspect the selected revision or
+file before activating. Replace `RUN_ID` below with the identifier printed by preparation:
+
+```bash
+python3 ~/scripts/diagnose_xfce_panel_boot.py activate RUN_ID
+python3 ~/scripts/diagnose_xfce_panel_boot.py status RUN_ID
+```
+
+Activate in the same boot as preparation, then reboot normally. On the first captured activation
+in the next boot, the tool backs up the then-current XML and restores the pinned XML once, before
+the daemon reads it. Other launches cannot repeat restoration. A durable uncertain/interrupted
+receipt is not retried automatically. Logging or tracer failure reports an error and starts the
+original daemon; it does not prove capture succeeded. Instrumentation can change login timing.
+
+After login, leave the panel unchanged while inspecting the run directory printed by `status`.
+The launch JSON contains the configuration-environment allowlist, boot identity, PID and XML hash;
+XML snapshots and targeted syscall traces show the loading/persistence sequence. Confirm the first
+daemon's Mint search path, reads of the Mint defaults, successful restoration when requested, and
+the intended layout. A later daemon's environment alone does not prove the first one was correct.
+Raw captures and backups are private and remain outside Git. The tracked tests use synthetic XML.
+
+Remove the temporary hooks after collecting the result:
+
+```bash
+python3 ~/scripts/diagnose_xfce_panel_boot.py cleanup RUN_ID
+python3 ~/scripts/xfce_panel_startup.py status
+python3 ~/scripts/recover_xfce.py --component panel
+```
+
+Cleanup disarms restoration, restores the exact pre-capture launchers, detaches only identified
+diagnostic tracers and retains evidence. When capture was prepared after `apply`, cleanup preserves
+the permanent repair. It never changes the panel XML or terminates the daemon. Only one capture
+may be active. While its wrapper is installed, manual recovery can refuse the unfamiliar D-Bus
+command: **clean up capture first, then run manual recovery**. Keep the scripts installed until
+cleanup completes.
+
+To remove the permanent repair, clean up any active capture first, then run
+`python3 ~/scripts/xfce_panel_startup.py undo`. This restores the saved startup entries and can
+reintroduce the original reset on later logins; it does not undo the restored layout. A conflicting
+user edit stops replacement and reports the affected file. Preserve the private transaction state
+and reconcile that edit rather than deleting state or forcing an overwrite. Partial apply/undo
+records show their phase; rerunning is safe only while launcher contents still match that
+transaction's before/after versions. Before updating the scripts, clean up active capture and keep
+the repair and recovery helpers together; `apply` refuses a candidate that differs from saved
+transaction state instead of silently replacing its baseline.
+
+Portable checks run in the repository's normal test gate. Installed-Xfconf integration is opt-in on
+the Mint/local-build host and uses a disposable home and private D-Bus, never the live desktop:
+
+```bash
+cd ~/scripts
+XFCE_PANEL_INTEGRATION_TESTS=1 poetry run python -B -m unittest test_xfce_panel_integration -v
+```
 
 #### Shared XFWM launcher
 

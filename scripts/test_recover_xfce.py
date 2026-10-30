@@ -143,14 +143,15 @@ class RecoveryCliTests(unittest.TestCase):
     def test_help_import_does_not_write_cache_beside_scripts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for name in ("launch_xfwm4.py", "recover_xfce.py"):
+            sources = ("launch_xfwm4.py", "recover_xfce.py", "xfce_panel_startup.py")
+            for name in sources:
                 (root / name).write_text((Path(__file__).parent / name).read_text())
             result = subprocess.run([sys.executable, str(root / "recover_xfce.py"), "--help"],
                                     env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
                                     capture_output=True, text=True, timeout=5, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("--component", result.stdout)
-            self.assertEqual(sorted(path.name for path in root.iterdir()), ["launch_xfwm4.py", "recover_xfce.py"])
+            self.assertEqual(sorted(path.name for path in root.iterdir()), sorted(sources))
 
 
 class RecoveryTests(unittest.TestCase):
@@ -301,6 +302,36 @@ class RecoveryTests(unittest.TestCase):
     def test_unsupported_activation_command_is_not_replaced(self):
         self.desktop.service_path.write_text("[D-BUS Service]\nName=org.xfce.Xfconf\nExec=/tmp/unknown\n")
         self.assert_refused_without_submission("Unsupported xfconf activation")
+
+    def test_repaired_activation_starts_daemon_with_mint_overlay(self):
+        self.desktop.env["XDG_CONFIG_DIRS"] = "/etc/xdg"
+        self.desktop.write_process(102, "xfce4-session", self.desktop.scope)
+        service = self.desktop.service_path
+        service.write_text(service.read_text().replace(
+            "Exec=", "Exec=/usr/bin/env XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg "))
+        self.desktop.specs = self.desktop.host.components(self.desktop.host.discover())
+        self.recover(start=True, component="conf")
+        self.assertEqual(len(self.desktop.submissions), 1)
+        command = self.desktop.submissions[0]
+        self.assertEqual(command[-1], "/home/fixture/.local/lib/xfce4/xfconf/xfconfd")
+        self.assertEqual(self.desktop.submitted_environment(command)["XDG_CONFIG_DIRS"],
+                         "/etc/xdg/xdg-xfce:/etc/xdg")
+
+    def test_activation_overlay_rejects_independent_extras(self):
+        path = self.desktop.service_path
+        before = path.read_text()
+        daemon = "/home/fixture/.local/lib/xfce4/xfconf/xfconfd"
+        for command in (
+            "/usr/bin/env LD_PRELOAD=unsafe " + daemon,
+            "/usr/bin/env XDG_CONFIG_DIRS=/etc/xdg " + daemon,
+            "/usr/bin/env XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg LD_PRELOAD=unsafe " + daemon,
+            "/usr/bin/env -i XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg " + daemon,
+            "/usr/bin/env XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg " + daemon + " --extra",
+            "/bin/sh -c " + daemon,
+        ):
+            with self.subTest(command=command):
+                path.write_text(before.replace("Exec=" + daemon, "Exec=" + command))
+                self.assert_refused_without_submission("Unsupported xfconf activation")
 
     def test_missing_binary_blocks_before_any_mutation(self):
         (self.desktop.disk / "home/fixture/.local/bin/xfce4-panel").unlink()
