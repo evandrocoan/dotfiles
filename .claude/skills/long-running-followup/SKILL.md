@@ -21,40 +21,39 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 
 ## Delegate once, with a compact handoff
 
-Reuse one authorized worker/monitor; delegate with fresh context, never per check. Keep procedure
-in its authoritative source and live state in a checkpoint. Handoffs and scheduled prompts carry:
+Separate waiting from continuation, even when inherited context contains a plan. Reuse one
+authorized monitor with fresh context, never one per check. Aim below 100 words; exceed only for
+essential monitoring constraints. Verify original monitoring, return and chat-lifecycle constraints
+survive. Reference changing state instead of copying snapshots; do not restate this skill. Core inputs:
 
 ```text
-Operation: identity/attempt, owner, observation source, terminal criteria.
-References: instruction paths, checkpoint, verifiable authorization, continuation limits.
+Operation: identity/attempt, exact status/log source, exit-code or log-event condition.
 Return: parent and supported route.
-Monitor: worker/schedule ID, cadence, timezone, deadline/check cap.
+Bounds: cadence, timezone, deadline/check cap; owned schedule/state path if used.
 ```
 
-Keep identity, destination and bounds explicit; reference procedures and changing state. Verify
-reference coverage; keep uncovered constraints concise. Aim for 100–200 words, longer only for
-essential uncovered requirements. Omit historical IDs/snapshots. Require applicable instructions,
-but do not make unchanged checks reread procedures or history. Load procedural detail for the next
-authorized action; missing, stale or conflicting references block it. Monitor read-only; continuation
-needs separate authority. Do not restart or recursively delegate.
+Include applicable instructions and required observation/access and return authorization.
+Exclude maintenance plans, future-step checklists and continuation approvals from the assignment
+and monitor reads, even at completion. Missing future-step references do not block observation;
+missing monitoring inputs need clarification. Do not restart or recursively delegate.
 
 ## Check only when due
 
-Use scheduling or bounded native waits, not short sleep loops or cache warming. Silent activations
-still consume resources.
+Use scheduling or bounded native waits, not short polling loops or cache warming.
 
-Observe new output once per due check, including prompts. Save observation/cursor, delivery status
-and next due time in the checkpoint, within bounds. Stay silent on unchanged state unless updates
-were requested. Missing/failed observations mean uncertainty; retry within bounds or report intervention.
+Observe read-only once per due check, including prompts. Save only needed cursor/delivery/next-due
+state; simple waits need no new checkpoint. Stay silent on unchanged state unless updates were
+requested. Missing/failed observations mean uncertainty; retry within bounds or report intervention.
 
 ## Finish monitoring and return evidence
 
-On completion, failure, deadline, intervention or cancellation, deactivate only the owned schedule
-if present; verify inactivity by read-back and report failed cleanup. Job completion does not disable
-its schedule. Stopping monitoring does not cancel the operation; deadlines report last known state.
+On completion, failure, deadline, intervention or cancellation, deactivate only the owned schedule,
+if any; verify inactivity by read-back and report failed cleanup. Stopping monitoring does not
+cancel the operation; deadlines report last known state.
 
-Return identity, time/state, evidence and next action/blocker once through native delivery.
+Return identity, time/state, exit code or matched event, and concise evidence once through native delivery.
+Completion proves neither downstream validation nor permission to continue.
 Uncertain delivery requires read-back/deduplication or an uncertainty report, never blind resend/restart.
 
-The parent verifies identity/freshness, rejects duplicate/stale results and resumes only authorized
-work; pending approvals remain.
+The parent checks identity/freshness, rejects duplicate/stale results and consults only prerequisites
+for its next authorized action. Missing/stale prerequisites and pending approvals still block it.

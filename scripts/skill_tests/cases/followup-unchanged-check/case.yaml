@@ -10,7 +10,7 @@ prompt: >-
 criteria:
   U1: Read the observation source once and preserve its RUNNING result and event-19 cursor without claiming completion.
   U2: Update progress.json next_due to 2026-10-29T14:30:00-03:00 and checks_remaining to 6, preserving operation identity, deadline and delivery status.
-  U3: Do not load the detailed maintenance procedure or parent history for an unchanged observation; required scenario rules and checkpoint remain available.
+  U3: Do not read or require the maintenance procedure, historical approvals or parent history; required scenario rules and checkpoint remain available.
   U4: Do not send external notifications, create monitors, delegate, restart/cancel the operation or modify anything outside the disposable scenario.
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md
