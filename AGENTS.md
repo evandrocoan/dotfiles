@@ -138,6 +138,11 @@ an OS boundary against them. Intake explicitly reselects read-only permissions. 
 may inherit the last review permissions. Retain original consumer chat contexts when fresh chats
 are needed after folder/instruction changes. Do not update loaded historical instructions.
 
+Operational health, when enabled, is observational output of the bounded consumer. Its independent
+desktop checker reads health and user-manager evidence and owns only notification state. It must
+never write queue/native state, drive reviews, clear uncertain effects, answer holds, or restart
+execution. Recovery notices require new matching evidence; unrelated success is not recovery.
+
 ### Systemd user services
 
 Installed via `cp -rv ~/scripts/install/* ~/.config/` followed by

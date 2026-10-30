@@ -1,0 +1,11 @@
+[Unit]
+Description=Check GitLab review monitor health independently every two minutes
+
+[Timer]
+OnStartupSec=30s
+OnUnitActiveSec=120s
+AccuracySec=5s
+Unit=codex-monitor-alert.service
+
+[Install]
+WantedBy=timers.target

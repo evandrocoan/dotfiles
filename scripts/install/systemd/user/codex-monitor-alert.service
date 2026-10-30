@@ -1,0 +1,14 @@
+[Unit]
+Description=Notify the desktop about GitLab review monitor failures
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I %h/scripts/codex_monitor_alert.py
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
+Environment=TZ=America/Sao_Paulo
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
+MemoryMax=96M
+TasksMax=16
+TimeoutStartSec=90s

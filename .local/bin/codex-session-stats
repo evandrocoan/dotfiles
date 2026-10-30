@@ -1733,10 +1733,15 @@ def monitor_shared_owner(config: dict) -> dict:
                 or not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid()
                 or [metadata.st_dev, metadata.st_ino] != receipt["socket_identity"]):
             raise RuntimeError("shared server lease or socket identity is no longer valid")
+        mq_health_signal(config,'native:shared',message='A conexão compartilhada do Codex foi validada novamente.')
         return receipt
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
-        raise RuntimeError("shared Codex application is unavailable or unverified; close the app and use "
-                           "monitor-gitlab launch-app --app PATH --codex PATH") from error
+        mq_health_signal(config,'native:shared',error=error,kind='Conexão do Codex indisponível',
+            message='O monitor não validou a conexão compartilhada. Feche o app normalmente e abra Codex Monitor; consulte o status da fila.')
+        failure = RuntimeError("shared Codex application is unavailable or unverified; close the app and use "
+                               "monitor-gitlab launch-app --app PATH --codex PATH")
+        failure.health_reported = True
+        raise failure from error
 
 
 def monitor_shared_peer(config: dict, connection):
@@ -2545,12 +2550,18 @@ def monitor_native(config: dict, method: str, params: dict, *, followup=None) ->
         timeout = mq_io_timeout(config,"native_timeout")
         return await asyncio.wait_for(exchange(),timeout)
     try:
-        return asyncio.run(bounded())
+        result = asyncio.run(bounded())
+        mq_health_signal(config,'native:transport',message='Uma nova chamada ao servidor Codex foi concluída.')
+        return result
     except (OSError, TimeoutError, WebSocketException) as error:
         if mq_expired(config):
             raise MonitorCycleYield('cycle ended during native RPC; reconcile delivery',issued=True) from error
         diagnostic = f"{type(error).__name__}, errno={getattr(error, 'errno', None)}"
-        raise RuntimeError(f"native {method} transport failed or timed out ({diagnostic}); reconcile before retry") from error
+        mq_health_signal(config,'native:transport',error=error,kind='Comunicação com o Codex',
+            message='Uma chamada ao servidor Codex falhou ou excedeu o prazo; consulte o diagnóstico da fila.')
+        failure = RuntimeError(f"native {method} transport failed or timed out ({diagnostic}); reconcile before retry")
+        failure.health_reported = True
+        raise failure from error
 
 
 def monitor_credential(config: dict) -> tuple[str, str]:
@@ -2634,6 +2645,11 @@ class MonitorGitLab:
             raise RuntimeError("invalid GitLab API route")
         if self.guard:
             self.guard()
+        health_key = 'gitlab:http:'+str(self.config.get('project_id','global'))+':'+hashlib.sha256(route.encode()).hexdigest()[:16]
+        transport_key = 'gitlab:transport:'+str(self.config.get('project_id','global'))
+        repository = self.config.get('project_id')
+        target = re.match(r'^/projects/(\d+)/merge_requests/(\d+)(?:/|\?|$)',route)
+        iid = int(target[2]) if target and int(target[1])==repository else None
         request = urllib.request.Request(self.base + route, headers={
             "PRIVATE-TOKEN": self._token, "Accept": "application/json"})
         try:
@@ -2644,13 +2660,27 @@ class MonitorGitLab:
                         raise RuntimeError("GitLab response exceeds configured byte bound")
                     self.last_date = response.headers.get("Date")
                     self.last_headers = response.headers
-                    return json.loads(body)
+                    value = json.loads(body)
+                    mq_health_signal(self.config,health_key,message='A mesma leitura do GitLab voltou a responder.')
+                    mq_health_signal(self.config,transport_key,message='Uma nova conexão ao GitLab foi concluída.')
+                    return value
         except urllib.error.HTTPError as error:
-            raise RuntimeError(f"GitLab GET rejected (HTTP {error.code}); no redirect followed") from error
+            mq_health_signal(self.config,health_key,error=error,kind='Leitura do GitLab',
+                repository=repository,iid=iid,
+                threshold=1 if error.code in {401,403} else 2,
+                message='GitLab recusou uma leitura (HTTP '+str(error.code)+'). Consulte o diagnóstico da fila.')
+            failure = RuntimeError(f"GitLab GET rejected (HTTP {error.code}); no redirect followed")
+            failure.health_reported = True
+            raise failure from error
         except (urllib.error.URLError,OSError) as error:
             if mq_expired(self.config):
                 raise MonitorCycleYield('cycle ended during GitLab read') from error
-            raise RuntimeError("GitLab GET transport failed") from error
+            mq_health_signal(self.config,transport_key,error=error,kind='Conexão com o GitLab',threshold=2,
+                repository=repository,
+                message='A conexão de leitura do GitLab falhou em ciclos distintos. Consulte o diagnóstico da fila.')
+            failure = RuntimeError("GitLab GET transport failed")
+            failure.health_reported = True
+            raise failure from error
 
     def project(self):
         project = self.get(f"/projects/{self.config['project_id']}")
@@ -5041,6 +5071,7 @@ def mq_human_candidates(config,queue,record):
     for provider,session in mq_rotated_sources(queue,key,sessions,lambda v:':'.join(v)):
         try:
             yield from mq_session_candidates(config,queue,record,provider,session)
+            mq_health_ok(config,'human_session_error:'+provider+':'+session)
         except (OSError,RuntimeError,ValueError,KeyError) as failure:
             mq_diagnostic(queue,'human_session_error:'+provider+':'+session,failure)
 
@@ -5052,6 +5083,7 @@ def mq_session_candidates(config,queue,record,provider,session):
             seen = 'human:'+session+':'+turn
             try:
                 items = mq_codex_items(config,session,turn)
+                mq_health_ok(config,'human_source_error:'+session+':'+turn)
             except (OSError,RuntimeError,ValueError,KeyError) as failure:
                 mq_diagnostic(queue,'human_source_error:'+session+':'+turn,failure)
                 continue
@@ -5374,6 +5406,7 @@ def mq_intake(config,queue,record):
                 continue
             try:
                 mq_direct_result(job,stage,observed)
+                mq_health_ok(config,'question_continuation:'+source['session'])
             except (RuntimeError,ValueError) as failure:
                 mq_diagnostic(queue,'question_continuation:'+source['session'],failure)
                 continue
@@ -5585,7 +5618,10 @@ def mq_observe_outputs(config,queue,job,stage):
 
 
 def mq_try_observe_outputs(config,queue,job,stage):
-    try:return mq_observe_outputs(config,queue,job,stage)
+    try:
+        result = mq_observe_outputs(config,queue,job,stage)
+        if result:mq_health_ok(config,'output_observation:'+stage['id'])
+        return result
     except MonitorOutputObservationError as failure:
         mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
         return False
@@ -5706,6 +5742,7 @@ def mq_inventory(config,queue):
                 if not cursor['pending']:
                     if cursor['final']:
                         with queue.atomic():queue.set_meta(key,None)
+                        mq_health_ok(config,'inventory_error:'+str(project['id']))
                         break
                     page,final = next(api.pages(route,start_page=cursor['page']))
                     cursor = {'page':cursor['page']+1,'pending':[int(row['iid']) for row in page],'final':final}
@@ -5728,6 +5765,7 @@ def mq_inventory(config,queue):
                         closed_record = queue.mr(project['id'],iid)
                         closed_record.update(mr_state=context['mr']['state'],mr_state_checked_at=mq_stamp())
                         queue.put_mr(closed_record)
+                        mq_health_ok(config,f"inventory_error:{project['id']}:{iid}")
                         continue
                     config.setdefault('_checked_mr_states',{})[(project['id'],iid)] = 'opened'
                     record = queue.mr(project['id'],context['iid'])
@@ -5755,6 +5793,7 @@ def mq_inventory(config,queue):
                             title=context['mr']['title'],mr_state='opened',mr_state_checked_at=mq_stamp())
                         queue.put_mr(fresh)
                         mq_retire_self_activity(queue,fresh)
+                    mq_health_ok(config,f"inventory_error:{project['id']}:{iid}")
                 except (OSError,RuntimeError,ValueError) as failure:
                     mq_diagnostic(queue,f"inventory_error:{project['id']}:{iid}",failure)
         except MonitorDeferred as failure:
@@ -5774,6 +5813,8 @@ def mq_refresh_saved_mr_state(config,queue):
         mq_budget(config)
         project = configured[record['repository_id']]
         scoped = mq_repository(config,project['id'])
+        health_scope = f"mr_state_error:{project['id']}:{record['iid']}"
+        if config.get('_health') is not None:config['_health']['mr_state_scope'] = health_scope
         mr = MonitorGitLab(scoped).mr(record['iid'])
         fresh = queue.mr(record['repository_id'],record['iid'])
         if (fresh['repository_id'],fresh['iid'])!=(project['id'],record['iid']):
@@ -5781,6 +5822,7 @@ def mq_refresh_saved_mr_state(config,queue):
         fresh.update(mr_state=mr['state'],mr_state_checked_at=mq_stamp(),title=mr['title'])
         with queue.atomic():queue.put_mr(fresh)
         config.setdefault('_checked_mr_states',{})[(project['id'],record['iid'])] = mr['state']
+        mq_health_ok(config,health_scope)
         return True
     return False
 
@@ -5936,6 +5978,7 @@ def mq_step(config,queue):
     job = queue.reserve(allowed)
     if job is None:
         return False
+    if config.get('_health') is not None:config['_health']['current_job'] = job['id']
     enabled = job['repository_id'] in {p['id'] for p in mq_repositories(config)}
     scoped = (mq_repository(config,job['repository_id']) if enabled else
               {**config,'project_id':job['repository_id'],'_project_id':job['repository_id'],
@@ -6238,6 +6281,7 @@ def mq_lock(config, name, *, blocking=False):
 def mq_diagnostic(queue,key,error):
     with queue.atomic():
         queue.set_meta(key,{'at':mq_stamp(),'error':str(error)[:3000]})
+    mq_health_diagnostic(queue,key,error)
 
 
 def mq_queue_unread(queue,stage,anchor,turn):
@@ -6283,6 +6327,7 @@ def mq_notify_unread(config,queue):
                     with queue.atomic():
                         if queue.meta(key)==notice:queue.set_meta(key,{**notice,'pending':False})
                         queue.set_meta('unread_error:'+session,None)
+                    mq_health_ok(config,'unread_error:'+session)
                 # Load only the idle native context and app plugin; send no model input and
                 # preserve its instructions, workspace and permissions. Active chats wait.
                 monitor_native(scoped,'thread/resume',{'threadId':session,'excludeTurns':True,'config':{
@@ -6315,6 +6360,7 @@ def mq_scan(config,queue):
                 queue.set_meta('intake_next_mr',[following['repository_id'],following['iid']])
             try:
                 mq_intake(mq_repository(intake,record['repository_id']),queue,record)
+                mq_health_ok(config,f"intake_error:{record['repository_id']}:{record['iid']}")
             except (OSError,RuntimeError,ValueError) as failure:
                 mq_diagnostic(queue,f"intake_error:{record['repository_id']}:{record['iid']}",failure)
     except MonitorCycleYield:
@@ -6327,6 +6373,7 @@ def mq_scan(config,queue):
         try:
             if mq_inventory(inventory,queue):
                 with queue.atomic():queue.set_meta('last_inventory',mq_stamp())
+                mq_health_ok(config,'scan_error')
         except MonitorCycleYield:
             pass
         except (OSError,RuntimeError,ValueError) as failure:
@@ -6612,7 +6659,7 @@ def mq_rotate_effects(queue,limit):
         if not removed:break
 
 
-def mq_forget_mr(queue,record):
+def mq_forget_mr(queue,record,*,check_only=False):
     repository,iid=record['repository_id'],record['iid']
     jobs=[job for job in queue.jobs() if (job['repository_id'],job['iid'])==(repository,iid)]
     effects=[effect for effect in queue.effects() if (effect['repository_id'],effect['iid'])==(repository,iid)]
@@ -6649,6 +6696,7 @@ def mq_forget_mr(queue,record):
         if any((notice:=queue.meta('app_unread:'+session)) and notice.get('pending')
                 for _,session in dict.fromkeys(sessions)):
             return False
+        if check_only:return True
         queue.db.execute('DELETE FROM jobs WHERE repository=? AND iid=?',(repository,iid))
         queue.db.execute('DELETE FROM effects WHERE repository=? AND iid=?',(repository,iid))
         queue.db.execute('DELETE FROM retired_jobs WHERE repository=? AND iid=?',(repository,iid))
@@ -6682,6 +6730,7 @@ def mq_rotate_mrs(queue,config,limit):
             removed_project=record['repository_id'] not in configured
             if not (closed or removed_project):continue
             if mq_forget_mr(queue,record):
+                mq_health_retire_scope(config,record['repository_id'],record['iid'])
                 removed=True;break
         if not removed:break
 
@@ -6730,6 +6779,167 @@ def mq_rotate_history(queue,config,*,include_remote=False):
     mq_rotate_metadata(queue,limit)
 
 
+def mq_health_signal(config,key,*,error=None,kind='Falha operacional',message=None,threshold=1,job=None,repository=None,iid=None,retired=False):
+    """Observational only. No exporter failure may change a native/queue transition."""
+    health = config.get('_health')
+    if health is None:return
+    try:
+        previous = health['checks'].get(key)
+        if error is None:
+            if previous is None:return
+            previous.update(status='retired' if retired else 'ok',last_seen=mq_stamp(),
+                message=message or 'Uma nova observação da mesma operação confirmou recuperação.')
+            return
+        same = previous is not None and previous['status']=='failed'
+        count = previous['failures'] if same else 0
+        if not same or previous['cycle']!=health['cycle_id']:count += 1
+        health['checks'][key] = {'status':'failed','kind':kind,'message':(message or
+            'A operação falhou; consulte o diagnóstico '+key+'.')[:600],
+            'episode':previous['episode'] if same else monitor_id(),
+            'first_seen':previous['first_seen'] if same else mq_stamp(),'last_seen':mq_stamp(),
+            'failures':count,'cycle':health['cycle_id'],
+            'threshold':min(previous['threshold'],threshold) if same else threshold,'job':job,
+            'repository':repository,'iid':iid}
+    except Exception as failure:
+        print('monitor health observation failed: '+type(failure).__name__,file=sys.stderr)
+
+
+def mq_health_diagnostic(queue,key,error):
+    config = queue.config
+    if not config.get('_health'):return
+    cause = error
+    while isinstance(cause,BaseException):
+        if getattr(cause,'health_reported',False):return
+        cause = cause.__cause__
+    health = config['_health']
+    job = health.get('current_job') if key=='consumer_error' else None
+    if key.startswith('recovery_error:'):job = key.split(':',1)[1]
+    if key.startswith('intake_error:'):
+        _,repository,iid = key.split(':')
+        job = (queue.mr(int(repository),int(iid)).get('hold') or {}).get('job_id')
+    scope = key+(':'+job if key=='consumer_error' and job else '')
+    if key=='mr_state_error':scope = health.get('mr_state_scope',key)
+    repository,iid = None,None
+    if scope.startswith(('inventory_error:','intake_error:','mr_state_error:')):
+        parts = scope.split(':')
+        repository = int(parts[1])
+        if len(parts)>2:iid = int(parts[2])
+    elif job:
+        owner = queue.job(job)
+        if owner:repository,iid = owner['repository_id'],owner['iid']
+    mq_health_signal(config,'diagnostic:'+scope,error=error,
+        kind='Processamento da fila' if key=='consumer_error' else 'Leitura ou recuperação',
+        threshold=1 if key=='consumer_error' else 2,job=job,repository=repository,iid=iid,
+        message='A operação '+scope+' falhou ('+type(error).__name__+'). Consulte o diagnóstico da fila.')
+
+
+def mq_health_ok(config,key):
+    mq_health_signal(config,'diagnostic:'+key)
+
+
+def mq_health_retire_scope(config,repository,iid):
+    """Only a validated queue retirement proves that an MR observation left scope."""
+    try:
+        for value in config.get('_health',{}).get('checks',{}).values():
+            if (value.get('repository'),value.get('iid'))==(repository,iid):
+                value.update(status='retired',message='O MR saiu do escopo ativo, sem crédito de revisão.')
+    except Exception as failure:
+        print('monitor health retirement failed: '+type(failure).__name__,file=sys.stderr)
+
+
+def mq_health_publish(config,queue,phase):
+    import time
+    try:
+        health = config.get('_health')
+        if health is None:return
+        jobs = queue.jobs()
+        scoped = {j['id']:j for j in jobs
+                  if j['repository_id'] in {p['id'] for p in mq_repositories(config)}}
+        current = {key:job for key,job in scoped.items() if job['state']!='completed'}
+        if phase=='failed':
+            mq_health_signal(config,'cycle',error=True,kind='Ciclo interrompido',message='O ciclo não terminou normalmente. Consulte o journal do monitor.')
+        elif phase=='finished':
+            mq_health_signal(config,'cycle',message='Um novo ciclo terminou normalmente; falhas de operações permanecem separadas.')
+        if phase!='running':
+            for job in scoped.values():
+                latest = {}
+                for stage in job['stages']:
+                    latest[stage['reviewer']] = mq_effective_stage(stage)
+                for reviewer,stage in latest.items():
+                    key = 'reviewer:'+job['id']+':'+reviewer
+                    label = reviewer+' / projeto '+str(job['repository_id'])+' / MR !'+str(job['iid'])
+                    if stage['state']=='failed' and job['state']!='completed':
+                        mq_health_signal(config,key,error=True,job=job['id'],kind='Falha do revisor',
+                            message=label+' terminou com falha. Consulte o estágio '+stage['id']+' no status da fila.')
+                    elif stage['state']=='succeeded':
+                        mq_health_signal(config,key,message=label+' produziu um novo resultado válido; consulte o status da fila.')
+                    overdue = 'overdue:'+job['id']+':'+reviewer
+                    if (stage['state']=='running' and stage['id'] in config.get('_observed_attempts',set())
+                            and mq_stamp()>stage.get('review_deadline',float('inf'))):
+                        mq_health_signal(config,overdue,error=True,job=job['id'],kind='Execução incerta ou atrasada',
+                            message=label+' excedeu o prazo e seu término ainda não foi comprovado. Nenhuma execução foi reiniciada.')
+                    elif stage['state'] in {'failed','succeeded'}:
+                        mq_health_signal(config,overdue,message=label+' teve o término comprovado; isso não afirma sucesso da revisão.')
+        for value in health['checks'].values():
+            if value.get('job') and value['job'] not in current and value['status']!='ok':
+                value.update(status='retired',message='O trabalho saiu do escopo ativo, sem crédito de revisão.')
+        # Operational scope expires on validated closure, independently of history retention.
+        configured = {p['id'] for p in mq_repositories(config)}
+        for record in queue.mrs():
+            closed = config.get('_checked_mr_states',{}).get((record['repository_id'],record['iid'])) in {'closed','merged'}
+            if ((closed or record['repository_id'] not in configured)
+                    and mq_forget_mr(queue,record,check_only=True)):
+                mq_health_retire_scope(config,record['repository_id'],record['iid'])
+        # Bound recovered history while retaining every active issue. Overflow is visible, never healthy.
+        checks = health['checks']
+        if len(checks)>1800:
+            for key,value in sorted(list(checks.items()),key=lambda p:p[1]['last_seen']):
+                if len(checks)<=1800:break
+                if value['status']!='failed':checks.pop(key)
+        if len(checks)>2048:raise RuntimeError('too many active health observations')
+        document = {'version':1,'boot_id':health['boot_id'],'queue_id':health['queue_id'],
+            'invocation_id':os.environ.get('INVOCATION_ID',''),
+            'cycle_id':health['cycle_id'],'phase':phase,'sampled':time.monotonic(),'wall_time':mq_stamp(),
+            'interval_seconds':config['interval_minutes']*60,'checks':checks,
+            'summary':{'pending':sum(j['state']=='pending' for j in current.values()),
+                'running':sum(j['state']=='running' for j in current.values()),
+                'holds':sum(bool(r.get('hold')) for r in queue.mrs())}}
+        raw = json.dumps(document,ensure_ascii=False,allow_nan=False).encode()
+        if len(raw)>1024*1024:raise RuntimeError('health snapshot exceeds byte bound')
+        monitor_private(queue.path.parent,directory=True)
+        mq_service_write(queue.path.with_name('health.json'),document)
+    except Exception as failure:
+        print('monitor health export failed: '+type(failure).__name__,file=sys.stderr)
+
+
+def mq_health_begin(config,queue):
+    try:
+        identity = monitor_digest({'queue':config['queue_file'],'origin':config['gitlab_url'],
+            'projects':mq_repositories(config),'home':config['codex_home']})
+        previous = {}
+        path = queue.path.with_name('health.json')
+        try:
+            monitor_private(path)
+            with os.fdopen(os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK),'rb') as stream:
+                raw = stream.read(1024*1024+1)
+            if len(raw)>1024*1024:raise ValueError('oversize health snapshot')
+            saved = json.loads(raw)
+            if saved.get('version')==1 and saved.get('queue_id')==identity:
+                previous = saved['checks']
+                if not isinstance(previous,dict) or len(previous)>2048:raise ValueError('invalid checks')
+        except FileNotFoundError:pass
+        except (OSError,ValueError,KeyError,TypeError):
+            # Old malformed diagnostics are not evidence of a current failure or recovery.
+            print('monitor health snapshot invalid; rebuilding from fresh observations',file=sys.stderr)
+            previous = {}
+        config['_health'] = {'checks':previous,'cycle_id':monitor_id(),'queue_id':identity,
+            'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip()}
+        mq_health_publish(config,queue,'running')
+    except Exception as failure:
+        config.pop('_health',None)
+        print('monitor health startup failed: '+type(failure).__name__,file=sys.stderr)
+
+
 def mq_tick(path):
     import time
     config = mq_config(Path(path))
@@ -6738,8 +6948,10 @@ def mq_tick(path):
     except BlockingIOError:
         return {'cycle':'busy','writes_performed':False}
     queue = None
+    phase = 'failed'
     try:
         queue = MonitorQueue(config)
+        mq_health_begin(config,queue)
         config['_checked_mr_states'] = {}
         config['_cycle_deadline'] = time.monotonic()+config['cycle_seconds']
         config['_output_budget'] = {'remaining':min(5.0,config['cycle_seconds']/8)}
@@ -6762,7 +6974,14 @@ def mq_tick(path):
             try:work = mq_lock(config,'work')
             except BlockingIOError:pass
             else:
-                try:mq_reconcile_effects(recovery,queue,pending)
+                try:
+                    settled = mq_reconcile_effects(recovery,queue,pending)
+                    if settled:
+                        mq_health_ok(config,'recovery_error:'+pending['id'])
+                        mq_health_signal(config,'effect:'+pending['id'],message='A recuperação do efeito foi confirmada por leitura.')
+                    else:
+                        mq_health_signal(config,'effect:'+pending['id'],error=True,job=pending['id'],kind='Recuperação pendente',
+                            message='MR !'+str(pending['iid'])+' ainda tem entrega histórica incerta. Consulte recover/status; nenhum envio foi repetido.')
                 except MonitorCycleYield:pass
                 except (OSError,RuntimeError,ValueError) as error:
                     mq_diagnostic(queue,'recovery_error:'+pending['id'],error)
@@ -6771,11 +6990,14 @@ def mq_tick(path):
         mq_drain(config,queue)
         mq_notify_unread(config,queue)
         mq_rotate_history(queue,config,include_remote=True)
+        phase = 'finished'
         return {'cycle':'checked','queue_file':config['queue_file']}
     except MonitorCycleYield:
+        phase = 'yielded'
         return {'cycle':'checked','yielded':'cycle budget','queue_file':config['queue_file']}
     finally:
         if queue is not None:
+            mq_health_publish(config,queue,phase)
             queue.close()
         os.close(consumer)
 
@@ -7314,8 +7536,12 @@ def mq_consume(config,queue):
 
 
 def mq_consume_locked(config,queue):
+    if config.get('_health') is not None:config['_health']['current_job'] = None
     try:
-        return mq_step(config,queue)
+        progressed = mq_step(config,queue)
+        job = config.get('_health',{}).get('current_job')
+        if progressed and job:mq_health_ok(config,'consumer_error:'+job)
+        return progressed
     except (OSError,RuntimeError,ValueError) as failure:
         mq_diagnostic(queue,'consumer_error',failure)
         active = queue.jobs('running')

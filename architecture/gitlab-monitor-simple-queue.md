@@ -440,6 +440,18 @@ Current configuration removal denies new observation, enqueue, reservation, oper
 native start, including from stale cached config. Already-issued sends retain bounded receipt/
 settlement access without new sends. Removal cannot erase human sources, holds or public IDs.
 
+Operational health is an observational output of the
+bounded consumer. An independent bounded desktop checker reads that output and user-manager
+evidence to warn about actual failures or absent cycles. It never reserves work, writes queue or
+native state, answers human questions, changes retry order, confirms publications, or restarts
+execution. Matching successful observations are required for recovery notices; a successful
+service exit or an unrelated operation cannot clear an operational failure. Notification delivery
+and suppression have their own private state and cannot block review progress. A successful
+lock-busy invocation without an export is unknown until the freshness bound, not a failed cycle.
+Running exports are attributed to a stopped service only by exact invocation identity. MR alert
+retirement uses validated closed/removal evidence and the existing obligation checks independently
+of history retention; retained history alone does not keep an obsolete incident active.
+
 ## Transition and traceability
 
 Stage source before cutover. Use a separate fresh queue database; never import or modify the
@@ -473,6 +485,7 @@ abandonment transition. No old chat is rewritten.
 | Native human conversations and held reviews | Targeted `mq_intake`, original native collectors and `mq_effective_stage` | `test_codex_gitlab_direct.py`: no general producer/classifier, causal continuations, original finals, failures/retries, checkpoints, source denials and transaction recovery; installed-client cold-resume probes; historical tools holds/fences |
 | Direct publications and observation | Native GitLab tools, passive collector and raw inventory deltas | `test_codex_gitlab_direct.py`: self-output race, human edits, version/hold/transition boundaries and honest checkpoints; legacy recovery tests retain original journals |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
+| Independent operational alerts | Bounded health export, `scripts/codex_monitor_alert.py`, separate user timer and private delivery state | `scripts/tests/test_codex_monitor_alert.py`: caught failures, busy and incomplete cycles, scoped recovery, terminal retries, validated MR retirement and holds, startup/suspend, stale evidence, bounded delivery and restart suppression |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
 | Visible native requests  | Existing stage input, native dispatch, input validation and question continuation | Exact message/context, historical reader, large Claude stdin, pre-exec failure and native creation/cold-resume checks |
 | Explicit full-round restart  | Operator control, original native question, existing queue and intake | Native-answer frontier/races, late replies, exact target, fresh complete review/chat, FIFO/history/effect preservation and rejection controls |

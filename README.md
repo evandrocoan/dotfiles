@@ -16,6 +16,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Update dependencies](#update-dependencies)
       - [Codex session statistics](#codex-session-statistics)
       - [Automatic GitLab MR review](#automatic-gitlab-mr-review)
+        - [Desktop alerts for monitor failures](#desktop-alerts-for-monitor-failures)
     - [Shared GitLab MCP](#shared-gitlab-mcp)
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
@@ -915,6 +916,59 @@ an unconfirmed operation. New direct sends have no such journal and are checked 
 To stop supervision, stop both service and timer; do
 not delete queue/history files to clear an uncertainty. The
 [architecture record](architecture/gitlab-monitor-simple-queue.md) defines these boundaries.
+
+#### Desktop alerts for monitor failures
+
+The bounded consumer exports private current health beside its queue. The independent
+[desktop checker](scripts/codex_monitor_alert.py) checks that health and the monitor's user units
+every two minutes, using the existing system Python, systemd and `notify-send`. It does not need
+the Codex app to deliver an alert and never changes jobs, retries, native execution or GitLab data.
+
+It warns about failed shared-app access, terminal reviewer failures, unresolved overdue execution,
+blocked historical-effect recovery, repeated read failures, a stopped timer, a failed service, or
+missing recent cycles. Repeated network/read failures require observations in distinct cycles;
+explicit authentication/permission failures can alert immediately. A caught internal error is
+observable even when the cycle's process exits successfully. Old stored diagnostics alone do not
+produce warnings. Idle time, normal retry backoff, a valid human hold and a review within its
+deadline are normal conditions.
+
+Install/update the checker units from a terminal in the graphical user session:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+install -m 0644 ~/scripts/install/systemd/user/codex-monitor-alert.service ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/systemd/user/codex-monitor-alert.timer ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now codex-monitor-alert.timer
+```
+
+One warning is delivered per incident, without periodic reminders. A matching new successful
+observation can produce one recovery notice; an unrelated successful read or cycle cannot clear a
+failure. Scope retirement is not a successful review. Failed desktop sends remain pending for a
+later check. Popup lifetime/history depends on the desktop notification server; accepted delivery
+does not prove the user read it. The checker cannot guarantee immediate warnings while the host,
+user manager or desktop notification service is unavailable.
+
+The default snapshot is `~/.local/state/codex-session-stats-queue/health.json`; private notification
+state is under `~/.local/state/codex-monitor-alert/`. For a custom queue or state root, set the
+checker's `--snapshot` and `--state` arguments in a user-unit override; the checker does not parse
+the monitor configuration or scan native history. Missing health has a startup/resume grace;
+stale health warns after two expected timer intervals plus five minutes. If you change the monitor
+timer's schedule, adjust `--cycle-seconds` too; the TOML inventory interval is a separate setting.
+An inactive monitor oneshot between triggers is expected.
+
+For deliberate monitor maintenance, stop both `codex-monitor-alert.timer` and
+`codex-monitor-alert.service` before pausing `codex-gitlab-monitor.timer`. After maintenance,
+resume the monitor timer, then the alert timer. Pausing only the monitor is an
+actionable scheduling outage while alerts are armed. Diagnose with
+`journalctl --user -u codex-monitor-alert.service -n 50 --no-pager` and the existing monitor
+status/journal commands. Do not delete queue state to clear an alert.
+
+To remove only desktop alerts, disable and stop `codex-monitor-alert.timer`, stop
+`codex-monitor-alert.service`, remove its installed service/timer files from
+`~/.config/systemd/user/`, and reload the user manager. This does not
+stop the review monitor. Notification state may be removed separately after its checker stops.
 
 ### Shared GitLab MCP
 
