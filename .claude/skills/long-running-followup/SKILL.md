@@ -28,11 +28,13 @@ substituting another model. For a simple wait, pass only the operation/status so
 exit-code or log-event condition, and parent/return route. Add only applicable monitoring needs:
 
 ```text
-Read: required monitoring instructions; existing state if resumption/deduplication needs it.
-Bounds, if scheduled: cadence, timezone, deadline/check cap.
+Read: exact monitoring instruction references; existing state if resumption/deduplication needs it.
+Bounds, if scheduled: cadence, timezone, deadline/check cap; one due observation, silent if unchanged.
 Stop: deactivate only owned schedule, read back inactivity; preserve operation.
-Chat: retain any no-archive/no-new-chat constraint.
+Chat: copy original no-archive/no-new-chat prohibitions verbatim.
 ```
+
+Check the draft against these inputs before dispatch.
 
 Do not create or require a checkpoint for a simple wait. Reference existing state instead of
 copying snapshots; do not restate this skill or drop necessary constraints to meet a word target.

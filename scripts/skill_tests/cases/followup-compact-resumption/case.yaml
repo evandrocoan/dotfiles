@@ -2,9 +2,10 @@ id: followup-compact-resumption
 kind: application
 initial_live: false
 prompt: >-
-  As the parent coordinator, use long-running-followup. In this disposable scenario, replace the oversized draft in
-  scenario/oversized.txt with a prompt to wait for the current transfer and report its result,
-  saved as scenario/resumption.txt. Current execution data is in scenario/progress.json.
+  As the parent coordinator, use long-running-followup. In this disposable scenario, replace
+  the oversized draft in scenario/oversized.txt with a prompt of at most 160 whitespace-separated
+  words to wait for the current transfer and report its result, saved as scenario/resumption.txt.
+  Current execution data is in scenario/progress.json.
   The maintenance procedure and fictional approvals are supplied alongside it.
   This prepares an artifact only; do not create a real schedule or perform maintenance.
 criteria:
