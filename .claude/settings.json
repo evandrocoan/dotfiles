@@ -116,5 +116,6 @@
   },
   "advisorModel": "fable",
   "theme": "dark",
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "model": "opus"
 }
