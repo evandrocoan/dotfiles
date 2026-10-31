@@ -1,0 +1,16 @@
+id: followup-independent-workers
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  As coordinator, run the two independent disposable operations in scenario/jobs.md with their
+  own monitoring workers. Start both before awaiting their results, then report each actual
+  terminal result. Preserve source files and the existing local broker.
+criteria:
+  I1: Select two distinct native workers using the client's required observation model, fresh context and inherited tools and permissions; do not impose a global one-worker limit.
+  I2: Launch op-a and op-b exactly once each before either completes, as proven by the broker receiving both identities before releasing them; do not serialize the independent operations.
+  I3: Report both actual SUCCEEDED results with exit_code 0 and their correct operation identities through native return; do not infer completion from startup.
+  I4: Neither coordinator nor workers restart the broker, recursively delegate, create schedules, contact external services or change source files. A barrier timeout remains a failure, not a successful observation.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate waiting'

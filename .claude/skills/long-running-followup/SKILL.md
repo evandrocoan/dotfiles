@@ -1,7 +1,7 @@
 ---
 name: long-running-followup
 description: >-
-  Delegate authorized polling and operations that remain running to one worker. Use before
+  Delegate authorized polling and operations that remain running to a reusable worker. Use before
   launching known waits, at the first still-running result, or before any status polling or
   scheduled follow-up. Prefer completion events. Exclude short synchronous commands unless they
   return still running, and explanations requiring no monitoring.
@@ -20,9 +20,10 @@ Delegate known waits before launch; on an unexpected running result, hand off ob
 another status check, log read or execution wait. The parent awaits the worker's completion event
 instead of checking operation or worker progress.
 
-Reuse an existing assigned worker, never one per check. Use `gpt-6-luna` / `high` explicitly,
-with fresh context and inherited tool permissions. An assigned observation worker keeps its
-operation; it does not delegate again.
+Reuse the assigned worker for an operation, never one per check. Independent operations may use
+different workers; there is no global one-worker limit. Select `gpt-6-luna` / `high` in Codex or
+`haiku` in Claude Code explicitly. Start with fresh context and inherit tools and permissions.
+An assigned observation worker keeps its operation; it does not delegate again.
 
 Preserve already-started operations. Delegate an accessible status/result source; do not assume
 another agent's execution session transfers. After worker completion evidence, the parent may
@@ -34,6 +35,7 @@ the operation and report the gap; do not substitute another model or resume pare
 The worker records startup errors/prompts and operation identity.
 Prefer native completion, then an existing deterministic watcher, then supported scheduling.
 No routine polling alongside reliable completion delivery.
+When following a log, include existing terminal output and avoid gaps between reading and subscribing.
 
 Verify lifetime/return support before yielding; proposed schedules are not active. Load host
 details only if needed: [Codex](references/codex.md), [Claude](references/claude.md),
@@ -42,7 +44,9 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 ## Assign the observation directly
 
 Pass the operation/status source, exact exit-code or log-event condition, and parent/return route
-directly. Include applicable observation/access instructions, authorization and chat restrictions.
+directly. Have the worker load this skill before observing; fresh context does not include the
+parent's loaded skills. Include applicable observation/access instructions, authorization and
+chat restrictions.
 For scheduled checks, include cadence, timezone and any supplied deadline/check cap. Do not add a
 prompt-rewriting step or word budget before monitoring.
 

@@ -1,0 +1,16 @@
+id: followup-worker-reuse
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  As coordinator, follow the already-running operation in scenario/job.md. Obtain its first
+  observation and then its terminal result through the supplied blocking client. Report both
+  observed states and the terminal exit code. These are disposable local fixtures.
+criteria:
+  R1: The coordinator selects the client's required observation model with fresh context and inherited tools and permissions, without asking another monitoring choice.
+  R2: The same native worker makes the first observation and subsequent blocking wait for job-91 attempt-3; do not create another worker for the next check or delegate recursively.
+  R3: The actual client receipts show one --once request and one --wait request, both made by that worker; the coordinator does not poll status while waiting.
+  R4: Return observed RUNNING followed by SUCCEEDED and exit_code 0 through native delivery, supported by actual tool outputs; preserve the source files and operation identity.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate waiting'

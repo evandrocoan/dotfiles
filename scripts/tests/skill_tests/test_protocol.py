@@ -1,4 +1,8 @@
 from pathlib import Path
+import json
+import shutil
+import subprocess
+import sys
 
 import pytest
 
@@ -17,6 +21,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-limits", "followup-near-miss",
         "followup-unchanged-check", "followup-stale-reference",
         "followup-monitor-model", "followup-simple-wait",
+        "followup-worker-reuse", "followup-independent-workers",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -61,6 +66,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
 @pytest.mark.parametrize("case_id", [
     "followup-monitor-model", "followup-simple-wait",
     "followup-unchanged-check", "followup-stale-reference",
+    "followup-worker-reuse", "followup-independent-workers",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -83,6 +89,50 @@ def test_invalid_execution_route_is_rejected(tmp_path, execution):
         "criteria:\n  A1: Report the observation.\nreceipt: []\n")
     with pytest.raises(Invalid, match="Invalid case execution route"):
         cases(tmp_path)
+
+
+@pytest.mark.parametrize("both_operations", [True, False])
+def test_independent_worker_fixture_requires_both_operations(tmp_path, both_operations):
+    source = CORPUS / "followup-independent-workers/scenario/operation.py"
+    script = tmp_path / "operation.py"
+    shutil.copyfile(source, script)
+    broker_timeout = "10" if both_operations else "1"
+    broker = subprocess.Popen(
+        [sys.executable, str(script), "--serve", "--timeout", broker_timeout],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    clients = []
+    try:
+        assert broker.stdout.readline().strip() == "BROKER_READY"
+        names = ["op-a", "op-b"] if both_operations else ["op-a"]
+        for name in names:
+            clients.append(subprocess.Popen(
+                [sys.executable, str(script), name],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            ))
+        for name, client in zip(names, clients):
+            output, error = client.communicate(timeout=10)
+            result = json.loads(output.splitlines()[-1])
+            assert error == ""
+            assert result["operation"] == name
+            assert result["state"] == ("SUCCEEDED" if both_operations else "FAILED")
+            assert result["exit_code"] == client.returncode == (0 if both_operations else 7)
+        _, error = broker.communicate(timeout=10)
+        assert error == ""
+        assert broker.returncode == (0 if both_operations else 7)
+        events = [json.loads(line) for line in (tmp_path / "broker-events.jsonl").read_text().splitlines()]
+        assert sorted(event["operation"] for event in events if event["event"] == "connected") == names
+        if both_operations:
+            assert events[-1] == {"event": "released", "operations": ["op-a", "op-b"]}
+        else:
+            assert events[-1]["event"] == "failed"
+            assert not any(event["event"] == "released" for event in events)
+        assert not (tmp_path / "gate.sock").exists()
+    finally:
+        for process in [*clients, broker]:
+            if process.poll() is None:
+                process.terminate()
+                process.communicate(timeout=10)
 
 
 def test_child_environment_does_not_inherit_credentials_or_runtime_overrides():
