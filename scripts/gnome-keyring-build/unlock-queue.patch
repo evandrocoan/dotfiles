@@ -1,0 +1,985 @@
+--- a/daemon/dbus/gkd-secret-unlock.c
++++ b/daemon/dbus/gkd-secret-unlock.c
+@@ -83,6 +83,7 @@
+ 
+ static guint unique_prompt_number = 0;
+ static GQueue unlock_prompt_queue = G_QUEUE_INIT;
++static guint unlock_prompt_source = 0;
+ 
+ EGG_SECURE_DECLARE (secret_unlock);
+ 
+@@ -142,10 +143,43 @@
+ 	gck_builder_add_ulong (builder, CKA_G_OBJECT, gck_object_get_handle (collection));
+ }
+ 
++/* Run after the current dispatch, including disposal of every prompt of a client. */
++static gboolean
++advance_unlock_queue (gpointer unused)
++{
++	GkdSecretUnlock *self;
++
++	unlock_prompt_source = 0;
++	self = g_queue_peek_head (&unlock_prompt_queue);
++	if (self != NULL && self->current == NULL) {
++		g_object_ref (self);
++		perform_next_unlock (self);
++		g_object_unref (self);
++	}
++	return G_SOURCE_REMOVE;
++}
++
++static void
++schedule_unlock_queue (void)
++{
++	if (!unlock_prompt_source && !g_queue_is_empty (&unlock_prompt_queue))
++		unlock_prompt_source = g_idle_add (advance_unlock_queue, NULL);
++}
++
++static void
++release_completed_unlock (GkdSecretUnlock *self)
++{
++	/* A dismissed native operation still owns the slot until its callback. */
++	if (self->completed && self->current == NULL &&
++	    g_queue_remove (&unlock_prompt_queue, self)) {
++		schedule_unlock_queue ();
++		g_object_unref (self);
++	}
++}
++
+ static gboolean
+ mark_as_complete (GkdSecretUnlock *self, gboolean dismissed)
+ {
+-	GkdSecretUnlock *other;
+ 	const char *value;
+ 	gint i;
+ 	GVariantBuilder builder;
+@@ -155,28 +189,22 @@
+ 		return FALSE;
+ 	self->completed = TRUE;
+ 
+-	g_variant_builder_init (&builder, G_VARIANT_TYPE ("ao"));
+-	for (i = 0; i < self->results->len; ++i) {
+-		value = g_array_index (self->results, gchar*, i);
+-		g_variant_builder_add (&builder, "o", value);
+-	}
+-
+-	/* Emit signal manually, so that we can set the caller as destination */
+-	variant = g_variant_new_variant (g_variant_builder_end (&builder));
+-	g_dbus_connection_emit_signal (g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (self->skeleton)),
+-				       self->caller,
+-				       g_dbus_interface_skeleton_get_object_path (G_DBUS_INTERFACE_SKELETON (self->skeleton)),
+-				       "org.freedesktop.Secret.Prompt", "Completed",
+-				       g_variant_new ("(b@v)", dismissed, variant),
+-				       NULL);
+-
+-	/* Fire off the next item in the unlock prompt queue */
+-	other = g_queue_pop_head (&unlock_prompt_queue);
+-	if (other != NULL) {
+-		perform_next_unlock (other);
+-		g_object_unref (other);
+-	}
+-
++	if (self->skeleton != NULL) {
++		g_variant_builder_init (&builder, G_VARIANT_TYPE ("ao"));
++		for (i = 0; i < self->results->len; ++i) {
++			value = g_array_index (self->results, gchar*, i);
++			g_variant_builder_add (&builder, "o", value);
++		}
++
++		/* Emit manually to keep the result private to the original caller. */
++		variant = g_variant_new_variant (g_variant_builder_end (&builder));
++		g_dbus_connection_emit_signal (g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (self->skeleton)),
++					       self->caller, self->object_path,
++					       "org.freedesktop.Secret.Prompt", "Completed",
++					       g_variant_new ("(b@v)", dismissed, variant), NULL);
++	}
++
++	release_completed_unlock (self);
+ 	return TRUE;
+ }
+ 
+@@ -184,49 +212,37 @@
+ on_unlock_complete (GObject *object, GAsyncResult *res, gpointer user_data)
+ {
+ 	GkdSecretUnlock *self = GKD_SECRET_UNLOCK (user_data);
+-	GkdSecretUnlock *other;
+ 	GckObject *cred;
+ 	GError *error = NULL;
+ 
+-	/* We should be at the front of the unlock queue, pop ourselves */
+-	other = g_queue_pop_head (&unlock_prompt_queue);
+-	if (other == self)
+-		g_object_unref (other);
+-	else
+-		g_warning ("unlock prompt queue is out of sync with prompts");
+-
+-	/* Now process the results */
++	g_assert (g_queue_peek_head (&unlock_prompt_queue) == self);
+ 	cred = gck_session_create_object_finish (GCK_SESSION (object), res, &error);
+ 
+-	/* Successfully authentication */
+-	if (cred) {
+-		g_object_unref (cred);
++	/* Dismiss/dispose may have completed the public request while PKCS#11 ran. */
++	if (self->completed) {
++		g_clear_pointer (&self->current, g_free);
++		release_completed_unlock (self);
++
++	} else if (cred != NULL) {
+ 		emit_collection_unlocked (self, self->current);
+ 		g_array_append_val (self->results, self->current);
+ 		self->current = NULL;
+ 		perform_next_unlock (self);
+ 
+-	/* The user cancelled the protected auth prompt */
+-	} else if (g_error_matches (error, GCK_ERROR, CKR_PIN_INCORRECT)) {
+-		g_free (self->current);
+-		self->current = NULL;
++	} else {
++		g_clear_pointer (&self->current, g_free);
++		if (!g_error_matches (error, GCK_ERROR, CKR_PIN_INCORRECT) &&
++		    !g_error_matches (error, GCK_ERROR, CKR_CANCEL) &&
++		    !g_error_matches (error, GCK_ERROR, CKR_FUNCTION_CANCELED) &&
++		    !g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
++			g_warning ("couldn't create credential for collection: %s",
++			           egg_error_message (error));
+ 		mark_as_complete (self, TRUE);
+-
+-	/* The operation was cancelled via Dismiss call */
+-	} else if (g_error_matches (error, GCK_ERROR, CKR_CANCEL)) {
+-		/* Should have been the result of a dismiss */
+-		g_return_if_fail (self->completed);
+-
+-	/* Another error, something's broken */
+-	} else {
+-		g_warning ("couldn't create credential for collection: %s",
+-			   egg_error_message (error));
+-	}
+-
++	}
++
++	g_clear_object (&cred);
+ 	g_clear_error (&error);
+-
+-	/* refed for async call */
+-	g_object_unref (self);
++	g_object_unref (self); /* asynchronous call */
+ }
+ 
+ static void
+@@ -236,20 +252,22 @@
+ 	GckObject *collection;
+ 	GckSession *session;
+ 	gboolean locked;
+-	gboolean proceed;
+ 	gchar *objpath;
+ 
++	g_assert (g_queue_peek_head (&unlock_prompt_queue) == self);
++	g_assert (self->current == NULL);
++	if (self->completed) {
++		release_completed_unlock (self);
++		return;
++	}
++
+ 	for (;;) {
+-		g_assert (!self->current);
+ 		objpath = g_queue_pop_head (self->queued);
+-
+-		/* Nothing more to prompt for? */
+-		if (!objpath) {
++		if (objpath == NULL) {
+ 			mark_as_complete (self, FALSE);
+-			break;
++			return;
+ 		}
+ 
+-		/* Find the collection, make sure it's still around */
+ 		collection = lookup_collection (self, objpath);
+ 		if (collection == NULL) {
+ 			g_free (objpath);
+@@ -260,44 +278,29 @@
+ 			g_object_unref (collection);
+ 			g_free (objpath);
+ 			continue;
+-
+ 		} else if (!locked) {
+ 			g_array_append_val (self->results, objpath);
+ 			g_object_unref (collection);
+ 			continue;
+ 		}
+ 
+-		/* Add ourselves to the unlock prompt queue */
+-		proceed = g_queue_is_empty (&unlock_prompt_queue);
+-		g_queue_push_tail (&unlock_prompt_queue, g_object_ref (self));
+-
+-		/*
+-		 * Proceed with this unlock request. The on_unlock_complete callback
+-		 * pops us back off the unlock prompt queue
+-		 */
+-		if (proceed) {
+-			common_unlock_attributes (&builder, collection);
+-			gck_builder_add_boolean (&builder, CKA_GNOME_TRANSIENT, TRUE);
+-			gck_builder_add_data (&builder, CKA_VALUE, NULL, 0);
+-
+-			session = gkd_secret_service_get_pkcs11_session (self->service, self->caller);
+-			gck_session_create_object_async (session, gck_builder_end (&builder),
+-							 self->cancellable, on_unlock_complete,
+-							 g_object_ref (self));
+-			self->current = objpath;
+-			break;
++		session = gkd_secret_service_get_pkcs11_session (self->service, self->caller);
++		if (session == NULL) {
++			g_object_unref (collection);
++			g_free (objpath);
++			mark_as_complete (self, TRUE);
++			return;
+ 		}
+ 
++		common_unlock_attributes (&builder, collection);
++		gck_builder_add_boolean (&builder, CKA_GNOME_TRANSIENT, TRUE);
++		gck_builder_add_data (&builder, CKA_VALUE, NULL, 0);
+ 		g_object_unref (collection);
+-
+-		/*
+-		 * Already have one unlock request going on. Just wait around
+-		 * and this function will be called again later.
+-		 */
+-		if (!proceed) {
+-			g_queue_push_head (self->queued, objpath);
+-			break;
+-		}
++		self->current = objpath;
++		gck_session_create_object_async (session, gck_builder_end (&builder),
++		                                 self->cancellable, on_unlock_complete,
++		                                 g_object_ref (self));
++		return;
+ 	}
+ }
+ 
+@@ -400,6 +403,10 @@
+ gkd_secret_unlock_dispose (GObject *obj)
+ {
+ 	GkdSecretUnlock *self = GKD_SECRET_UNLOCK (obj);
++
++	self->completed = TRUE;
++	g_cancellable_cancel (self->cancellable);
++	release_completed_unlock (self);
+ 
+ 	if (self->skeleton) {
+ 		g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON (self->skeleton));
+@@ -619,7 +626,8 @@
+ 	self->window_id = g_strdup (window_id);
+ 
+ 	self->prompted = TRUE;
+-	perform_next_unlock (self);
++	g_queue_push_tail (&unlock_prompt_queue, g_object_ref (self));
++	schedule_unlock_queue ();
+ }
+ 
+ gboolean
+--- a/daemon/dbus/Makefile.am
++++ b/daemon/dbus/Makefile.am
+@@ -153,6 +153,7 @@
+ 	test-dbus-items \
+ 	test-dbus-signals \
+ 	test-dbus-lock \
++	test-dbus-unlock \
+ 	test-dbus-portal
+ 
+ test_dbus_util_SOURCES = daemon/dbus/test-dbus-util.c
+@@ -182,3 +183,7 @@
+ 
+ check_PROGRAMS += $(daemon_dbus_TESTS)
+ TESTS += $(daemon_dbus_TESTS)
++
++test_dbus_unlock_SOURCES = daemon/dbus/test-dbus-unlock.c
++test_dbus_unlock_LDADD = $(daemon_dbus_LIBS)
++test_dbus_unlock_CFLAGS = $(daemon_dbus_CFLAGS) $(GCR_BASE_CFLAGS) $(GIO_CFLAGS)
+--- a/daemon/dbus/test-dbus-session.c
++++ b/daemon/dbus/test-dbus-session.c
+@@ -23,7 +23,9 @@
+ 	FAULT_NONE,
+ 	FAULT_DEPARTED,
+ 	FAULT_OPEN,
+-	FAULT_LOGIN
++	FAULT_LOGIN,
++	FAULT_CREDENTIAL,
++	FAULT_CANCELLED
+ } Fault;
+ 
+ typedef struct {
+@@ -40,6 +42,7 @@
+ 	gchar *directory;
+ 	Fault fault;
+ 	guint injections;
++	gboolean drop_session_on_locked;
+ } Test;
+ 
+ static CK_FUNCTION_LIST_PTR real_functions;
+@@ -78,6 +81,39 @@
+ 		return CKR_DEVICE_ERROR;
+ 	}
+ 	return real_functions->C_Login (session, user, pin, length);
++}
++
++/* Inject failures at the PKCS#11 boundary, keeping the exported queue real. */
++static CK_RV
++create_object (CK_SESSION_HANDLE session, CK_ATTRIBUTE_PTR attrs,
++               CK_ULONG count, CK_OBJECT_HANDLE_PTR object)
++{
++	Fault fault = active_test->fault;
++	if (fault == FAULT_CREDENTIAL || fault == FAULT_CANCELLED) {
++		active_test->fault = FAULT_NONE;
++		active_test->injections++;
++		return fault == FAULT_CANCELLED ? CKR_FUNCTION_CANCELED : CKR_DEVICE_ERROR;
++	}
++	return real_functions->C_CreateObject (session, attrs, count, object);
++}
++
++static CK_RV
++get_attributes (CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object,
++                CK_ATTRIBUTE_PTR attrs, CK_ULONG count)
++{
++	CK_RV rv = real_functions->C_GetAttributeValue (session, object, attrs, count);
++	CK_ULONG i;
++	for (i = 0; i < count; i++) {
++		if (rv == CKR_OK && active_test->drop_session_on_locked &&
++		    attrs[i].type == CKA_G_LOCKED && attrs[i].pValue != NULL) {
++			ServiceClient *client = g_hash_table_lookup (active_test->service->clients,
++				g_dbus_connection_get_unique_name (active_test->client));
++			g_assert_nonnull (client);
++			active_test->drop_session_on_locked = FALSE;
++			g_clear_object (&client->pkcs11_session);
++		}
++	}
++	return rv;
+ }
+ 
+ static gboolean
+@@ -136,7 +172,8 @@
+ 	gchar *reserved;
+ 	CK_RV rv;
+ 
+-	test->directory = egg_tests_create_scratch_directory (NULL);
++	test->directory = egg_tests_create_scratch_directory (
++		SRCDIR "/daemon/dbus/fixtures/test.keyring", NULL);
+ 	reserved = g_strdup_printf ("directory='%s'", test->directory);
+ 	args.flags = CKF_OS_LOCKING_OK;
+ 	args.pReserved = reserved;
+@@ -149,6 +186,8 @@
+ 	test->functions = *real_functions;
+ 	test->functions.C_OpenSession = open_session;
+ 	test->functions.C_Login = login;
++	test->functions.C_CreateObject = create_object;
++	test->functions.C_GetAttributeValue = get_attributes;
+ 	test->module = gck_module_new (&test->functions);
+ 	slots = gck_module_get_slots (test->module, TRUE);
+ 	g_assert_nonnull (slots);
+@@ -408,6 +447,101 @@
+ 	assert_usable_session (test, "dh-ietf1024-sha256-aes128-cbc-pkcs7");
+ }
+ 
++typedef struct {
++	GPtrArray *paths;
++	guint count;
++} UnlockResults;
++
++static gboolean
++unlock_deadline (gpointer unused)
++{
++	g_error ("unlock request did not complete after PKCS#11 failure");
++	return G_SOURCE_REMOVE;
++}
++
++static void
++unlock_completed (GDBusConnection *connection, const gchar *sender,
++                  const gchar *path, const gchar *interface, const gchar *signal,
++                  GVariant *args, gpointer data)
++{
++	UnlockResults *results = data;
++	gboolean dismissed;
++	GVariant *unlocked;
++	g_assert_cmpuint (results->count, <, results->paths->len);
++	g_assert_cmpstr (path, ==, g_ptr_array_index (results->paths, results->count));
++	g_variant_get (args, "(bv)", &dismissed, &unlocked);
++	g_assert_true (dismissed);
++	g_assert_true (g_variant_is_of_type (unlocked, G_VARIANT_TYPE ("ao")));
++	g_assert_cmpuint (g_variant_n_children (unlocked), ==, 0);
++	g_variant_unref (unlocked);
++	results->count++;
++}
++
++static void
++test_unlock_failure (Test *test, gconstpointer data)
++{
++	Fault fault = GPOINTER_TO_INT (data);
++	const gchar *paths[] = { SECRET_COLLECTION_PREFIX "/test", NULL };
++	GError *error = NULL;
++	GVariant *reply, *unlocked;
++	UnlockResults results = { g_ptr_array_new_with_free_func (g_free), 0 };
++	guint subscription, deadline, i;
++	gchar *prompt;
++
++	subscription = g_dbus_connection_signal_subscribe (test->client,
++		g_dbus_connection_get_unique_name (test->server), SECRET_PROMPT_INTERFACE,
++		"Completed", NULL, NULL, G_DBUS_SIGNAL_FLAGS_NONE, unlock_completed, &results, NULL);
++	deadline = g_timeout_add_seconds (5, unlock_deadline, NULL);
++	for (i = 0; i < 2; i++) {
++		reply = call (test, SECRET_SERVICE_PATH, SECRET_SERVICE_INTERFACE, "Unlock",
++			g_variant_new ("(^ao)", paths), G_VARIANT_TYPE ("(aoo)"), &error);
++		g_assert_no_error (error);
++		g_variant_get (reply, "(@aoo)", &unlocked, &prompt);
++		g_assert_cmpuint (g_variant_n_children (unlocked), ==, 0);
++		g_assert_cmpstr (prompt, !=, "/");
++		g_ptr_array_add (results.paths, prompt);
++		g_variant_unref (unlocked);
++		g_variant_unref (reply);
++	}
++
++	/* Arm only after admission's empty-password probes have finished. */
++	test->fault = fault;
++	test->drop_session_on_locked = fault == FAULT_OPEN;
++	if (fault == FAULT_OPEN)
++		g_test_expect_message (NULL, G_LOG_LEVEL_WARNING, "couldn't open pkcs11 session for secret service: *");
++	else if (fault == FAULT_CREDENTIAL)
++		g_test_expect_message (NULL, G_LOG_LEVEL_WARNING, "couldn't create credential for collection: *");
++	reply = call (test, g_ptr_array_index (results.paths, 0), SECRET_PROMPT_INTERFACE,
++		"Prompt", g_variant_new ("(s)", ""), G_VARIANT_TYPE_UNIT, &error);
++	g_assert_no_error (error);
++	g_variant_unref (reply);
++	while (results.count < 1) g_main_context_iteration (NULL, TRUE);
++	g_test_assert_expected_messages ();
++	g_assert_cmpuint (test->injections, ==, 1);
++	test->fault = FAULT_NONE;
++
++	/* The real store has no human prompter in this focused fixture. Its
++	 * CKR_PIN_INCORRECT exercises ordinary cancellation after recovery. */
++	reply = call (test, g_ptr_array_index (results.paths, 1), SECRET_PROMPT_INTERFACE,
++		"Prompt", g_variant_new ("(s)", ""), G_VARIANT_TYPE_UNIT, &error);
++	g_assert_no_error (error);
++	g_variant_unref (reply);
++	while (results.count < 2) g_main_context_iteration (NULL, TRUE);
++	reply = call (test, paths[0], "org.freedesktop.DBus.Properties", "Get",
++		g_variant_new ("(ss)", SECRET_COLLECTION_INTERFACE, "Locked"),
++		G_VARIANT_TYPE ("(v)"), &error);
++	g_assert_no_error (error);
++	g_variant_get (reply, "(v)", &unlocked);
++	g_assert_true (g_variant_get_boolean (unlocked));
++	g_variant_unref (unlocked);
++	g_variant_unref (reply);
++	g_assert_cmpuint (results.count, ==, 2);
++	g_source_remove (deadline);
++	g_dbus_connection_signal_unsubscribe (test->client, subscription);
++	g_ptr_array_unref (results.paths);
++}
++
++
+ int
+ main (int argc, char **argv)
+ {
+@@ -429,5 +563,11 @@
+ 	g_test_init (&argc, &argv, NULL);
+ 	for (i = 0; i < G_N_ELEMENTS (scenarios); i++)
+ 		g_test_add (names[i], Test, &scenarios[i], setup, test_failed_open, teardown);
++	g_test_add ("/secret-unlock/credential-error", Test, GINT_TO_POINTER (FAULT_CREDENTIAL),
++	            setup, test_unlock_failure, teardown);
++	g_test_add ("/secret-unlock/cancelled-error", Test, GINT_TO_POINTER (FAULT_CANCELLED),
++	            setup, test_unlock_failure, teardown);
++	g_test_add ("/secret-unlock/session-unavailable", Test, GINT_TO_POINTER (FAULT_OPEN),
++	            setup, test_unlock_failure, teardown);
+ 	return g_test_run ();
+ }
+--- /dev/null
++++ b/daemon/dbus/test-dbus-unlock.c
+@@ -0,0 +1,491 @@
++/*
++ * Native Secret Service queue regression: only human interaction is simulated.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++#include "config.h"
++#include "gkd-secret-types.h"
++#include "test-service.h"
++#include "egg/egg-testing.h"
++
++#define GCR_API_SUBJECT_TO_CHANGE
++#include <gcr/gcr-base.h>
++
++#define COLLECTION "/org/freedesktop/secrets/collection/test"
++
++/* Keep a real GCR conversation pending until the test supplies a human response. */
++typedef struct { GObject parent; GHashTable *properties; } HumanPrompt;
++typedef GObjectClass HumanPromptClass;
++static GTask *pending_password;
++static guint password_count;
++static void human_prompt_iface (GcrPromptIface *iface);
++G_DEFINE_TYPE_WITH_CODE (HumanPrompt, human_prompt, G_TYPE_OBJECT,
++                        G_IMPLEMENT_INTERFACE (GCR_TYPE_PROMPT, human_prompt_iface))
++
++static void
++value_free (gpointer data)
++{
++	g_value_unset (data);
++	g_free (data);
++}
++
++static void
++human_get (GObject *object, guint id, GValue *value, GParamSpec *spec)
++{
++	GValue *stored = g_hash_table_lookup (((HumanPrompt *)object)->properties, spec->name);
++	if (stored)
++		g_value_copy (stored, value);
++	else
++		g_param_value_set_default (spec, value);
++}
++
++static void
++human_set (GObject *object, guint id, const GValue *value, GParamSpec *spec)
++{
++	GValue *stored = g_new0 (GValue, 1);
++	g_value_init (stored, G_VALUE_TYPE (value));
++	g_value_copy (value, stored);
++	g_hash_table_replace (((HumanPrompt *)object)->properties, g_strdup (spec->name), stored);
++}
++
++static void
++human_finalize (GObject *object)
++{
++	g_hash_table_unref (((HumanPrompt *)object)->properties);
++	G_OBJECT_CLASS (human_prompt_parent_class)->finalize (object);
++}
++
++static void
++human_prompt_class_init (HumanPromptClass *klass)
++{
++	gpointer iface = g_type_default_interface_ref (GCR_TYPE_PROMPT);
++	guint count, i;
++	GParamSpec **properties = g_object_interface_list_properties (iface, &count);
++	klass->get_property = human_get;
++	klass->set_property = human_set;
++	klass->finalize = human_finalize;
++	for (i = 0; i < count; i++)
++		g_object_class_override_property (klass, i + 1, properties[i]->name);
++	g_free (properties);
++	g_type_default_interface_unref (iface);
++}
++
++static void
++human_prompt_init (HumanPrompt *self)
++{
++	self->properties = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, value_free);
++}
++
++static void
++human_password (GcrPrompt *prompt, GCancellable *cancel,
++                GAsyncReadyCallback callback, gpointer data)
++{
++	g_assert_null (pending_password);
++	pending_password = g_task_new (prompt, cancel, callback, data);
++	password_count++;
++}
++
++static const gchar *
++human_password_finish (GcrPrompt *prompt, GAsyncResult *result, GError **error)
++{
++	return g_task_propagate_pointer (G_TASK (result), error);
++}
++
++static void
++human_confirm (GcrPrompt *prompt, GCancellable *cancel,
++               GAsyncReadyCallback callback, gpointer data)
++{
++	g_assert_not_reached ();
++}
++
++static GcrPromptReply
++human_confirm_finish (GcrPrompt *prompt, GAsyncResult *result, GError **error)
++{
++	g_assert_not_reached ();
++	return GCR_PROMPT_REPLY_CANCEL;
++}
++
++static void
++human_prompt_iface (GcrPromptIface *iface)
++{
++	iface->prompt_password_async = human_password;
++	iface->prompt_password_finish = human_password_finish;
++	iface->prompt_confirm_async = human_confirm;
++	iface->prompt_confirm_finish = human_confirm_finish;
++}
++
++typedef struct {
++	gchar *path;
++	gboolean dismissed;
++	gchar **unlocked;
++} Completion;
++
++typedef struct {
++	TestService service;
++	GcrSystemPrompter *prompter;
++	GPtrArray *completed;
++	GPtrArray *clients;
++	GArray *subscriptions;
++	gchar *other;
++} Test;
++
++static gboolean
++expired (gpointer unused)
++{
++	g_error ("unlock queue did not reach the required terminal state");
++	return G_SOURCE_REMOVE;
++}
++
++/* Deadlines bound failure; arrival of the actual event controls progress. */
++#define WAIT_FOR(condition) G_STMT_START { \
++	guint deadline = g_timeout_add_seconds (5, expired, NULL); \
++	while (!(condition)) g_main_context_iteration (NULL, TRUE); \
++	g_source_remove (deadline); \
++} G_STMT_END
++
++static GVariant *
++call (Test *test, GDBusConnection *client, const gchar *path,
++      const gchar *interface, const gchar *method, GVariant *args, const gchar *type)
++{
++	GError *error = NULL;
++	GVariant *result = g_dbus_connection_call_sync (client, test->service.bus_name,
++		path, interface, method, args, G_VARIANT_TYPE (type),
++		G_DBUS_CALL_FLAGS_NO_AUTO_START, 5000, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_nonnull (result);
++	return result;
++}
++
++static gboolean
++locked (Test *test, const gchar *path)
++{
++	GVariant *reply = call (test, test->service.connection, path,
++		"org.freedesktop.DBus.Properties", "Get",
++		g_variant_new ("(ss)", SECRET_COLLECTION_INTERFACE, "Locked"), "(v)");
++	GVariant *value;
++	gboolean result;
++	g_variant_get (reply, "(v)", &value);
++	result = g_variant_get_boolean (value);
++	g_variant_unref (value);
++	g_variant_unref (reply);
++	return result;
++}
++
++static void
++completion_free (gpointer data)
++{
++	Completion *result = data;
++	g_free (result->path);
++	g_strfreev (result->unlocked);
++	g_free (result);
++}
++
++static void
++completed (GDBusConnection *connection, const gchar *sender, const gchar *path,
++           const gchar *interface, const gchar *signal, GVariant *args, gpointer data)
++{
++	Test *test = data;
++	Completion *result = g_new0 (Completion, 1);
++	GVariant *value;
++	guint i;
++	for (i = 0; i < test->completed->len; i++)
++		g_assert_cmpstr (((Completion *)g_ptr_array_index (test->completed, i))->path, !=, path);
++	result->path = g_strdup (path);
++	g_variant_get (args, "(bv)", &result->dismissed, &value);
++	result->unlocked = g_variant_dup_objv (value, NULL);
++	g_variant_unref (value);
++	g_ptr_array_add (test->completed, result);
++}
++
++static GDBusConnection *
++client_new (Test *test)
++{
++	GError *error = NULL;
++	GDBusConnection *client = g_dbus_connection_new_for_address_sync (
++		g_getenv ("DBUS_SESSION_BUS_ADDRESS"),
++		G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT | G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
++		NULL, NULL, &error);
++	guint subscription;
++	g_assert_no_error (error);
++	subscription = g_dbus_connection_signal_subscribe (client, test->service.bus_name,
++		SECRET_PROMPT_INTERFACE, "Completed", NULL, NULL, G_DBUS_SIGNAL_FLAGS_NONE,
++		completed, test, NULL);
++	g_ptr_array_add (test->clients, client);
++	g_array_append_val (test->subscriptions, subscription);
++	return client;
++}
++
++static void
++setup (Test *test, gconstpointer unused)
++{
++	GError *error = NULL;
++	GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
++	g_assert_no_error (error);
++	g_assert_null (pending_password);
++	password_count = 0;
++	test->completed = g_ptr_array_new_with_free_func (completion_free);
++	test->clients = g_ptr_array_new_with_free_func (g_object_unref);
++	test->subscriptions = g_array_new (FALSE, FALSE, sizeof (guint));
++	test->prompter = gcr_system_prompter_new (GCR_SYSTEM_PROMPTER_SINGLE, human_prompt_get_type ());
++	gcr_system_prompter_register (test->prompter, bus);
++	test->service.mock_prompter = g_dbus_connection_get_unique_name (bus);
++	test_service_setup (&test->service);
++	g_assert_true (locked (test, COLLECTION));
++	g_object_unref (bus);
++}
++
++static void
++teardown (Test *test, gconstpointer unused)
++{
++	guint i;
++	/* Consume callbacks already delivered before detaching the assertions. */
++	while (g_main_context_iteration (NULL, FALSE));
++	g_assert_null (pending_password);
++	for (i = 0; i < test->clients->len; i++)
++		g_dbus_connection_signal_unsubscribe (g_ptr_array_index (test->clients, i),
++			g_array_index (test->subscriptions, guint, i));
++	test_service_teardown (&test->service);
++	gcr_system_prompter_unregister (test->prompter, TRUE);
++	g_object_unref (test->prompter);
++	g_ptr_array_unref (test->clients);
++	g_array_unref (test->subscriptions);
++	g_ptr_array_unref (test->completed);
++	g_free (test->other);
++}
++
++static gchar *
++admit (Test *test, GDBusConnection *client, const gchar **collections)
++{
++	GVariant *reply = call (test, client, SECRET_SERVICE_PATH, SECRET_SERVICE_INTERFACE,
++		"Unlock", g_variant_new ("(^ao)", collections), "(aoo)");
++	GVariant *unlocked;
++	gchar *prompt;
++	g_variant_get (reply, "(@aoo)", &unlocked, &prompt);
++	g_assert_cmpuint (g_variant_n_children (unlocked), ==, 0);
++	g_assert_cmpstr (prompt, !=, "/");
++	g_variant_unref (unlocked);
++	g_variant_unref (reply);
++	reply = call (test, client, prompt, SECRET_PROMPT_INTERFACE, "Prompt",
++		g_variant_new ("(s)", ""), "()");
++	g_variant_unref (reply);
++	return prompt;
++}
++
++static void
++answer (const gchar *password)
++{
++	GTask *task;
++	WAIT_FOR (pending_password != NULL);
++	task = g_steal_pointer (&pending_password);
++	g_task_return_pointer (task, (gpointer)password, NULL);
++	g_object_unref (task);
++}
++
++static void
++expect_completion (Test *test, guint index, const gchar *path, gboolean dismissed,
++                   const gchar **unlocked)
++{
++	Completion *result;
++	guint i;
++	WAIT_FOR (test->completed->len > index);
++	result = g_ptr_array_index (test->completed, index);
++	g_assert_cmpstr (result->path, ==, path);
++	g_assert_cmpint (result->dismissed, ==, dismissed);
++	for (i = 0; unlocked && unlocked[i]; i++)
++		g_assert_cmpstr (result->unlocked[i], ==, unlocked[i]);
++	g_assert_null (result->unlocked[i]);
++}
++
++static void
++cancel_many (Test *test, gconstpointer data)
++{
++	guint count = GPOINTER_TO_UINT (data), i;
++	const gchar *paths[] = { COLLECTION, NULL };
++	gchar *prompts[5];
++	for (i = 0; i < count; i++) {
++		prompts[i] = admit (test, client_new (test), paths);
++		if (i == 0) WAIT_FOR (pending_password != NULL);
++	}
++	for (i = 0; i < count; i++) {
++		answer (NULL);
++		expect_completion (test, i, prompts[i], TRUE, NULL);
++		g_free (prompts[i]);
++	}
++	g_assert_cmpuint (password_count, ==, count);
++	g_assert_true (locked (test, COLLECTION));
++	g_assert_cmpuint (test->completed->len, ==, count);
++}
++
++static void
++success_shared (Test *test, gconstpointer unused)
++{
++	const gchar *paths[] = { COLLECTION, NULL };
++	gchar *prompts[3];
++	guint i;
++	for (i = 0; i < 3; i++) {
++		prompts[i] = admit (test, client_new (test), paths);
++		if (i == 0) WAIT_FOR (pending_password != NULL);
++	}
++	answer ("booo");
++	for (i = 0; i < 3; i++) {
++		expect_completion (test, i, prompts[i], FALSE, paths);
++		g_free (prompts[i]);
++	}
++	g_assert_cmpuint (password_count, ==, 1);
++	g_assert_false (locked (test, COLLECTION));
++	g_assert_cmpuint (test->completed->len, ==, 3);
++}
++
++static void
++create_other (Test *test)
++{
++	GVariantBuilder attributes;
++	GVariant *reply;
++	g_variant_builder_init (&attributes, G_VARIANT_TYPE ("a{sv}"));
++	g_variant_builder_add (&attributes, "{sv}", SECRET_COLLECTION_INTERFACE ".Label",
++		g_variant_new_string ("Other"));
++	reply = call (test, test->service.connection, SECRET_SERVICE_PATH, INTERNAL_SERVICE_INTERFACE,
++		"CreateWithMasterPassword", g_variant_new ("(a{sv}@(oayays))", &attributes,
++		 test_service_build_secret (&test->service, "booo")), "(o)");
++	g_variant_get (reply, "(o)", &test->other);
++	g_variant_unref (reply);
++	reply = call (test, test->service.connection, SECRET_SERVICE_PATH, SECRET_SERVICE_INTERFACE,
++		"LockService", g_variant_new ("()"), "()");
++	g_variant_unref (reply);
++	g_assert_true (locked (test, test->other));
++}
++
++static void
++mixed_collections (Test *test, gconstpointer unused)
++{
++	const gchar *both[] = { COLLECTION, NULL, NULL };
++	const gchar *only_other[] = { NULL, NULL };
++	gchar *first, *second;
++	create_other (test);
++	both[1] = only_other[0] = test->other;
++	first = admit (test, client_new (test), both);
++	WAIT_FOR (pending_password != NULL);
++	second = admit (test, client_new (test), only_other);
++	answer ("booo");
++	answer ("booo");
++	expect_completion (test, 0, first, FALSE, both);
++	expect_completion (test, 1, second, FALSE, only_other);
++	g_assert_false (locked (test, COLLECTION));
++	g_assert_false (locked (test, test->other));
++	g_assert_cmpuint (password_count, ==, 2);
++	g_free (first);
++	g_free (second);
++}
++
++static void
++dismiss (Test *test, GDBusConnection *client, const gchar *path)
++{
++	GVariant *reply = call (test, client, path, SECRET_PROMPT_INTERFACE,
++		"Dismiss", NULL, "()");
++	g_variant_unref (reply);
++}
++
++static void
++dismiss_queued (Test *test, gconstpointer unused)
++{
++	const gchar *paths[] = { COLLECTION, NULL };
++	GDBusConnection *a = client_new (test), *b = client_new (test);
++	gchar *first = admit (test, a, paths), *middle, *last, *fresh;
++	WAIT_FOR (pending_password != NULL);
++	middle = admit (test, b, paths);
++	last = admit (test, a, paths);
++	dismiss (test, b, middle);
++	expect_completion (test, 0, middle, TRUE, NULL);
++	g_assert_cmpuint (password_count, ==, 1);
++	answer (NULL);
++	expect_completion (test, 1, first, TRUE, NULL);
++	answer (NULL);
++	expect_completion (test, 2, last, TRUE, NULL);
++	fresh = admit (test, a, paths);
++	answer (NULL);
++	expect_completion (test, 3, fresh, TRUE, NULL);
++	g_assert_true (locked (test, COLLECTION));
++	g_assert_cmpuint (password_count, ==, 3);
++	g_free (first); g_free (middle); g_free (last); g_free (fresh);
++}
++
++static void
++dismiss_active (Test *test, gconstpointer data)
++{
++	gboolean accept = GPOINTER_TO_INT (data);
++	const gchar *both[] = { COLLECTION, NULL, NULL };
++	const gchar *other[] = { NULL, NULL };
++	GDBusConnection *a = client_new (test), *b = client_new (test);
++	gchar *first, *second;
++	create_other (test);
++	both[1] = other[0] = test->other;
++	first = admit (test, a, both);
++	WAIT_FOR (pending_password != NULL);
++	second = admit (test, b, other);
++	dismiss (test, a, first);
++	expect_completion (test, 0, first, TRUE, NULL);
++	g_assert_cmpuint (password_count, ==, 1);
++	answer (accept ? "booo" : NULL);
++	answer (NULL);
++	expect_completion (test, 1, second, TRUE, NULL);
++	g_assert_cmpint (locked (test, COLLECTION), ==, !accept);
++	g_assert_true (locked (test, test->other));
++	g_assert_cmpuint (password_count, ==, 2);
++	g_assert_cmpuint (test->completed->len, ==, 2);
++	g_free (first); g_free (second);
++}
++
++static void
++disconnect_client (Test *test, gconstpointer data)
++{
++	gboolean active = GPOINTER_TO_INT (data);
++	const gchar *paths[] = { COLLECTION, NULL };
++	GDBusConnection *gone = client_new (test), *live = client_new (test);
++	gchar *first = admit (test, active ? gone : live, paths);
++	gchar *queued, *last;
++	GError *error = NULL;
++	WAIT_FOR (pending_password != NULL);
++	queued = admit (test, gone, paths);
++	last = admit (test, live, paths);
++	g_assert_true (g_dbus_connection_close_sync (gone, NULL, &error));
++	g_assert_no_error (error);
++	/* NameHasOwner from the same bus establishes that the disconnect reached it.
++	 * Its NameOwnerChanged precedes the subsequent daemon call on that bus. */
++	{
++		GVariant *reply = g_dbus_connection_call_sync (live, "org.freedesktop.DBus",
++			"/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner",
++			g_variant_new ("(s)", g_dbus_connection_get_unique_name (gone)),
++			G_VARIANT_TYPE ("(b)"), 0, 5000, NULL, &error);
++		gboolean owned;
++		g_assert_no_error (error);
++		g_variant_get (reply, "(b)", &owned);
++		g_assert_false (owned);
++		g_variant_unref (reply);
++	}
++	g_assert_true (locked (test, COLLECTION));
++	answer (NULL);
++	if (!active) expect_completion (test, 0, first, TRUE, NULL);
++	answer (NULL);
++	expect_completion (test, active ? 0 : 1, last, TRUE, NULL);
++	g_assert_cmpuint (password_count, ==, 2);
++	g_assert_cmpuint (test->completed->len, ==, active ? 1 : 2);
++	g_assert_true (locked (test, COLLECTION));
++	g_free (first); g_free (queued); g_free (last);
++}
++
++int
++main (int argc, char **argv)
++{
++	g_test_init (&argc, &argv, NULL);
++	g_test_add ("/unlock/cancel-one", Test, GUINT_TO_POINTER (1), setup, cancel_many, teardown);
++	g_test_add ("/unlock/cancel-two", Test, GUINT_TO_POINTER (2), setup, cancel_many, teardown);
++	g_test_add ("/unlock/cancel-three", Test, GUINT_TO_POINTER (3), setup, cancel_many, teardown);
++	g_test_add ("/unlock/cancel-five", Test, GUINT_TO_POINTER (5), setup, cancel_many, teardown);
++	g_test_add ("/unlock/success-shared", Test, NULL, setup, success_shared, teardown);
++	g_test_add ("/unlock/mixed-collections", Test, NULL, setup, mixed_collections, teardown);
++	g_test_add ("/unlock/dismiss-queued", Test, NULL, setup, dismiss_queued, teardown);
++	g_test_add ("/unlock/dismiss-active-cancel", Test, NULL, setup, dismiss_active, teardown);
++	g_test_add ("/unlock/dismiss-active-accept", Test, GINT_TO_POINTER (1), setup, dismiss_active, teardown);
++	g_test_add ("/unlock/disconnect-queued", Test, NULL, setup, disconnect_client, teardown);
++	g_test_add ("/unlock/disconnect-active", Test, GINT_TO_POINTER (1), setup, disconnect_client, teardown);
++	return egg_tests_run_with_loop ();
++}

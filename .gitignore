@@ -179,6 +179,8 @@
 !/scripts/gnome-keyring-build/build.Dockerfile
 !/scripts/gnome-keyring-build/isolated_run.py
 !/scripts/gnome-keyring-build/opensession-crash.patch
+!/scripts/gnome-keyring-build/unlock-queue.patch
+/scripts/gnome-keyring-build/build/
 !/scripts/gcr-build/
 !/scripts/gcr-build/.dockerignore
 !/scripts/gcr-build/build.Dockerfile

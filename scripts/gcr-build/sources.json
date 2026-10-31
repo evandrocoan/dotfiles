@@ -4,7 +4,7 @@
   "sources": {
     "gnome-keyring": {
       "version": "46.1-2ubuntu0.2",
-      "package_version": "46.1-2ubuntu0.2+keyringfix1",
+      "package_version": "46.1-2ubuntu0.2+keyringfix2",
       "archives": [
         {
           "file": "gnome-keyring_46.1-2ubuntu0.2.debian.tar.xz",
@@ -24,7 +24,8 @@
       ],
       "patches": [
         "../gnome-keyring-build/opensession-crash.patch",
-        "keyring-prompt-consumer.patch"
+        "keyring-prompt-consumer.patch",
+        "../gnome-keyring-build/unlock-queue.patch"
       ],
       "packages": [
         "gnome-keyring",

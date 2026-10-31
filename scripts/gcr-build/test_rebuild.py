@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -106,6 +107,54 @@ class PackageVerificationTests(unittest.TestCase):
             rebuild.snapshot(destination, [self.packages])
         self.assertEqual({p.name: rebuild.sha256(p) for p in rebuild.verify_packages(destination, True)},
                          {r["file"]: r["sha256"] for r in self.records})
+
+
+class PackageChangelogTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        (self.root / "debian").mkdir()
+        self.changelog = self.root / "debian/changelog"
+
+    def run_helper(self, package, base, version):
+        return subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().with_name("package_changelog.py")),
+             package, base, version], cwd=self.root, text=True, capture_output=True
+        )
+
+    def test_manifest_versions_produce_native_changelogs(self):
+        for package, source in rebuild.load_sources()["sources"].items():
+            with self.subTest(package=package):
+                original = (
+                    f"{package} ({source['version']}) noble; urgency=medium\n\n"
+                    "  * Original package fixture.\n\n"
+                    " -- Test <test@example.invalid>  Mon, 26 Oct 2026 00:00:00 +0000\n"
+                )
+                self.changelog.write_text(original)
+                result = self.run_helper(package, source["version"], source["package_version"])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                version = subprocess.check_output(
+                    ["dpkg-parsechangelog", "--show-field", "Version"], cwd=self.root, text=True
+                ).strip()
+                self.assertEqual(version, source["package_version"])
+                self.assertTrue(self.changelog.read_text().endswith(original))
+
+    def test_unselected_revision_is_rejected_without_write(self):
+        original = "gnome-keyring (46.1-2ubuntu0.2) noble; urgency=medium\n"
+        self.changelog.write_text(original)
+        result = self.run_helper("gnome-keyring", "46.1-2ubuntu0.2", "46.1-2ubuntu0.2+keyringfix99")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unexpected source package or local version", result.stderr)
+        self.assertEqual(self.changelog.read_text(), original)
+
+    def test_different_source_base_is_rejected_without_write(self):
+        original = "gnome-keyring (0.0-other) noble; urgency=medium\n"
+        self.changelog.write_text(original)
+        result = self.run_helper("gnome-keyring", "46.1-2ubuntu0.2", "46.1-2ubuntu0.2+keyringfix2")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("source changelog does not match", result.stderr)
+        self.assertEqual(self.changelog.read_text(), original)
 
 
 if __name__ == "__main__":
