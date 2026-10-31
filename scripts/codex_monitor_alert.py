@@ -7,6 +7,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import selectors
 import stat
 import subprocess
@@ -21,6 +22,8 @@ UNITS = ('codex-gitlab-monitor.timer', 'codex-gitlab-monitor.service')
 PROPERTIES = ('Id', 'LoadState', 'ActiveState', 'SubState', 'UnitFileState', 'Result',
               'InvocationID', 'ExecMainStartTimestampMonotonic', 'ExecMainExitTimestampMonotonic',
               'ExecMainCode', 'ExecMainStatus')
+RECOVERY_TITLE = 'Monitor: recuperação confirmada'
+REVIEWER_RECOVERY_TITLE = 'Monitor: revisor recuperado'
 
 
 def private_directory(path):
@@ -243,15 +246,52 @@ def collect(snapshot_path, units, state, clock, interval=900):
     checks['observer:health'] = observation('ok', 'Observação do monitor', 'Há um registro de saúde recente.')
     for key, value in snapshot['checks'].items():
         checks['monitor:' + key] = {**value, 'message': value['message'] +
-            '\nFila: '+str(snapshot['summary']['pending'])+' pendente(s), '+
+            '\nFila de revisões: '+str(snapshot['summary']['pending'])+' aguardando, '+
             str(snapshot['summary']['running'])+' em execução.'}
     return checks
 
 
 def notify(command, title, body):
+    icon = ('dialog-information' if title in {RECOVERY_TITLE, REVIEWER_RECOVERY_TITLE}
+            else 'dialog-warning')
     run_bounded([str(command), '--app-name=Fila de revisões', '--urgency=normal',
-                 '--icon=dialog-warning', '--expire-time=30000', '--',
+                 '--icon=' + icon, '--expire-time=30000', '--',
                  html.escape(title), html.escape(body)], limit=8192)
+
+
+def recovery_notice(key, check, previous):
+    first = time.strftime('%d/%m %H:%M', time.localtime(previous['first_seen']))
+    message, separator, queue = check['message'].partition('\n')
+    if key.startswith('monitor:reviewer:'):
+        # Format the existing export; this does not classify results or read native/queue state.
+        match = re.fullmatch(r'(codex|claude) / projeto ([1-9][0-9]*) / MR !([1-9][0-9]*) '
+            r'produziu um novo resultado válido; consulte o status da fila\.', message)
+        if match:
+            reviewer, project, iid = match.groups()
+            body = (f'O {reviewer.capitalize()} voltou a responder na revisão da MR !{iid} '
+                    f'(projeto {project}).\nFalha anterior registrada em {first}.\n'
+                    'Consulte o status da fila para ver o resultado.')
+            if separator:
+                body += '\n' + queue
+            return REVIEWER_RECOVERY_TITLE, body
+    return RECOVERY_TITLE, (f"Verificação recuperada: {check['kind']}.\n"
+                            f'Falha anterior registrada em {first}.\n' + check['message'])
+
+
+def failure_notice(key, check, first):
+    message, separator, queue = check['message'].partition('\n')
+    if key.startswith('monitor:reviewer:'):
+        match = re.fullmatch(r'(codex|claude) / projeto ([1-9][0-9]*) / MR !([1-9][0-9]*) '
+            r'terminou com falha\. Consulte o estágio [A-Za-z0-9-]+ no status da fila\.', message)
+        if match:
+            reviewer, project, iid = match.groups()
+            body = (f'O {reviewer.capitalize()} não conseguiu concluir a revisão da MR !{iid} '
+                    f'(projeto {project}).\nFalha registrada em {first}.\n'
+                    'Consulte o status da fila para ver o motivo.')
+            if separator:
+                body += '\n' + queue
+            return 'Monitor: revisão não concluída', body
+    return 'Monitor: ' + check['kind'], check['message'] + '\nObservado desde ' + first + '.'
 
 
 def deliver(checks, state, state_path, command, clock, *, sender=notify):
@@ -271,7 +311,8 @@ def deliver(checks, state, state_path, command, clock, *, sender=notify):
                     continue
                 attempts += 1
                 try:
-                    sender(command, 'Monitor: recuperação confirmada', check['kind'] + ': ' + check['message'])
+                    title, body = recovery_notice(key, check, previous)
+                    sender(command, title, body)
                 except (OSError, RuntimeError, ValueError, TimeoutError) as error:
                     failures.append(str(error))
                     continue
@@ -293,7 +334,8 @@ def deliver(checks, state, state_path, command, clock, *, sender=notify):
         attempts += 1
         try:
             first = time.strftime('%d/%m %H:%M', time.localtime(previous['first_seen']))
-            sender(command, 'Monitor: ' + check['kind'], check['message'] + '\nObservado desde ' + first + '.')
+            title, body = failure_notice(key, check, first)
+            sender(command, title, body)
         except (OSError, RuntimeError, ValueError, TimeoutError) as error:
             failures.append(str(error))
         else:
