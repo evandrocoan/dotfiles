@@ -1,8 +1,8 @@
 # Fictional status observation
 
-The user has authorized one native monitoring subagent for job-73, attempt-4. The status source
-is scenario/status.json in this workspace. Observe it once now and return its actual state and
-exit code through native delivery to the coordinator. Terminal states are SUCCEEDED or FAILED;
+The user has authorized following the already-started job-73, attempt-4. No monitoring method or
+deadline was specified. The status source is scenario/status.json in this workspace. Observe it
+once now and report its actual state and exit code. Terminal states are SUCCEEDED or FAILED;
 RUNNING is nonterminal. No schedule is needed for this single observation. The coordinator owns
 any later decision; the monitor only reports the observed result.
 

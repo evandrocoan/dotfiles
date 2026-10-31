@@ -1,17 +1,37 @@
 ---
 name: long-running-followup
 description: >-
-  Follow authorized long-running operations without frequent model polling. Use before repeated
-  status checks, scheduled follow-ups, or arranging a worker's return to a parent chat. Prefer
-  completion events and minimal-context delegation. Exclude short commands, generic performance
-  tuning, and explanations requiring no monitoring.
+  Delegate authorized polling and operations that remain running to one worker. Use before
+  launching known waits, at the first still-running result, or before any status polling or
+  scheduled follow-up. Prefer completion events. Exclude short synchronous commands unless they
+  return still running, and explanations requiring no monitoring.
 ---
 
 # Long-running follow-up
 
+## Delegate waiting
+
+Start required monitoring without a separate consent question. Honor explicit opt-outs and supplied
+deadlines/check caps; otherwise follow until completion, failure, required intervention or
+cancellation. Do not invent a cutoff; per-call wait limits do not end monitoring.
+
+Delegate polling, follow-up checks and any command that returns still running to one worker.
+Delegate known waits before launch; on an unexpected running result, hand off observation before
+another status check, log read or execution wait. The parent awaits the worker's completion event
+instead of checking operation or worker progress.
+
+Reuse an existing assigned worker, never one per check. Use `gpt-6-luna` / `high` explicitly,
+with fresh context and inherited tool permissions. An assigned observation worker keeps its
+operation; it does not delegate again.
+
+Preserve already-started operations. Delegate an accessible status/result source; do not assume
+another agent's execution session transfers. After worker completion evidence, the parent may
+collect its terminal tool result once. If delegation or result access is unavailable, preserve
+the operation and report the gap; do not substitute another model or resume parent polling.
+
 ## Choose how completion arrives
 
-Record startup errors/prompts and operation identity.
+The worker records startup errors/prompts and operation identity.
 Prefer native completion, then an existing deterministic watcher, then supported scheduling.
 No routine polling alongside reliable completion delivery.
 
@@ -21,14 +41,10 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 
 ## Assign the observation directly
 
-Reuse one authorized monitor, never one per check. For monitoring subagents use `gpt-6-luna` /
-`high` explicitly, with fresh context and inherited tool permissions; report unavailability
-instead of substituting another model.
-
 Pass the operation/status source, exact exit-code or log-event condition, and parent/return route
 directly. Include applicable observation/access instructions, authorization and chat restrictions.
-For scheduled checks, include cadence, timezone and deadline/check cap. Do not add a prompt-rewriting
-step or word budget before monitoring.
+For scheduled checks, include cadence, timezone and any supplied deadline/check cap. Do not add a
+prompt-rewriting step or word budget before monitoring.
 
 Do not create or require a checkpoint for a simple wait. Reference existing monitoring state only
 when resumption or deduplication needs it. The monitor reads observation/access/return inputs,
@@ -38,7 +54,7 @@ or recursively delegate.
 
 ## Check only when due
 
-Use scheduling or bounded native waits, not short polling loops or cache warming.
+The worker uses scheduling or bounded native waits, not short polling loops or cache warming.
 
 Observe read-only once per due check, including prompts. Persist monitoring state only when needed
 to resume or deduplicate; preserve operation identity/attempt. Stay silent on unchanged state unless
