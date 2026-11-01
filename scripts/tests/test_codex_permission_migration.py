@@ -1,0 +1,435 @@
+"""Exact migration mapping and real source/absence/consumer boundaries."""
+import copy
+import importlib
+import json
+import os
+from pathlib import Path
+import runpy
+import subprocess
+import sys
+import tomllib
+
+import pytest
+
+
+@pytest.fixture
+def migration(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1]))
+    return importlib.import_module('codex_permission_migration')
+
+
+SOURCE = b'''# user preference
+sandbox_mode = "workspace-write" # old mode
+approval_policy = { granular = { sandbox_approval = true, rules = true, request_permissions = true, mcp_elicitations = true, skill_approval = true } }
+secret = "SENTINEL-DO-NOT-PRINT"
+[features]
+code_mode_host = true
+# legacy CLI compatibility
+[sandbox_workspace_write]
+network_access = true # direct network
+[permissions.existing]
+extends = ":read-only"
+[permissions.existing.filesystem]
+"/example" = "write"
+'''
+
+
+@pytest.mark.parametrize('layout', ['table', 'inline', 'dotted'])
+def test_exact_transform_preserves_existing_profiles_approvals_and_comments(migration, layout):
+    source = SOURCE
+    network = (b'# legacy CLI compatibility\n[sandbox_workspace_write]\n'
+               b'network_access = true # direct network\n')
+    if layout != 'table':
+        declarations = {
+            'inline': b'sandbox_workspace_write = { network_access = true } # direct network\n',
+            'dotted': b'sandbox_workspace_write.network_access = true # direct network\n',
+        }
+        source = source.replace(network, b'').replace(
+            b'[features]\n', b'# legacy CLI compatibility\n' + declarations[layout] + b'[features]\n')
+    output = migration.transform(source)
+    old, new = tomllib.loads(source.decode()), tomllib.loads(output.decode())
+    assert new['default_permissions'] == 'local-workspace'
+    assert new['permissions']['local-workspace'] == {'extends': ':workspace', 'network': {'enabled': True}}
+    assert new['sandbox_workspace_write'] == {'network_access': True}
+    del new['default_permissions'], new['permissions']['local-workspace']
+    del old['sandbox_mode']
+    assert new == old
+    assert b'# user preference' in output
+    assert b'# legacy CLI compatibility' in output
+    assert b'# direct network' in output
+    assert b'network_proxy' not in output
+    assert b'SENTINEL-DO-NOT-PRINT' in output
+
+
+@pytest.mark.parametrize('network', [
+    b'network_access = false',
+    b'network_access = 1',
+    b'network_access = true\nexclude_tmpdir_env_var = true',
+])
+def test_unreviewed_legacy_network_shape_is_refused(migration, network):
+    source = SOURCE.replace(b'network_access = true # direct network', network)
+    with pytest.raises(RuntimeError, match='formato aprovado'):
+        migration.transform(source)
+
+
+@pytest.mark.parametrize('change', [
+    b'sandbox_mode = "read-only"',
+    b'sandbox_mode = "workspace-write"\ndefault_permissions = "other"',
+    b'sandbox_mode = "workspace-write"\n[permissions.local-workspace]\nextends = ":workspace"',
+    b'sandbox_mode = "workspace-write"\n[profiles.other]\nmodel = "other"',
+])
+def test_unreviewed_source_shape_is_refused(migration, change):
+    with pytest.raises(RuntimeError, match='formato aprovado'):
+        migration.transform(change + b'\n[sandbox_workspace_write]\nnetwork_access = true\n')
+
+
+@pytest.fixture
+def shape(tmp_path):
+    home = tmp_path / 'codex'
+    home.mkdir(mode=0o700)
+    work = tmp_path / 'work'
+    work.mkdir(mode=0o700)
+    target = home / 'config.toml'
+    target.write_bytes(SOURCE)
+    target.chmod(0o600)
+    name = {'type': 'user', 'file': str(target), 'profile': None}
+    user = {'name': name, 'version': 'sha256:test', 'config': tomllib.loads(SOURCE.decode())}
+    system = {'name': {'type': 'system', 'file': '/etc/codex/config.toml'},
+              'version': 'sha256:empty', 'config': {}}
+    report = {'layers': [user, system], 'origins': {'sandbox_mode': {'name': name}}}
+    return home, work, target, report
+
+
+def test_inventory_rechecks_real_absent_and_present_sources(migration, shape):
+    home, work, target, report = shape
+    original = migration.inventory(home, [work], [report], {'requirements': None})
+    migration.revalidate_inventory(original, home, [work], [report], {'requirements': None})
+    # Both the previously missing directory and a new project policy invalidate the seal.
+    (work / '.codex').mkdir(mode=0o700)
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate(original['sources'])
+    (work / '.codex/config.toml').write_text('sandbox_mode = "read-only"\n')
+    (work / '.codex/config.toml').chmod(0o600)
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate(original['sources'])
+    assert target.read_bytes() == SOURCE
+
+
+def test_same_bytes_with_new_file_identity_invalidate_inventory(migration, shape):
+    home, work, target, report = shape
+    original = migration.inventory(home, [work], [report], {'requirements': None})
+    replacement = home / 'other'
+    replacement.write_bytes(SOURCE)
+    replacement.chmod(0o600)
+    replacement.replace(target)
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate(original['sources'])
+
+
+@pytest.mark.parametrize('kind', ['enterpriseManaged', 'mdm', 'packagedDefaults', 'future'])
+def test_unknown_and_unbound_managed_layers_refuse_inventory(migration, shape, kind):
+    home, work, _, report = shape
+    report['layers'].insert(0, {'name': {'type': kind}, 'version': 'new', 'config': {}})
+    with pytest.raises(RuntimeError, match='desconhecida ou não vinculável'):
+        migration.inventory(home, [work], [report], {'requirements': None})
+
+
+def test_changed_requirements_and_session_policy_cannot_be_hidden(migration, shape):
+    home, work, _, report = shape
+    with pytest.raises(RuntimeError, match='requisitos gerenciados'):
+        migration.inventory(home, [work], [report], {'requirements': {}})
+    report['layers'].insert(0, {'name': {'type': 'sessionFlags'}, 'version': 'flags',
+                               'config': {'sandbox_mode': 'danger-full-access'}})
+    with pytest.raises(RuntimeError, match='opções de sessão'):
+        migration.inventory(home, [work], [report], {'requirements': None})
+
+
+def test_source_changed_since_native_read_is_refused(migration, shape):
+    home, work, target, report = shape
+    target.write_bytes(SOURCE.replace(b'workspace-write', b'read-only'))
+    with pytest.raises(RuntimeError, match='não corresponde'):
+        migration.inventory(home, [work], [report], {'requirements': None})
+
+
+@pytest.mark.parametrize('unsafe', ['symlink', 'hardlink', 'writable'])
+def test_unsafe_source_witness_refused(migration, tmp_path, unsafe):
+    target = tmp_path / 'source'
+    target.write_text('secret')
+    target.chmod(0o600)
+    if unsafe == 'symlink':
+        alias = tmp_path / 'alias'
+        alias.symlink_to(target)
+        target = alias
+    elif unsafe == 'hardlink':
+        os.link(target, tmp_path / 'alias')
+    else:
+        target.chmod(0o666)
+    with pytest.raises((RuntimeError, OSError)):
+        migration.witness(target)
+
+
+def test_executable_rewrite_with_restored_bytes_and_mtime_changes_pin(migration, tmp_path):
+    executable = tmp_path / 'native'
+    executable.write_bytes(b'fixture executable bytes')
+    executable.chmod(0o700)
+    before = executable.stat()
+    original = migration.executable_pin(executable)
+    executable.write_bytes(b'fixture executable bytes')
+    os.utime(executable, ns=(before.st_atime_ns, before.st_mtime_ns))
+    changed = migration.executable_pin(executable)
+    assert changed['sha256'] == original['sha256']
+    assert changed['identity'][:-1] == original['identity'][:-1]
+    assert changed['identity'][-1] != original['identity'][-1]
+    assert changed != original
+
+
+def test_real_client_process_denies_quiescence_even_without_native_records(migration, shape, monkeypatch):
+    home, work, target, _ = shape
+    runtime = home.parent / 'run'
+    runtime.mkdir(mode=0o700)
+    monkeypatch.setenv('XDG_RUNTIME_DIR', str(runtime))
+    alias = home / 'app-server-control/app-server-control.sock'
+    config = {'codex_home': str(home), '_socket_alias': str(alias), 'socket': str(alias),
+              'queue_file': str(home.parent / 'queue.sqlite3'),
+              'state_file': str(home.parent / 'state/state.sqlite3')}
+    with migration.MonitorColdStart(config, [sys.executable]) as owner:
+        process = subprocess.Popen([sys.executable, '-u', '-c',
+            'import time;print("ready",flush=True);time.sleep(30)'],
+            env={**os.environ, 'CODEX_HOME': str(home)}, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True)
+        try:
+            assert process.stdout.readline() == 'ready\n'
+            with pytest.raises(RuntimeError, match='ainda está ativo'):
+                migration.quiescent(owner, client_executables=[sys.executable], consumer_scripts=[])
+            assert target.read_bytes() == SOURCE
+        finally:
+            process.terminate()
+            process.wait(timeout=5)
+            process.stdout.close()
+            process.stderr.close()
+        migration.quiescent(owner, client_executables=[sys.executable], consumer_scripts=[])
+
+
+def test_new_git_root_marker_and_auth_change_invalidate_seal(migration, shape):
+    home, work, _, report = shape
+    sealed = migration.inventory(home, [work], [report], {'requirements': None})
+    (work / '.git').mkdir(mode=0o700)
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate(sealed['sources'])
+    sealed = migration.inventory(home, [work], [report], {'requirements': None})
+    (home / 'auth.json').write_text('{}')
+    (home / 'auth.json').chmod(0o600)
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate(sealed['sources'])
+
+
+def test_running_automatic_obligation_denies_without_queue_writes(migration, shape, monkeypatch):
+    home, _, target, _ = shape
+    runtime = home.parent / 'run'
+    runtime.mkdir(mode=0o700)
+    monkeypatch.setenv('XDG_RUNTIME_DIR', str(runtime))
+    alias = home / 'app-server-control/app-server-control.sock'
+    config = {'codex_home': str(home), '_socket_alias': str(alias), 'socket': str(alias),
+              'queue_file': str(home.parent / 'queue.sqlite3'),
+              'state_file': str(home.parent / 'state/state.sqlite3'),
+              'gitlab_url': 'https://gitlab.example.invalid'}
+    support = migration._monitor_support()
+    queue = support['MonitorQueue'](config)
+    queue.db.execute('INSERT INTO jobs(id,source_key,repository,iid,state,value) VALUES(?,?,?,?,?,?)',
+                     ('held', 'fixture', 1, 1, 'running', json.dumps({'id': 'held'})))
+    queue.close()
+    before = Path(config['queue_file']).read_bytes()
+    with migration.MonitorColdStart(config, [sys.executable]) as owner:
+        with pytest.raises(RuntimeError, match='trabalho automático'):
+            migration.quiescent(owner, client_executables=[], consumer_scripts=[])
+    assert Path(config['queue_file']).read_bytes() == before
+    assert target.read_bytes() == SOURCE
+
+
+@pytest.fixture
+def operator(migration, shape, monkeypatch):
+    home, work, target, report = shape
+    root = home.parent
+    for name in ('run', 'user', 'config', 'data', 'cache', 'state', 'bin'):
+        (root / name).mkdir(mode=0o700)
+    for key, name in (('HOME', 'user'), ('CODEX_HOME', 'codex'), ('XDG_RUNTIME_DIR', 'run'),
+                      ('XDG_CONFIG_HOME', 'config'), ('XDG_DATA_HOME', 'data'),
+                      ('XDG_CACHE_HOME', 'cache'), ('XDG_STATE_HOME', 'state')):
+        monkeypatch.setenv(key, str(root / name))
+    fake = root / 'bin/systemctl'
+    fake.write_text('#!/usr/bin/python3\nimport os\nprint(os.environ.get("FIXTURE_UNIT_STATE", "inactive"))\n')
+    fake.chmod(0o700)
+    monkeypatch.setenv('PATH', str(fake.parent) + ':' + os.environ['PATH'])
+    # Protocol fixture at the native executable boundary. No guard, source reader,
+    # inventory comparison, lock, backup or publisher logic is replaced.
+    (work / 'app-server').write_text('''import json,os,pathlib,sys,tomllib
+home=pathlib.Path(os.environ['CODEX_HOME'])
+for line in sys.stdin:
+    row=json.loads(line)
+    if 'id' not in row:continue
+    method=row['method']
+    if method=='initialize':value={'codexHome':str(home)}
+    elif method=='configRequirements/read':value={'requirements':None}
+    elif method=='config/read':
+        source=tomllib.loads((home/'config.toml').read_text())
+        user={'type':'user','file':str(home/'config.toml'),'profile':None}
+        value={'layers':[{'name':user,'version':'sha256:test','config':source},
+            {'name':{'type':'system','file':'/etc/codex/config.toml'},'version':'sha256:empty','config':{}}],
+            'origins':{'sandbox_mode':{'name':user}}}
+    else:raise AssertionError(method)
+    print(json.dumps({'id':row['id'],'result':value}),flush=True)
+''')
+    alias = home / 'app-server-control/app-server-control.sock'
+    config = {'codex_home': str(home), '_socket_alias': str(alias), 'socket': str(alias),
+              'queue_file': str(root / 'queue.sqlite3'), 'state_file': str(root / 'state/state.sqlite3'),
+              'gitlab_url': 'https://gitlab.example.invalid'}
+    support = migration._monitor_support()
+    monitor_path = root / 'monitor.json'
+    raw = support['monitor_default_config']('https://gitlab.example.invalid/team/project', 1, 'gitlab')
+    raw.update({key: value for key, value in config.items() if not key.startswith('_')})
+    raw['cwd'] = str(work)
+    monitor_path.write_text(json.dumps(raw))
+    monitor_path.chmod(0o600)
+    config = support['mq_config'](monitor_path)
+    artifact = root / 'artifact'
+    migration.prepare_artifact(config, [work], [report], {'requirements': None},
+        native_paths=[sys.executable], client_executables=['/usr/bin/true'], artifact=artifact)
+    manifest_sha256 = migration.digest((artifact / 'manifest.json').read_bytes())
+    return migration, target, artifact, manifest_sha256
+
+
+def test_operator_uses_real_transition_backup_repeat_and_guarded_recovery(operator):
+    migration, target, artifact, seal = operator
+    previous = target.read_bytes()
+    result = migration.apply_artifact(artifact, manifest_sha256=seal)
+    assert result['published'] and result['native_started'] and result['native_terminated']
+    assert result['locks_reacquired'] and result['backup_complete']
+    assert result['activation_verified'] is False
+    assert Path(result['backup']).read_bytes() == previous
+    candidate = target.read_bytes()
+    unchanged = migration.apply_artifact(artifact, manifest_sha256=seal)
+    assert unchanged['unchanged'] and not unchanged['native_started']
+    assert target.read_bytes() == candidate
+    restored = migration.apply_artifact(artifact, manifest_sha256=seal, recover=True)
+    assert restored['published'] and target.read_bytes() == previous
+    assert Path(restored['backup']).read_bytes() == candidate
+
+
+@pytest.mark.parametrize('already_applied', [False, True])
+def test_changed_monitor_queue_refuses_before_reader_or_backup(operator, already_applied):
+    migration, target, artifact, seal = operator
+    if already_applied:
+        migration.apply_artifact(artifact, manifest_sha256=seal)
+    monitor_path = target.parent.parent / 'monitor.json'
+    raw = json.loads(monitor_path.read_text())
+    raw['queue_file'] = str(target.parent.parent / 'another-queue.sqlite3')
+    monitor_path.write_text(json.dumps(raw))
+    changed = migration._monitor_support()['mq_config'](monitor_path)
+    queue = migration._monitor_support()['MonitorQueue'](changed)
+    queue.db.execute('INSERT INTO jobs(id,source_key,repository,iid,state,value) VALUES(?,?,?,?,?,?)',
+        ('detached', 'fixture-detached', 1, 1, 'running', json.dumps({'id': 'detached'})))
+    queue.close()
+    previous = target.read_bytes(), target.stat().st_mtime_ns
+    readers = set(artifact.glob('reader-*'))
+    backups = set(target.parent.glob('config.toml.before-monitor-*.bak'))
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.apply_artifact(artifact, manifest_sha256=seal)
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == previous
+    assert set(artifact.glob('reader-*')) == readers
+    assert set(target.parent.glob('config.toml.before-monitor-*.bak')) == backups
+
+
+def test_monitor_sources_refuse_stale_derived_queue_selection(operator):
+    migration, target, _, _ = operator
+    path = target.parent.parent / 'monitor.json'
+    config = migration._monitor_support()['mq_config'](path)
+    raw = json.loads(path.read_text())
+    raw['queue_file'] = str(target.parent.parent / 'another-queue.sqlite3')
+    path.write_text(json.dumps(raw))
+    with pytest.raises(RuntimeError, match='seleção da configuração do monitor mudou'):
+        migration.monitor_sources(config)
+
+
+def test_linked_monitor_analysis_source_is_revalidated(operator):
+    migration, target, _, _ = operator
+    import tomlkit
+    support = migration._monitor_support()
+    path = target.parent.parent / 'monitor.json'
+    raw = json.loads(path.read_text())
+    settings = {key: raw.pop(key) for key in support['MONITOR_TOML_OPTIONS'] if key in raw}
+    for key in ('model', 'effort'):
+        settings['codex_' + key] = raw.pop(key)
+    settings['workspace'] = raw.pop('cwd')
+    analysis = path.with_suffix('.toml')
+    analysis.write_text(tomlkit.dumps(settings))
+    analysis.chmod(0o600)
+    raw['analysis_config'] = str(analysis)
+    path.write_text(json.dumps(raw))
+    config = support['mq_config'](path)
+    sources = migration.monitor_sources(config)
+    assert [item['path'] for item in sources] == [str(path), str(analysis)]
+    analysis.write_text(analysis.read_text() + '\n# external edit\n')
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate(sources)
+
+
+@pytest.mark.parametrize('changed', ['manifest', 'candidate', 'candidate_metadata', 'config', 'project', 'unit'])
+def test_operator_initial_refusals_never_start_reader_or_backup(operator, monkeypatch, changed):
+    migration, target, artifact, seal = operator
+    if changed == 'manifest':
+        with (artifact / 'manifest.json').open('ab') as stream:
+            stream.write(b' ')
+    elif changed == 'candidate':
+        with (artifact / 'proposed.toml').open('ab') as stream:
+            stream.write(b'# changed\n')
+    elif changed == 'candidate_metadata':
+        meta = (artifact / 'proposed.toml').stat()
+        os.utime(artifact / 'proposed.toml', ns=(meta.st_atime_ns, meta.st_mtime_ns + 1))
+    elif changed == 'config':
+        target.write_bytes(target.read_bytes() + b'# external edit\n')
+    elif changed == 'project':
+        work = target.parent.parent / 'work'
+        (work / '.codex').mkdir(mode=0o700)
+    else:
+        monkeypatch.setenv('FIXTURE_UNIT_STATE', 'active')
+    current = target.read_bytes(), target.stat().st_mtime_ns
+    with pytest.raises((RuntimeError, OSError)):
+        migration.apply_artifact(artifact, manifest_sha256=seal)
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == current
+    assert not list(artifact.glob('reader-*'))
+    assert not list(target.parent.glob('config.toml.before-monitor-*.bak'))
+
+
+@pytest.mark.parametrize('changed', ['user', 'project'])
+def test_edit_after_native_shutdown_refuses_backup_and_reports_reader_activity(operator, monkeypatch, changed):
+    migration, target, artifact, seal = operator
+    import codex_monitor_cold
+    real_reader = codex_monitor_cold.monitor_read_cold_native
+    def after_shutdown(*args, **kwargs):
+        value = real_reader(*args, **kwargs)
+        assert value['native_terminated'] and value['locks_reacquired']
+        if changed == 'user':
+            target.write_bytes(target.read_bytes() + b'# later edit\n')
+        else:
+            (target.parent.parent / 'work/.codex').mkdir(mode=0o700)
+        return value
+    monkeypatch.setattr(codex_monitor_cold, 'monitor_read_cold_native', after_shutdown)
+    previous = target.read_bytes()
+    with pytest.raises(RuntimeError, match='mudaram') as caught:
+        migration.apply_artifact(artifact, manifest_sha256=seal)
+    state = caught.value.migration_state
+    assert state['native_started'] and state['native_terminated'] and not state['published']
+    assert target.read_bytes() == previous + (b'# later edit\n' if changed == 'user' else b'')
+    assert not list(target.parent.glob('config.toml.before-monitor-*.bak'))
+
+
+@pytest.mark.parametrize('changed', ['target', 'backup'])
+def test_guarded_recovery_refuses_later_edits(operator, changed):
+    migration, target, artifact, seal = operator
+    result = migration.apply_artifact(artifact, manifest_sha256=seal)
+    path = target if changed == 'target' else Path(result['backup'])
+    path.write_bytes(path.read_bytes() + b'# later edit\n')
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with pytest.raises(RuntimeError, match='recuperação recusada'):
+        migration.apply_artifact(artifact, manifest_sha256=seal, recover=True)
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before

@@ -775,6 +775,56 @@ codex-session-stats monitor-gitlab launch-app \
   --app path/to/ChatGPT --codex path/to/resources/codex
 ```
 
+**Preparation candidate; not released for production application.**
+
+The optional [permission migration operator](scripts/codex_permission_migration.py) prepares the
+inspected legacy workspace/network policy as the named `local-workspace` default, retaining
+existing approvals and profiles. It preserves the old workspace network table because the current
+interactive CLI explicitly requests the legacy mode. The server default uses the named profile;
+the CLI retains its existing access through that compatibility setting. Revalidate both paths
+after a Codex update. Use the existing Poetry `monitor-tools` environment. From
+`scripts/`, inspect `poetry run python codex_permission_migration.py --help` before preparing:
+
+```bash
+poetry run python codex_permission_migration.py prepare \
+  --monitor-config "$HOME/.config/codex-session-stats/gitlab-monitor.json" \
+  --native path/to/current/native --native path/to/other/installed/native \
+  --context path/to/workspace --artifact path/to/new/private/artifact
+```
+
+The first native must match the current authenticated GUI server. Include every installed CLI/native
+selection and each intended workspace context. Preparation requires the current verified Codex Monitor
+connection and leaves the real config unchanged. Keep the private artifact directory and printed
+manifest SHA-256; prepare and apply from the same terminal environment. Changed config, source layers,
+monitor JSON or its referenced analysis TOML, code, packages, candidate bytes/metadata or relevant
+environment require a new preparation. The selected queue is bound to those monitor sources;
+changing them also prevents an unchanged-file result from bypassing the checks.
+
+Application is a separate, explicitly released operator step. Pause the previously active
+`codex-gitlab-monitor.timer` and `codex-monitor-alert.timer`, let their services and issued reviews
+finish normally, and close GUI/CLI clients normally. The operator requires all four timer/service
+units inactive, no running queue obligation and verified cold native ownership. It starts only its
+owned configuration reader, stops it normally and reacquires native exclusion before publication.
+After reviewing the preview and releasing this handoff, run:
+
+```bash
+poetry run python codex_permission_migration.py apply \
+  --artifact path/to/private/artifact --manifest-sha256 SHA256 --after-normal-close
+```
+
+Success names an exact private backup and records `application.json`. Repeating apply reports an
+unchanged file; neither result confirms client activation. Reopen the app and CLI, verify new-chat
+defaults, retained old-chat scopes and explicit monitor roles, then resume only the timers paused for
+this handoff. The operator never changes schedules. Its private `reader-*` directories contain the
+native diagnostics and observed shutdown state. A failure after reader startup reports that activity;
+a failure after replacement reports the write and backup without another overwrite.
+
+For recovery after a successful application, close clients and establish the same scheduling/work
+conditions, then use `recover` with the same artifact, manifest SHA-256 and `--after-normal-close`.
+It restores only the known exact backup while the target remains the recorded applied image. Later
+edits to the target or backup prevent recovery. A failed post-write confirmation requires inspection
+of the reported backup and target; the operator does not automatically roll back.
+
 Fresh work uses a separate private queue, by default under
 `~/.local/state/codex-session-stats-queue/queue.sqlite3`. Predecessor databases and chats are never
 imported, changed or read for new human requests. New Codex chats are created lazily per MR in the

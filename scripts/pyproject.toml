@@ -32,6 +32,7 @@ optional = true
 [tool.poetry.group.monitor-tools.dependencies]
 mcp = "^2.3.0"
 websockets = "^10.4"
+tomlkit = "0.15.2"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
