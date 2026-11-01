@@ -821,9 +821,12 @@ a failure after replacement reports the write and backup without another overwri
 
 For recovery after a successful application, close clients and establish the same scheduling/work
 conditions, then use `recover` with the same artifact, manifest SHA-256 and `--after-normal-close`.
-It restores only the known exact backup while the target remains the recorded applied image. Later
-edits to the target or backup prevent recovery. A failed post-write confirmation requires inspection
-of the reported backup and target; the operator does not automatically roll back.
+It restores the exact backup while the target still has the recorded applied contents. Historical
+timestamps, same-byte replacement and updates to the recovery code do not invalidate those contents;
+no new artifact or publication receipt is required. Changed target/backup contents prevent recovery.
+The existing native/layer/consumer checks remain, and fresh observations detect edits during recovery.
+A failed post-write confirmation requires inspection of the reported backup and target; the operator
+does not automatically roll back.
 
 Fresh work uses a separate private queue, by default under
 `~/.local/state/codex-session-stats-queue/queue.sqlite3`. Predecessor databases and chats are never

@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import runpy
 import shutil
 import stat
@@ -596,8 +597,118 @@ def test_operator_uses_real_transition_backup_repeat_and_guarded_recovery(operat
     assert Path(restored['backup']).read_bytes() == candidate
 
 
-def test_operator_refuses_its_active_consumer_before_reader_or_backup(operator):
+@pytest.mark.parametrize('changed', [
+    'target_time', 'target_replacement', 'backup_time', 'backup_replacement',
+    'candidate_time', 'program', 'environment',
+])
+def test_recovery_accepts_unchanged_contents_after_historical_changes(operator, monkeypatch, changed):
     migration, target, artifact, seal = operator
+    previous = target.read_bytes()
+    applied = migration.apply_artifact(artifact, manifest_sha256=seal)
+    candidate = target.read_bytes()
+    path = target
+    if changed.startswith('backup_'):
+        path = Path(applied['backup'])
+    elif changed == 'candidate_time':
+        path = artifact / 'proposed.toml'
+    if changed.endswith('_time'):
+        before = path.stat()
+        os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000))
+        assert path.stat().st_mtime_ns != before.st_mtime_ns
+    elif changed.endswith('_replacement'):
+        inode = path.stat().st_ino
+        replacement = path.with_suffix('.replacement')
+        replacement.write_bytes(path.read_bytes())
+        replacement.chmod(0o600)
+        replacement.replace(path)
+        assert path.stat().st_ino != inode
+    elif changed == 'program':
+        # Only the fixture-owned source changes; no live source or guard is patched.
+        source = Path(migration.__file__)
+        source.write_bytes(source.read_bytes() + b'\n# installed recovery update\n')
+    else:
+        monkeypatch.setenv('TMPDIR', str(target.parent.parent))
+    original_manifest = (artifact / 'manifest.json').read_bytes()
+    original_receipt = (artifact / 'application.json').read_bytes()
+
+    restored = migration.apply_artifact(artifact, manifest_sha256=seal, recover=True)
+
+    assert restored['published'] is True
+    assert restored['native_terminated'] is True
+    assert target.read_bytes() == previous
+    assert Path(restored['backup']).read_bytes() == candidate
+    assert Path(applied['backup']).read_bytes() == previous
+    assert (artifact / 'manifest.json').read_bytes() == original_manifest
+    assert (artifact / 'application.json').read_bytes() == original_receipt
+    assert not (artifact / 'recovery.json').exists()
+
+
+@pytest.mark.parametrize('changed, message', [
+    ('target_time', 'Codex config changed concurrently; preparation refused'),
+    ('target_replacement', 'Codex config changed concurrently; preparation refused'),
+    ('backup_time', 'origem presente ou ausente mudou; prepare novamente'),
+    ('program', 'origem presente ou ausente mudou; prepare novamente'),
+])
+def test_recovery_rechecks_fresh_inputs_after_reader(operator, monkeypatch, changed, message):
+    migration, target, artifact, seal = operator
+    applied = migration.apply_artifact(artifact, manifest_sha256=seal)
+    candidate = target.read_bytes()
+    backups = set(target.parent.glob('config.toml.before-monitor-*.bak'))
+    import codex_monitor_cold
+    real_reader = codex_monitor_cold.monitor_read_cold_native
+
+    def after_shutdown(*args, **kwargs):
+        result = real_reader(*args, **kwargs)
+        assert result['native_terminated'] is True and result['locks_reacquired'] is True
+        if changed == 'program':
+            path = Path(migration.__file__)
+            path.write_bytes(path.read_bytes() + b'\n# changed during recovery\n')
+        elif changed == 'target_replacement':
+            replacement = target.with_suffix('.replacement')
+            replacement.write_bytes(candidate)
+            replacement.chmod(0o600)
+            replacement.replace(target)
+        else:
+            path = target if changed == 'target_time' else Path(applied['backup'])
+            before = path.stat()
+            os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000))
+        return result
+
+    monkeypatch.setattr(codex_monitor_cold, 'monitor_read_cold_native', after_shutdown)
+    with pytest.raises(RuntimeError, match='^' + re.escape(message) + '$') as caught:
+        migration.apply_artifact(artifact, manifest_sha256=seal, recover=True)
+    state = caught.value.migration_state
+    assert state['native_started'] is True and state['native_terminated'] is True
+    assert state['published'] is False
+    assert target.read_bytes() == candidate
+    assert set(target.parent.glob('config.toml.before-monitor-*.bak')) == backups
+
+
+def test_public_recovery_after_source_update_reports_actual_result(operator):
+    migration, target, artifact, seal = operator
+    previous = target.read_bytes()
+    migration.apply_artifact(artifact, manifest_sha256=seal)
+    script = Path(migration.__file__)
+    script.write_bytes(script.read_bytes() + b'\n# installed update\n')
+    environment = dict(os.environ, PYTHONPATH=str(target.parent.parent / 'work'))
+    result = subprocess.run([sys.executable, str(script), 'recover', '--artifact', str(artifact),
+        '--manifest-sha256', seal, '--after-normal-close'], env=environment,
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert 'Configuração anterior restaurada.' in result.stdout
+    assert result.stderr == ''
+    assert 'SENTINEL-DO-NOT-PRINT' not in result.stdout
+    assert target.read_bytes() == previous
+
+
+@pytest.mark.parametrize('recover', [False, True], ids=['apply', 'recover'])
+def test_operator_refuses_its_active_consumer_before_reader_or_backup(operator, recover):
+    migration, target, artifact, seal = operator
+    if recover:
+        migration.apply_artifact(artifact, manifest_sha256=seal)
+    previous = target.read_bytes()
+    readers = set(artifact.glob('reader-*'))
+    backups = set(target.parent.glob('config.toml.before-monitor-*.bak'))
     source_root = Path(migration.__file__).resolve().parents[1]
     consumer = str(source_root / '.local/bin/codex-session-stats')
     assert json.loads((artifact / 'manifest.json').read_text())['consumers'] == [
@@ -611,10 +722,10 @@ def test_operator_refuses_its_active_consumer_before_reader_or_backup(operator):
     try:
         assert process.stdout.readline() == 'ready\n'
         with pytest.raises(RuntimeError, match='consumidor automático ainda está ativo'):
-            migration.apply_artifact(artifact, manifest_sha256=seal)
-        assert target.read_bytes() == SOURCE
-        assert not list(artifact.glob('reader-*'))
-        assert not list(target.parent.glob('config.toml.before-monitor-*.bak'))
+            migration.apply_artifact(artifact, manifest_sha256=seal, recover=recover)
+        assert target.read_bytes() == previous
+        assert set(artifact.glob('reader-*')) == readers
+        assert set(target.parent.glob('config.toml.before-monitor-*.bak')) == backups
     finally:
         process.terminate()
         process.wait(timeout=5)

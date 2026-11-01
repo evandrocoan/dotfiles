@@ -450,7 +450,7 @@ def systemd_quiescent(executable):
             raise RuntimeError('agendamento ou serviço ativo/não verificável: ' + unit)
 
 
-def artifact_inputs(artifact, manifest_sha256):
+def artifact_inputs(artifact, manifest_sha256, *, recovery=False):
     artifact = Path(artifact).absolute()
     if artifact.resolve(strict=True) != artifact:
         raise RuntimeError('diretório de artefatos não canônico')
@@ -463,7 +463,7 @@ def artifact_inputs(artifact, manifest_sha256):
         raise RuntimeError('versão de artefato não suportada')
     prepared = private_read(artifact / 'proposed.toml')
     if (digest(prepared) != manifest['candidate_sha256']
-            or witness(artifact / 'proposed.toml') != manifest['candidate_witness']):
+            or not recovery and witness(artifact / 'proposed.toml') != manifest['candidate_witness']):
         raise RuntimeError('prévia mudou depois da preparação')
     return artifact, manifest, prepared
 
@@ -483,21 +483,31 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
     from codex_monitor_cold import monitor_config_snapshot, monitor_publish_config, monitor_read_cold_native
     import uuid
 
-    artifact, manifest, prepared = artifact_inputs(artifact, manifest_sha256)
-    static_revalidate(manifest)
+    artifact, manifest, prepared = artifact_inputs(artifact, manifest_sha256, recovery=recover)
+    # An exact backup does not expire when this program or its invocation changes.
+    # Still freeze the current code/environment for this operation's rechecks.
+    execution = ({**manifest, 'code': code_sources(), 'environment': environment_seal()}
+                 if recover else manifest)
+    static_revalidate(execution)
     systemd_quiescent(manifest['systemctl']['actual'])
     authority = MonitorColdStart(manifest['config'], [item['actual'] for item in manifest['native']])
     state = {'native_started': False, 'native_terminated': False, 'published': False, 'backup': None}
     receipt = None
+    recovery_sources = []
     if recover:
+        receipt_witness = witness(artifact / 'application.json')
         receipt = json.loads(private_read(artifact / 'application.json'))
         backup = Path(receipt['backup'])
         if (backup.parent != authority.home
                 or not __import__('re').fullmatch(r'config\.toml\.before-monitor-[a-f0-9]{32}\.bak', backup.name)):
             raise RuntimeError('backup fora do local conhecido')
+        backup_witness = witness(backup)
         restored = private_read(backup)
-        if digest(restored) != manifest['source_sha256'] or witness(backup) != receipt['backup_witness']:
+        if digest(restored) != manifest['source_sha256']:
             raise RuntimeError('backup original mudou; recuperação recusada')
+        recovery_sources = [witness(artifact / 'manifest.json'), witness(artifact / 'proposed.toml'),
+                            receipt_witness, backup_witness]
+        revalidate(recovery_sources)
     try:
         with authority:
             def consumers():
@@ -512,7 +522,7 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
                             if item['path'] != str(authority.home / 'config.toml')])
                 return {**state, 'unchanged': True, 'activation_verified': False}
             if recover:
-                if witness(authority.home / 'config.toml') != receipt['target_witness'] or original[1] != prepared:
+                if original[1] != prepared:
                     raise RuntimeError('configuração mudou após a aplicação; recuperação recusada')
             elif (list(original[0] or ()) != manifest['source_identity']
                   or digest(original[1]) != manifest['source_sha256']
@@ -552,22 +562,21 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
             observed = witness(authority.home / 'config.toml')
 
             def recheck():
-                artifact_inputs(artifact, manifest_sha256)
-                static_revalidate(manifest)
+                artifact_inputs(artifact, manifest_sha256, recovery=recover)
+                static_revalidate(execution)
+                revalidate(recovery_sources)
                 revalidate(watched)
                 consumers()
                 revalidate(actual['sources'])
                 if witness(authority.home / 'config.toml') != observed:
                     raise RuntimeError('configuração mudou após o leitor; gravação recusada')
-                if recover and witness(backup) != receipt['backup_witness']:
-                    raise RuntimeError('backup mudou antes da recuperação')
 
             result = monitor_publish_config(authority, original, restored if recover else prepared, recheck=recheck)
             state.update(result)
-            if result['changed']:
+            if result['changed'] and not recover:
                 result.update(target_witness=witness(authority.home / 'config.toml'),
                               backup_witness=witness(result['backup']))
-                private_write(artifact / ('recovery.json' if recover else 'application.json'),
+                private_write(artifact / 'application.json',
                               json.dumps(result, sort_keys=True).encode())
             return {**state, 'unchanged': not result['changed'], 'activation_verified': False}
     except BaseException as error:
@@ -622,7 +631,8 @@ def main(argv=None):
         return 0
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
         state = getattr(error, 'migration_state', state)
-        print('Migração recusada: ' + str(error), file=sys.stderr)
+        operation = 'Recuperação' if args.command == 'recover' else 'Migração'
+        print(operation + ' recusada: ' + str(error), file=sys.stderr)
         if state.get('published'):
             print('A gravação ocorreu, mas a confirmação falhou. Não houve reversão automática. '
                   'Backup: ' + str(state.get('backup')), file=sys.stderr)
