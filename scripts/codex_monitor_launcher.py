@@ -386,6 +386,13 @@ def socket_identity(config):
     return str(endpoint), [meta.st_dev, meta.st_ino]
 
 
+def server_stop_instructions(config):
+    import shlex
+    return ('Para parar o servidor compartilhado, execute:\n'
+            f'CODEX_HOME={shlex.quote(config["codex_home"])} codex app-server daemon stop\n'
+            'Depois, abra Codex Monitor novamente.')
+
+
 def native_owner(config):
     """Authenticate an independent managed native process; no GUI ancestry is required."""
     import socket
@@ -410,7 +417,8 @@ def native_owner(config):
             or any(environment.get(key) != value for key, value in expected.items())
             or b'app-server' not in Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')):
         raise RuntimeError('O servidor aberto usa a configuração anterior ou outra instalação. '
-                           'Termine os trabalhos e feche o Codex normalmente; depois abra Codex Monitor.')
+                           'Termine os trabalhos e feche o Codex normalmente.\n' +
+                           server_stop_instructions(config))
     import tomllib
     data = tomllib.loads((Path(config['codex_home']) / 'config.toml').read_text())
     for path in MONITOR_BOOTSTRAP_OPTIONS:
@@ -676,7 +684,8 @@ def verify_existing_gui(config, runtime, app):
     for gui in existing_gui(config, app):
         if not known or gui['pid'] != known['pid'] or gui['birth'] != known['birth']:
             raise RuntimeError('O aplicativo já está aberto fora deste lançador. '
-                               'Termine os trabalhos e feche-o normalmente antes de usar o atalho.')
+                               'Termine os trabalhos e feche a interface pela opção Sair.\n' +
+                               server_stop_instructions(config))
 
 
 def _monitor_launch_app(config, path, app, codex, app_args):
