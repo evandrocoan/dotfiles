@@ -1,10 +1,14 @@
 """Exact migration mapping and real source/absence/consumer boundaries."""
 import copy
+import errno
 import importlib
+import importlib.util
 import json
 import os
 from pathlib import Path
 import runpy
+import shutil
+import stat
 import subprocess
 import sys
 import tomllib
@@ -151,8 +155,8 @@ def test_source_changed_since_native_read_is_refused(migration, shape):
         migration.inventory(home, [work], [report], {'requirements': None})
 
 
-@pytest.mark.parametrize('unsafe', ['symlink', 'hardlink', 'writable'])
-def test_unsafe_source_witness_refused(migration, tmp_path, unsafe):
+@pytest.mark.parametrize('unsafe, expected_error', [('symlink', OSError), ('hardlink', RuntimeError)])
+def test_unsafe_source_witness_refused(migration, tmp_path, unsafe, expected_error):
     target = tmp_path / 'source'
     target.write_text('secret')
     target.chmod(0o600)
@@ -160,12 +164,146 @@ def test_unsafe_source_witness_refused(migration, tmp_path, unsafe):
         alias = tmp_path / 'alias'
         alias.symlink_to(target)
         target = alias
-    elif unsafe == 'hardlink':
-        os.link(target, tmp_path / 'alias')
     else:
-        target.chmod(0o666)
-    with pytest.raises((RuntimeError, OSError)):
+        os.link(target, tmp_path / 'alias')
+    with pytest.raises(expected_error) as caught:
         migration.witness(target)
+    if unsafe == 'symlink':
+        assert caught.value.errno == errno.ELOOP
+    else:
+        assert str(caught.value) == 'origem insegura de configuração'
+
+
+@pytest.mark.parametrize('directory_mode, file_mode', [
+    (0o755, 0o664), (0o755, 0o666), (0o775, 0o600), (0o777, 0o600),
+])
+def test_source_witness_accepts_existing_modes(migration, tmp_path, directory_mode, file_mode):
+    directory = tmp_path / 'shared'
+    directory.mkdir()
+    directory.chmod(directory_mode)
+    target = directory / 'source'
+    target.write_bytes(b'original source')
+    target.chmod(file_mode)
+
+    recorded = migration.witness(target)
+    migration.revalidate([recorded])
+
+    assert recorded['file']['sha256'] == migration.digest(b'original source')
+    assert target.read_bytes() == b'original source'
+    assert stat.S_IMODE(directory.stat().st_mode) == directory_mode
+    assert stat.S_IMODE(target.stat().st_mode) == file_mode
+
+
+@pytest.mark.parametrize('changed', ['content', 'replacement', 'mode'])
+def test_writable_source_changes_still_invalidate_witness(migration, tmp_path, changed):
+    directory = tmp_path / 'shared'
+    directory.mkdir()
+    directory.chmod(0o777)
+    target = directory / 'source'
+    target.write_bytes(b'original source')
+    target.chmod(0o666)
+    recorded = migration.witness(target)
+    original_inode = target.stat().st_ino
+    if changed == 'content':
+        target.write_bytes(b'changed source')
+    elif changed == 'replacement':
+        replacement = directory / 'replacement'
+        replacement.write_bytes(b'original source')
+        replacement.chmod(0o666)
+        replacement.replace(target)
+        assert target.stat().st_ino != original_inode
+    else:
+        target.chmod(0o664)
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.revalidate([recorded])
+
+
+@pytest.fixture
+def shared_inputs(migration, shape):
+    home, work, target, report = shape
+    settings = home.parent / 'settings'
+    settings.mkdir()
+    settings.chmod(0o777)
+    work.chmod(0o775)
+    marker = work / '.git'
+    marker.write_bytes(b'gitdir: ../shared-git-metadata\n')
+    marker.chmod(0o664)
+    alias = home / 'app-server-control/app-server-control.sock'
+    support = migration._monitor_support()
+    raw = support['monitor_default_config']('https://gitlab.example.invalid/team/project', 1, 'gitlab')
+    raw.update(codex_home=str(home), socket=str(alias), cwd=str(work),
+               queue_file=str(home.parent / 'queue.sqlite3'),
+               state_file=str(home.parent / 'state/state.sqlite3'))
+    monitor = settings / 'monitor.json'
+    monitor_bytes = json.dumps(raw).encode()
+    monitor.write_bytes(monitor_bytes)
+    monitor.chmod(0o600)
+    config = support['mq_config'](monitor)
+    config.pop('_health', None)
+    return {'config': config, 'work': work, 'target': target, 'report': report, 'monitor': monitor,
+            'artifact': home.parent / 'artifact', 'directories': {settings: 0o777, work: 0o775},
+            'sources': {target: (SOURCE, 0o600), monitor: (monitor_bytes, 0o600),
+                        marker: (b'gitdir: ../shared-git-metadata\n', 0o664)}}
+
+
+def prepare_shared_artifact(migration, inputs):
+    manifest = migration.prepare_artifact(inputs['config'], [inputs['work']], [inputs['report']],
+        {'requirements': None}, native_paths=[sys.executable],
+        client_executables=['/usr/bin/true'], artifact=inputs['artifact'])
+    seal = migration.digest((inputs['artifact'] / 'manifest.json').read_bytes())
+    return manifest, seal
+
+
+def test_prepare_accepts_existing_source_modes_without_chmod(migration, shared_inputs):
+    manifest, seal = prepare_shared_artifact(migration, shared_inputs)
+    artifact = shared_inputs['artifact']
+    migration.artifact_inputs(artifact, seal)
+    migration.static_revalidate(manifest)
+    migration.revalidate(manifest['inventory']['sources'])
+    for path, (expected_bytes, expected_mode) in shared_inputs['sources'].items():
+        assert path.read_bytes() == expected_bytes
+        assert stat.S_IMODE(path.stat().st_mode) == expected_mode
+    for path, expected_mode in shared_inputs['directories'].items():
+        assert stat.S_IMODE(path.stat().st_mode) == expected_mode
+    candidate = tomllib.loads((artifact / 'proposed.toml').read_text())
+    assert 'sandbox_mode' not in candidate
+    assert candidate['default_permissions'] == 'local-workspace'
+    assert candidate['permissions']['local-workspace'] == {
+        'extends': ':workspace', 'network': {'enabled': True}}
+    assert candidate['sandbox_workspace_write'] == {'network_access': True}
+    assert stat.S_IMODE(artifact.stat().st_mode) == 0o700
+    for name in ('manifest.json', 'proposed.toml'):
+        assert stat.S_IMODE((artifact / name).stat().st_mode) == 0o600
+
+
+@pytest.mark.parametrize('changed', ['content', 'replacement'])
+def test_prepared_shared_monitor_source_changes_are_refused(migration, shared_inputs, changed):
+    manifest, _ = prepare_shared_artifact(migration, shared_inputs)
+    monitor = shared_inputs['monitor']
+    original_bytes = monitor.read_bytes()
+    original_inode = monitor.stat().st_ino
+    if changed == 'content':
+        monitor.write_bytes(original_bytes + b'\n')
+    else:
+        replacement = monitor.with_suffix('.replacement')
+        replacement.write_bytes(original_bytes)
+        replacement.chmod(0o600)
+        replacement.replace(monitor)
+        assert monitor.stat().st_ino != original_inode
+        assert monitor.read_bytes() == original_bytes
+    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+        migration.static_revalidate(manifest)
+    assert shared_inputs['target'].read_bytes() == SOURCE
+
+
+@pytest.mark.parametrize('name', ['manifest.json', 'proposed.toml'])
+def test_shared_sources_do_not_allow_nonprivate_artifacts(migration, shared_inputs, name):
+    _, seal = prepare_shared_artifact(migration, shared_inputs)
+    artifact = shared_inputs['artifact']
+    (artifact / name).chmod(0o644)
+    with pytest.raises(RuntimeError, match='must be private'):
+        migration.artifact_inputs(artifact, seal)
+    assert shared_inputs['target'].read_bytes() == SOURCE
 
 
 def test_executable_rewrite_with_restored_bytes_and_mtime_changes_pin(migration, tmp_path):
@@ -247,7 +385,29 @@ def test_running_automatic_obligation_denies_without_queue_writes(migration, sha
 
 
 @pytest.fixture
-def operator(migration, shape, monkeypatch):
+def isolated_migration(tmp_path, monkeypatch):
+    source_root = Path(__file__).resolve().parents[2]
+    fixture_root = tmp_path / 'source'
+    for relative in ('scripts/codex_permission_migration.py', 'scripts/codex_monitor_cold.py',
+                     'scripts/pyproject.toml', 'scripts/poetry.lock',
+                     '.local/bin/codex-session-stats', '.local/bin/codex-monitor'):
+        original, copied = source_root / relative, fixture_root / relative
+        copied.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(original, copied)
+        assert copied.read_bytes() == original.read_bytes()
+    # The real module paths select fixture consumers, keeping unrelated live
+    # monitor processes outside this operator's source/home context.
+    for name in ('codex_monitor_cold', 'codex_permission_migration'):
+        spec = importlib.util.spec_from_file_location(name, fixture_root / 'scripts' / (name + '.py'))
+        module = importlib.util.module_from_spec(spec)
+        monkeypatch.setitem(sys.modules, name, module)
+        spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def operator(isolated_migration, shape, monkeypatch):
+    migration = isolated_migration
     home, work, target, report = shape
     root = home.parent
     for name in ('run', 'user', 'config', 'data', 'cache', 'state', 'bin'):
@@ -313,6 +473,32 @@ def test_operator_uses_real_transition_backup_repeat_and_guarded_recovery(operat
     restored = migration.apply_artifact(artifact, manifest_sha256=seal, recover=True)
     assert restored['published'] and target.read_bytes() == previous
     assert Path(restored['backup']).read_bytes() == candidate
+
+
+def test_operator_refuses_its_active_consumer_before_reader_or_backup(operator):
+    migration, target, artifact, seal = operator
+    source_root = Path(migration.__file__).resolve().parents[1]
+    consumer = str(source_root / '.local/bin/codex-session-stats')
+    assert json.loads((artifact / 'manifest.json').read_text())['consumers'] == [
+        consumer, str(source_root / '.local/bin/codex-monitor')]
+    # A different native home isolates this assertion from native/client gates.
+    # The exact configured script argument identifies the automatic consumer.
+    process = subprocess.Popen([sys.executable, '-u', '-c',
+        'import time;print("ready",flush=True);time.sleep(30)', consumer],
+        env={**os.environ, 'CODEX_HOME': str(target.parent.parent / 'another-home')},
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert process.stdout.readline() == 'ready\n'
+        with pytest.raises(RuntimeError, match='consumidor automático ainda está ativo'):
+            migration.apply_artifact(artifact, manifest_sha256=seal)
+        assert target.read_bytes() == SOURCE
+        assert not list(artifact.glob('reader-*'))
+        assert not list(target.parent.glob('config.toml.before-monitor-*.bak'))
+    finally:
+        process.terminate()
+        process.wait(timeout=5)
+        process.stdout.close()
+        process.stderr.close()
 
 
 @pytest.mark.parametrize('already_applied', [False, True])

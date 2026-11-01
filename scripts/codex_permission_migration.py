@@ -63,7 +63,7 @@ def directory_identity(meta):
     return [meta.st_dev, meta.st_ino, meta.st_uid, meta.st_gid, meta.st_mode]
 
 
-def witness(path, *, allow_directory=False, code_input=False):
+def witness(path, *, allow_directory=False):
     """Bind a regular source or its absence and every existing ancestor identity."""
     path = Path(path)
     if not path.is_absolute() or path != Path(os.path.normpath(str(path))):
@@ -78,14 +78,11 @@ def witness(path, *, allow_directory=False, code_input=False):
         except FileNotFoundError:
             missing = str(parent)
             continue
-        if (not stat.S_ISDIR(meta.st_mode) or meta.st_uid not in {0, os.getuid()}
-                or meta.st_mode & 0o002 and not meta.st_mode & stat.S_ISVTX
-                or meta.st_mode & 0o020 and not meta.st_mode & stat.S_ISVTX
-                and not (code_input and meta.st_uid == os.getuid() and meta.st_gid == os.getgid())):
+        if not stat.S_ISDIR(meta.st_mode) or meta.st_uid not in {0, os.getuid()}:
             raise RuntimeError('ancestral inseguro da origem de configuração')
         parents.append([str(parent), directory_identity(meta)])
     result = {'path': str(path), 'parents': parents, 'missing_ancestor': missing,
-              'allow_directory': allow_directory, 'code_input': code_input}
+              'allow_directory': allow_directory}
     if missing is not None:
         result['file'] = None
         return result
@@ -107,9 +104,7 @@ def witness(path, *, allow_directory=False, code_input=False):
     with os.fdopen(descriptor, 'rb') as stream:
         meta = os.fstat(stream.fileno())
         if (not stat.S_ISREG(meta.st_mode) or meta.st_uid not in {0, os.getuid()}
-                or meta.st_nlink != 1 or meta.st_mode & 0o002
-                or meta.st_mode & 0o020 and not (code_input and meta.st_uid == os.getuid()
-                                                and meta.st_gid == os.getgid())):
+                or meta.st_nlink != 1):
             raise RuntimeError('origem insegura de configuração')
         data = stream.read(8 * 1024 * 1024 + 1)
         if len(data) > 8 * 1024 * 1024:
@@ -125,8 +120,7 @@ def witness(path, *, allow_directory=False, code_input=False):
 
 def revalidate(witnesses):
     for original in witnesses:
-        if witness(original['path'], allow_directory=original.get('allow_directory', False),
-                   code_input=original.get('code_input', False)) != original:
+        if witness(original['path'], allow_directory=original.get('allow_directory', False)) != original:
             raise RuntimeError('origem presente ou ausente mudou; prepare novamente')
 
 
@@ -329,7 +323,7 @@ def code_sources():
     import tomlkit
     import websockets
     root = Path(__file__).resolve().parent.parent
-    return [witness(path, code_input=True) for path in (
+    return [witness(path) for path in (
         Path(__file__).resolve(), root / 'scripts/codex_monitor_cold.py',
         root / '.local/bin/codex-session-stats', root / 'scripts/pyproject.toml',
         root / 'scripts/poetry.lock', Path(tomlkit.__file__).resolve(),
