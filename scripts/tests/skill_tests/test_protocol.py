@@ -24,6 +24,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-monitor-model", "followup-simple-wait",
         "followup-worker-reuse", "followup-independent-workers",
         "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
+        "followup-executor-model",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -70,6 +71,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-unchanged-check", "followup-stale-reference",
     "followup-worker-reuse", "followup-independent-workers",
     "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
+    "followup-executor-model",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -171,6 +173,38 @@ def test_execution_fixture_requires_prescribed_directory_and_both_schemas(tmp_pa
         assert events[0]["tests"] == 0
         assert events[0]["exit_code"] == 2
         assert "TERMINAL invocation-contract exit=0" not in result.stdout
+
+
+@pytest.mark.parametrize("mode", ["workspace-write", "unsupported"])
+def test_engineering_preview_fixture_preserves_source_and_rejects_unsupported_mode(tmp_path, mode):
+    scenario = tmp_path / "scenario"
+    shutil.copytree(CORPUS / "followup-executor-model/scenario", scenario)
+    source = scenario / "source.json"
+    source.write_text(json.dumps({"mode": mode, "network_enabled": True}) + "\n")
+    original = source.read_bytes()
+    result = subprocess.run(
+        [sys.executable, str(scenario / "prepare.py"), "--delay", "0"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=10,
+    )
+    assert source.read_bytes() == original
+    events = [json.loads(line) for line in (scenario / "events.jsonl").read_text().splitlines()]
+    if mode == "workspace-write":
+        assert result.returncode == 0
+        assert result.stderr == ""
+        assert read_json(scenario / "preview.json") == {
+            "permission_profile": "local-workspace", "network_enabled": True,
+        }
+        assert events == [
+            {"state": "PREPARING", "source_sha256": digest(original)},
+            {"state": "PREVIEW_READY", "exit_code": 0,
+             "preview_sha256": digest((scenario / "preview.json").read_bytes())},
+        ]
+        assert "PREVIEW_READY exit=0; not applied" in result.stdout
+    else:
+        assert result.returncode == 2
+        assert events == [{"state": "REFUSED", "exit_code": 2}]
+        assert not (scenario / "preview.json").exists()
+        assert "PREVIEW_READY" not in result.stdout
 
 
 def test_child_environment_does_not_inherit_credentials_or_runtime_overrides():

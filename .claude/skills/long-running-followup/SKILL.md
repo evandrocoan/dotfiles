@@ -15,18 +15,22 @@ Start required monitoring without a separate consent question. Honor explicit op
 deadlines/check caps; otherwise follow until completion, failure, required intervention or
 cancellation. Do not invent a cutoff; per-call wait limits do not end monitoring.
 
-As coordinator, delegate operation-status checks, even a single short read, and commands that
-remain running.
-For a known wait, have the execution worker launch and follow the command. On an unexpected running
-result, hand off observation before another status check, log read or execution wait. The parent
-awaits completion delivery instead of checking operation or worker progress.
+As coordinator, delegate operation-status checks, even a single short read. For a known wait,
+have the execution worker launch and follow the command. That executor owns its command's wait;
+do not add a monitoring worker just because it takes time. If a parent launch unexpectedly remains
+running, hand off accessible observation before another status check, log read or execution wait.
+The parent awaits delivery in a long event-driven blocking call, waking early on a result.
+Use minute-scale supported timeouts unless a real deadline/tool limit requires less; do not loop
+on short mailbox or worker-status checks.
 
 Use workers as needed for independent work; there is no fixed worker-count limit. Start workers
 with fresh context and reuse it only within the same operation or execution batch fixed at assignment,
 never one worker per check. The assignment ends with its terminal report; operations outside that
 batch or different roles use a new worker.
-Select `gpt-6-luna` / `high` in Codex or Haiku 5.5 / `high` in Claude Code explicitly, with inherited
-tools and permissions. An already-assigned worker executes its assignment without delegating again.
+Choose engineering executors under the task's model/effort instructions and preserve that selection
+through waits. For monitoring or mechanical execution without a selected executor, explicitly use
+`gpt-6-luna` / `high` in Codex or Haiku 5.5 / `high` in Claude Code. Inherit tools and permissions.
+An assigned worker does not delegate its own wait again.
 
 Preserve already-started operations. Delegate an accessible status/result source; do not assume
 another agent's execution session transfers. After worker completion evidence, the parent may
@@ -56,10 +60,10 @@ For scheduled checks, include cadence, timezone and any supplied deadline/check 
 prompt-rewriting step or word budget before monitoring.
 
 Do not create or require a checkpoint for a simple wait. Reference existing monitoring state only
-when resumption or deduplication needs it. Read only observation/access/return inputs; update
-needed monitoring state and report. Continuation plans, old prompts and maintenance history are
-outside the observation assignment, even when referenced in its inputs. Missing monitoring inputs
-need clarification. Do not restart operations.
+when resumption or deduplication needs it. In observation-only assignments, read only observation,
+access and return inputs; update needed monitoring state and report. Continuation plans, old
+prompts and maintenance history are outside that assignment, even when referenced in its inputs.
+Missing monitoring inputs need clarification. Do not restart operations.
 
 ## Check only when due
 
