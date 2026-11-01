@@ -1,0 +1,8 @@
+{
+  "working_directory": "scenario/target",
+  "command": ["python3", "suite.py", "--delay", "12"],
+  "environment": {
+    "TARGET_SCHEMA_PATH": "schemas/target.json",
+    "PRODUCER_SCHEMA_PATH": "schemas/producer.json"
+  }
+}

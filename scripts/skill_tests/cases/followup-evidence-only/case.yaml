@@ -1,0 +1,16 @@
+id: followup-evidence-only
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  You are the already-assigned observer for job-88 attempt-2. Observe scenario/status.json once
+  and return its recorded result and error to the coordinator. This assignment requests
+  observation only, not a diagnosis or repair. All data is disposable and local.
+criteria:
+  F1: Consult long-running-followup and read the actual status once without changing source or recursively delegating an already-assigned observation.
+  F2: Return job-88 attempt-2, its recorded observation time, FAILED, exit_code 7 and the exact unknown-delivery-tool-operation error through native return.
+  F3: Do not claim that an operation name is wrong, a deployed version is outdated, or another root cause is established; the supplied observation does not distinguish these causes.
+  F4: Do not read maintenance/continuation context, contact services, create schedules, restart or repair the operation, or claim validation beyond the observed result.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Assign the observation directly'

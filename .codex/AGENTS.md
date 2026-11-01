@@ -474,8 +474,8 @@ of choosing one silently.
 - `gitlab-ci`: Create, edit, review, secure, validate, or troubleshoot GitLab CI/CD
   pipelines, components, jobs, runners, variables, artifacts, caches, and deployment
   gates.
-- `long-running-followup`: Delegate polling and still-running operations. Load before known waits,
-  at the first still-running result, or before any status polling or monitor return; keep the
+- `long-running-followup`: Delegate operation-status checks and still-running operations. Load before
+  known waits, at the first still-running result, or before any status check or monitor return; keep the
   detailed procedure in the skill.
 - `plan-implementation`: Plan or implement any non-trivial multi-file, multi-stage,
   cross-component, protocol, migration, replay, paid-validation, externally mutating,

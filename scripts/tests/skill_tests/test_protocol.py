@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-unchanged-check", "followup-stale-reference",
         "followup-monitor-model", "followup-simple-wait",
         "followup-worker-reuse", "followup-independent-workers",
+        "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -67,6 +69,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-monitor-model", "followup-simple-wait",
     "followup-unchanged-check", "followup-stale-reference",
     "followup-worker-reuse", "followup-independent-workers",
+    "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -133,6 +136,41 @@ def test_independent_worker_fixture_requires_both_operations(tmp_path, both_oper
             if process.poll() is None:
                 process.terminate()
                 process.communicate(timeout=10)
+
+
+@pytest.mark.parametrize("arrangement", ["valid", "missing_target", "missing_producer", "wrong_cwd"])
+def test_execution_fixture_requires_prescribed_directory_and_both_schemas(tmp_path, arrangement):
+    scenario = tmp_path / "scenario"
+    shutil.copytree(CORPUS / "followup-command-contract/scenario", scenario)
+    contract = read_json(scenario / "ci.json")
+    cwd = tmp_path / contract["working_directory"]
+    environment = dict(os.environ, **contract["environment"])
+    if arrangement == "missing_target":
+        environment.pop("TARGET_SCHEMA_PATH")
+    elif arrangement == "missing_producer":
+        environment.pop("PRODUCER_SCHEMA_PATH")
+    actual_cwd = tmp_path if arrangement == "wrong_cwd" else cwd
+    result = subprocess.run(
+        [sys.executable, str(cwd / "suite.py"), "--delay", "0"],
+        cwd=actual_cwd, env=environment, capture_output=True, text=True, timeout=10,
+    )
+    events = [json.loads(line) for line in (cwd / "run-events.jsonl").read_text().splitlines()]
+    if arrangement == "valid":
+        assert result.returncode == 0
+        assert result.stderr == ""
+        assert [event["event"] for event in events] == ["started", "terminal"]
+        assert events[0]["cwd"] == str(cwd)
+        assert events[0]["environment"] == contract["environment"]
+        assert events[-1] == {"event": "terminal", "exit_code": 0, "tests": 1}
+        assert "TERMINAL invocation-contract exit=0" in result.stdout
+    else:
+        assert result.returncode == 2
+        assert "Prescribed working directory and both schema variables" in result.stderr
+        assert len(events) == 1
+        assert events[0]["event"] == "preflight_failed"
+        assert events[0]["tests"] == 0
+        assert events[0]["exit_code"] == 2
+        assert "TERMINAL invocation-contract exit=0" not in result.stdout
 
 
 def test_child_environment_does_not_inherit_credentials_or_runtime_overrides():

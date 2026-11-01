@@ -1,0 +1,8 @@
+{
+  "operation": "job-88",
+  "attempt": 2,
+  "observed_at": "2026-10-31T14:15:00-03:00",
+  "state": "FAILED",
+  "exit_code": 7,
+  "error": "ValueError: unknown-delivery-tool-operation"
+}

@@ -310,9 +310,11 @@ implementation, or the expectation according to the contract.
 Before launching tests known to need continued waiting or follow-up, read and apply
 [long-running-followup](../long-running-followup/SKILL.md). If that need becomes apparent after
 launch, including a command returning still running, load it before another status check or wait.
-Keep known short checks direct; do not preload follow-up for them.
+Keep known short test executions direct; do not preload follow-up for them.
 Do not load it solely because a full suite is requested, its duration is unknown, or you are
 writing or reviewing tests.
+When delegating test execution, pass the prescribed command, working directory, runtime and required
+environment from the repository or CI. The worker executes that invocation and reports its result.
 
 1. Run the narrowest relevant test while iterating.
 2. Run formatting, lint, type checks, unit tests, integration tests, smoke tests, and every other

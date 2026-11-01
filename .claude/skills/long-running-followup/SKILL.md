@@ -1,10 +1,10 @@
 ---
 name: long-running-followup
 description: >-
-  Delegate authorized polling and operations that remain running to a reusable worker. Use before
-  launching known waits, at the first still-running result, or before any status polling or
-  scheduled follow-up. Prefer completion events. Exclude short synchronous commands unless they
-  return still running, and explanations requiring no monitoring.
+  Delegate waiting and operation-status checks to reusable workers. Use before known waits,
+  at the first still-running result, or before any status check, polling or scheduled follow-up.
+  Prefer completion events. Exclude short synchronous execution unless it remains running,
+  and terminology-only explanations.
 ---
 
 # Long-running follow-up
@@ -15,15 +15,18 @@ Start required monitoring without a separate consent question. Honor explicit op
 deadlines/check caps; otherwise follow until completion, failure, required intervention or
 cancellation. Do not invent a cutoff; per-call wait limits do not end monitoring.
 
-Delegate polling, follow-up checks and any command that returns still running to one worker.
-Delegate known waits before launch; on an unexpected running result, hand off observation before
-another status check, log read or execution wait. The parent awaits the worker's completion event
-instead of checking operation or worker progress.
+As coordinator, delegate operation-status checks, even a single short read, and commands that
+remain running.
+For a known wait, have the execution worker launch and follow the command. On an unexpected running
+result, hand off observation before another status check, log read or execution wait. The parent
+awaits completion delivery instead of checking operation or worker progress.
 
-Reuse the assigned worker for an operation, never one per check. Independent operations may use
-different workers; there is no global one-worker limit. Select `gpt-6-luna` / `high` in Codex or
-`haiku` in Claude Code explicitly. Start with fresh context and inherit tools and permissions.
-An assigned observation worker keeps its operation; it does not delegate again.
+Use workers as needed for independent work; there is no fixed worker-count limit. Start workers
+with fresh context and reuse it only within the same operation or execution batch fixed at assignment,
+never one worker per check. The assignment ends with its terminal report; operations outside that
+batch or different roles use a new worker.
+Select `gpt-6-luna` / `high` in Codex or Haiku 5.5 / `high` in Claude Code explicitly, with inherited
+tools and permissions. An already-assigned worker executes its assignment without delegating again.
 
 Preserve already-started operations. Delegate an accessible status/result source; do not assume
 another agent's execution session transfers. After worker completion evidence, the parent may
@@ -35,7 +38,9 @@ the operation and report the gap; do not substitute another model or resume pare
 The worker records startup errors/prompts and operation identity.
 Prefer native completion, then an existing deterministic watcher, then supported scheduling.
 No routine polling alongside reliable completion delivery.
-When following a log, include existing terminal output and avoid gaps between reading and subscribing.
+When following a log, include existing terminal output, avoid read/subscribe gaps, and make the
+watcher terminate on the matched event or producer exit. An open-ended `tail` pipeline can remain
+blocked after completion.
 
 Verify lifetime/return support before yielding; proposed schedules are not active. Load host
 details only if needed: [Codex](references/codex.md), [Claude](references/claude.md),
@@ -43,18 +48,18 @@ details only if needed: [Codex](references/codex.md), [Claude](references/claude
 
 ## Assign the observation directly
 
-Pass the operation/status source, exact exit-code or log-event condition, and parent/return route
-directly. Have the worker load this skill before observing; fresh context does not include the
-parent's loaded skills. Include applicable observation/access instructions, authorization and
-chat restrictions.
+Pass the actual command or authoritative status source, operation identity, exact exit-code or
+log-event condition, and return route. Have the worker load this skill; fresh context does not
+include the parent's loaded skills. Include applicable access instructions and authorization.
+Observation returns facts and evidence; diagnose or repair only when that is the assigned task.
 For scheduled checks, include cadence, timezone and any supplied deadline/check cap. Do not add a
 prompt-rewriting step or word budget before monitoring.
 
 Do not create or require a checkpoint for a simple wait. Reference existing monitoring state only
-when resumption or deduplication needs it. The monitor reads observation/access/return inputs,
-updates needed monitoring state and reports. Do not follow continuation references or search for
-later maintenance context. Missing monitoring inputs need clarification. Do not restart
-or recursively delegate.
+when resumption or deduplication needs it. Read only observation/access/return inputs; update
+needed monitoring state and report. Continuation plans, old prompts and maintenance history are
+outside the observation assignment, even when referenced in its inputs. Missing monitoring inputs
+need clarification. Do not restart operations.
 
 ## Check only when due
 

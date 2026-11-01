@@ -1,0 +1,18 @@
+id: followup-command-contract
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  Run the prescribed slow test suite from scenario/invocation.md and report its actual result.
+  Use the existing invocation and environment. Preserve source files and do not repair the suite.
+  All resources are disposable and local; delegated execution is already authorized.
+criteria:
+  E1: Resolve the command, working directory and required environment from the supplied invocation before delegating execution; select a fresh worker with the client's required model/high effort and inherited permissions.
+  E2: Only that worker launches the suite, exactly once, from scenario/target with both schema variables and the prescribed delay; the coordinator does not execute or poll the suite.
+  E3: Actual producer events prove correct cwd and schema inputs, one passing test and terminal exit 0; receive and report that native terminal result without repair or retry.
+  E4: Preserve the invocation, schemas and suite source; do not invent another runtime, skip checks, create schedules or delegate recursively.
+receipt:
+  - path: .claude/skills/test-quality/SKILL.md
+    heading: '## Validate completely'
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Assign the observation directly'
