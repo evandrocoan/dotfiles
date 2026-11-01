@@ -765,15 +765,40 @@ the same socket even when the app-server inherited another agent. To diagnose SS
 `SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gcr/ssh" ssh-add -l` and verify the intended public fingerprints.
 Install the updated monitor unit and reload systemd using the commands below.
 
-For Codex, close the ordinary app normally and open **Codex Monitor** from the applications menu.
-The [desktop entry](.local/share/applications/codex-monitor.desktop) uses the existing
-[launcher](.local/bin/codex-monitor) and native relay. The GUI and monitor share that GUI's server;
-do not launch a second daemon. Direct launch remains available:
+Open **Codex Monitor** from the applications menu for the GUI, or run `codex-monitor` for
+Codex CLI in the current terminal. Both use the same native managed server. `codex-monitor --gui`
+opens the GUI; if its verified window is already open, the launcher brings it to the front.
+CLI arguments and working directory are preserved. Closing either client leaves the server and
+other work running. App tools become available when the GUI connects and reconnect after reopening.
+
+The [launcher](.local/bin/codex-monitor) uses the existing Poetry `monitor-tools` environment and
+[shared lifecycle owner](scripts/codex_monitor_launcher.py). Before starting a cold server, it
+prepares only the three static app-tool/code-review feature booleans. A changed config gets an exact
+private `config.toml.before-monitor-*.bak`; an already prepared file is untouched. The launcher
+preserves permission profiles, network settings and approval policy. It never restarts a live
+incompatible server: finish work and close its clients normally before changing the server mode.
+
+Startup and failure messages go to the terminal. The desktop shortcut also uses notifications for
+confirmed results and a persistent error dialog for failures. A connected interface is announced
+only after genuine GUI traffic and the app-tool catalog have succeeded. Server startup alone is
+reported as startup, without claiming that an earlier unrelated failure recovered.
+
+The [desktop entry](.local/share/applications/codex-monitor.desktop) passes `--gui`. Direct launch
+with explicit installed paths remains available:
 
 ```bash
 codex-session-stats monitor-gitlab launch-app \
   --app path/to/ChatGPT --codex path/to/resources/codex
+codex-session-stats monitor-gitlab launch-cli \
+  --codex path/to/resources/codex --cli path/to/installed/codex -- --no-alt-screen
 ```
+
+For diagnostics, inspect the private per-home directory under
+`$XDG_RUNTIME_DIR/codex-session-stats/shared-*` and the existing queue status. `ready.json` identifies
+the independent native process; `gui-ready.json` identifies a connected GUI and its tools. Neither
+file alone proves that a process is live. Do not remove native sockets or kill processes to clear
+an opening error. Explicit native shutdown, after work finishes, uses the installed Codex command
+`codex app-server daemon stop` with the same `CODEX_HOME`.
 
 **Preparation candidate; not released for production application.**
 

@@ -17,9 +17,13 @@ import tomllib
 import pytest
 
 
+SOURCE_ROOT = Path(os.environ.get('CODEX_MONITOR_TEST_CLI',
+    Path(__file__).resolve().parents[2] / '.local/bin/codex-session-stats')).parents[2]
+
+
 @pytest.fixture
 def migration(monkeypatch):
-    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1]))
+    monkeypatch.syspath_prepend(str(SOURCE_ROOT / 'scripts'))
     return importlib.import_module('codex_permission_migration')
 
 
@@ -491,7 +495,7 @@ def test_running_automatic_obligation_denies_without_queue_writes(migration, sha
 
 @pytest.fixture
 def isolated_migration(tmp_path, monkeypatch):
-    source_root = Path(__file__).resolve().parents[2]
+    source_root = SOURCE_ROOT
     fixture_root = tmp_path / 'source'
     for relative in ('scripts/codex_permission_migration.py', 'scripts/codex_monitor_cold.py',
                      'scripts/pyproject.toml', 'scripts/poetry.lock',

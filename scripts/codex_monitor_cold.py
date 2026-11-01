@@ -70,27 +70,34 @@ class MonitorColdStart:
             raise
 
     def __enter__(self):
-        import stat
         try:
             self.runtime = self.shared_runtime(self.config, create=True)
             self.coordinator = self.lock_file(self.runtime / 'launch.lock', private=True)
-            for relative in ('app-server-daemon', 'app-server-control'):
-                directory = self.home / relative
-                directory.mkdir(mode=0o700, exist_ok=True)
-                meta = directory.lstat()
-                # Native files can inherit a broader mode inside the private home. Never chmod
-                # native-owned files or interpret a mode alone as proof of an active owner.
-                if not stat.S_ISDIR(meta.st_mode) or meta.st_uid != os.getuid():
-                    raise RuntimeError('native control directory must be owned and without symlinks')
-                self.control_directories[directory] = (meta.st_dev, meta.st_ino, meta.st_uid, meta.st_gid, meta.st_mode)
-            for path in (self.home / 'app-server-daemon/daemon.lock',
-                         self.home / 'app-server-control/app-server-startup.lock'):
-                self.native_locks.append(self.lock_file(path, private=False))
-            self.verify()
+            self.acquire_native_exclusion()
             return self
         except BaseException:
             self.__exit__(None, None, None)
             raise
+
+    def acquire_native_exclusion(self):
+        """Classify cold state without releasing the already held launch coordinator."""
+        import stat
+        if self.coordinator is None or self.native_locks:
+            raise RuntimeError('native exclusion requires a held coordinator and no native locks')
+        self.verify_coordinator()
+        for relative in ('app-server-daemon', 'app-server-control'):
+            directory = self.home / relative
+            directory.mkdir(mode=0o700, exist_ok=True)
+            meta = directory.lstat()
+            # Native files can inherit a broader mode inside the private home. Never chmod
+            # native-owned files or interpret a mode alone as proof of an active owner.
+            if not stat.S_ISDIR(meta.st_mode) or meta.st_uid != os.getuid():
+                raise RuntimeError('native control directory must be owned and without symlinks')
+            self.control_directories[directory] = (meta.st_dev, meta.st_ino, meta.st_uid, meta.st_gid, meta.st_mode)
+        for path in (self.home / 'app-server-daemon/daemon.lock',
+                     self.home / 'app-server-control/app-server-startup.lock'):
+            self.native_locks.append(self.lock_file(path, private=False))
+        self.verify()
 
     def __exit__(self, *_):
         for _, descriptor, _ in reversed(self.descriptors):

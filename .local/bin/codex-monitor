@@ -1,32 +1,51 @@
 #!/usr/bin/env python3
-"""Open the installed Codex app through the GitLab monitor launcher."""
-
-import argparse
+"""Open the terminal CLI, or --gui, on Codex Monitor's shared native server."""
 import os
 from pathlib import Path
 import shutil
 import sys
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Open Codex with the GitLab monitor's shared application server.",
-    )
-    parser.parse_args()
-    application = shutil.which("chatgpt")
-    if application is None:
-        print("Error: chatgpt was not found on PATH; check the Codex app installation.", file=sys.stderr)
-        return 1
+def main():
+    arguments = sys.argv[1:]
+    if arguments[:1] in (['--help'], ['-h']):
+        print('Uso: codex-monitor [opções da CLI]\n'
+              '     codex-monitor --gui [opções do aplicativo]\n\n'
+              'Sem --gui, abre a CLI no terminal. Ambos usam o mesmo servidor.\n'
+              'Use codex-monitor -- --help para ver as opções da CLI.')
+        return 0
+    gui = arguments[:1] == ['--gui']
+    if gui or arguments[:1] == ['--']:
+        arguments = arguments[1:]
     try:
+        application = shutil.which('chatgpt')
+        if application is None:
+            raise RuntimeError('chatgpt não foi encontrado no PATH; confira a instalação do aplicativo.')
         directory = Path(application).resolve(strict=True).parent
-        control = Path(__file__).resolve(strict=True).with_name("codex-session-stats")
-        os.execv(control, [str(control), "monitor-gitlab", "launch-app",
-                          "--app", str(directory / "ChatGPT"),
-                          "--codex", str(directory / "resources/codex")])
-    except OSError as error:
-        print(f"Error: could not start Codex Monitor: {error}", file=sys.stderr)
-    return 1
+        control = Path(__file__).resolve(strict=True).with_name('codex-session-stats')
+        command = [str(control), 'monitor-gitlab', 'launch-app' if gui else 'launch-cli',
+                   '--codex', str(directory / 'resources/codex')]
+        if gui:
+            command.extend(['--app', str(directory / 'ChatGPT')])
+        else:
+            cli = shutil.which('codex')
+            if cli is None:
+                raise RuntimeError('codex não foi encontrado no PATH; confira a instalação da CLI.')
+            command.extend(['--cli', cli])
+        python = control.parents[2] / 'scripts/.venv/bin/python'
+        if not python.is_file():
+            raise RuntimeError('O ambiente Python do monitor não foi encontrado; em ~/scripts, '
+                               'execute poetry install --with monitor-tools.')
+        os.execv(python, [str(python), *command, '--', *arguments])
+    except (OSError, RuntimeError) as error:
+        print('Codex Monitor — não foi possível abrir: ' + str(error), file=sys.stderr)
+        if gui:
+            import subprocess
+            dialog = shutil.which('zenity')
+            if dialog:
+                subprocess.run([dialog, '--error', '--title=Codex Monitor', '--text=' + str(error)], check=False)
+        return 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

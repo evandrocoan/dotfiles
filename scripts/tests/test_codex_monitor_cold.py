@@ -11,7 +11,9 @@ import tempfile
 
 import pytest
 
-SOURCE = Path(__file__).resolve().parents[1] / 'codex_monitor_cold.py'
+SOURCE_ROOT = Path(os.environ.get('CODEX_MONITOR_TEST_CLI',
+    Path(__file__).resolve().parents[2] / '.local/bin/codex-session-stats')).parents[2]
+SOURCE = SOURCE_ROOT / 'scripts/codex_monitor_cold.py'
 
 
 @pytest.fixture

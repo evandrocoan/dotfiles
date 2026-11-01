@@ -13,6 +13,7 @@
     <property name="known_applications" type="array">
       <value type="string" value="chatgpt"/>
       <value type="string" value="code"/>
+      <value type="string" value="Codex Monitor"/>
       <value type="string" value="com.anthropic.Claude"/>
       <value type="string" value="com.uploadedlobster.peek"/>
       <value type="string" value="Core dumps"/>

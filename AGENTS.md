@@ -69,6 +69,18 @@ optional package must fail only the operation that needs it, with an actionable 
 Apply the same isolation to future command-specific dependencies so adding one feature does not
 break the rest of the standalone CLI.
 
+### Shared Codex launcher
+
+`codex-monitor` opens the terminal CLI; the desktop shortcut passes `--gui`. Keep one native
+managed server per Codex home, independent of client lifetime, with one lifecycle owner in
+`scripts/codex_monitor_launcher.py`. Never adopt a legacy GUI-owned child as independent or stop
+an unknown/live server during startup. Authenticate the native Unix peer, process birth/executable,
+selected home, bootstrap and protocol; a saved receipt alone is insufficient. The relay owns the
+native handshake and requires genuine delivered GUI traffic before readiness. Pin the actual GUI
+tools socket by authenticated private hard link and remove only its own binding generation.
+Only cold startup may prepare the three approved static feature/plugin booleans, preserving exact
+backup and unrelated config. Permission migration remains a separate operator action.
+
 ### GitLab monitor work ownership
 
 Preserve the [simple queue contract](architecture/gitlab-monitor-simple-queue.md). One durable

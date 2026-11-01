@@ -452,6 +452,52 @@ Running exports are attributed to a stopped service only by exact invocation ide
 retirement uses validated closed/removal evidence and the existing obligation checks independently
 of history retention; retained history alone does not keep an obsolete incident active.
 
+## Shared native server lifecycle
+
+One authenticated native server per configured Codex
+home must have a lifetime independent of the GUI and CLI clients. A single lifecycle authority
+serializes startup and validates an adopted server's actual identity, configuration and protocol;
+a socket or saved receipt alone is insufficient. The main GUI relay forwards initialization and
+owns exactly one native `initialized` notification after correlated native success. It serializes
+that write before releasing the initialization response, accepts subsequent GUI RPCs without
+waiting for output-drain return or final readiness, and consumes a redundant valid GUI
+notification. Preserve initialization-time server requests and replies, capabilities, helpers,
+backpressure and ownership revalidation. GUI readiness additionally requires a real GUI RPC, its
+successful native response and delivery to the GUI; generated traffic cannot replace that proof
+or functional host/tool validation. Closing a client revokes only its transport/readiness. Native
+stop remains an explicit operator operation; uncertain execution is never abandoned by startup.
+Retain queue/source identities, historical readers, holds, checkpoints and publication ownership.
+The lifecycle backend also owns a stable private app-tool address, inherited by a newly started
+native server. Bind it only to an authenticated actual GUI host by pinning its socket inode with a
+same-filesystem hard link in a protected directory. Authenticate through the private temporary link
+before atomic publication; public-path unlink/reuse cannot redirect it. Reject unsafe ancestry,
+unsupported links or identity changes without a symlink, broker or restart fallback. Bind cleanup
+to exact generation/inode identity; abnormal exits grant no readiness or successor authority.
+GUI-bound calls may become explicitly unavailable while no GUI exists, without replaying uncertain
+calls or interrupting unrelated native work. Restore tools in retained threads after a verified GUI
+reopens. Native MCP refresh must preserve in-flight unrelated native and non-app MCP work. Preserve
+actual caller metadata, bootstrap/runtime and verification identities rather than fabricating them.
+Before a cold start, the same lifecycle backend may automatically persist only the three static
+desktop bootstrap booleans: `features.code_mode_host`, the bundled app-tool MCP enablement and
+the bundled code-review MCP enablement. Preserve all unrelated user configuration, comments and
+formatting; require owned safe regular paths, serialized preparation, a private exact backup,
+atomic publication and refusal of observed concurrent changes. No-op preparation changes nothing.
+The launcher never changes global permission defaults, legacy sandbox settings, named permission
+profiles or approval policy. A separately authorized operator migration owns replacement of legacy
+defaults with a named permission profile, outside ordinary launching and only after a validated
+quiescent handoff. Validate the intended filesystem, network and approval behavior with installed
+clients; a matching profile name or config parse is insufficient. Verify applicable configuration
+layers before publication and refuse unknown/conflicting policy or observed concurrent changes.
+Preserve existing named profiles, unrelated configuration/comments and granular approval policy.
+Preserve purpose-specific reviewer/intake selection and historical scopes; a new global default
+does not prove that an existing chat adopted it. The migration never clears queue/native state,
+abandons unknown execution or interrupts work to obtain quiescence. This narrow authority never
+writes changing GUI pipe paths, verification identities or credentials. Do not edit startup config
+while an existing server is being used; authenticate its actual compatibility or report
+incompatibility without interruption or automatic restart.
+Persisted settings do not establish process compatibility: verify effective configuration and
+the actual native/GUI/tool boundaries after start. A parent-bound legacy server cannot be adopted as independent in place.
+
 ## Transition and traceability
 
 Stage source before cutover. Use a separate fresh queue database; never import or modify the
@@ -485,7 +531,10 @@ abandonment transition. No old chat is rewritten.
 | Native human conversations and held reviews | Targeted `mq_intake`, original native collectors and `mq_effective_stage` | `test_codex_gitlab_direct.py`: no general producer/classifier, causal continuations, original finals, failures/retries, checkpoints, source denials and transaction recovery; installed-client cold-resume probes; historical tools holds/fences |
 | Direct publications and observation | Native GitLab tools, passive collector and raw inventory deltas | `test_codex_gitlab_direct.py`: self-output race, human edits, version/hold/transition boundaries and honest checkpoints; legacy recovery tests retain original journals |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
+| Shared native lifetime and GUI tools | `scripts/codex_monitor_launcher.py`, lazy standalone CLI entry points and desktop launcher | `test_codex_monitor_launcher.py`, `test_codex_monitor_bootstrap.py`, `test_codex_monitor_handshake.py`, `test_codex_monitor_app_tools.py`; isolated installed native/GUI/CLI proofs with retained threads and in-flight native/non-app MCP work |
 | Independent operational alerts | Bounded health export, `scripts/codex_monitor_alert.py`, separate user timer and private delivery state | `scripts/tests/test_codex_monitor_alert.py`: caught failures, busy and incomplete cycles, scoped recovery, terminal retries, validated MR retirement and holds, startup/suspend, stale evidence, bounded delivery and restart suppression |
+| Static desktop bootstrap preparation | Shared lifecycle backend before cold native start; existing-server validation remains read-only | Actual preparation-helper protection for exact three-key writes, TOML/comment preservation, private backup, no-op and failure/concurrency/path denials; installed absent/false-config cold start and effective native/GUI/tool verification; no permission-default edit at launch |
+| Operator permission-profile migration | Separately authorized external applicator reusing the lifecycle cold-start authority; explicit reviewer/intake policies stay with their existing owners | Fresh layer/requirement and GUI/CLI/automatic-work quiescence evidence before publication, sealed source/artifact identities, private exact backup/read-back/guarded recovery, installed default filesystem/network/approval behavior without selection overrides, historical scope continuity and explicit concurrent role selection; `scripts/codex_permission_migration.py` and its focused cold/reader/operator regression tests |
 | Fresh start and instructions | Fresh state, new-chat producer and cutover | Old state/chats untouched, no legacy intake, native creation/cold resume |
 | Visible native requests  | Existing stage input, native dispatch, input validation and question continuation | Exact message/context, historical reader, large Claude stdin, pre-exec failure and native creation/cold-resume checks |
 | Explicit full-round restart  | Operator control, original native question, existing queue and intake | Native-answer frontier/races, late replies, exact target, fresh complete review/chat, FIFO/history/effect preservation and rejection controls |
