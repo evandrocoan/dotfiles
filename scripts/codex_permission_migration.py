@@ -23,6 +23,30 @@ def semantic(value):
                              ensure_ascii=False, allow_nan=False).encode())
 
 
+def native_user_semantic(value, home):
+    """Compare loaded user values without changing exact file/transform seals."""
+    def numbers(item):
+        if isinstance(item, dict):
+            return {key: numbers(child) for key, child in item.items()}
+        if isinstance(item, list):
+            return [numbers(child) for child in item]
+        # Do not coerce booleans, strings or large integers through float: that
+        # would hide type differences or a rounded native numeric value.
+        if type(item) is float and item.is_integer():
+            return int(item)
+        return item
+
+    config = numbers(value)
+    skills = config.get('skills')
+    if isinstance(skills, dict) and isinstance(skills.get('config'), list):
+        for skill in skills['config']:
+            if isinstance(skill, dict) and isinstance(skill.get('path'), str):
+                # Installed native versions resolve this typed path relative to
+                # the declaring config.toml. Keep other strings untouched.
+                skill['path'] = os.path.normpath(os.path.join(home, skill['path']))
+    return semantic(config)
+
+
 def transform(source):
     """Return only the reviewed mapping, preserving TOML trivia and unrelated values."""
     import copy
@@ -187,7 +211,7 @@ def inventory(home, contexts, reports, requirements):
         if len(user) != 1:
             raise RuntimeError('camada base de usuário ausente ou ambígua')
         source = tomllib.loads((home / 'config.toml').read_text())
-        if semantic(user[0]['config']) != semantic(source):
+        if native_user_semantic(user[0]['config'], home) != native_user_semantic(source, home):
             raise RuntimeError('camada nativa não corresponde ao arquivo de usuário')
         # Reject origins that cannot be accounted for by actual returned layers.
         names = [item['name'] for item in layers]
@@ -519,7 +543,10 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
                     for old_layer, new_layer in zip(old['layers'], new['layers']):
                         if old_layer['name']['type'] == 'user':
                             old_layer['version'] = new_layer['version']
-                            old_layer['config'] = tomllib.loads(prepared.decode())
+                            if (native_user_semantic(new_layer['config'], authority.home)
+                                    != native_user_semantic(tomllib.loads(prepared.decode()), authority.home)):
+                                raise RuntimeError('camada nativa não corresponde à prévia de recuperação')
+                            old_layer['config'] = new_layer['config']
             if actual != expected:
                 raise RuntimeError('camadas ou requisitos nativos mudaram; gravação recusada')
             observed = witness(authority.home / 'config.toml')

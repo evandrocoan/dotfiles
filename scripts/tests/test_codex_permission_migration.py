@@ -155,6 +155,78 @@ def test_source_changed_since_native_read_is_refused(migration, shape):
         migration.inventory(home, [work], [report], {'requirements': None})
 
 
+@pytest.mark.parametrize('source_value, native_value', [(30, 30.0), (30.0, 30), (0, -0.0)])
+def test_inventory_accepts_equal_native_numbers(migration, shape, source_value, native_value):
+    home, work, target, report = shape
+    source = SOURCE + ('\n[mcp_servers.fixture]\nstartup_timeout_sec = '
+                       + json.dumps(source_value) + '\n').encode()
+    target.write_bytes(source)
+    report['layers'][0]['config'] = tomllib.loads(source.decode())
+    report['layers'][0]['config']['mcp_servers']['fixture']['startup_timeout_sec'] = native_value
+    before = target.read_bytes(), target.stat()
+    inventory = migration.inventory(home, [work], [report], {'requirements': None})
+    migration.revalidate_inventory(inventory, home, [work], [report], {'requirements': None})
+    assert (target.read_bytes(), target.stat()) == before
+    # The independent exact-transform/source seals must stay representation-sensitive.
+    assert migration.semantic(tomllib.loads(source.decode())) != migration.semantic(report['layers'][0]['config'])
+
+
+@pytest.mark.parametrize('source_value, native_value', [
+    (30, 30.5), (2 ** 53 + 1, float(2 ** 53 + 1)), (1, True), (0, False), ('30', 30.0),
+])
+def test_inventory_refuses_different_native_numbers_and_types(migration, shape, source_value, native_value):
+    home, work, target, report = shape
+    source = SOURCE + ('\n[mcp_servers.fixture]\nstartup_timeout_sec = '
+                       + json.dumps(source_value) + '\n').encode()
+    target.write_bytes(source)
+    report['layers'][0]['config'] = tomllib.loads(source.decode())
+    report['layers'][0]['config']['mcp_servers']['fixture']['startup_timeout_sec'] = native_value
+    with pytest.raises(RuntimeError, match='não corresponde'):
+        migration.inventory(home, [work], [report], {'requirements': None})
+    assert target.read_bytes() == source
+
+
+@pytest.fixture
+def native_paths_shape(shape):
+    home, work, target, report = shape
+    source = SOURCE + b'''\n[skills]
+config = [{ path = "skills/fixture/SKILL.md", enabled = false }]
+description = "skills/fixture/SKILL.md"
+'''
+    target.write_bytes(source)
+    report['layers'][0]['config'] = tomllib.loads(source.decode())
+    report['layers'][0]['config']['skills']['config'][0]['path'] = str(home / 'skills/fixture/SKILL.md')
+    return shape
+
+
+def test_inventory_resolves_skill_paths_from_declaring_config(migration, native_paths_shape):
+    home, work, target, report = native_paths_shape
+    before = target.read_bytes(), target.stat(), copy.deepcopy(report)
+    inventory = migration.inventory(home, [work], [report], {'requirements': None})
+    migration.revalidate_inventory(inventory, home, [work], [report], {'requirements': None})
+    assert (target.read_bytes(), target.stat(), report) == before
+    assert inventory['reports'][0]['layers'][0]['config']['skills']['config'][0]['path'] == str(
+        home / 'skills/fixture/SKILL.md')
+
+
+@pytest.mark.parametrize('changed', ['cwd_base', 'different_path', 'untyped_string', 'enabled_type'])
+def test_inventory_refuses_other_skill_changes(migration, native_paths_shape, changed):
+    home, work, target, report = native_paths_shape
+    skills = report['layers'][0]['config']['skills']
+    if changed == 'cwd_base':
+        skills['config'][0]['path'] = str(work / 'skills/fixture/SKILL.md')
+    elif changed == 'different_path':
+        skills['config'][0]['path'] = str(home / 'skills/other/SKILL.md')
+    elif changed == 'untyped_string':
+        skills['description'] = str(home / 'skills/fixture/SKILL.md')
+    else:
+        skills['config'][0]['enabled'] = 0
+    before = target.read_bytes()
+    with pytest.raises(RuntimeError, match='não corresponde'):
+        migration.inventory(home, [work], [report], {'requirements': None})
+    assert target.read_bytes() == before
+
+
 @pytest.mark.parametrize('unsafe, expected_error', [('symlink', OSError), ('hardlink', RuntimeError)])
 def test_unsafe_source_witness_refused(migration, tmp_path, unsafe, expected_error):
     target = tmp_path / 'source'
@@ -274,6 +346,38 @@ def test_prepare_accepts_existing_source_modes_without_chmod(migration, shared_i
     assert stat.S_IMODE(artifact.stat().st_mode) == 0o700
     for name in ('manifest.json', 'proposed.toml'):
         assert stat.S_IMODE((artifact / name).stat().st_mode) == 0o600
+
+
+def test_prepare_preserves_source_bytes_with_native_normalization(migration, shared_inputs):
+    target, report = shared_inputs['target'], shared_inputs['report']
+    source = SOURCE + b'''\n[mcp_servers.fixture]
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+[mcp_servers.node_repl]
+startup_timeout_sec = 120
+[skills]
+config = [{ path = "skills/fixture/SKILL.md", enabled = false }]
+'''
+    target.write_bytes(source)
+    report['layers'][0]['config'] = tomllib.loads(source.decode())
+    native = report['layers'][0]['config']
+    native['mcp_servers']['fixture'].update(startup_timeout_sec=30.0, tool_timeout_sec=300.0)
+    native['mcp_servers']['node_repl']['startup_timeout_sec'] = 120.0
+    native['skills']['config'][0]['path'] = str(target.parent / 'skills/fixture/SKILL.md')
+    before = target.read_bytes(), target.stat()
+    manifest, seal = prepare_shared_artifact(migration, shared_inputs)
+    migration.artifact_inputs(shared_inputs['artifact'], seal)
+    migration.static_revalidate(manifest)
+    migration.revalidate_inventory(manifest['inventory'], target.parent,
+                                  [shared_inputs['work']], [report], {'requirements': None})
+    assert manifest['source_sha256'] == migration.digest(source)
+    assert (target.read_bytes(), target.stat()) == before
+    candidate_bytes = (shared_inputs['artifact'] / 'proposed.toml').read_bytes()
+    candidate = tomllib.loads(candidate_bytes.decode())
+    assert candidate_bytes == migration.transform(source)
+    assert candidate['default_permissions'] == 'local-workspace'
+    assert candidate['mcp_servers'] == tomllib.loads(source.decode())['mcp_servers']
+    assert candidate['skills'] == tomllib.loads(source.decode())['skills']
 
 
 @pytest.mark.parametrize('changed', ['content', 'replacement'])
@@ -406,9 +510,20 @@ def isolated_migration(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def operator(isolated_migration, shape, monkeypatch):
+def operator(isolated_migration, shape, monkeypatch, request):
     migration = isolated_migration
     home, work, target, report = shape
+    if getattr(request, 'param', False):
+        source = SOURCE + b'''\n[mcp_servers.fixture]
+startup_timeout_sec = 30
+[skills]
+config = [{ path = "skills/fixture/SKILL.md", enabled = false }]
+'''
+        target.write_bytes(source)
+        report['layers'][0]['config'] = tomllib.loads(source.decode())
+        native = report['layers'][0]['config']
+        native['mcp_servers']['fixture']['startup_timeout_sec'] = 30.0
+        native['skills']['config'][0]['path'] = str(home / 'skills/fixture/SKILL.md')
     root = home.parent
     for name in ('run', 'user', 'config', 'data', 'cache', 'state', 'bin'):
         (root / name).mkdir(mode=0o700)
@@ -432,6 +547,11 @@ for line in sys.stdin:
     elif method=='configRequirements/read':value={'requirements':None}
     elif method=='config/read':
         source=tomllib.loads((home/'config.toml').read_text())
+        for server in source.get('mcp_servers',{}).values():
+            for key in ('startup_timeout_sec','tool_timeout_sec'):
+                if key in server:server[key]=float(server[key])
+        for skill in source.get('skills',{}).get('config',[]):
+            skill['path']=str(home/skill['path'])
         user={'type':'user','file':str(home/'config.toml'),'profile':None}
         value={'layers':[{'name':user,'version':'sha256:test','config':source},
             {'name':{'type':'system','file':'/etc/codex/config.toml'},'version':'sha256:empty','config':{}}],
@@ -458,6 +578,7 @@ for line in sys.stdin:
     return migration, target, artifact, manifest_sha256
 
 
+@pytest.mark.parametrize('operator', [False, True], indirect=True, ids=['exact', 'native-normalized'])
 def test_operator_uses_real_transition_backup_repeat_and_guarded_recovery(operator):
     migration, target, artifact, seal = operator
     previous = target.read_bytes()
