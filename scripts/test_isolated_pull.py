@@ -224,6 +224,39 @@ class IsolatedPullTests(unittest.TestCase):
         wrapper.chmod(0o755)
         return dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
 
+    def report_isolated_git_directory(self, directory=None, *, query_status=0,
+                                      later_query_status=None):
+        """Vary only Git's directory report and record guarded Git dispatches."""
+        bin_directory = self.root / 'directory-report-bin'
+        bin_directory.mkdir()
+        self.directory_dispatches = self.root / 'directory-dispatches'
+        wrapper = bin_directory / 'git'
+        real_git = shlex.quote(shutil.which('git'))
+        reported_directory = ('"${GIT_DIRECTORY}/."' if directory is None else
+                              shlex.quote(str(directory)))
+        dispatch_log = shlex.quote(str(self.directory_dispatches))
+        query_exit_status = f'    QUERY_STATUS={query_status}\n'
+        if later_query_status is not None:
+            query_exit_status += (f'    if [[ -f {dispatch_log} ]]; then\n'
+                                  f'        QUERY_STATUS={later_query_status}\n'
+                                  '    fi\n')
+        wrapper.write_text(
+            '#!/usr/bin/env bash\nset -euo pipefail\n'
+            'if [[ " $* " == *" rev-parse --absolute-git-dir " ]]; then\n'
+            f'{query_exit_status}'
+            f'    printf "%s\\n" query >> {dispatch_log}\n'
+            f'    GIT_DIRECTORY="$({real_git} "$@")"\n'
+            f'    printf "%s\\n" {reported_directory}\n'
+            '    exit "${QUERY_STATUS}"\n'
+            'fi\n'
+            'case " $* " in\n'
+            f'    *" reset --hard ") printf "%s\\n" reset >> {dispatch_log} ;;\n'
+            f'    *" pull --rebase ") printf "%s\\n" pull >> {dispatch_log} ;;\n'
+            'esac\n'
+            f'exec {real_git} "$@"\n')
+        wrapper.chmod(0o755)
+        return dict(self.env, PATH=f'{bin_directory}{os.pathsep}{self.env["PATH"]}')
+
     def readme_recovery_command(self):
         section = README.read_text().split('#### Recover an interrupted isolated pull\n', 1)[1]
         return section.split('```bash\n', 1)[1].split('\n```', 1)[0]
@@ -289,6 +322,91 @@ class IsolatedPullTests(unittest.TestCase):
         tree = self.isolated_trees()[0]
         self.assertEqual((tree / 'shared.txt').read_text(), 'upstream rewrote this\n')
         self.assertIn('Returned the Git directory', result.stdout)
+
+    def test_equivalent_git_directory_spelling_preserves_root_work(self):
+        self.write('live.conf', 'my live edit\n')
+        self.write('untracked.txt', 'my untracked work\n')
+        before = self.snapshot('live.conf', 'untracked.txt', 'shared.txt')
+        upstream_commit = self.push_upstream_change({'shared.txt': 'upstream content\n'})
+
+        self.run_script(env=self.report_isolated_git_directory())
+
+        self.assertEqual(self.directory_dispatches.read_text().splitlines(),
+                         ['query', 'reset', 'query', 'pull'])
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip(),
+                         upstream_commit)
+        self.assertEqual(self.snapshot('live.conf', 'untracked.txt', 'shared.txt'), before)
+        self.assertEqual((self.isolated_trees()[0] / 'shared.txt').read_text(),
+                         'upstream content\n')
+
+    def test_refuses_different_existing_git_directory_before_reset(self):
+        other_directory = self.root / 'other.git'
+        other_directory.mkdir()
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        original_tip = self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip()
+
+        result = self.run_script(
+            expect=1, env=self.report_isolated_git_directory(other_directory))
+
+        self.assertEqual(self.directory_dispatches.read_text().splitlines(), ['query'])
+        self.assertIn('instead of the isolated directory', result.stderr)
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip(),
+                         original_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+
+    def test_equivalent_git_directory_materializes_before_later_query_failure(self):
+        """Exercise normalization and restoration without starting a pull process group."""
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        original_tip = self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip()
+
+        self.run_script(
+            expect=73, env=self.report_isolated_git_directory(later_query_status=73))
+
+        self.assertEqual(self.directory_dispatches.read_text().splitlines(),
+                         ['query', 'reset', 'query'])
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip(),
+                         original_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+        self.assertEqual((self.isolated_trees()[0] / 'live.conf').read_text(),
+                         'live configuration version 1\n')
+
+    def test_refuses_missing_git_directory_before_reset(self):
+        missing_directory = self.root / 'missing.git'
+        self.assertFalse(missing_directory.exists())
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        original_tip = self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip()
+
+        self.run_script(expect=1, env=self.report_isolated_git_directory(missing_directory))
+
+        self.assertEqual(self.directory_dispatches.read_text().splitlines(), ['query'])
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip(),
+                         original_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
+
+    def test_failed_git_directory_query_with_valid_output_stops_before_reset(self):
+        self.write('live.conf', 'my live edit\n')
+        before = self.snapshot('live.conf', 'shared.txt')
+        original_tip = self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip()
+
+        self.run_script(expect=73, env=self.report_isolated_git_directory(query_status=73))
+
+        self.assertEqual(self.directory_dispatches.read_text().splitlines(), ['query'])
+        self.assert_git_returned()
+        self.assert_no_pending_state()
+        self.assertEqual(self.git('rev-parse', 'HEAD', cwd=self.repository).stdout.strip(),
+                         original_tip)
+        self.assertEqual(self.snapshot('live.conf', 'shared.txt'), before)
 
     def test_tracked_global_configuration_is_untouched_while_history_moves(self):
         """Invariant 4: Git reads global configuration from HOME, not from the isolated tree."""

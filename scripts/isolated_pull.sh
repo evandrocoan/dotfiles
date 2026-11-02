@@ -238,6 +238,7 @@ function assertisolated() {
         fail 'The isolated Git directory is missing.'
     fi
     git_directory="$(isolatedgit rev-parse --absolute-git-dir)"
+    git_directory="$(cd -- "${git_directory}" && pwd -P)"
     if [[ "${git_directory}" != "${ISOLATED_TREE}/.git" ]]; then
         fail "Refusing to continue: Git resolved \"${git_directory}\" instead of the isolated directory."
     fi
