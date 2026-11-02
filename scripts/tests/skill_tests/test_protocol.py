@@ -25,6 +25,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-worker-reuse", "followup-independent-workers",
         "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
         "followup-executor-model",
+        "followup-parent-takeover", "followup-task-continuation",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -72,6 +73,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-worker-reuse", "followup-independent-workers",
     "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
     "followup-executor-model",
+    "followup-parent-takeover", "followup-task-continuation",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -205,6 +207,51 @@ def test_engineering_preview_fixture_preserves_source_and_rejects_unsupported_mo
         assert events == [{"state": "REFUSED", "exit_code": 2}]
         assert not (scenario / "preview.json").exists()
         assert "PREVIEW_READY" not in result.stdout
+
+
+@pytest.mark.parametrize(("route", "actions", "codes", "states"), [
+    ("assess_with_selected_executor", ["assess", "execute"], [0, 0],
+     ["INSUFFICIENT_FOR_ENGINEERING", "COMPLETE"]),
+    ("assess_with_selected_executor", ["execute"], [2], ["ASSESSMENT_REQUIRED"]),
+    ("parent_retained", ["execute"], [0], ["COMPLETE"]),
+])
+def test_parent_takeover_fixture_requires_known_or_recorded_assessment(
+        tmp_path, route, actions, codes, states):
+    scenario = tmp_path / "scenario"
+    shutil.copytree(CORPUS / "followup-parent-takeover/scenario", scenario)
+    assignment = scenario / "assignment.json"
+    value = read_json(assignment)
+    value["route"] = route
+    assignment.write_text(json.dumps(value) + "\n")
+    original = assignment.read_bytes()
+    results = [subprocess.run(
+        [sys.executable, str(scenario / "task.py"), action, "--delay", "0"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=10,
+    ) for action in actions]
+    assert [result.returncode for result in results] == codes
+    assert all(result.stderr == "" for result in results)
+    events = [json.loads(line) for line in (scenario / "events.jsonl").read_text().splitlines()]
+    assert events == [dict(task="task-117", action=action, state=state, exit_code=code)
+                      for action, state, code in zip(actions, states, codes)]
+    assert assignment.read_bytes() == original
+
+
+@pytest.mark.parametrize(("actions", "codes", "states"), [
+    (["inspect", "finalize"], [0, 0], ["NEEDS_FINALIZE", "COMPLETE"]),
+    (["finalize"], [2], ["OUT_OF_ORDER"]),
+])
+def test_continuation_fixture_requires_inspection_before_completion(tmp_path, actions, codes, states):
+    scenario = tmp_path / "scenario"
+    shutil.copytree(CORPUS / "followup-task-continuation/scenario", scenario)
+    results = [subprocess.run(
+        [sys.executable, str(scenario / "operation.py"), action, "--delay", "0"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=10,
+    ) for action in actions]
+    assert [result.returncode for result in results] == codes
+    assert all(result.stderr == "" for result in results)
+    events = [json.loads(line) for line in (scenario / "events.jsonl").read_text().splitlines()]
+    assert events == [dict(task="task-128", action=action, state=state, exit_code=code)
+                      for action, state, code in zip(actions, states, codes)]
 
 
 def test_child_environment_does_not_inherit_credentials_or_runtime_overrides():

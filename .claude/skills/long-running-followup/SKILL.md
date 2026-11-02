@@ -16,19 +16,27 @@ deadlines/check caps; otherwise follow until completion, failure, required inter
 cancellation. Do not invent a cutoff; per-call wait limits do not end monitoring.
 
 As coordinator, delegate operation-status checks, even a single short read. For a known wait,
-have the execution worker launch and follow the command. That executor owns its command's wait;
+have the assigned executor launch and follow the command. That executor owns its command's wait;
 do not add a monitoring worker just because it takes time. If a parent launch unexpectedly remains
-running, hand off accessible observation before another status check, log read or execution wait.
+running and the parent is not the retained technical executor, hand off accessible observation
+before another status/log read or execution wait.
 The parent awaits delivery in a long event-driven blocking call, waking early on a result.
 Use minute-scale supported timeouts unless a real deadline/tool limit requires less; do not loop
 on short mailbox or worker-status checks.
 
-Use workers as needed for independent work; there is no fixed worker-count limit. Start workers
-with fresh context and reuse it only within the same operation or execution batch fixed at assignment,
-never one worker per check. The assignment ends with its terminal report; operations outside that
-batch or different roles use a new worker.
-Choose engineering executors under the task's model/effort instructions and preserve that selection
-through waits. For monitoring or mechanical execution without a selected executor, explicitly use
+Use workers as needed for independent work; there is no fixed worker-count limit. Fix the task scope
+at assignment and reuse its worker across checks, commands, interim reports and continuations.
+A command exit or native final alone does not complete that task. Start fresh when the task is
+complete or the target, purpose or role changes, never for each command or check.
+Honor a task-selected engineering model and effort; otherwise use `gpt-6.1-terra` / `high` in Codex
+or Sonnet 5.5 / `high` in Claude Code. Work beyond Luna/Haiku's mechanical scope goes to that
+engineering tier; preserve its executor through waits. If that tier is insufficient, including
+selected Terra xhigh, the parent retains or takes over technical execution instead of spawning a
+stronger engineering child. Do not require an unsuccessful trial first. The retained parent launches
+and awaits its commands itself, including after a still-running return. Use the original command's
+native result or completion event; do not delegate its wait or add a watcher or polling loop.
+Separate status checks remain delegated.
+For monitoring or mechanical execution without a selected executor, explicitly use
 `gpt-6-luna` / `high` in Codex or Haiku 5.5 / `high` in Claude Code. Inherit tools and permissions.
 An assigned worker does not delegate its own wait again.
 
@@ -46,8 +54,8 @@ When following a log, include existing terminal output, avoid read/subscribe gap
 watcher terminate on the matched event or producer exit. An open-ended `tail` pipeline can remain
 blocked after completion.
 
-Verify lifetime/return support before yielding; proposed schedules are not active. Load host
-details only if needed: [Codex](references/codex.md), [Claude](references/claude.md),
+Verify lifetime/return support before yielding; proposed schedules are not active. Before choosing
+a background-command route, load host details: [Codex](references/codex.md), [Claude](references/claude.md),
 [other hosts](references/clients.md).
 
 ## Assign the observation directly

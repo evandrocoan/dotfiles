@@ -1,6 +1,7 @@
 # Designated engineering executor
 
-The user selected `gpt-6.1-terra` with `high` effort for this preparation assignment.
+For this preparation assignment, the user selected `gpt-6.1-terra` / `high` in Codex
+or Sonnet 5.5 / `high` in Claude Code.
 Use fresh context and inherited tools and permissions. This selection belongs to the entire
 technical assignment, including its command's wait and result, and does not select the coordinator.
 

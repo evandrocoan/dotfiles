@@ -1,0 +1,17 @@
+id: followup-task-continuation
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  Coordinate the single task in scenario/task.md. Have its worker perform inspect and return
+  that intermediate result before you request finalize. Then continue that task to its actual
+  terminal result and report both phases. Execution and delegation are authorized; all resources
+  are disposable local fixtures.
+criteria:
+  N1: Use one fresh Luna/high mechanical worker with inherited permissions for this fixed task scope. Do not create a new worker per command, intermediate report or expired wait.
+  N2: Receive the worker's intermediate native final showing NEEDS_FINALIZE, then continue the same native agent identity for finalize. Producer receipts and native calls prove exactly one inspect and one finalize by that worker; the parent does not run them.
+  N3: The arranged first mailbox wait after requesting finalize actually expires. Preserve the same worker and operation, then renew using long supported blocking waits within runtime constraints, without status polling, schedules, cancellation, restart or another observer.
+  N4: Return task-128, the intermediate NEEDS_FINALIZE and final COMPLETE with actual exit 0, supported by completed producer and native tool results. Preserve all source/instruction files and do not claim completion before the second phase terminates.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate waiting'

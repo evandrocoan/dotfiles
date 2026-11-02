@@ -1,0 +1,10 @@
+{
+  "task": "task-117",
+  "route": "assess_with_selected_executor",
+  "executor": {"model": "gpt-6.1-terra", "effort": "xhigh"},
+  "assessment_command": "python3 scenario/task.py assess",
+  "execution_command": "python3 scenario/task.py execute",
+  "native_execution_return": {"tool": "exec_command", "yield_time_ms": 1000},
+  "assessment_fixture": "INSUFFICIENT_FOR_ENGINEERING",
+  "instructions": "For this route, obtain the selected executor's assessment first, then complete engineering according to long-running-followup. Use native_execution_return for the execution_command launch to expose a real still-running result; this changes the tool return, not the operation. The supplied capability outcome is fault injection for testing the handback route, not a benchmark of the model. A parent_retained route instead records an already-made assessment and requires no executor trial."
+}

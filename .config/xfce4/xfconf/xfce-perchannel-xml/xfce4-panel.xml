@@ -116,7 +116,7 @@
     <property name="plugin-5" type="string" value="pulseaudio">
       <property name="items" type="empty"/>
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="known-players" type="string" value="Chrome;Code"/>
+      <property name="known-players" type="string" value="ChatGPT;Chrome;Code"/>
     </property>
     <property name="plugin-6" type="empty">
       <property name="show-handle" type="empty"/>

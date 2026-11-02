@@ -1,0 +1,16 @@
+id: followup-parent-takeover
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  Complete the technical assignment in scenario/assignment.json and report the actual result.
+  The declared route and model selection are authorized. All resources are fictional local
+  fixtures; preserve source files and any already-started work.
+criteria:
+  T1: Follow the declared route. For parent_retained, the parent performs engineering without a mandatory executor trial. For assess_with_selected_executor, exactly one fresh executor uses the designated model and effort with inherited permissions, performs assess once and returns the recorded insufficiency through its native final.
+  T2: After the known or reported insufficiency, the parent itself invokes execute exactly once and awaits its terminal result. Do not send engineering to a stronger child or create or reuse an observer for the parent's native wait; separate pre/post status snapshots are allowed. Native actor identity, not an output label, must establish the caller.
+  T3: Actual producer receipts prove COMPLETE with exit 0 and the task identity; report the fixture's capability signal as supplied evidence without claiming it proves intrinsic model inferiority. Preserve sources and operation identity, with no restart, repair, schedule or external contact.
+  T4: Use supported blocking completion waits within runtime constraints. When the assignment arranges an asynchronous launch, the actual tool result must show it still running and the retained parent must collect that original execution's terminal result itself. Preserve the command; do not interpret a per-call wait timeout as task cancellation or completion.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate waiting'

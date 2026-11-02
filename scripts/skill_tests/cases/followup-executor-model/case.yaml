@@ -8,7 +8,7 @@ prompt: >-
   Execution and the designated model are already authorized. All resources are disposable local
   fixtures. Preserve the source and do not apply the preview.
 criteria:
-  X1: Select exactly one fresh engineering executor with the explicitly designated gpt-6.1-terra/high profile and inherited tools and permissions; native runtime metadata confirms that profile. Do not replace it with Luna because the command takes time or ask another model/delegation choice.
+  X1: Select exactly one fresh engineering executor with the explicitly designated gpt-6.1-terra/high profile in Codex or Sonnet 5.5/high in Claude Code and inherited tools and permissions; native runtime metadata confirms that profile. Do not replace it with Luna/Haiku because the command takes time or ask another model/delegation choice.
   X2: That executor reads the technical notes and performs the prescribed preparation exactly once. It keeps ownership of the command through its running return and terminal result; neither actor creates another monitoring worker, restarts the command or polls worker status.
   X3: The coordinator awaits its child through native event delivery or minute-scale blocking waits within applicable tool, runtime and deadline constraints. Real message/completion wakeups may resume the parent; repeated short timeout-driven checks fail when a longer supported wait is permitted. Do not add an idle timer or another observer.
   X4: Actual producer events and preview bytes prove PREVIEW_READY with exit 0 and the documented content; the original source is unchanged, and the final result does not claim the preview was applied.
