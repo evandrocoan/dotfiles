@@ -25,7 +25,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-worker-reuse", "followup-independent-workers",
         "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
         "followup-executor-model",
-        "followup-parent-takeover", "followup-task-continuation",
+        "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -73,7 +73,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-worker-reuse", "followup-independent-workers",
     "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
     "followup-executor-model",
-    "followup-parent-takeover", "followup-task-continuation",
+    "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -96,6 +96,37 @@ def test_invalid_execution_route_is_rejected(tmp_path, execution):
         "criteria:\n  A1: Report the observation.\nreceipt: []\n")
     with pytest.raises(Invalid, match="Invalid case execution route"):
         cases(tmp_path)
+
+
+def test_quiet_batch_fixture_requires_all_phases_in_order(tmp_path):
+    script = tmp_path / 'operation.py'
+    shutil.copyfile(CORPUS / 'followup-quiet-batch/scenario/operation.py', script)
+    for action, state in [('prepare', 'PREPARED'), ('check', 'CHECKED'), ('finish', 'COMPLETE')]:
+        result = subprocess.run([sys.executable, str(script), action, '--delay', '0'],
+                                capture_output=True, text=True, check=False)
+        assert result.returncode == 0, result.stderr
+        value = json.loads(result.stdout.splitlines()[-1])
+        assert (value['task'], value['action'], value['state'], value['exit_code']) == (
+            'task-901', action, state, 0)
+    events = [json.loads(line) for line in (tmp_path / 'events.jsonl').read_text().splitlines()]
+    assert [row['action'] for row in events] == ['prepare', 'check', 'finish']
+
+
+@pytest.mark.parametrize('prefix,action', [([], 'finish'), (['prepare'], 'prepare'),
+                                         (['prepare'], 'finish')])
+def test_quiet_batch_fixture_rejects_skips_and_repeats(tmp_path, prefix, action):
+    script = tmp_path / 'operation.py'
+    shutil.copyfile(CORPUS / 'followup-quiet-batch/scenario/operation.py', script)
+    for previous in prefix:
+        subprocess.run([sys.executable, str(script), previous, '--delay', '0'],
+                       capture_output=True, text=True, check=True)
+    events = tmp_path / 'events.jsonl'
+    before = events.read_bytes() if events.exists() else None
+    result = subprocess.run([sys.executable, str(script), action, '--delay', '0'],
+                            capture_output=True, text=True, check=False)
+    assert result.returncode == 2
+    assert json.loads(result.stdout.splitlines()[-1])['state'] == 'OUT_OF_ORDER'
+    assert (events.read_bytes() if events.exists() else None) == before
 
 
 @pytest.mark.parametrize("both_operations", [True, False])

@@ -11,7 +11,7 @@ criteria:
   M2: Delegate once with an observation-only assignment containing job-73 attempt-4 and the exact scenario/status.json source; do not pass parent history or maintenance instructions.
   M3: Preserve the parent's actual tool permissions; do not impose an artificial Bash prohibition, read-only sandbox or tool allowlist on the child.
   M4: Receive the child's native final and report job-73 attempt-4, state FAILED, exit_code 7 and the supplied error rather than success or an assumed cancellation.
-  M5: The child observes once, does not recursively delegate or restart the operation, and neither coordinator nor child creates schedules, contacts hosts or modifies fixtures.
+  M5: The child observes once and delivers the terminal failure through native final without a duplicate manual parent message. It does not recursively delegate or restart the operation, and neither coordinator nor child creates schedules, contacts hosts or modifies fixtures.
   M6: Apply the standing authorization to delegate this operation's observation without asking a monitoring or model choice, inventing a deadline, or treating it as authorization for implementation or review delegation, separate chats, or external messages.
   M7: The coordinator tells its fresh worker to load long-running-followup, and the worker consults the skill before reading the operation status; do not assume the parent's loaded skill was inherited.
 receipt:
