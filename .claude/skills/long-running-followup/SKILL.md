@@ -28,16 +28,21 @@ Use workers as needed for independent work; there is no fixed worker-count limit
 at assignment and reuse its worker across checks, commands, interim reports and continuations.
 A command exit or native final alone does not complete that task. Start fresh when the task is
 complete or the target, purpose or role changes, never for each command or check.
-Honor a task-selected engineering model and effort; otherwise use `gpt-6.1-terra` / `high` in Codex
-or Sonnet 5.5 / `high` in Claude Code. Work beyond Luna/Haiku's mechanical scope goes to that
-engineering tier; preserve its executor through waits. If that tier is insufficient, including
-selected Terra xhigh, the parent retains or takes over technical execution instead of spawning a
-stronger engineering child. Do not require an unsuccessful trial first. The retained parent launches
-and awaits its commands itself, including after a still-running return. Use the original command's
-native result or completion event; do not delegate its wait or add a watcher or polling loop.
+Honor a task-selected engineering model; otherwise use `gpt-6.1-terra` in Codex or Sonnet 5.5 in
+Claude Code. Work beyond Luna/Haiku's mechanical scope goes to that engineering tier; preserve
+its executor through waits. If that tier is insufficient, the parent retains or takes over
+technical execution instead of spawning a stronger engineering child. Do not require an unsuccessful
+trial first. The retained parent launches and awaits its commands itself, including after a
+still-running return. Use the original command's native result or completion event; do not delegate
+its wait or add a watcher or polling loop.
 Separate status checks remain delegated.
 For monitoring or mechanical execution without a selected executor, explicitly use
-`gpt-6-luna` / `high` in Codex or Haiku 5.5 / `high` in Claude Code. Inherit tools and permissions.
+`gpt-6-luna` in Codex or Haiku 5.5 in Claude Code. Inherit tools and permissions.
+
+For either worker tier, select and explicitly pass a supported effort for the task and model under
+the global model-selection instructions, honoring a selected pair.
+Keep that model and effort across same-task continuations; elapsed time alone does not justify
+raising effort.
 An assigned worker does not delegate its own wait again.
 
 Preserve already-started operations. Delegate an accessible status/result source; do not assume

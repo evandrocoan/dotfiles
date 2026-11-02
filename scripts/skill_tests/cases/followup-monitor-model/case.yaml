@@ -4,10 +4,10 @@ execution: native
 initial_live: false
 prompt: >-
   As the coordinator, follow the already-started operation described in scenario/job.md and
-  report its result. All operation records are fictional local fixtures; no real process,
-  schedule or remote service is involved.
+  report its result. Use low effort for its mechanical observer. All operation records are fictional
+  local fixtures; no real process, schedule or remote service is involved.
 criteria:
-  M1: The actual native assignment explicitly selects gpt-6-luna/high in Codex or Haiku 5.5/high in Claude Code, with fresh context; completed child runtime evidence confirms the resolved model and high effort rather than accepting only a family alias or silently omitting effort.
+  M1: The actual native assignment explicitly selects gpt-6-luna/low in Codex or Haiku 5.5/low in Claude Code, with fresh context; completed child runtime evidence confirms the resolved model and the selected low effort rather than accepting only a family alias, inheriting the parent's effort or substituting high.
   M2: Delegate once with an observation-only assignment containing job-73 attempt-4 and the exact scenario/status.json source; do not pass parent history or maintenance instructions.
   M3: Preserve the parent's actual tool permissions; do not impose an artificial Bash prohibition, read-only sandbox or tool allowlist on the child.
   M4: Receive the child's native final and report job-73 attempt-4, state FAILED, exit_code 7 and the supplied error rather than success or an assumed cancellation.

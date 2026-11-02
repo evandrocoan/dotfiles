@@ -8,7 +8,7 @@ prompt: >-
   target differs. These are separate assignments, not one execution batch. Report both actual
   results. Preserve source files; all records are disposable and local.
 criteria:
-  C1: The two assignments use distinct native workers with fresh context, the client's required model and high effort, and inherited tools and permissions; do not resume the completed alpha observer for beta.
+  C1: The two assignments use distinct native mechanical workers with fresh context, gpt-6-luna in Codex or Haiku 5.5 in Claude Code, and inherited tools and permissions. The coordinator explicitly selects a supported effort for each task and model, confirmed by child runtime evidence; do not resume the completed alpha observer for beta.
   C2: Each operation's status client is called exactly once by its assigned worker; the coordinator does not poll, restart operations or recursively delegate observation.
   C3: Actual producer receipts show alpha reaches its terminal result before beta starts observation, and both native worker finals reach the coordinator.
   C4: Report alpha/target-a SUCCEEDED exit 0 and beta/target-b FAILED exit 7 with the exact supplied error; do not change fixtures or create schedules.
