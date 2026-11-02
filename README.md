@@ -767,7 +767,8 @@ Install the updated monitor unit and reload systemd using the commands below.
 
 Open **Codex Monitor** from the applications menu for the GUI, or run `codex-monitor` for
 Codex CLI in the current terminal. Both use the same native managed server. `codex-monitor --gui`
-opens the GUI; if its verified window is already open, the launcher brings it to the front.
+opens the GUI; if the verified GUI is already running, the launcher brings its window to the front.
+When its last window was closed, the launcher asks that GUI to show a window again.
 CLI arguments and working directory are preserved. Closing either client leaves the server and
 other work running. App tools become available when the GUI connects and reconnect after reopening.
 

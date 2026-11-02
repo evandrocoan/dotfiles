@@ -79,7 +79,10 @@ selected home, bootstrap and protocol; a saved receipt alone is insufficient. Th
 native handshake and requires genuine delivered GUI traffic before readiness. Pin the actual GUI
 tools socket by authenticated private hard link and remove only its own binding generation.
 Only cold startup may prepare the three approved static feature/plugin booleans, preserving exact
-backup and unrelated config. Permission migration remains a separate operator action.
+backup and unrelated config. Permission migration remains a separate operator action. Reopen
+a live registered GUI's window only through its Chromium singleton socket after the lock, cookie
+and listener peer match that GUI. Never start a second app process for that, because Chromium may
+kill an unresponsive lock holder.
 
 ### GitLab monitor work ownership
 

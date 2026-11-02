@@ -333,8 +333,148 @@ def test_focus_targets_only_verified_gui_pid_and_propagates_window_manager_failu
             return types.SimpleNamespace(stdout=f'0x111 0 99999 host unrelated\n0x222 0 {gui["pid"]} host Codex\n')
         raise subprocess.CalledProcessError(1, arguments)
     monkeypatch.setattr(subprocess, 'run', run)
-    with pytest.raises(subprocess.CalledProcessError):launcher['focus_gui'](gui)
+    with pytest.raises(subprocess.CalledProcessError):launcher['focus_gui'](gui, Path('/fixture/app'), 1)
     assert calls == [['/fixture/wmctrl','-lp'], ['/fixture/wmctrl','-ia','0x222']]
+
+
+APP = Path('/usr/lib/chatgpt/ChatGPT')
+
+
+def singleton_gui(tmp_path, lock_owner, socket_cookie='42'):
+    """Make this test process a GUI whose Chromium child names a profile with a singleton socket."""
+    profile, sockets = tmp_path/'profile', tmp_path/'s'
+    profile.mkdir(); sockets.mkdir()
+    (profile/'SingletonLock').symlink_to(f'{socket.gethostname()}-{lock_owner}')
+    (profile/'SingletonCookie').symlink_to('42')
+    (sockets/'SingletonCookie').symlink_to(socket_cookie)
+    (profile/'SingletonSocket').symlink_to(sockets/'SingletonSocket')
+    # Chromium rewrites a child's arguments into one space-joined process title; reproduce that shape.
+    title = f'{APP} --type=zygote --enable-crash-reporter=, --user-data-dir={profile} --change-stack-guard-on-fork=enable'
+    child = subprocess.Popen(['bash', '-c', 'exec -a "$0" sleep 60', title])
+    return profile, sockets/'SingletonSocket', child
+
+
+def handoff(profile):
+    return b'\0'.join([b'START', os.fsencode(os.getcwd()), os.fsencode(APP),
+                        b'--no-startup-window', b'--user-data-dir=' + os.fsencode(profile)])
+
+
+def serve_singleton(path, reply, received, release):
+    """Answer one handoff as Chromium does: read until the client half-closes, then reply."""
+    import threading
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    listener.bind(str(path)); listener.listen(1)
+    def answer():
+        connection, _ = listener.accept()
+        with connection:
+            message = b''
+            while chunk := connection.recv(4096):
+                message += chunk
+            received.append(message)
+            if reply is None:
+                release.wait(10)
+            elif message:
+                connection.sendall(reply)
+    thread = threading.Thread(target=answer, daemon=True); thread.start()
+    def stop():
+        release.set()
+        if thread.is_alive():
+            # Unblock an accept() that the refused client never reached.
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as unblock:unblock.connect(str(path))
+        thread.join(5)
+        listener.close()
+        assert not thread.is_alive()
+    return stop
+
+
+def fake_wmctrl(monkeypatch, gui, shown):
+    import shutil
+    calls = []
+    monkeypatch.setattr(shutil, 'which', lambda name: '/fixture/wmctrl')
+    def run(arguments, **kwargs):
+        calls.append(arguments)
+        if arguments == ['/fixture/wmctrl','-lp']:
+            window = f'0x333 0 {gui["pid"]} host Codex\n' if shown() else ''
+            return types.SimpleNamespace(stdout='0x111 0 99999 host unrelated\n' + window)
+        return types.SimpleNamespace(returncode=0)
+    monkeypatch.setattr(subprocess, 'run', run)
+    return calls
+
+
+def test_closed_window_is_reopened_through_registered_gui_singleton_then_focused(launcher, tmp_path, monkeypatch):
+    import threading
+    profile, path, child = singleton_gui(tmp_path, os.getpid())
+    received = []
+    stop = serve_singleton(path, b'ACK', received, threading.Event())
+    gui = launcher['monitor_process'](os.getpid())
+    # The GUI maps a window only after it has received the handoff.
+    calls = fake_wmctrl(monkeypatch, gui, lambda: bool(received))
+    try:
+        launcher['focus_gui'](gui, APP, 5)
+    finally:
+        stop(); child.kill(); child.wait()
+    assert received == [handoff(tmp_path/'profile')]
+    assert calls[0] == ['/fixture/wmctrl','-lp'] and calls[-1] == ['/fixture/wmctrl','-ia','0x333']
+    assert calls.count(['/fixture/wmctrl','-ia','0x333']) == 1
+
+
+FOREIGN_PEER = ('import socket, sys\n'
+                'listener = socket.socket(socket.AF_UNIX); listener.bind(sys.argv[1]); listener.listen(1)\n'
+                'open(sys.argv[3], "w").close()\n'
+                'connection, _ = listener.accept(); message = b""\n'
+                'while chunk := connection.recv(4096): message += chunk\n'
+                'open(sys.argv[2], "wb").write(message)\n')
+
+
+@pytest.mark.parametrize('case,expected', [
+    ('foreign-lock', 'não foi possível confirmar sua instância'),
+    ('cookie-mismatch', 'não foi possível confirmar sua instância'),
+    ('shutting-down', 'não aceitou o pedido'),
+    ('silent', 'não respondeu ao pedido'),
+    ('no-window', 'janela ainda não está disponível'),
+], ids=['foreign-lock', 'cookie-mismatch', 'shutting-down', 'silent', 'no-window'])
+def test_unconfirmed_reopen_is_refused_without_focusing(launcher, tmp_path, monkeypatch, case, expected):
+    import threading
+    profile, path, child = singleton_gui(tmp_path, 1 if case == 'foreign-lock' else os.getpid(),
+                                         '43' if case == 'cookie-mismatch' else '42')
+    received = []
+    stop = serve_singleton(path, {'shutting-down': b'SHUTDOWN', 'silent': None}.get(case, b'ACK'),
+                           received, threading.Event())
+    gui = launcher['monitor_process'](os.getpid())
+    calls = fake_wmctrl(monkeypatch, gui, lambda: False)
+    try:
+        with pytest.raises(RuntimeError, match=expected):
+            launcher['focus_gui'](gui, APP, 0.5)
+        sent = list(received)
+    finally:
+        stop(); child.kill(); child.wait()
+    # A refused instance never receives the request; a reached one got exactly one.
+    assert sent == ([] if case in {'foreign-lock', 'cookie-mismatch'} else [handoff(profile)])
+    # Nothing is focused; only an accepted handoff waits for the window to appear.
+    assert all(call == ['/fixture/wmctrl','-lp'] for call in calls)
+    assert (len(calls) > 1) is (case == 'no-window')
+
+
+def test_reopen_refuses_a_socket_not_served_by_the_registered_gui(launcher, tmp_path, monkeypatch):
+    import time
+    profile, path, child = singleton_gui(tmp_path, os.getpid())
+    record, listening = tmp_path/'foreign.bin', tmp_path/'listening'
+    peer = subprocess.Popen([sys.executable, '-c', FOREIGN_PEER, str(path), str(record), str(listening)])
+    deadline = time.monotonic() + 10
+    while not listening.exists():
+        assert time.monotonic() < deadline and peer.poll() is None
+        time.sleep(.05)
+    gui = launcher['monitor_process'](os.getpid())
+    calls = fake_wmctrl(monkeypatch, gui, lambda: False)
+    try:
+        with pytest.raises(RuntimeError, match='não foi possível confirmar sua instância'):
+            launcher['focus_gui'](gui, APP, 5)
+        assert peer.wait(10) == 0
+    finally:
+        child.kill(); child.wait()
+        if peer.poll() is None:peer.kill(); peer.wait()
+    assert record.read_bytes() == b''
+    assert calls == [['/fixture/wmctrl','-lp']]
 
 
 def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_path, monkeypatch):

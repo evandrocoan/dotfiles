@@ -617,20 +617,95 @@ def message(text, *, gui=False, error=False):
                 print('Não foi possível mostrar a mensagem na área de trabalho: ' + result.stderr.strip(), file=sys.stderr)
 
 
-def focus_gui(gui):
+def singleton_holder(profile):
+    import socket
+    try:
+        host, _, pid = os.readlink(profile / 'SingletonLock').rpartition('-')
+    except OSError:
+        return None
+    return int(pid) if host == socket.gethostname() and pid.isdigit() else None
+
+
+def gui_profile(gui):
+    """Return the profile whose Chromium single-instance lock the registered GUI holds."""
+    import re
+    for entry in Path('/proc').iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            if int((entry / 'stat').read_bytes().rsplit(b')', 1)[1].split()[1]) != gui['pid']:
+                continue
+            arguments = (entry / 'cmdline').read_bytes()
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+        # Chromium children carry the profile the GUI resolved at startup, inside a process title
+        # that joins their arguments with spaces. A profile path containing spaces fails closed.
+        for match in re.finditer(rb'(?:^|[\0 ])--user-data-dir=([^\0 ]+)', arguments):
+            profile = Path(os.fsdecode(match.group(1)))
+            if singleton_holder(profile) == gui['pid']:
+                return profile
+    raise RuntimeError('O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.')
+
+
+def reopen_gui_window(gui, app, timeout):
+    """Ask the registered GUI to show a window, as a second launch would, without starting one."""
+    import socket
+    import struct
+    profile = gui_profile(gui)
+    unconfirmed = 'O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.'
+    try:
+        # Chromium accepts the socket only when its directory carries the profile's cookie.
+        target = Path(os.readlink(profile / 'SingletonSocket'))
+        if os.readlink(target.parent / 'SingletonCookie') != os.readlink(profile / 'SingletonCookie'):
+            raise RuntimeError(unconfirmed)
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+            connection.settimeout(timeout)
+            connection.connect(str(target))
+            pid, uid, _ = struct.unpack('3i', connection.getsockopt(
+                socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize('3i')))
+            if pid != gui['pid'] or uid != os.getuid() or not same_process(gui):
+                raise RuntimeError(unconfirmed)
+            # A second launch of the app sends START, its working directory and its argv. Send
+            # only the argv entries that concern a running instance, a subset of that launch's.
+            connection.sendall(b'\0'.join([b'START', os.fsencode(os.getcwd()), os.fsencode(app),
+                                           b'--no-startup-window', b'--user-data-dir=' + os.fsencode(profile)]))
+            connection.shutdown(socket.SHUT_WR)
+            reply = b''
+            while chunk := connection.recv(16):
+                reply += chunk
+    except TimeoutError as error:
+        raise RuntimeError('O Codex não respondeu ao pedido para reabrir a janela no prazo; ela ainda pode '
+                           'aparecer. O aplicativo e seus trabalhos foram preservados.') from error
+    except OSError as error:
+        raise RuntimeError(unconfirmed) from error
+    if reply != b'ACK':
+        raise RuntimeError('O Codex não aceitou o pedido para reabrir a janela (resposta ' + repr(reply) +
+                           '). O aplicativo e seus trabalhos foram preservados.')
+
+
+def focus_gui(gui, app, timeout):
     import shutil
     import subprocess
+    import time
     if not same_process(gui):
         raise RuntimeError('A interface registrada já terminou.')
     wmctrl = shutil.which('wmctrl')
     if not wmctrl:
         raise RuntimeError('O Codex já está aberto, mas wmctrl não está disponível para trazer sua janela à frente.')
-    result = subprocess.run([wmctrl, '-lp'], capture_output=True, text=True, check=True)
-    windows = [line.split()[0] for line in result.stdout.splitlines()
-               if len(line.split()) >= 3 and line.split()[2] == str(gui['pid'])]
-    if not windows or not same_process(gui):
+    def windows():
+        result = subprocess.run([wmctrl, '-lp'], capture_output=True, text=True, check=True)
+        return [line.split()[0] for line in result.stdout.splitlines()
+                if len(line.split()) >= 3 and line.split()[2] == str(gui['pid'])]
+    found = windows()
+    if not found:
+        # Closing the last window keeps the GUI and its work running; ask it to show one again.
+        reopen_gui_window(gui, app, timeout)
+        deadline = time.monotonic() + timeout
+        while not (found := windows()) and time.monotonic() < deadline:
+            time.sleep(.1)
+    if not found or not same_process(gui):
         raise RuntimeError('O Codex já está aberto, mas sua janela ainda não está disponível para receber foco.')
-    subprocess.run([wmctrl, '-ia', windows[0]], check=True)
+    subprocess.run([wmctrl, '-ia', found[0]], check=True)
 
 
 def existing_gui(config, app):
@@ -712,7 +787,7 @@ def _monitor_launch_app(config, path, app, codex, app_args):
             if gui and gui['birth'] == old['gui']['birth']:
                 if gui['exe'] != str(app) or old.get('codex_home') != config['codex_home']:
                     raise RuntimeError('Outra abertura do Codex ainda está em andamento.')
-                focus_gui(gui)
+                focus_gui(gui, app, config['native_timeout'])
                 message('O Codex já estava aberto. A janela foi trazida à frente.', gui=True)
                 return
         verify_existing_gui(config, runtime, app)
