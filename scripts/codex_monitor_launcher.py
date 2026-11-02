@@ -594,6 +594,7 @@ def ensure_server(config, codex):
 def clean_environment():
     # Preserve ordinary desktop/session context, never a caller's tools pipe or verification identity.
     names = {'PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LANGUAGE', 'TERM', 'COLORTERM',
+        'SSH_AUTH_SOCK',
         'DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_RUNTIME_DIR',
         'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_CURRENT_DESKTOP',
         'XDG_SESSION_TYPE', 'XDG_SESSION_ID', 'XDG_SESSION_DESKTOP', 'DESKTOP_SESSION', 'GDK_BACKEND', 'GTK_THEME',
@@ -912,7 +913,8 @@ def _monitor_launch_app(config, path, app, codex, app_args):
 def _monitor_launch_cli(config, codex, cli, arguments):
     codex, cli = Path(codex).resolve(strict=True), Path(cli).resolve(strict=True)
     # An alternate endpoint would defeat sharing. Native flags for prompts/cwd remain untouched.
-    if any(word == '--remote' or word.startswith('--remote=') for word in arguments):
+    options = arguments[:arguments.index('--')] if '--' in arguments else arguments
+    if any(word == '--remote' or word.startswith('--remote=') for word in options):
         raise RuntimeError('codex-monitor escolhe o servidor compartilhado; remova a opção --remote.')
     owner, created, backup = ensure_server(config, codex)
     if created:

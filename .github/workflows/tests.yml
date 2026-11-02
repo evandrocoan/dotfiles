@@ -30,6 +30,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare private test Python
+        id: prepare-test-python
+        working-directory: scripts
+        shell: bash
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          python -m venv --copies .venv
+          .venv/bin/python -c 'import ssl, sys; print(sys.executable, ssl.OPENSSL_VERSION)'
+
       - name: Install locked test dependencies
         working-directory: scripts
         shell: bash

@@ -101,13 +101,15 @@ os.execv(os.environ['CHECK_CI_REAL_TIMEOUT'], ['timeout', *args])
 
 def test_loads_adjacent_dotenv_and_checks_authenticated_ssh(monitor):
     run, calls, config, _ = monitor
-    config.write_text('export CHECK_CI_HOSTS="first user@second 192.0.2.3" # hosts\n')
+    config.write_text('export CHECK_CI_HOSTS="first user@second 192.0.2.3 '
+                      '::1 ::ffff:192.0.2.3 _deploy@host" # hosts\n')
 
     result = run(CHECK_CI_HOSTS="ignored-inherited-value")
 
     assert result.returncode == 0, result.stderr
     assert [args[-2:] for args in calls("ssh")] == [
-        ["first", "true"], ["user@second", "true"], ["192.0.2.3", "true"]
+        ["first", "true"], ["user@second", "true"], ["192.0.2.3", "true"],
+        ["::1", "true"], ["::ffff:192.0.2.3", "true"], ["_deploy@host", "true"]
     ]
     assert calls("nc") == []
     assert calls("notify-send") == []
@@ -121,7 +123,7 @@ def test_loads_adjacent_dotenv_and_checks_authenticated_ssh(monitor):
         ]
     assert [args[:3] for args in calls("timeout")] == [
         ["--kill-after=2s", "15s", "ssh"]
-    ] * 3
+    ] * 6
     assert "SSH check succeeded for first." in result.stdout
 
 

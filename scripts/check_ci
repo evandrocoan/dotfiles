@@ -67,7 +67,7 @@ except (OSError, UnicodeError) as error:
 if not value or not value.strip():
     sys.exit(f"Error: set CHECK_CI_HOSTS to a whitespace-separated list of SSH destinations in {path}.")
 hosts = value.split()
-if any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:@%\[\]-]*", host) for host in hosts):
+if any(not re.fullmatch(r"(?!-)[A-Za-z0-9_.:@%\[\]-]+", host) for host in hosts):
     sys.exit("Error: CHECK_CI_HOSTS contains an invalid SSH destination.")
 print("\n".join(dict.fromkeys(hosts)))
 PY

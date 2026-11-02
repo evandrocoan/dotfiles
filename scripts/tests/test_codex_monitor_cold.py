@@ -4,12 +4,14 @@ import json
 import os
 from pathlib import Path
 import runpy
+import shutil
 import socket
 import subprocess
 import sys
 import tempfile
 
 import pytest
+import yaml
 
 SOURCE_ROOT = Path(os.environ.get('CODEX_MONITOR_TEST_CLI',
     Path(__file__).resolve().parents[2] / '.local/bin/codex-session-stats')).parents[2]
@@ -34,6 +36,38 @@ def cold(monkeypatch):
         target.chmod(0o600)
         factory = lambda: module['MonitorColdStart'](config,[sys.executable])
         yield module, root, config, target, factory
+
+
+def test_ci_prepares_a_private_runner_from_world_writable_python(cold, tmp_path):
+    module, _, config, _, _ = cold
+    prefix = tmp_path / 'provider'
+    provider = prefix / 'bin/python'
+    provider.parent.mkdir(parents=True)
+    shutil.copyfile(Path(sys.executable).resolve(), provider)
+    provider.chmod(0o777)
+    for name in ('lib', 'lib64'):
+        library = Path(sys.base_prefix) / name
+        if library.is_dir():
+            (prefix / name).symlink_to(library, target_is_directory=True)
+    with pytest.raises(RuntimeError, match='untrusted native executable'):
+        module['MonitorColdStart'](config, [provider])
+    workflow = yaml.safe_load((SOURCE_ROOT / '.github/workflows/tests.yml').read_text())
+    step, = [step for step in workflow['jobs']['unit-tests']['steps']
+             if step.get('id') == 'prepare-test-python']
+    workspace = tmp_path / 'workspace'
+    workspace.mkdir()
+    result = subprocess.run(['bash', '--noprofile', '--norc', '-c', step['run']],
+        cwd=workspace, env={**os.environ, 'PATH': str(provider.parent) + os.pathsep + os.environ['PATH']},
+        capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    runner = workspace / '.venv/bin/python'
+    assert runner.resolve().is_relative_to(workspace / '.venv')
+    assert runner.stat().st_mode & 0o777 == 0o755
+    assert not runner.samefile(provider)
+    assert provider.stat().st_mode & 0o777 == 0o777
+    guard = module['MonitorColdStart'](config, [runner])
+    assert set(guard.native) == {str(runner.resolve())}
+    assert guard.descriptors == []
 
 
 @pytest.mark.parametrize('kind,mode,regular,executable,writable_bits', [

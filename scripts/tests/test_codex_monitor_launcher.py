@@ -59,7 +59,13 @@ def test_help_does_not_need_installation_or_optional_packages(monkeypatch, capsy
     assert 'Sem --gui, abre a CLI no terminal' in capsys.readouterr().out
 
 
-def test_cli_exec_keeps_cwd_exit_and_arguments_without_restarting_native(launcher, monkeypatch, tmp_path):
+@pytest.mark.parametrize('arguments', [
+    ['-C', 'relative', 'hello world'],
+    ['--', '--remote'],
+    ['--', '--remote=example'],
+])
+def test_cli_exec_keeps_cwd_exit_and_arguments_without_restarting_native(
+        launcher, monkeypatch, tmp_path, arguments):
     function = launcher['monitor_launch_cli']; namespace = function.__globals__
     native = Path(sys.executable).resolve(); calls = []
     monkeypatch.setitem(namespace, 'ensure_server', lambda config, codex:
@@ -70,11 +76,11 @@ def test_cli_exec_keeps_cwd_exit_and_arguments_without_restarting_native(launche
         calls.append((binary, args, environment, Path.cwd())); raise SystemExit(41)
     monkeypatch.setattr(os, 'execve', execute)
     with pytest.raises(SystemExit) as result:
-        function({'codex_home': str(tmp_path)}, native, native, ['-C', 'relative', 'hello world'])
+        function({'codex_home': str(tmp_path)}, native, native, arguments)
     assert result.value.code == 41
     binary, args, env, cwd = calls[0]
     assert binary == native
-    assert args == [str(native), '--remote', 'unix:///fixture/native.sock', '-C', 'relative', 'hello world']
+    assert args == [str(native), '--remote', 'unix:///fixture/native.sock', *arguments]
     assert env['CODEX_HOME'] == str(tmp_path)
     assert 'CODEX_CLI_PATH' not in env and 'CODEX_STATS_APP_LAUNCH' not in env
     assert cwd == Path.cwd()
@@ -611,6 +617,11 @@ def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_
     core = launcher['support']()
     path, config = private_config(core, tmp_path, monkeypatch)
     config['native_timeout'] = 8
+    agent_socket = str(tmp_path / 'agent.sock')
+    monkeypatch.setenv('SSH_AUTH_SOCK', agent_socket)
+    monkeypatch.setenv('CODEX_APP_TOOLS_PIPE_PATH', '/unrelated/tools.sock')
+    monkeypatch.setenv('CODEX_STATS_APP_LAUNCH', '/unrelated/launch.json')
+    monkeypatch.setenv('CODEX_MONITOR_LAUNCHER_PROTOCOL', 'untrusted-caller')
     resources = tmp_path/'resources'; (resources/'cua_node/bin').mkdir(parents=True)
     codex = resources/'codex'; codex.write_text('#!/usr/bin/python3\n'); codex.chmod(0o700)
     node = resources/'cua_node/bin/node'; node.write_text('#!/usr/bin/python3\n'); node.chmod(0o700)
@@ -623,7 +634,7 @@ def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_
     cold_class = launcher['cold']()['MonitorColdStart']
     original_lock = cold_class.lock_file
     events = queue.Queue(); second_started = threading.Event(); second_done = threading.Event()
-    acquisitions = {}; launches = []; results = {}; errors = {}
+    acquisitions = {}; launches = []; environments = []; results = {}; errors = {}
     def lock_file(authority, target, **kwargs):
         name = threading.current_thread().name
         if target.name == 'launch.lock':
@@ -637,6 +648,7 @@ def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_
     monkeypatch.setattr(cold_class, 'lock_file', lock_file)
     def start_native(arguments, **kwargs):
         launches.append(arguments)
+        environments.append(kwargs['env'])
         if threading.current_thread().name == 'first':
             events.put('native-start')
             assert second_started.wait(8)
@@ -660,12 +672,21 @@ def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_
         assert {name: result[0] for name, result in results.items()} == {'first': owner, 'second': owner}
         assert len(launches) == 1
         assert sum(result[1] for result in results.values()) == 1
+        environment, = environments
+        assert environment['SSH_AUTH_SOCK'] == agent_socket
+        directory = launcher['monitor_app_tools_directory'](config)
+        assert environment['CODEX_APP_TOOLS_PIPE_PATH'] == str(directory / 'host.sock')
+        assert environment['CODEX_MONITOR_LAUNCHER_PROTOCOL'] == '1'
+        assert 'CODEX_STATS_APP_LAUNCH' not in environment
     finally:
         second_started.set(); second_done.set()
         first.join(timeout=10)
         if second.ident is not None:second.join(timeout=10)
-        directory = launcher['monitor_app_tools_directory'](config)
-        directory.rmdir()
+        try:
+            directory = launcher['monitor_app_tools_directory'](config)
+            directory.rmdir()
+        except FileNotFoundError:
+            pass
 
 
 def test_aggregate_catalog_is_ready_without_thread_scoped_runtime_status(launcher, monkeypatch):
