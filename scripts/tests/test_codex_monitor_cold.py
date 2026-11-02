@@ -36,6 +36,62 @@ def cold(monkeypatch):
         yield module, root, config, target, factory
 
 
+@pytest.mark.parametrize('kind,mode,regular,executable,writable_bits', [
+    ('group-write', 0o770, True, True, 0o020),
+    ('other-write', 0o702, True, True, 0o002),
+    ('not-executable', 0o600, True, False, 0),
+    ('directory', 0o700, False, True, 0),
+    ('foreign-owner', 0o700, True, True, 0),
+])
+def test_untrusted_native_reports_rejected_file_metadata(
+        cold, monkeypatch, kind, mode, regular, executable, writable_bits):
+    module, root, config, target, _ = cold
+    native = root / 'native'
+    if kind == 'directory':
+        native.mkdir(mode=mode)
+    else:
+        native.write_text('#!/usr/bin/python3\n')
+        native.chmod(mode)
+    owner = os.getuid()
+    if kind == 'foreign-owner':
+        owner += 1
+        original_stat = Path.stat
+        def file_stat(path, *args, **kwargs):
+            meta = original_stat(path, *args, **kwargs)
+            if path == native:
+                fields = list(meta)
+                fields[4] = owner
+                return os.stat_result(fields)
+            return meta
+        monkeypatch.setattr(Path, 'stat', file_stat)
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with pytest.raises(RuntimeError, match='untrusted native executable') as caught:
+        module['MonitorColdStart'](config, [native])
+    detail = str(caught.value)
+    assert f'path={str(native.resolve())!r}' in detail
+    assert f'uid={owner}' in detail
+    assert f'current_uid={os.getuid()}' in detail
+    assert f'mode={mode:#06o}' in detail
+    assert f'regular_file={regular}' in detail
+    assert f'trusted_owner={kind != "foreign-owner"}' in detail
+    assert f'executable={executable}' in detail
+    assert f'writable_bits={writable_bits:#05o}' in detail
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+    assert not (Path(config['codex_home']) / 'app-server-control').exists()
+
+
+def test_trusted_native_still_constructs_without_configuration_effects(cold):
+    module, root, config, target, _ = cold
+    native = root / 'native'
+    native.write_text('#!/usr/bin/python3\n')
+    native.chmod(0o700)
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    guard = module['MonitorColdStart'](config, [native])
+    assert set(guard.native) == {str(native.resolve())}
+    assert guard.descriptors == []
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
 def test_cold_guard_holds_three_real_locks_and_changes_no_config(cold):
     _,root,config,target,factory = cold
     before = target.read_bytes(),target.stat().st_mtime_ns

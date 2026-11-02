@@ -35,9 +35,16 @@ class MonitorColdStart:
         for path in native_paths:
             path = Path(path).resolve(strict=True)
             meta = path.stat()
-            if (not stat.S_ISREG(meta.st_mode) or meta.st_uid not in {0, os.getuid()}
-                    or not os.access(path, os.X_OK) or meta.st_mode & 0o022):
-                raise RuntimeError('untrusted native executable for cold-start classification')
+            regular_file = stat.S_ISREG(meta.st_mode)
+            trusted_owner = meta.st_uid in {0, os.getuid()}
+            executable = os.access(path, os.X_OK)
+            writable_bits = meta.st_mode & 0o022
+            if not regular_file or not trusted_owner or not executable or writable_bits:
+                raise RuntimeError('untrusted native executable for cold-start classification: '
+                    f'path={str(path)!r}, uid={meta.st_uid}, current_uid={os.getuid()}, '
+                    f'mode={stat.S_IMODE(meta.st_mode):#06o}, regular_file={regular_file}, '
+                    f'trusted_owner={trusted_owner}, executable={executable}, '
+                    f'writable_bits={writable_bits:#05o}')
             self.native[str(path)] = self.file_identity(meta)
         if not self.native:
             raise RuntimeError('cold start requires exact native executable identities')
