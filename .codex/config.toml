@@ -1,12 +1,12 @@
-model = "gpt-6-astra"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "xhigh"
 project_doc_fallback_filenames = [
     "CLAUDE.md",
     "claude.md",
 ]
-service_tier = "default"
-sandbox_mode = "workspace-write"
 approvals_reviewer = "user"
+service_tier = "default"
+default_permissions = "local-workspace"
 
 [sandbox_workspace_write]
 network_access = true
@@ -18,33 +18,15 @@ mcp_elicitations = true
 request_permissions = true
 skill_approval = true
 
+[mcp_servers]
+
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
-
-[mcp_servers.gitlab-mcp]
-command = "docker"
-args = [
-    "run",
-    "-i",
-    "--rm",
-    "-e",
-    "GITLAB_PERSONAL_ACCESS_TOKEN",
-    "-e",
-    "GITLAB_API_URL",
-    "zereight050/gitlab-mcp",
-]
-env_vars = [
-    "GITLAB_PERSONAL_ACCESS_TOKEN",
-    "GITLAB_API_URL",
-]
 
 [mcp_servers.excalidash]
 command = "excalidash-mcp"
 args = ["--stdio"]
-env_vars = [
-    "EXCALIDASH_API_KEY",
-    "EXCALIDASH_URL",
-]
+env_vars = ["EXCALIDASH_API_KEY", "EXCALIDASH_URL"]
 
 [mcp_servers.kredmine]
 command = "kredmine-mcp"
@@ -52,6 +34,8 @@ enabled = true
 startup_timeout_sec = 30
 tool_timeout_sec = 300
 default_tools_approval_mode = "writes"
+
+[mcp_servers.kredmine.tools]
 
 [mcp_servers.kredmine.tools.apply_proposal]
 approval_mode = "prompt"
@@ -84,11 +68,12 @@ command = "node"
 args = [
     "/myfiles/Programs/excalidraw-mcp/dist/index.js",
     "--stdio",
-]
+[tui]
+screen_reader_detection_done = true
 
 [tui.model_availability_nux]
 gpt-6-astra = 4
-"gpt-6.1-sol" = 2
+"gpt-6.1-sol" = 4
 
 [desktop]
 followUpQueueMode = "queue"
@@ -151,6 +136,8 @@ inherit = "core"
 SSH_AUTH_SOCK = "/run/user/1000/keyring/ssh"
 DISABLE_AUTOUPDATER = "1"
 
+[projects]
+
 [projects."/home/someuser"]
 trust_level = "trusted"
 
@@ -159,3 +146,6 @@ trust_level = "trusted"
 [[skills.config]]
 path = "skills/.system/skill-creator/SKILL.md"
 enabled = false
+
+[features]
+code_mode_host = true
