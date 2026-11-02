@@ -629,28 +629,60 @@ def singleton_holder(profile):
 def gui_profile(gui):
     """Return the profile whose Chromium single-instance lock the registered GUI holds."""
     import re
+    profiles = set()
+    for entry in gui_children(gui):
+        try:
+            arguments = (entry / 'cmdline').read_bytes().split(b'\0')
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+        for argument in arguments:
+            if argument.startswith(b'--user-data-dir='):
+                # A real argv element retains the entire value, including option-like text.
+                candidates = [argument[len(b'--user-data-dir='):]]
+            else:
+                # Chromium's rewritten title has lost quoting. Consider every option boundary
+                # and require a unique actual lock holder, never the first whitespace prefix.
+                candidates = []
+                for match in re.finditer(rb'(?:^| )--user-data-dir=', argument):
+                    value = argument[match.end():]
+                    candidates.extend(value[:end] for end in
+                                      [m.start() for m in re.finditer(rb' --', value)] + [len(value)])
+            for candidate in candidates:
+                profile = Path(os.fsdecode(candidate))
+                if profile.is_absolute() and singleton_holder(profile) == gui['pid']:
+                    profiles.add(profile.resolve(strict=True))
+    if len(profiles) == 1:
+        return profiles.pop()
+    raise RuntimeError('O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.')
+
+
+def gui_children(gui):
     for entry in Path('/proc').iterdir():
         if not entry.name.isdigit():
             continue
         try:
-            if int((entry / 'stat').read_bytes().rsplit(b')', 1)[1].split()[1]) != gui['pid']:
-                continue
-            arguments = (entry / 'cmdline').read_bytes()
+            fields = (entry / 'stat').read_bytes().rsplit(b')', 1)[1].split()
+            if int(fields[1]) == gui['pid'] and fields[0] not in {b'Z', b'X'}:
+                yield entry
         except (FileNotFoundError, ProcessLookupError, PermissionError):
             continue
-        # Chromium children carry the profile the GUI resolved at startup, inside a process title
-        # that joins their arguments with spaces. A profile path containing spaces fails closed.
-        for match in re.finditer(rb'(?:^|[\0 ])--user-data-dir=([^\0 ]+)', arguments):
-            profile = Path(os.fsdecode(match.group(1)))
-            if singleton_holder(profile) == gui['pid']:
-                return profile
-    raise RuntimeError('O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.')
 
 
-def reopen_gui_window(gui, app, timeout):
+def gui_remaining(deadline):
+    import time
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError('GUI deadline expired')
+    return remaining
+
+
+def reopen_gui_window(gui, app, timeout, *, deadline=None, verify=None):
     """Ask the registered GUI to show a window, as a second launch would, without starting one."""
     import socket
     import struct
+    import time
+    if deadline is None:
+        deadline = time.monotonic() + timeout
     profile = gui_profile(gui)
     unconfirmed = 'O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.'
     try:
@@ -659,19 +691,28 @@ def reopen_gui_window(gui, app, timeout):
         if os.readlink(target.parent / 'SingletonCookie') != os.readlink(profile / 'SingletonCookie'):
             raise RuntimeError(unconfirmed)
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-            connection.settimeout(timeout)
+            connection.settimeout(gui_remaining(deadline))
             connection.connect(str(target))
             pid, uid, _ = struct.unpack('3i', connection.getsockopt(
                 socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize('3i')))
             if pid != gui['pid'] or uid != os.getuid() or not same_process(gui):
                 raise RuntimeError(unconfirmed)
+            if verify:
+                verify()
+            if singleton_holder(profile) != gui['pid']:
+                raise RuntimeError(unconfirmed)
             # A second launch of the app sends START, its working directory and its argv. Send
             # only the argv entries that concern a running instance, a subset of that launch's.
+            connection.settimeout(gui_remaining(deadline))
             connection.sendall(b'\0'.join([b'START', os.fsencode(os.getcwd()), os.fsencode(app),
                                            b'--no-startup-window', b'--user-data-dir=' + os.fsencode(profile)]))
             connection.shutdown(socket.SHUT_WR)
             reply = b''
-            while chunk := connection.recv(16):
+            while True:
+                connection.settimeout(gui_remaining(deadline))
+                chunk = connection.recv(16)
+                if not chunk:
+                    break
                 reply += chunk
     except TimeoutError as error:
         raise RuntimeError('O Codex não respondeu ao pedido para reabrir a janela no prazo; ela ainda pode '
@@ -683,32 +724,44 @@ def reopen_gui_window(gui, app, timeout):
                            '). O aplicativo e seus trabalhos foram preservados.')
 
 
-def focus_gui(gui, app, timeout):
+def focus_gui(gui, app, timeout, *, verify=None):
     import shutil
     import subprocess
     import time
+    deadline = time.monotonic() + timeout
     if not same_process(gui):
         raise RuntimeError('A interface registrada já terminou.')
     wmctrl = shutil.which('wmctrl')
     if not wmctrl:
         raise RuntimeError('O Codex já está aberto, mas wmctrl não está disponível para trazer sua janela à frente.')
     def windows():
-        result = subprocess.run([wmctrl, '-lp'], capture_output=True, text=True, check=True)
+        result = subprocess.run([wmctrl, '-lp'], capture_output=True, text=True, check=True,
+                                timeout=gui_remaining(deadline))
         return [line.split()[0] for line in result.stdout.splitlines()
                 if len(line.split()) >= 3 and line.split()[2] == str(gui['pid'])]
-    found = windows()
-    if not found:
-        # Closing the last window keeps the GUI and its work running; ask it to show one again.
-        reopen_gui_window(gui, app, timeout)
-        deadline = time.monotonic() + timeout
-        while not (found := windows()) and time.monotonic() < deadline:
-            time.sleep(.1)
-    if not found or not same_process(gui):
-        raise RuntimeError('O Codex já está aberto, mas sua janela ainda não está disponível para receber foco.')
-    subprocess.run([wmctrl, '-ia', found[0]], check=True)
+    try:
+        if verify:
+            verify()
+        found = windows()
+        if not found:
+            # Closing the last window keeps the GUI and its work running.
+            reopen_gui_window(gui, app, timeout, deadline=deadline, verify=verify)
+            while time.monotonic() < deadline:
+                found = windows()
+                if found:
+                    break
+                time.sleep(min(.1, gui_remaining(deadline)))
+        if not found or not same_process(gui):
+            raise RuntimeError('O Codex já está aberto, mas sua janela ainda não está disponível para receber foco.')
+        if verify:
+            verify()
+        subprocess.run([wmctrl, '-ia', found[0]], check=True, timeout=gui_remaining(deadline))
+    except (subprocess.TimeoutExpired, TimeoutError) as error:
+        raise RuntimeError('Não foi possível trazer a janela do Codex à frente no prazo. '
+                           'O aplicativo e seus trabalhos foram preservados.') from error
 
 
-def existing_gui(config, app):
+def gui_processes(app):
     for entry in Path('/proc').iterdir():
         if not entry.name.isdigit() or int(entry.name) == os.getpid():
             continue
@@ -733,34 +786,73 @@ def existing_gui(config, app):
                 raise
             if process['exe'] != str(app):
                 continue
-            try:
-                environment = process_environment(process['pid'])
-                import pwd
-                account_home = environment.get('HOME') or pwd.getpwuid(os.getuid()).pw_dir
-                selected = Path(environment.get('CODEX_HOME') or str(Path(account_home) / '.codex'))
-            except (PermissionError, KeyError) as error:
-                raise RuntimeError('Não foi possível verificar a configuração do Codex já aberto.') from error
-            if not selected.is_absolute():
-                selected = (entry / 'cwd').resolve(strict=True) / selected
-            if selected.resolve() == Path(config['codex_home']):
-                yield process
+            yield process
         except (FileNotFoundError, ProcessLookupError):
             continue
 
 
+def gui_registration(gui):
+    """Authenticate an existing launch through its live direct relay, even after GUI env erasure."""
+    unconfirmed = ('O Codex já está aberto, mas não foi possível confirmar sua configuração e seu '
+                   'processo auxiliar. Se acabou de abrir, aguarde e tente novamente. '
+                   'O aplicativo e seus trabalhos foram preservados.')
+    registrations = []
+    for entry in gui_children(gui):
+        try:
+            proxy = monitor_process(int(entry.name))
+            arguments = [os.fsdecode(word) for word in (entry / 'cmdline').read_bytes().split(b'\0') if word]
+            if len(arguments) < 2 or not support()['monitor_main_bootstrap'](arguments[2:]):
+                continue
+            environment = process_environment(proxy['pid'])
+            home = Path(environment['CODEX_HOME'])
+            base = Path(environment.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')).resolve(strict=True)
+            runtime = base / 'codex-session-stats' / ('shared-' + hashlib.sha256(str(home).encode()).hexdigest()[:20])
+            launch_path, wrapper = runtime / 'launch.json', runtime / 'codex-proxy'
+            if (not home.is_absolute() or home.resolve(strict=True) != home
+                    or environment.get('CODEX_STATS_APP_LAUNCH') != str(launch_path)
+                    or environment.get('CODEX_INTERNAL_ORIGINATOR_OVERRIDE') != 'Codex Desktop'
+                    or arguments[1] != str(wrapper)):
+                continue
+            for directory in (base, runtime.parent, runtime):
+                monitor_private(directory, directory=True)
+            monitor_private(launch_path)
+            monitor_private(wrapper)
+            launch = json.loads(launch_path.read_text())
+            interpreter = wrapper.read_text().splitlines()[0]
+            if (launch['codex_home'] != str(home) or launch['wrapper'] != str(wrapper)
+                    or launch['app'] != gui['exe'] or launch['gui']['pid'] != gui['pid']
+                    or launch['gui']['birth'] != gui['birth'] or proxy['parent'] != gui['pid']
+                    or not interpreter.startswith('#!')
+                    or str(Path(interpreter[2:]).resolve(strict=True)) != proxy['exe']):
+                continue
+            ready_path = runtime / 'gui-ready.json'
+            if ready_path.exists():
+                monitor_private(ready_path)
+                ready = json.loads(ready_path.read_text())
+                if (any(ready['gui'].get(key) != gui[key] for key in ('pid', 'birth', 'exe'))
+                        or ready['proxy'] != proxy):
+                    continue
+            if not same_process(gui) or not same_process(proxy):
+                continue
+            registrations.append({'gui': gui, 'proxy': proxy, 'home': str(home),
+                                  'launch': launch, 'profile': gui_profile(gui)})
+        except (OSError, ValueError, KeyError, IndexError, RuntimeError):
+            continue
+    if len(registrations) != 1:
+        raise RuntimeError(unconfirmed)
+    return registrations[0]
+
+
 def verify_existing_gui(config, runtime, app):
-    launch_path = runtime / 'launch.json'
-    known = None
-    if launch_path.exists():
-        monitor_private(launch_path)
-        launch = json.loads(launch_path.read_text())
-        if launch.get('app') == str(app) and launch.get('codex_home') == config['codex_home']:
-            known = launch.get('gui')
-    for gui in existing_gui(config, app):
-        if not known or gui['pid'] != known['pid'] or gui['birth'] != known['birth']:
-            raise RuntimeError('O aplicativo já está aberto fora deste lançador. '
-                               'Termine os trabalhos e feche a interface pela opção Sair.\n' +
-                               server_stop_instructions(config))
+    registrations = [gui_registration(gui) for gui in gui_processes(app)]
+    matching = [item for item in registrations if item['home'] == config['codex_home']]
+    if not registrations:
+        return None
+    if len(matching) == 1 and len({item['profile'] for item in registrations}) == len(registrations):
+        return matching[0]
+    raise RuntimeError('Há uma interface do Codex aberta com outra configuração ou um perfil em conflito. '
+                       'Para abrir esta configuração, termine os trabalhos e use Sair na outra interface. '
+                       'O aplicativo e o servidor foram preservados.')
 
 
 def _monitor_launch_app(config, path, app, codex, app_args):
@@ -776,6 +868,14 @@ def _monitor_launch_app(config, path, app, codex, app_args):
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise RuntimeError('Outra abertura da interface ainda está em andamento. Tente novamente em instantes.') from error
+        registered = verify_existing_gui(config, runtime, app)
+        if registered:
+            def verify():
+                if gui_registration(registered['gui']) != registered:
+                    raise RuntimeError('A configuração da interface mudou durante a abertura. Tente novamente.')
+            focus_gui(registered['gui'], app, config['native_timeout'], verify=verify)
+            message('O Codex já estava aberto. A janela foi trazida à frente.', gui=True)
+            return
         launch_path = runtime / 'launch.json'
         if launch_path.exists():
             monitor_private(launch_path)
@@ -785,12 +885,7 @@ def _monitor_launch_app(config, path, app, codex, app_args):
             except (FileNotFoundError, ProcessLookupError, RuntimeError):
                 gui = None
             if gui and gui['birth'] == old['gui']['birth']:
-                if gui['exe'] != str(app) or old.get('codex_home') != config['codex_home']:
-                    raise RuntimeError('Outra abertura do Codex ainda está em andamento.')
-                focus_gui(gui, app, config['native_timeout'])
-                message('O Codex já estava aberto. A janela foi trazida à frente.', gui=True)
-                return
-        verify_existing_gui(config, runtime, app)
+                raise RuntimeError('Outra abertura do Codex ainda está em andamento. Aguarde e tente novamente.')
         wrapper = runtime / 'codex-proxy'
         temporary = runtime / ('wrapper-' + monitor_id())
         try:

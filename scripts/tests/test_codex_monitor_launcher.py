@@ -340,9 +340,9 @@ def test_focus_targets_only_verified_gui_pid_and_propagates_window_manager_failu
 APP = Path('/usr/lib/chatgpt/ChatGPT')
 
 
-def singleton_gui(tmp_path, lock_owner, socket_cookie='42'):
+def singleton_gui(tmp_path, lock_owner, socket_cookie='42', profile_name='profile', joined=True):
     """Make this test process a GUI whose Chromium child names a profile with a singleton socket."""
-    profile, sockets = tmp_path/'profile', tmp_path/'s'
+    profile, sockets = tmp_path/profile_name, tmp_path/'s'
     profile.mkdir(); sockets.mkdir()
     (profile/'SingletonLock').symlink_to(f'{socket.gethostname()}-{lock_owner}')
     (profile/'SingletonCookie').symlink_to('42')
@@ -350,8 +350,136 @@ def singleton_gui(tmp_path, lock_owner, socket_cookie='42'):
     (profile/'SingletonSocket').symlink_to(sockets/'SingletonSocket')
     # Chromium rewrites a child's arguments into one space-joined process title; reproduce that shape.
     title = f'{APP} --type=zygote --enable-crash-reporter=, --user-data-dir={profile} --change-stack-guard-on-fork=enable'
-    child = subprocess.Popen(['bash', '-c', 'exec -a "$0" sleep 60', title])
+    arguments = (['bash', '-c', 'exec -a "$0" sleep 60', title] if joined else
+                 [sys.executable, '-c', 'import time; time.sleep(60)',
+                  '--type=zygote', '--user-data-dir=' + str(profile)])
+    child = subprocess.Popen(arguments)
     return profile, sockets/'SingletonSocket', child
+
+
+@pytest.mark.parametrize('joined', [True, False], ids=['chromium-title', 'nul-argv'])
+def test_profile_preserves_spaces_unicode_and_option_like_text(launcher, monkeypatch, joined):
+    import threading
+    with tempfile.TemporaryDirectory(prefix='cm-p-') as name:
+        profile, path, child = singleton_gui(Path(name), os.getpid(),
+            profile_name='perfil ação --flag=valor final', joined=joined)
+        received = []
+        stop = serve_singleton(path, b'ACK', received, threading.Event())
+        gui = launcher['monitor_process'](os.getpid())
+        fake_wmctrl(monkeypatch, gui, lambda: bool(received))
+        try:
+            launcher['focus_gui'](gui, APP, 5)
+            assert received == [handoff(profile)]
+        finally:
+            stop(); child.kill(); child.wait()
+
+
+def test_profile_rejects_multiple_valid_candidates_instead_of_selecting_prefix(launcher, tmp_path):
+    profile, _, child = singleton_gui(tmp_path, os.getpid(), profile_name='profile --flag=long')
+    prefix = tmp_path/'profile'; prefix.mkdir()
+    (prefix/'SingletonLock').symlink_to(f'{socket.gethostname()}-{os.getpid()}')
+    try:
+        with pytest.raises(RuntimeError, match='confirmar sua instância'):
+            launcher['gui_profile'](launcher['monitor_process'](os.getpid()))
+    finally:
+        child.kill(); child.wait()
+
+
+def test_profile_does_not_choose_a_valid_whitespace_prefix(launcher, tmp_path):
+    profile, _, child = singleton_gui(tmp_path, os.getpid(), profile_name='profile with spaces')
+    prefix = tmp_path/'profile'; prefix.mkdir()
+    (prefix/'SingletonLock').symlink_to(f'{socket.gethostname()}-{os.getpid()}')
+    try:
+        assert launcher['gui_profile'](launcher['monitor_process'](os.getpid())) == profile
+    finally:
+        child.kill(); child.wait()
+
+
+@pytest.mark.parametrize('stall', ['-lp', '-ia'])
+def test_wmctrl_timeouts_use_remaining_budget_and_gui_error(launcher, monkeypatch, stall):
+    import shutil
+    import time
+    gui = launcher['monitor_process'](os.getpid()); budgets = []
+    clock = [10.0]
+    monkeypatch.setattr(time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(shutil, 'which', lambda name: '/fixture/wmctrl')
+    def run(arguments, **kwargs):
+        budgets.append(kwargs.get('timeout'))
+        assert kwargs.get('timeout') is not None, 'wmctrl was called without a deadline'
+        if arguments[1] == stall:
+            raise subprocess.TimeoutExpired(arguments, kwargs['timeout'])
+        clock[0] += .4
+        return types.SimpleNamespace(stdout=f'0x222 0 {gui["pid"]} host Codex\n')
+    monkeypatch.setattr(subprocess, 'run', run)
+    with pytest.raises(RuntimeError, match='janela.*prazo') as error:
+        launcher['launch_operation'](launcher['focus_gui'], gui, APP, 1)
+    assert 'gerenciador nativo' not in str(error.value)
+    assert budgets == pytest.approx([1] if stall == '-lp' else [1, .6])
+
+
+def test_singleton_reads_and_later_wmctrl_share_one_deadline(launcher, monkeypatch):
+    import threading
+    import time
+    with tempfile.TemporaryDirectory(prefix='cm-t-') as name:
+        profile, path, child = singleton_gui(Path(name), os.getpid())
+        received = []
+        stop = serve_singleton(path, b'ACK', received, threading.Event())
+        gui = launcher['monitor_process'](os.getpid())
+        clock = [10.0]; socket_budgets = []; wm_budgets = []
+        original_socket = socket.socket
+        class Connection:
+            def __init__(self, *args, **kwargs):self.connection = original_socket(*args, **kwargs)
+            def __getattr__(self, key):return getattr(self.connection, key)
+            def __enter__(self):return self
+            def __exit__(self, *args):self.connection.close()
+            def settimeout(self, value):
+                socket_budgets.append(value); self.connection.settimeout(value)
+            def recv(self, size):
+                result = self.connection.recv(size); clock[0] += .1; return result
+        monkeypatch.setattr(socket, 'socket', lambda *args, **kwargs:
+                            original_socket(*args, **kwargs) if 'fileno' in kwargs else Connection(*args, **kwargs))
+        monkeypatch.setattr(time, 'monotonic', lambda: clock[0])
+        import shutil
+        monkeypatch.setattr(shutil, 'which', lambda name: '/fixture/wmctrl')
+        def run(arguments, **kwargs):
+            wm_budgets.append(kwargs.get('timeout'))
+            clock[0] += .2
+            return types.SimpleNamespace(stdout=f'0x333 0 {gui["pid"]} host Codex\n' if received else '')
+        monkeypatch.setattr(subprocess, 'run', run)
+        try:
+            launcher['focus_gui'](gui, APP, 1)
+            assert received == [handoff(profile)]
+            assert socket_budgets == pytest.approx([.8, .8, .8, .7])
+            assert wm_budgets == pytest.approx([1, .6, .4])
+        finally:
+            stop(); child.kill(); child.wait()
+
+
+def test_window_polling_does_not_reset_the_operation_budget(launcher, monkeypatch):
+    import threading
+    import time
+    with tempfile.TemporaryDirectory(prefix='cm-t-') as name:
+        profile, path, child = singleton_gui(Path(name), os.getpid())
+        received = []
+        stop = serve_singleton(path, b'ACK', received, threading.Event())
+        gui = launcher['monitor_process'](os.getpid()); clock = [10.0]; budgets = []
+        monkeypatch.setattr(time, 'monotonic', lambda: clock[0])
+        monkeypatch.setattr(time, 'sleep', lambda seconds: clock.__setitem__(0, clock[0]+seconds))
+        import shutil
+        monkeypatch.setattr(shutil, 'which', lambda name: '/fixture/wmctrl')
+        def run(arguments, **kwargs):
+            assert arguments == ['/fixture/wmctrl', '-lp']
+            budgets.append(kwargs.get('timeout')); clock[0] += .15
+            return types.SimpleNamespace(stdout='')
+        monkeypatch.setattr(subprocess, 'run', run)
+        try:
+            with pytest.raises(RuntimeError, match='janela.*(prazo|disponível)'):
+                launcher['focus_gui'](gui, APP, 1)
+            assert received == [handoff(profile)]
+            assert len(budgets) >= 3 and all(a > b > 0 for a, b in zip(budgets, budgets[1:]))
+            assert clock[0] <= 11.15
+        finally:
+            stop(); child.kill(); child.wait()
 
 
 def handoff(profile):
@@ -575,7 +703,7 @@ def test_gui_inventory_ignores_foreign_zombie_and_unrelated_nondumpable_processe
         Entry(4, os.getuid(), Field(b'/installed/ChatGPT\0--type=renderer\0')),
         Entry(5, os.getuid(), Field(b'/installed/ChatGPT\0'), 'ChatGPT'),
     ]
-    namespace = launcher['existing_gui'].__globals__
+    namespace = launcher['gui_processes'].__globals__
     original_path = Path
     monkeypatch.setitem(namespace, 'Path', lambda value: types.SimpleNamespace(iterdir=lambda: iter(entries))
                         if str(value) == '/proc' else original_path(value))
@@ -584,14 +712,223 @@ def test_gui_inventory_ignores_foreign_zombie_and_unrelated_nondumpable_processe
     def process(pid):
         authenticated.append(pid); assert pid == 5; return gui
     monkeypatch.setitem(namespace, 'monitor_process', process)
-    monkeypatch.setitem(namespace, 'process_environment', lambda pid: {'HOME': str(home.parent), 'CODEX_HOME': str(home)})
-    assert list(launcher['existing_gui']({'codex_home': str(home)}, app)) == [gui]
+    assert list(launcher['gui_processes'](app)) == [gui]
     assert authenticated == [5]
-    import pwd
-    monkeypatch.setattr(pwd, 'getpwuid', lambda uid: types.SimpleNamespace(pw_dir=str(tmp_path)))
-    monkeypatch.setitem(namespace, 'process_environment', lambda pid: {})
-    assert list(launcher['existing_gui']({'codex_home': str(tmp_path/'.codex')}, app)) == [gui]
-    def unreadable(pid):raise PermissionError('actual GUI environment unreadable')
-    monkeypatch.setitem(namespace, 'process_environment', unreadable)
-    with pytest.raises(RuntimeError, match='configuração do Codex já aberto'):
-        list(launcher['existing_gui']({'codex_home': str(home)}, app))
+
+
+GUI_FIXTURE = '''import json, os, subprocess, sys
+spec = json.loads(sys.stdin.readline())
+children = []
+try:
+    if spec['relay']:
+        children.append(subprocess.Popen([sys.executable, spec['wrapper'], *spec['bootstrap']],
+            env=dict(os.environ, **spec['environment'])))
+    children.append(subprocess.Popen([sys.executable, '-c', 'import signal; signal.pause()',
+        '--type=zygote', '--user-data-dir=' + spec['profile']]))
+    print(json.dumps([p.pid for p in children]), flush=True)
+    sys.stdin.read()
+finally:
+    for child in children:
+        child.terminate()
+        child.wait(10)
+'''
+
+
+@pytest.fixture
+def gui_instances(launcher, monkeypatch, tmp_path):
+    """Real GUI/relay/Chromium-child identities; only OS GUI inventory and wmctrl are substituted."""
+    import selectors
+    instances = []
+    base = tmp_path/'run'; base.mkdir(mode=0o700)
+    monkeypatch.setenv('XDG_RUNTIME_DIR', str(base))
+    namespace = launcher['verify_existing_gui'].__globals__
+    monkeypatch.setitem(namespace, 'gui_processes', lambda app: (item.gui for item in instances
+                        if item.process.poll() is None))
+    def create(name='default', relay=True, ready=True):
+        home = tmp_path/('.codex' if name == 'default' else name); home.mkdir(mode=0o700)
+        config = {'codex_home': str(home), 'state_file': str(tmp_path/'state/monitor.sqlite'), 'native_timeout': 1}
+        runtime = launcher['support']()['monitor_shared_runtime'](config, create=True)
+        wrapper = runtime/'codex-proxy'
+        wrapper.write_text(f'#!{sys.executable}\nimport signal\nsignal.pause()\n'); wrapper.chmod(0o700)
+        env = {key: value for key, value in os.environ.items() if key not in
+               {'HOME', 'CODEX_HOME', 'CODEX_STATS_APP_LAUNCH', 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE'}}
+        process = subprocess.Popen([sys.executable, '-c', GUI_FIXTURE], stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, text=True, env=env)
+        gui = launcher['monitor_process'](process.pid)
+        profile = tmp_path/(name+' profile'); profile.mkdir()
+        (profile/'SingletonLock').symlink_to(f'{socket.gethostname()}-{process.pid}')
+        launch = {'gui': dict(gui, exe='/fixture/pre-exec-python'), 'app': gui['exe'],
+                  'codex': sys.executable, 'config': str(tmp_path/'monitor.json'),
+                  'codex_home': str(home), 'wrapper': str(wrapper)}
+        launcher['monitor_runtime_write'](runtime/'launch.json', launch)
+        environment = {'CODEX_HOME': str(home), 'CODEX_STATS_APP_LAUNCH': str(runtime/'launch.json'),
+                       'XDG_RUNTIME_DIR': str(base), 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE': 'Codex Desktop'}
+        bootstrap = ['-c', 'features.code_mode_host=true', 'app-server', '--analytics-default-enabled',
+            '-c', 'plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled=true',
+            '-c', 'plugins.code-review@openai-bundled.mcp_servers.code-review.enabled=true']
+        process.stdin.write(json.dumps({'relay': relay, 'wrapper': str(wrapper), 'bootstrap': bootstrap,
+                                       'environment': environment, 'profile': str(profile)})+'\n')
+        process.stdin.flush()
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            assert selector.select(10), 'owned GUI fixture did not start'
+        children = json.loads(process.stdout.readline())
+        proxy = launcher['monitor_process'](children[0]) if relay else None
+        if ready and relay:
+            launcher['monitor_runtime_write'](runtime/'gui-ready.json', {'gui': gui, 'proxy': proxy})
+        item = types.SimpleNamespace(process=process, gui=gui, proxy=proxy, config=config, runtime=runtime,
+                                     profile=profile, launch=launch, wrapper=wrapper)
+        instances.append(item)
+        return item
+    yield create
+    for item in reversed(instances):
+        item.process.stdin.close()
+        assert item.process.wait(10) == 0
+        item.process.stdout.close()
+
+
+def gui_launch_boundary(launcher, monkeypatch, item):
+    effects = []
+    namespace = launcher['_monitor_launch_app'].__globals__
+    def ensure(config, codex):
+        effects.append('ensure'); return {}, False, None
+    def execute(*args):
+        effects.append('exec'); raise SystemExit(43)
+    monkeypatch.setitem(namespace, 'ensure_server', ensure)
+    monkeypatch.setitem(namespace, 'message', lambda *args, **kwargs: effects.append('message'))
+    monkeypatch.setattr(os, 'execve', execute)
+    def launch():
+        return launcher['_monitor_launch_app'](item.config, Path(item.launch['config']),
+            Path(item.gui['exe']), Path(sys.executable), [])
+    return effects, launch
+
+
+@pytest.mark.parametrize('name,ready', [('default', True), ('custom home', True), ('starting', False),
+                                     ('reparented', True)])
+def test_reuse_authenticates_erased_gui_environment_via_actual_relay(
+        launcher, monkeypatch, gui_instances, name, ready):
+    item = gui_instances(name, ready=ready)
+    if name == 'reparented':
+        launcher['monitor_runtime_write'](item.runtime/'gui-ready.json',
+            {'gui': dict(item.gui, parent=1), 'proxy': item.proxy})
+    assert 'CODEX_HOME' not in launcher['process_environment'](item.gui['pid'])
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
+    calls = fake_wmctrl(monkeypatch, item.gui, lambda: True)
+    before = (item.runtime/'launch.json').read_bytes()
+    launch()
+    assert effects == ['ensure', 'message']
+    assert calls == [['/fixture/wmctrl', '-lp'], ['/fixture/wmctrl', '-ia', '0x333']]
+    assert (item.runtime/'launch.json').read_bytes() == before
+
+
+@pytest.mark.parametrize('damage', ['no-relay', 'home', 'birth', 'app', 'wrapper', 'ready-proxy',
+                                     'unprivate', 'wrong-location', 'unrelated-child', 'dead-relay', 'profile-lock'])
+def test_unconfirmed_registration_refuses_before_native_or_gui_effects(
+        launcher, monkeypatch, gui_instances, damage):
+    item = gui_instances(relay=damage != 'no-relay')
+    launch_path = item.runtime/'launch.json'
+    if damage == 'home':item.launch['codex_home'] += '-wrong'
+    elif damage == 'birth':item.launch['gui']['birth'] += '-wrong'
+    elif damage == 'app':item.launch['app'] = '/wrong/app'
+    elif damage == 'wrapper':item.launch['wrapper'] += '-wrong'
+    elif damage == 'ready-proxy':
+        launcher['monitor_runtime_write'](item.runtime/'gui-ready.json', {'gui': item.gui, 'proxy': item.gui})
+    elif damage == 'unrelated-child':
+        # A different process's live identity in the receipt cannot authorize this child.
+        launcher['monitor_runtime_write'](item.runtime/'gui-ready.json',
+            {'gui': item.gui, 'proxy': launcher['monitor_process'](os.getpid())})
+    elif damage == 'dead-relay':
+        import signal
+        os.kill(item.proxy['pid'], signal.SIGTERM)
+        # Wait for our owned child to terminate; it remains a zombie until its GUI reaps it.
+        import time
+        deadline = time.monotonic()+5
+        while Path(f'/proc/{item.proxy["pid"]}/stat').read_text().rsplit(')', 1)[1].split()[0] != 'Z':
+            assert time.monotonic() < deadline
+            time.sleep(.01)
+    elif damage == 'profile-lock':
+        (item.profile/'SingletonLock').unlink()
+        (item.profile/'SingletonLock').symlink_to(f'{socket.gethostname()}-1')
+    launcher['monitor_runtime_write'](launch_path, item.launch)
+    if damage == 'unprivate':launch_path.chmod(0o644)
+    elif damage == 'wrong-location':
+        other = item.runtime/'elsewhere.json'; launch_path.rename(other); launch_path.symlink_to(other)
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
+    calls = fake_wmctrl(monkeypatch, item.gui, lambda: True)
+    with pytest.raises(RuntimeError, match='confirmar sua configuração') as result:
+        launch()
+    assert 'daemon stop' not in str(result.value)
+    assert effects == [] and calls == []
+
+
+def test_existing_distinct_homes_reuse_only_the_requested_registered_gui(launcher, monkeypatch, gui_instances):
+    other = gui_instances('other'); selected = gui_instances()
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, selected)
+    calls = fake_wmctrl(monkeypatch, selected.gui, lambda: True)
+    launch()
+    assert other.process.poll() is None
+    assert effects == ['ensure', 'message'] and calls[-1][-1] == '0x333'
+
+
+def test_fresh_other_home_is_refused_even_with_initial_profile_override(launcher, monkeypatch, gui_instances):
+    item = gui_instances('other')
+    item.config = dict(item.config, codex_home=str(item.profile.parent/'new-home'))
+    Path(item.config['codex_home']).mkdir()
+    monkeypatch.setenv('CODEX_ELECTRON_USER_DATA_PATH', str(item.profile.parent/'override'))
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
+    calls = fake_wmctrl(monkeypatch, item.gui, lambda: True)
+    with pytest.raises(RuntimeError, match='outra configuração'):
+        launch()
+    assert effects == [] and calls == []
+
+
+def test_profile_collision_between_existing_guis_is_refused(launcher, monkeypatch, gui_instances):
+    other = gui_instances('other'); selected = gui_instances()
+    (other.profile/'SingletonLock').unlink(); other.profile.rmdir()
+    other.profile.symlink_to(selected.profile, target_is_directory=True)
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, selected)
+    calls = fake_wmctrl(monkeypatch, selected.gui, lambda: True)
+    with pytest.raises(RuntimeError, match='confirmar sua configuração'):
+        launch()
+    assert effects == [] and calls == []
+
+
+@pytest.mark.parametrize('reuse_pid', [False, True])
+def test_terminated_reservation_allows_normal_launch(launcher, monkeypatch, gui_instances, reuse_pid):
+    item = gui_instances()
+    item.process.stdin.close(); assert item.process.wait(10) == 0
+    # Retained historical metadata must not block a new launch, even when its PID was recycled.
+    if reuse_pid:
+        item.launch['gui']['pid'] = os.getpid()
+        item.launch['gui']['birth'] = 'old-birth'
+        launcher['monitor_runtime_write'](item.runtime/'launch.json', item.launch)
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
+    with pytest.raises(SystemExit) as result:launch()
+    assert result.value.code == 43 and effects == ['ensure', 'exec']
+
+
+@pytest.mark.parametrize('failure', ['registration-changed', 'wmctrl-timeout'])
+def test_reuse_failure_after_inventory_releases_lock(
+        launcher, monkeypatch, gui_instances, failure):
+    import fcntl
+    item = gui_instances()
+    effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
+    calls = fake_wmctrl(monkeypatch, item.gui, lambda: True)
+    if failure == 'registration-changed':
+        # Invalidate after the second inventory, at the actual focus consumer boundary.
+        original_focus = launcher['focus_gui']
+        namespace = original_focus.__globals__
+        def focus(*args, **kwargs):
+            ready = item.runtime/'gui-ready.json'
+            launcher['monitor_runtime_write'](ready, {'gui': item.gui, 'proxy': item.gui})
+            return original_focus(*args, **kwargs)
+        monkeypatch.setitem(namespace, 'focus_gui', focus)
+        expected = 'confirmar sua configuração'
+    else:
+        def stall(arguments, **kwargs):raise subprocess.TimeoutExpired(arguments, kwargs['timeout'])
+        monkeypatch.setattr(subprocess, 'run', stall)
+        expected = 'janela.*prazo'
+    with pytest.raises(RuntimeError, match=expected):launch()
+    assert effects == ['ensure'] and calls == []
+    with (item.runtime/'gui.lock').open('r') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
