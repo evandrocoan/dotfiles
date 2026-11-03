@@ -1,9 +1,9 @@
 ---
 name: long-running-followup
 description: >-
-  Delegate waiting and operation-status checks to reusable workers. Use before known waits,
-  at the first still-running result, or before any status check, polling or scheduled follow-up.
-  Prefer completion events. Exclude short synchronous execution unless it remains running,
+  Delegate waiting and operation-status checks to reusable workers. Use before assigning known
+  waits or status checks, when a command or worker is still running after a tool return, or before
+  polling or scheduled follow-up. Prefer completion events. Exclude short synchronous commands
   and terminology-only explanations.
 ---
 
@@ -54,6 +54,10 @@ Keep that model and effort across same-task continuations; elapsed time alone do
 raising effort.
 An assigned worker does not delegate its own wait again.
 
+In every fresh worker assignment, explicitly tell the worker to load this skill before execution
+or observation. Include its reference even when passing detailed task instructions; fresh context
+does not include the parent's loaded skills.
+
 Keep both worker tiers quiet during each assigned batch. Do not request routine updates by default.
 Pass this return contract explicitly:
 no start, routine progress or phase-completion messages to the parent, including interim native
@@ -62,6 +66,8 @@ worker's native final, or the agreed fallback when native return is unavailable.
 it with a manual parent message. Interrupt early only when the parent
 must act before completion or explicitly requested updates. Continue already-authorized steps
 without routine acknowledgments; terminal failures use the same return route.
+A requested progress update does not end the batch: send it and continue. Use an interim native
+final only for an explicitly requested handback.
 
 Preserve already-started operations. Delegate an accessible status/result source; do not assume
 another agent's execution session transfers. After worker completion evidence, the parent may
@@ -84,8 +90,7 @@ a background-command route, load host details: [Codex](references/codex.md), [Cl
 ## Assign the observation directly
 
 Pass the actual command or authoritative status source, operation identity, exact exit-code or
-log-event condition, and return route. Have the worker load this skill; fresh context does not
-include the parent's loaded skills. Include applicable access instructions and authorization.
+log-event condition, and return route. Include applicable access instructions and authorization.
 Observation returns facts and evidence; diagnose or repair only when that is the assigned task.
 For scheduled checks, include cadence, timezone and any supplied deadline/check cap. Do not add a
 prompt-rewriting step or word budget before monitoring.

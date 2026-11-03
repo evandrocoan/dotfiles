@@ -5,11 +5,13 @@ model and effort through supported native or launcher configuration. A family al
 version proof: verify the child's resolved model and effort; do not silently accept another profile.
 
 Distinguish a command's completion notification to its worker from the worker's handback to its
-parent. A worker final that says it is waiting can notify the parent before its background command
-finishes. A background worker can run finite commands in the foreground; prefer that route with a
-supported tool timeout. If a command backgrounds, await its original completion without an interim
-progress final. Check tool availability, permission behavior and process lifetime before relying
-on that route; wording alone does not suppress host-generated notifications.
+parent. A worker final that says it is waiting can notify the parent before its command finishes.
+Prefer finite foreground commands inside a background worker, with a supported tool timeout.
+For detached commands, use a native wait or an existing deterministic wait tied to the original
+operation, keeping the same worker without an interim handback. If neither route is available,
+report quiet delivery as unsupported; do not promise that wording suppresses host notifications.
+Preserve already-started work and its verified completion route. Do not restart it, add model-driven
+polling or add another monitoring worker. Check tools, permissions and lifetime before using a route.
 
 A foreground subagent's final stops its background commands. Keep finite commands foreground in
 one-shot CLI workers, with a supported timeout. Use a background worker only when its launcher
