@@ -1362,17 +1362,17 @@ directory remains private and may be removed manually only after evidence and re
 
 This repository's work tree must never be written by Git: many tracked files are live configuration
 read by running applications, the tree carries long-lived uncommitted work, and some paths are
-hidden with `assume-unchanged`. [`scripts/isolated_pull.sh`](./scripts/isolated_pull.sh) therefore
-moves `.git` into a fresh directory under `~/.local/state/isolated-pull`, materializes a clean tree
-there, and runs `git pull --rebase` inside it. It returns `.git` after the supervised pull process
-group stops and any unfinished operation is aborted. If it cannot establish those conditions,
-it leaves `.git` isolated and prints its location for recovery.
+hidden with `assume-unchanged`. [`scripts/isolated_pull.sh`](./scripts/isolated_pull.sh) keeps `.git`
+in the repository and creates a fresh temporary directory for files. It explicitly selects the
+original database with `--git-dir` and the temporary directory with `--work-tree`, prepares that
+directory with `reset --hard HEAD`, then runs `pull --rebase --no-autostash` in the foreground.
+It does not create a registered Git worktree. Run it from this repository's root:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-bash ~/scripts/isolated_pull.sh --dry-run
-bash ~/scripts/isolated_pull.sh
+bash scripts/isolated_pull.sh --dry-run
+bash scripts/isolated_pull.sh
 ```
 
 Nothing in the repository root is reverted, deleted or stashed. Afterwards the history has advanced
@@ -1390,19 +1390,35 @@ diff ~/.config/terminator/config ~/.local/state/isolated-pull/run-XXXXXXXX/.conf
 The run also reports every path whose `assume-unchanged` flag the pull dropped, which happens for
 flagged paths the upstream changed. They are deliberately not re-applied, because that would hide
 the change still waiting for review; re-apply them with `git update-index --assume-unchanged <path>`
-once it is done. Pass `--clean` to remove the isolated tree after a successful run. Manually
-delete an old `run-*` tree only after its `.git` has returned to `~/.git` and its contents are
-reviewed. Run the script with `--help` for every option and `--dry-run` for refused preconditions,
-such as staged changes, an active Git lock, a second worktree or an operation already in progress.
-A client that fetches on a timer, such as SmartGit, may hold a lock when a run starts. The script
-then names the lock without moving `.git`; retry when the client is idle.
+once it is done. Pass `--clean` to remove this run's temporary tree after success; failed runs
+retain their temporary files. Delete an old tree only after its Git operation has finished and
+its contents have been reviewed. Run the script with `--help` for every option and `--dry-run`
+to check preconditions without creating directories or changing Git state. Staged changes,
+existing Git locks and unfinished operations are refused. The default repository is determined
+from the script's location, so a different Windows `HOME` does not select the wrong repository.
+Use `--repository` to select another repository and `--base` to select the temporary base;
+the base can be on another filesystem. A client that fetches on a timer may hold a lock when
+a run starts; retry when it is idle.
 Keep Git clients idle for the whole run: a lock check cannot prevent a new operation from starting
 after the check.
 
 #### Recover an interrupted isolated pull
 
-If `~/.git` is missing, an isolated run did not finish safely. The database remains inside its
-isolated tree. A failed abort, an active pull descendant, or a collision keeps it there; the script
+The current helper leaves `.git` in its original location. If the foreground pull fails with a
+rebase conflict, it attempts to abort using the temporary directory, preserving the original
+branch tip and live files. An interruption or failed abort can leave a rebase pending: keep the
+temporary directory and, after Git and its transport processes have stopped, use the exact
+`git --git-dir=... --work-tree=... rebase --abort` command printed by the helper. Never run a bare
+`git rebase --abort` in the original work tree, because it can overwrite live configuration.
+
+The helper uses an empty `.git/isolated-pull.lock` directory to exclude another instance of itself.
+If an uncatchable termination leaves this directory behind, first establish that the previous
+helper and its Git processes have stopped, finish recovery, then remove only that empty directory
+with `rmdir`. Do not delete other Git locks blindly. The helper does not supervise process groups
+or scan `/proc`.
+
+**Recovery for older versions that moved `.git`:** if `~/.git` is missing, the database may remain
+inside its isolated tree. A failed abort, an active pull descendant, or a collision keeps it there; the script
 prints the location when it can. After `SIGKILL`, an out-of-memory kill, or power loss, first make
 sure no Git or transport process still uses that tree. Stop Git clients while recovering. If the
 script left a `pull-process-group` file, the commands below refuse recovery while that group has a
