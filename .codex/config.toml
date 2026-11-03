@@ -101,6 +101,9 @@ source = "/home/someuser/.cache/codex-runtimes/codex-primary-runtime/plugins/ope
 [plugins."codex-app-tools@openai-bundled"]
 enabled = true
 
+[plugins."codex-app-tools@openai-bundled".mcp_servers.codex_app]
+enabled = true
+
 [plugins."browser@openai-bundled"]
 enabled = true
 
@@ -129,6 +132,9 @@ enabled = true
 enabled = true
 
 [plugins."code-review@openai-bundled"]
+enabled = true
+
+[plugins."code-review@openai-bundled".mcp_servers.code-review]
 enabled = true
 
 [shell_environment_policy]
