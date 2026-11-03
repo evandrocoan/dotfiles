@@ -24,10 +24,17 @@ The parent awaits delivery in a long event-driven blocking call, waking early on
 Use minute-scale supported timeouts unless a real deadline/tool limit requires less; do not loop
 on short mailbox or worker-status checks.
 
-Use workers as needed for independent work; there is no fixed worker-count limit. Fix the task scope
-at assignment and reuse its worker across checks, commands, interim reports and continuations.
+Use workers as needed for independent work; there is no fixed worker-count limit. Define a concrete
+target and completion condition at assignment; "follow the whole release" is too broad for a waiting
+worker. Reuse that worker across checks, commands, interim reports and continuations.
 A command exit or native final alone does not complete that task. Start fresh when the task is
 complete or the target, purpose or role changes, never for each command or check.
+
+- Reuse: follow one pipeline until terminal and return its result, keeping the same worker across
+  observations and waits.
+- Fresh context: that waiting task is complete, and the next assignment is to fix code, review
+  another MR or publish documentation. Select the model for the new task; pass only needed inputs.
+
 Honor a task-selected engineering model; otherwise use `gpt-6.1-terra` in Codex or Sonnet 5.5 in
 Claude Code. Work beyond Luna/Haiku's mechanical scope goes to that engineering tier; preserve
 its executor through waits. If that tier is insufficient, the parent retains or takes over
