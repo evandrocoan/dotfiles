@@ -1,4 +1,4 @@
-"""A batch exposes phase changes without requiring coordinator intervention."""
+"""Disposable wait clients supply stage statuses for an already-running test fixture."""
 import argparse
 from datetime import datetime, timezone
 import json

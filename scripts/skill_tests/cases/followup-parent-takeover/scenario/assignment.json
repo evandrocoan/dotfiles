@@ -6,5 +6,5 @@
   "execution_command": "python3 scenario/task.py execute",
   "native_execution_return": {"tool": "exec_command", "yield_time_ms": 1000},
   "assessment_fixture": "INSUFFICIENT_FOR_ENGINEERING",
-  "instructions": "For this route, obtain the selected executor's assessment first, then complete engineering according to long-running-followup. Use native_execution_return for the execution_command launch to expose a real still-running result; this changes the tool return, not the operation. The supplied capability outcome is fault injection for testing the handback route, not a benchmark of the model. A parent_retained route instead records an already-made assessment and requires no executor trial."
+  "instructions": "For this route, obtain the selected executor's assessment first, then the parent completes engineering itself. This technical routing is an explicit condition of this scenario, not a decision delegated to long-running-followup; that skill governs waiting only. Use native_execution_return for the execution_command launch to expose a real still-running result; this changes the tool return, not the operation. The supplied capability outcome is fault injection for testing the handback route, not a benchmark of the model. A parent_retained route instead records an already-made assessment and requires no executor trial."
 }

@@ -1,4 +1,4 @@
-# Fictional status observation
+# Fictional long-running CI job observation
 
 The user has authorized following the already-started job-73, attempt-4. No monitoring method or
 deadline was specified. The status source is scenario/status.json in this workspace. Observe it

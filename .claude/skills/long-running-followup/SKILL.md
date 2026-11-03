@@ -1,127 +1,88 @@
 ---
 name: long-running-followup
 description: >-
-  Delegate waiting and operation-status checks to reusable workers. Use before assigning known
-  waits or status checks, when a command or worker is still running after a tool return, or before
-  polling or scheduled follow-up. Prefer completion events. Exclude short synchronous commands
-  and terminology-only explanations.
+  Delegate only waiting for long-running executions, such as CI pipelines, builds, tests or
+  deployment rollouts. Use for known long waits, still-running executions or repeated checks of
+  their progress. Not for database queries, investigation, coding, general execution, unrelated
+  status questions or terminology-only explanations.
 ---
 
 # Long-running follow-up
 
 ## Delegate waiting
 
-Start required monitoring without a separate consent question. Honor explicit opt-outs and supplied
-deadlines/check caps; otherwise follow until completion, failure, required intervention or
-cancellation. Do not invent a cutoff; per-call wait limits do not end monitoring.
+This skill delegates waiting and execution-progress observation only. Use `gpt-6-luna` in Codex
+or Haiku 5.5 in Claude Code for that role, with inherited tools and permissions and an explicitly
+selected supported effort. It does not select engineering executors or delegate technical work.
 
-As coordinator, delegate operation-status checks, even a single short read. For a known wait,
-have the assigned executor launch and follow the command. That executor owns its command's wait;
-do not add a monitoring worker just because it takes time. If a parent launch unexpectedly remains
-running and the parent is not the retained technical executor, hand off accessible observation
-before another status/log read or execution wait.
-The parent awaits delivery in a long event-driven blocking call, waking early on a result.
-Use minute-scale supported timeouts unless a real deadline/tool limit requires less; do not loop
-on short mailbox or worker-status checks.
+The monitoring worker may run only wait/status commands for the assigned execution. It must not
+connect to databases, write or execute SQL, investigate systems, modify code, prepare environments
+or perform operational actions. Read-only access or a slow command does not make a task monitoring.
+Do not ask it to launch, retry, cancel or change the underlying execution. That work stays with the
+parent or the already-assigned executor.
 
-Use workers as needed for independent work; there is no fixed worker-count limit. Define the
-original assignment by its objective, allowed work and completion condition. It may include
-related operations or phases. Reuse its worker across checks, commands, requested handbacks and
-continuations within that scope; internal target or phase changes do not create a new assignment.
-A command exit or native final alone does not complete it. Use fresh context for a new assignment
-outside that scope or after the prior assignment is complete.
+Start required follow-up without a separate consent question. Honor explicit opt-outs and supplied
+deadlines/check caps; otherwise follow until completion, failure, intervention or cancellation.
+Do not invent a cutoff. A per-call wait limit does not end monitoring.
 
-- Reuse: the original assignment covers observing a release's build and deployment pipelines
-  through the final deployment result. Keep its worker across both pipelines and requested handbacks.
-- Fresh context: a worker assigned only to observe one pipeline finishes that assignment. A later
-  assignment to observe another pipeline starts fresh, even within the same release. Select the
-  model for the new task; pass only needed inputs.
+If an executor already owns a reliable completion route, keep that route rather than adding another
+monitor for its command. Otherwise give the observer an accessible progress/completion source;
+another agent's execution session does not automatically transfer. After completion evidence, the
+original owner may collect its native terminal result once. Missing access stays a reported gap.
 
-Honor a task-selected engineering model; otherwise use `gpt-6.1-terra` in Codex or Sonnet 5.5 in
-Claude Code. Work beyond Luna/Haiku's mechanical scope goes to that engineering tier; preserve
-its executor through waits. If that tier is insufficient, the parent retains or takes over
-technical execution instead of spawning a stronger engineering child. Do not require an unsuccessful
-trial first. The retained parent launches and awaits its commands itself, including after a
-still-running return. Use the original command's native result or completion event; do not delegate
-its wait or add a watcher or polling loop.
-Separate status checks remain delegated.
-For monitoring or mechanical execution without a selected executor, explicitly use
-`gpt-6-luna` in Codex or Haiku 5.5 in Claude Code. Inherit tools and permissions.
+Fix the monitoring objective and completion condition at assignment. Reuse its worker across
+checks, requested handbacks and related executions already included in that scope. A command exit
+or intermediate report alone does not complete a multi-step monitoring assignment. Use fresh
+context for a new assignment outside that scope or after the prior assignment is complete.
 
-For either worker tier, select and explicitly pass a supported effort for the task and model under
-the global model-selection instructions, honoring a selected pair.
-Keep that model and effort across same-task continuations; elapsed time alone does not justify
-raising effort.
-An assigned worker does not delegate its own wait again.
+- Reuse: observe the build and deployment pipelines already included in one release-follow-up task.
+- Fresh context: after one monitoring task finishes, a separately assigned pipeline gets a new worker.
 
-In every fresh worker assignment, explicitly tell the worker to load this skill before execution
-or observation. Include its reference even when passing detailed task instructions; fresh context
-does not include the parent's loaded skills.
+Tell each fresh observer to load this skill. Keep its model and effort across continuations; it
+does not delegate its own waiting again. Independent monitoring tasks may have independent workers.
 
-Keep both worker tiers quiet during each assigned batch. Do not request routine updates by default.
-Pass this return contract explicitly:
-no start, routine progress or phase-completion messages to the parent, including interim native
-finals announcing that work is still running. Deliver each requested handback once through the
-worker's native final, or the agreed fallback when native return is unavailable. Do not duplicate
-it with a manual parent message. Interrupt early only when the parent
-must act before completion or explicitly requested updates. Continue already-authorized steps
-without routine acknowledgments; terminal failures use the same return route.
-A requested progress update does not end the batch: send it and continue. Use an interim native
-final only for an explicitly requested handback.
-
-Preserve already-started operations. Delegate an accessible status/result source; do not assume
-another agent's execution session transfers. After worker completion evidence, the parent may
-collect its terminal tool result once. If delegation or result access is unavailable, preserve
-the operation and report the gap; do not substitute another model or resume parent polling.
+The parent awaits delivery with a long event-driven blocking call, using minute-scale supported
+waits unless a real tool limit or supplied deadline requires less. Do not loop on short mailbox
+checks or wake the parent for cache warming.
 
 ## Choose how completion arrives
 
-The worker records startup errors/prompts and operation identity.
-Prefer native completion, then an existing deterministic watcher, then supported scheduling.
-No routine polling alongside reliable completion delivery.
-When following a log, include existing terminal output, avoid read/subscribe gaps, and make the
-watcher terminate on the matched event or producer exit. An open-ended `tail` pipeline can remain
-blocked after completion.
+Prefer native completion, then an existing deterministic wait tied to the original execution,
+then supported scheduling. Do not poll alongside reliable completion delivery. When following a
+log, include existing terminal output, avoid read/subscribe gaps and terminate the wait on the
+matched event or producer exit; an open-ended tail can remain blocked after completion.
 
-Verify lifetime/return support before yielding; proposed schedules are not active. Before choosing
-a background-command route, load host details: [Codex](references/codex.md), [Claude](references/claude.md),
-[other hosts](references/clients.md).
+Verify lifetime and return support before yielding. Read the relevant host details:
+[Codex](references/codex.md), [Claude](references/claude.md) or [other hosts](references/clients.md).
+Proposed schedules and queued messages do not prove active monitoring or parent wakeup.
 
 ## Assign the observation directly
 
-Pass the actual command or authoritative status source, operation identity, exact exit-code or
-log-event condition, and return route. Include applicable access instructions and authorization.
-Observation returns facts and evidence; diagnose or repair only when that is the assigned task.
-For scheduled checks, include cadence, timezone and any supplied deadline/check cap. Do not add a
-prompt-rewriting step or word budget before monitoring.
+Pass the execution identity, its existing log/status source or prescribed wait command, the actual
+exit-code/log-event condition, the return route and applicable access instructions. The observer
+returns facts; diagnosis, repair and decisions about the next action remain with the parent.
+For scheduled checks, include the cadence, timezone and any supplied deadline/check cap.
 
-Do not create or require a checkpoint for a simple wait. Reference existing monitoring state only
-when resumption or deduplication needs it. In observation-only assignments, read only observation,
-access and return inputs; update needed monitoring state and report. Continuation plans, old
-prompts and maintenance history are outside that assignment, even when referenced in its inputs.
-Missing monitoring inputs need clarification. Do not restart operations.
+Do not require a checkpoint for a simple wait or pass maintenance plans and old prompts. Use
+existing monitoring state only when resumption or deduplication needs it.
 
 ## Check only when due
 
-The worker uses scheduling or bounded native waits, not short polling loops or cache warming.
-
-Observe read-only once per due check, including prompts. Persist monitoring state only when needed
-to resume or deduplicate; preserve operation identity/attempt. Stay silent on unchanged state unless
-updates were requested.
-Missing/failed observations mean uncertainty; retry within bounds or report intervention.
+Observe the assigned execution once per due check, including visible failures or prompts. Use
+native blocking waits or scheduling rather than short model-driven polling. Preserve the execution
+identity and attempt. Stay silent on unchanged state unless updates were requested.
+Missing or failed observations mean uncertainty; report intervention when needed, without repair.
 
 ## Finish monitoring and return evidence
 
+Deliver each requested handback once through native final or the agreed supported fallback.
+Do not send routine start/progress/waiting messages or duplicate a native return with a manual send.
+A requested progress update does not end monitoring: send it and continue without acknowledgment.
+Use an interim native final only for an explicitly requested handback; interrupt early when the
+parent must act before completion.
+
+Return identity, observed time/state, exit code or matched event and concise evidence. Uncertain
+delivery requires read-back/deduplication or an uncertainty report, never a blind resend or restart.
 On completion, failure, deadline, intervention or cancellation, deactivate only the owned schedule,
-if any; verify inactivity by read-back and report failed cleanup. Stopping monitoring does not
-cancel the operation; deadlines report last known state.
-
-Return identity, time/state, exit code or matched event, and concise evidence once through the agreed,
-supported route, preferring native delivery when available.
-Completion proves neither downstream validation nor permission to continue.
-Uncertain delivery requires read-back/deduplication or an uncertainty report, never blind resend/restart.
-
-The monitoring activation ends with its report, without inspecting continuation prerequisites.
-After receiving it, the originating parent checks identity/freshness, rejects duplicate/stale
-results and consults only prerequisites for its next authorized action. Missing/stale prerequisites
-and pending approvals still block that action.
+if any, and verify inactivity. Stopping monitoring does not cancel the execution. The parent checks
+identity/freshness and decides its next authorized action; the observer does not continue the work.

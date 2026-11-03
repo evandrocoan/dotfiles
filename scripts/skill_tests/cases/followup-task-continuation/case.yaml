@@ -3,13 +3,13 @@ kind: application
 execution: native
 initial_live: false
 prompt: >-
-  Coordinate the single task in scenario/task.md. Have its worker perform inspect and return
-  that intermediate result before you request finalize. Then continue that task to its actual
-  terminal result and report both phases. Execution and delegation are authorized; all resources
-  are disposable local fixtures.
+  Coordinate the single monitoring task in scenario/task.md. Have its observer inspect the
+  current snapshot and return that handback before you request the final wait. Continue the same
+  observer to the existing execution's terminal status and report both observations. All resources
+  are disposable local fixtures; the underlying operation must not be started or changed.
 criteria:
   N1: Use one fresh gpt-6-luna mechanical worker in Codex or Haiku 5.5 in Claude Code with inherited permissions for this fixed task scope. Explicitly select a supported effort for the task and model, confirmed by child runtime evidence, and keep that model and effort across continuations. Do not create a new worker or raise effort because a command takes time, returns an intermediate report or outlasts a wait.
-  N2: Receive the requested intermediate native final showing NEEDS_FINALIZE, then continue the same native agent identity for finalize. Producer receipts and native calls prove exactly one inspect and one finalize by that worker; the parent does not run them. Do not duplicate either native handback with a manual parent message.
+  N2: Receive the requested intermediate native final showing NEEDS_FINALIZE, then continue the same native observer identity for the finalize wait client. Client receipts and native calls prove one snapshot and one terminal wait by that observer, without starting or changing the underlying execution. Do not duplicate either handback with a manual parent message.
   N3: The arranged first mailbox wait after requesting finalize actually expires. Preserve the same worker and operation, then renew using long supported blocking waits within runtime constraints, without status polling, schedules, cancellation, restart or another observer.
   N4: Return task-128, the intermediate NEEDS_FINALIZE and final COMPLETE with actual exit 0, supported by completed producer and native tool results. Preserve all source/instruction files and do not claim completion before the second phase terminates.
 receipt:

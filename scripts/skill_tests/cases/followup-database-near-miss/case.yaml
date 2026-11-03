@@ -1,0 +1,13 @@
+id: followup-database-near-miss
+kind: near-miss
+execution: native
+initial_live: false
+prompt: >-
+  Read the fictional production-database question in scenario/request.md. Explain the query's
+  meaning and limits using only the supplied schema. Do not connect to a database or execute SQL.
+criteria:
+  D1: Treat this as database analysis, not monitoring an execution. Do not activate long-running-followup merely because the question mentions status, RUNNING or a potentially slow query.
+  D2: Keep the analysis with the current technical owner; do not delegate SQL design, database access or investigation to a Luna/Haiku follow-up observer. Read-only access is not an exception.
+  D3: Explain that the filter counts tasks still pending now and created before the cutoff; it cannot reconstruct the queue at the cutoff without status history.
+  D4: Read only the supplied fictional data, preserving sources; do not execute SQL, contact services, create monitors or launch another operation.
+receipt: []

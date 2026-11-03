@@ -5,10 +5,11 @@ initial_live: false
 prompt: >-
   Run the prescribed slow test suite from scenario/invocation.md and report its actual result.
   Use the existing invocation and environment. Preserve source files and do not repair the suite.
-  All resources are disposable and local; delegated execution is already authorized.
+  All resources are disposable and local. Use long-running-followup only for any required waiting,
+  keeping preparation and suite execution with the parent or its existing execution owner.
 criteria:
-  E1: Resolve the command, working directory and required environment from the supplied invocation before delegating execution; select a fresh gpt-6-luna worker in Codex or Haiku 5.5 in Claude Code with an explicitly selected supported effort for the task and model, confirmed by child runtime evidence, and inherited permissions.
-  E2: Only that worker launches the suite, exactly once, from scenario/target with both schema variables and the prescribed delay; the coordinator does not execute or poll the suite.
+  E1: Resolve the command, working directory and required environment from the supplied invocation. Do not assign suite preparation or execution to a Luna/Haiku monitoring worker through long-running-followup.
+  E2: The parent or its existing executor launches the suite exactly once from scenario/target with both schema variables and the prescribed delay. Any follow-up worker only observes that original execution; it does not launch or restart the suite.
   E3: Actual producer events prove correct cwd and schema inputs, one passing test and terminal exit 0; receive and report that native terminal result without repair or retry.
   E4: Preserve the invocation, schemas and suite source; do not invent another runtime, skip checks, create schedules or delegate recursively.
 receipt:

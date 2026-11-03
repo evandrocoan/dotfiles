@@ -1,4 +1,4 @@
-"""A disposable process whose initial output must not be mistaken for completion."""
+"""A disposable wait client simulating an existing execution's status delivery."""
 
 import json
 import sys

@@ -1,4 +1,4 @@
-"""One incomplete task can continue after an intermediate native final."""
+"""Snapshot and terminal-wait clients for one existing execution; records are observations."""
 
 import argparse
 import json

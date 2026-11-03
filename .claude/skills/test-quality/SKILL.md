@@ -313,8 +313,9 @@ launch, including a command returning still running, load it before another stat
 Keep known short test executions direct; do not preload follow-up for them.
 Do not load it solely because a full suite is requested, its duration is unknown, or you are
 writing or reviewing tests.
-When delegating test execution, pass the prescribed command, working directory, runtime and required
-environment from the repository or CI. The worker executes that invocation and reports its result.
+Keep test execution with the parent or its already-assigned executor. Give a follow-up observer
+only the existing execution identity, log/status source and completion condition; this skill does
+not delegate test preparation or execution to the monitoring worker.
 
 1. Run the narrowest relevant test while iterating.
 2. Run formatting, lint, type checks, unit tests, integration tests, smoke tests, and every other

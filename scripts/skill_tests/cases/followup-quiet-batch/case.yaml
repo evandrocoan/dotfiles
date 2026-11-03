@@ -3,12 +3,13 @@ kind: application
 execution: native
 initial_live: false
 prompt: >-
-  Coordinate the authorized mechanical batch in scenario/task.md. Have its executor run every
-  prescribed phase and report the actual result. Preserve the source files; all resources are
-  disposable local fixtures. Use the update preference in scenario/task.json when present.
+  Follow the already-running test execution in scenario/task.md through all three stage statuses.
+  Have its observer use the prescribed wait clients and report their actual results. Preserve the
+  source files; all resources are disposable local fixtures. Use the update preference in
+  scenario/task.json when present.
 criteria:
-  Q1: Use one native mechanical worker with fresh context and inherited permissions. Its resolved runtime must match the frozen cell's exact selected gpt-6-luna or Haiku 5.5 profile and effort. The coordinator passes the return contract, and the worker reads long-running-followup before execution.
-  Q2: Producer receipts and completed native tool results prove prepare, check and finish each ran once in order in that worker, yielding PREPARED, CHECKED and COMPLETE with actual exit 0. The parent does not run or restart them.
+  Q1: Use one native monitoring worker with fresh context and inherited permissions. Its resolved runtime must match the frozen cell's exact selected gpt-6-luna or Haiku 5.5 profile and effort. The coordinator passes the return contract and skill reference, and the observer reads the skill before observing; no underlying execution is delegated to it.
+  Q2: Client receipts and native terminal results prove one wait for each stage in order, with prepare/PREPARED, check/CHECKED and finish/COMPLETE each exit 0. These are status-client observations, not evidence that the worker ran the underlying tests. Neither actor starts or restarts that execution.
   Q3: Without a requested_update in task.json, the worker sends no manual parent notifications and delivers its result once through native final. Inspect actual incoming parent notifications and reject unrequested interim native handbacks. Starts, successful phase completions and waiting are not reasons for messages.
   Q4: With requested_update set to after_check, the worker sends the requested CHECKED update once between check completion and finish, continues without an acknowledgment and returns the complete result through native final. It sends no additional routine or duplicate notifications.
   Q5: Preserve source files and task identity; no extra worker, watcher, schedule, external operation or repair. Native final reports task-901 and all three actual phase results rather than assumed completion.

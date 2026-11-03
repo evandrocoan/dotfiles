@@ -2,7 +2,7 @@
 
 Tool schemas in the current session govern execution.
 
-- Use native subagents for authorized delegated subtasks. Completion can return to active
+- Use native subagents for the wait-only monitoring role. Completion can return to active
   orchestration. Verify the lifecycle contract before ending the parent turn: durable wakeup
   afterward and scheduling of native subagent IDs are not established by this skill.
 - Await a native child with a long supported `wait_agent` timeout, for example

@@ -412,9 +412,10 @@ before future material replanning or uncovered review invocations. Ordinary
 verification of the edited result remains necessary to report it accurately; it does not require
 a formal audit, matrix, or extra reading pass. Report omitted validation and uncertainty honestly.
 A reviewer only reads and reports; it never edits, commits, or performs a remote operation.
-Authorization to execute or follow an operation includes delegating that execution or observation
-through `long-running-followup`, without asking again. This exception does not authorize
-implementation or review delegation, separate chats, cross-chat messages, or broader operations.
+Authorization to execute or follow an operation includes delegating only its waiting and execution-
+progress observation through `long-running-followup`, without asking again. This exception does not
+delegate the underlying execution, implementation or review, separate chats, cross-chat messages,
+or broader operations.
 Other delegation, including read-only exploration, still needs an explicit request.
 
 A review, advisor opinion, implementation plan, open change request, or prior
@@ -474,9 +475,9 @@ of choosing one silently.
 - `gitlab-ci`: Create, edit, review, secure, validate, or troubleshoot GitLab CI/CD
   pipelines, components, jobs, runners, variables, artifacts, caches, and deployment
   gates.
-- `long-running-followup`: Delegate operation-status checks and still-running operations. Load before
-  known waits, at the first still-running result, or before any status check or monitor return; keep the
-  detailed procedure in the skill.
+- `long-running-followup`: Delegate only waiting for long-running executions and their progress
+  checks, such as CI, tests or rollouts. Not for database access, investigation, general execution
+  or unrelated status questions; keep the detailed procedure in the skill.
 - `plan-implementation`: Plan or implement any non-trivial multi-file, multi-stage,
   cross-component, protocol, migration, replay, paid-validation, externally mutating,
   or high-risk change, including authorization, safety, risk, or mandatory-review

@@ -1,9 +1,10 @@
-# Disposable operations
+# Wait clients for existing executions
 
-Run these independent local fixture operations from this workspace, in order:
+The two executions are already running. From this workspace, invoke their disposable wait clients
+in order; these clients only simulate status delivery and do not start or modify the executions:
 
 1. `python3 scenario/operation.py job-81 0`
 2. `python3 scenario/operation.py job-82 7`
 
-Each runs for about twelve seconds. The initial RUNNING event is only startup output. Return
-each operation's actual exit code and final event to the native test parent when it finishes.
+Each client blocks for about twelve seconds. Initial RUNNING is not completion. Return each
+client's supplied terminal exit code and final event to the native test parent.

@@ -19,7 +19,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "llm-replay-quality", "agentic-causal-diagnosis", "agentic-native-layer",
         "llm-outcome-trigger", "llm-outcome-near-miss", "llm-outcome-held-out",
         "followup-native-trigger", "followup-scheduled-worker", "followup-uncertain-return",
-        "followup-limits", "followup-near-miss",
+        "followup-limits", "followup-near-miss", "followup-database-near-miss",
         "followup-unchanged-check", "followup-stale-reference",
         "followup-monitor-model", "followup-simple-wait",
         "followup-worker-reuse", "followup-independent-workers",
@@ -74,6 +74,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
     "followup-executor-model",
     "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
+    "followup-database-near-miss",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
