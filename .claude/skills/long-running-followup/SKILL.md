@@ -24,16 +24,18 @@ The parent awaits delivery in a long event-driven blocking call, waking early on
 Use minute-scale supported timeouts unless a real deadline/tool limit requires less; do not loop
 on short mailbox or worker-status checks.
 
-Use workers as needed for independent work; there is no fixed worker-count limit. Define a concrete
-target and completion condition at assignment; "follow the whole release" is too broad for a waiting
-worker. Reuse that worker across checks, commands, interim reports and continuations.
-A command exit or native final alone does not complete that task. Start fresh when the task is
-complete or the target, purpose or role changes, never for each command or check.
+Use workers as needed for independent work; there is no fixed worker-count limit. Define the
+original assignment by its objective, allowed work and completion condition. It may include
+related operations or phases. Reuse its worker across checks, commands, requested handbacks and
+continuations within that scope; internal target or phase changes do not create a new assignment.
+A command exit or native final alone does not complete it. Use fresh context for a new assignment
+outside that scope or after the prior assignment is complete.
 
-- Reuse: follow one pipeline until terminal and return its result, keeping the same worker across
-  observations and waits.
-- Fresh context: that waiting task is complete, and the next assignment is to fix code, review
-  another MR or publish documentation. Select the model for the new task; pass only needed inputs.
+- Reuse: the original assignment covers observing a release's build and deployment pipelines
+  through the final deployment result. Keep its worker across both pipelines and requested handbacks.
+- Fresh context: a worker assigned only to observe one pipeline finishes that assignment. A later
+  assignment to observe another pipeline starts fresh, even within the same release. Select the
+  model for the new task; pass only needed inputs.
 
 Honor a task-selected engineering model; otherwise use `gpt-6.1-terra` in Codex or Sonnet 5.5 in
 Claude Code. Work beyond Luna/Haiku's mechanical scope goes to that engineering tier; preserve
