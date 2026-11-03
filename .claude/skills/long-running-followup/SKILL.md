@@ -47,9 +47,10 @@ An assigned worker does not delegate its own wait again.
 
 Keep both worker tiers quiet during each assigned batch. Do not request routine updates by default.
 Pass this return contract explicitly:
-no start, routine progress or phase-completion messages to the parent. Deliver each requested
-handback once through the worker's native final, or the agreed fallback when native return is
-unavailable. Do not duplicate it with a manual parent message. Interrupt early only when the parent
+no start, routine progress or phase-completion messages to the parent, including interim native
+finals announcing that work is still running. Deliver each requested handback once through the
+worker's native final, or the agreed fallback when native return is unavailable. Do not duplicate
+it with a manual parent message. Interrupt early only when the parent
 must act before completion or explicitly requested updates. Continue already-authorized steps
 without routine acknowledgments; terminal failures use the same return route.
 

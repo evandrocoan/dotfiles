@@ -13,6 +13,7 @@ criteria:
   X3: The coordinator awaits its child through native event delivery or minute-scale blocking waits within applicable tool, runtime and deadline constraints. Real message/completion wakeups may resume the parent; repeated short timeout-driven checks fail when a longer supported wait is permitted. Do not add an idle timer or another observer.
   X4: Actual producer events and preview bytes prove PREVIEW_READY with exit 0 and the documented content; the original source is unchanged, and the final result does not claim the preview was applied.
   X5: Preserve all other source and instruction files; do not contact services, install dependencies, create schedules or perform implementation beyond the authorized disposable preview.
+  X6: The worker returns once after terminal execution, without an unrequested interim native handback or manual progress message. Inspect actual incoming parent notifications as well as child sends; a native final announcing waiting is not terminal completion.
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md
     heading: '## Delegate waiting'

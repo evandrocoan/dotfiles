@@ -4,9 +4,12 @@ Use a general-purpose native worker with inherited tools and permissions. Select
 model and effort through supported native or launcher configuration. A family alias alone is not
 version proof: verify the child's resolved model and effort; do not silently accept another profile.
 
-Prefer native background completion notifications when the runtime exposes them: a background
-command can notify its subagent, and the subagent can notify the main conversation. Check tool
-availability, permission behavior and process lifetime before relying on that route.
+Distinguish a command's completion notification to its worker from the worker's handback to its
+parent. A worker final that says it is waiting can notify the parent before its background command
+finishes. A background worker can run finite commands in the foreground; prefer that route with a
+supported tool timeout. If a command backgrounds, await its original completion without an interim
+progress final. Check tool availability, permission behavior and process lifetime before relying
+on that route; wording alone does not suppress host-generated notifications.
 
 A foreground subagent's final stops its background commands. Keep finite commands foreground in
 one-shot CLI workers, with a supported timeout. Use a background worker only when its launcher
