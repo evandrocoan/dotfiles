@@ -14,6 +14,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Create the virtual environment](#create-the-virtual-environment)
       - [Add a new dependency](#add-a-new-dependency)
       - [Update dependencies](#update-dependencies)
+      - [Mattermost notification tray](#mattermost-notification-tray)
       - [Codex session statistics](#codex-session-statistics)
       - [Automatic GitLab MR review](#automatic-gitlab-mr-review)
         - [Desktop alerts for monitor failures](#desktop-alerts-for-monitor-failures)
@@ -575,6 +576,62 @@ poetry add <package>
 ```bash
 cd ~/scripts
 poetry update
+```
+
+#### Mattermost notification tray
+
+The [tray client](scripts/mattermost_tray.py) mirrors the browser's Mattermost notification
+indicator: grey for no unread activity, blue for unread messages, and red for mentions or private
+messages. An amber question mark means that the browser reports are unavailable or stale, or that
+the local server cannot be reached. Mattermost's own notification and mute settings apply.
+
+The existing [screen monitor API](scripts/monitor_screen_lock.py) runs on loopback using the
+scripts Poetry environment. The tray uses system Python with the installed GTK/PyGObject and
+Ayatana AppIndicator bindings. Install or update the startup files:
+
+```bash
+install -d ~/.config/systemd/user ~/.config/autostart
+install -m 0644 ~/scripts/install/systemd/user/monitor_screen_locked.service ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/systemd/user/mattermost-tray.service ~/.config/systemd/user/
+install -m 0644 ~/scripts/install/autostart/mattermost-tray.desktop ~/.config/autostart/
+systemctl --user daemon-reload
+systemctl --user enable --now monitor_screen_locked.service
+systemctl --user import-environment DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS
+systemctl --user restart mattermost-tray.service
+```
+
+With the API running, open [the local userscript installer](http://127.0.0.1:8000/mattermost-tray.user.js)
+in Chrome and confirm the update in Tampermonkey. It preserves the existing script name and namespace.
+Reload the Mattermost tab afterward and keep it open. The canonical source is
+[the userscript in this repository](scripts/tampermonkey/mattermost-auto-status-based-on-screen-lock.user.js).
+After updating that source, repeat the Tampermonkey update; restarting the server alone does not
+update the browser's installed copy.
+
+The tray sends no Mattermost credentials or message contents to the API. A closed or sleeping tab
+may retain its last report until the freshness timeout; the menu distinguishes unavailable browser
+reports from an unreachable API. To diagnose or recover:
+
+```bash
+systemctl --user status monitor_screen_locked.service mattermost-tray.service
+journalctl --user -u monitor_screen_locked.service -u mattermost-tray.service -n 50
+curl --fail http://127.0.0.1:8000/mattermost/notifications
+systemctl --user restart monitor_screen_locked.service mattermost-tray.service
+```
+
+The existing screen-lock presence feature still requires `xscreensaver-command`; failed screen
+checks do not prevent notification reporting. The notification indicator requires a loaded channel
+view and recognized Mattermost favicons; other pages show unavailable status.
+
+To remove the tray, stop `mattermost-tray.service` and remove its installed unit and autostart file.
+The shared screen monitor can remain running. To remove the complete integration, also disable the
+Tampermonkey script and run:
+
+```bash
+systemctl --user stop mattermost-tray.service
+systemctl --user disable --now monitor_screen_locked.service
+rm ~/.config/systemd/user/mattermost-tray.service ~/.config/autostart/mattermost-tray.desktop
+rm ~/.config/systemd/user/monitor_screen_locked.service
+systemctl --user daemon-reload
 ```
 
 #### Codex session statistics

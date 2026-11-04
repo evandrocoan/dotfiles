@@ -1,10 +1,17 @@
 import subprocess
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Literal
+from pathlib import Path
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from typing import Annotated, Literal
+
+from mattermost_notifications import NotificationState
 
 # python3 -m pip install -U fastapi==0.121.0 email-validator>2.0
 app = FastAPI(title="Screen Lock Monitor", version="1.0.0")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"])
+notifications = NotificationState()
 
 """
 A FastAPI application to monitor screen lock status using xscreensaver-command.
@@ -25,8 +32,40 @@ class ScreenStatus(BaseModel):
     raw_output: str
 
 
+class NotificationReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    sequence: int = Field(strict=True, ge=0, le=9007199254740991)
+    state: Literal["idle", "unread", "mention", "unknown"]
+
+
+@app.get("/mattermost-tray.user.js", include_in_schema=False)
+async def userscript():
+    path = Path(__file__).resolve().parent / "tampermonkey" / "mattermost-auto-status-based-on-screen-lock.user.js"
+    return FileResponse(path, media_type="application/javascript", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/mattermost/notifications")
+async def report_notifications(
+    report: NotificationReport,
+    x_mattermost_tray: Annotated[Literal["1"], Header()],
+):
+    # A custom header plus JSON prevents writes through ordinary cross-site forms.
+    # No CORS permissions are granted; Tampermonkey uses GM_xmlhttpRequest.
+    try:
+        accepted = notifications.report(report.source, report.sequence, report.state)
+    except ValueError as error:
+        raise HTTPException(status_code=429, detail=str(error)) from error
+    return {"accepted": accepted, **notifications.snapshot()}
+
+
+@app.get("/mattermost/notifications")
+async def get_notifications():
+    return notifications.snapshot()
+
+
 @app.get("/screen-status", response_model=ScreenStatus)
-async def get_screen_status():
+def get_screen_status():
     """
     Check if the screen is locked, blank, or unlocked using xscreensaver-command.
 
@@ -38,7 +77,8 @@ async def get_screen_status():
             ["xscreensaver-command", "-time"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=5,
         )
         output = result.stdout.strip().lower()
 
@@ -80,6 +120,7 @@ async def root():
         "message": "Screen Lock Monitor API",
         "endpoints": {
             "/screen-status": "GET - Check current screen lock status",
+            "/mattermost/notifications": "GET - Tray state; POST - Browser report",
             "/docs": "GET - Interactive API documentation"
         }
     }
@@ -93,4 +134,5 @@ if __name__ == "__main__":
         port=8000,
         log_level="warning",
         access_log=False,
+        ws="none",
     )

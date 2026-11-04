@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Mattermost Auto Status Based on Screen Lock
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Automatically set Mattermost status to offline when screen is locked
+// @version      1.2
+// @description  Report Mattermost notifications to the local tray and update presence on screen lock
 // @author       You
 // @match        http://mattermost.khomp.corp/*
+// @match        https://mattermost.khomp.corp/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=mattermost.com
 // @grant        GM_xmlhttpRequest
 // @connect      127.0.0.1
@@ -18,6 +19,165 @@
 
     const SCREEN_STATUS_URL = 'http://127.0.0.1:8000/screen-status';
     const CHECK_INTERVAL = 5000; // Check every 5 seconds
+    const NOTIFICATIONS_URL = 'http://127.0.0.1:8000/mattermost/notifications';
+    const source = Array.from(crypto.getRandomValues(new Uint32Array(4)),
+        value => value.toString(16).padStart(8, '0')).join('');
+    let sequence = 0;
+    let reporting = false;
+    let pendingReport = false;
+    let leaving = false;
+    let reportTimer = null;
+    const faviconPixels = new Map();
+    const faviconStates = new Map();
+    const pendingFavicons = new Set();
+    let lastDetection = null;
+
+    function readFaviconPixels(href) {
+        if (!faviconPixels.has(href)) {
+            const promise = new Promise((resolve, reject) => {
+                const image = new Image();
+                const timer = setTimeout(() => finish(new Error('Favicon load timed out')), 5000);
+                const finish = (error, pixels) => {
+                    clearTimeout(timer);
+                    image.onload = image.onerror = null;
+                    if (error) reject(error);
+                    else resolve(pixels);
+                };
+                image.onload = () => {
+                    try {
+                        const width = image.naturalWidth;
+                        const height = image.naturalHeight;
+                        if (width !== height || ![16, 24, 32, 64, 96].includes(width)) {
+                            throw new Error('Unsupported favicon dimensions');
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const context = canvas.getContext('2d');
+                        context.drawImage(image, 0, 0);
+                        finish(null, {width, data: context.getImageData(0, 0, width, height).data});
+                    } catch (error) {
+                        finish(error);
+                    }
+                };
+                image.onerror = () => finish(new Error('Favicon could not be loaded'));
+                image.src = href;
+            });
+            faviconPixels.set(href, promise);
+            promise.catch(() => faviconPixels.delete(href));
+        }
+        return faviconPixels.get(href);
+    }
+
+    async function identifyHashedFavicon(url, staticPath) {
+        const actual = await readFaviconPixels(url.href);
+        const states = ['default', 'unread', 'mentions'];
+        const references = await Promise.all(states.map(state => readFaviconPixels(
+            new URL(`${staticPath}images/favicon/favicon-${state}-${actual.width}x${actual.width}.png`, url.origin).href
+        )));
+        return states.find((state, index) => {
+            const reference = references[index];
+            return actual.width === reference.width && actual.data.length === reference.data.length &&
+                actual.data.every((value, offset) => value === reference.data[offset]);
+        });
+    }
+
+    function faviconState(href) {
+        const url = new URL(href, window.location.href);
+        const named = url.pathname.match(/\/favicon-(default|unread|mentions)-\d+x\d+(?:\.[a-f0-9]+)?\.png$/i)?.[1];
+        if (named) return named.toLowerCase();
+        if (faviconStates.has(url.href)) return faviconStates.get(url.href);
+
+        // Webpack emits optimized icons as /static/files/<contenthash>.png.
+        // Match decoded pixels against the copied originals, which retain their names.
+        // Restrict image reads to Mattermost's own static assets; nothing is uploaded.
+        const hashed = url.pathname.match(/^(.*\/static\/)files\/[a-f0-9]+\.png$/i);
+        if (url.origin === window.location.origin && hashed && !pendingFavicons.has(url.href)) {
+            pendingFavicons.add(url.href);
+            identifyHashedFavicon(url, hashed[1]).then(state => {
+                faviconStates.set(url.href, state);
+                if (state) scheduleReport();
+            }).catch(() => {
+                // A later heartbeat retries failed image loads, without a tight retry loop.
+            }).finally(() => pendingFavicons.delete(url.href));
+        }
+        return undefined;
+    }
+
+    // Mirror Mattermost's own aggregate favicon, including its mute/thread rules.
+    // Unknown/login/loading pages must never report confirmed absence of activity.
+    function notificationState() {
+        if (leaving || !document.querySelector('#channel_view')) {
+            return 'unknown';
+        }
+        const states = Array.from(document.querySelectorAll('link[rel~="icon"]'), link => faviconState(link.href));
+        if (states.includes('mentions')) return 'mention';
+        if (states.includes('unread')) return 'unread';
+        if (states.length && states.every(state => state === 'default')) return 'idle';
+        return 'unknown';
+    }
+
+    function reportNotifications() {
+        if (reporting) {
+            pendingReport = true;
+            return;
+        }
+        reporting = true;
+        pendingReport = false;
+        const state = notificationState();
+        const detection = state === 'unknown' ?
+            (leaving || !document.querySelector('#channel_view') ? 'channel view unavailable' : 'favicon not recognized yet') : state;
+        if (detection !== lastDetection) {
+            console.info('Mattermost tray:', detection);
+            lastDetection = detection;
+        }
+        const finish = () => {
+            reporting = false;
+            if (pendingReport) reportNotifications();
+        };
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: NOTIFICATIONS_URL,
+            anonymous: true,
+            timeout: 5000,
+            headers: {'Content-Type': 'application/json', 'X-Mattermost-Tray': '1'},
+            data: JSON.stringify({source, sequence: ++sequence, state}),
+            onload: finish,
+            onerror: finish,
+            ontimeout: finish,
+            onabort: finish
+        });
+    }
+
+    function scheduleReport() {
+        clearTimeout(reportTimer);
+        reportTimer = setTimeout(reportNotifications, 150);
+    }
+
+    function startNotificationReports() {
+        const observer = new MutationObserver(scheduleReport);
+        observer.observe(document.head, {
+            subtree: true, childList: true, attributes: true,
+            attributeFilter: ['href', 'rel', 'sizes']
+        });
+        setInterval(reportNotifications, 15000);
+        window.addEventListener('pagehide', () => {
+            leaving = true;
+            reportNotifications();
+        });
+        window.addEventListener('pageshow', () => {
+            leaving = false;
+            reportNotifications();
+        });
+        document.addEventListener('visibilitychange', reportNotifications);
+        reportNotifications();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startNotificationReports, {once: true});
+    } else {
+        startNotificationReports();
+    }
 
     let lastStatus = null;
     let mattermostWindow = null;
@@ -27,9 +187,12 @@
         GM_xmlhttpRequest({
             method: 'GET',
             url: SCREEN_STATUS_URL,
+            timeout: 5000,
             onload: function(response) {
+                if (response.status !== 200) return;
                 try {
                     const data = JSON.parse(response.responseText);
+                    if (!['locked', 'blank', 'unlocked'].includes(data.status)) return;
                     handleScreenStatus(data);
                 } catch (error) {
                     console.error('Error parsing screen status:', error);

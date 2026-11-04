@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=60
 WorkingDirectory=%h/scripts/
-ExecStart=/bin/bash --login -c 'python3 %h/scripts/monitor_screen_lock.py'
+ExecStart=%h/scripts/.venv/bin/python %h/scripts/monitor_screen_lock.py
 
 [Install]
 WantedBy=default.target

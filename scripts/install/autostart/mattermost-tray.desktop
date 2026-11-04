@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Mattermost notification tray
+Comment=Show Mattermost notifications in the XFCE panel
+Exec=systemctl --user start mattermost-tray.service
+Terminal=false
+OnlyShowIn=XFCE;
