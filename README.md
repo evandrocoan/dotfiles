@@ -70,6 +70,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Optionally install KDE](#optionally-install-kde)
     - [Hide user account from login screen](#hide-user-account-from-login-screen)
     - [Fix teamviewer not opening anymore](#fix-teamviewer-not-opening-anymore)
+      - [Use XPresent for XFCE black screens](#use-xpresent-for-xfce-black-screens)
       - [Restart TeamViewer when its graphical session becomes stale](#restart-teamviewer-when-its-graphical-session-becomes-stale)
       - [Restart TeamViewer daily](#restart-teamviewer-daily)
     - [Fix networking not connecting (after coming out from system sleep)](#fix-networking-not-connecting-after-coming-out-from-system-sleep)
@@ -3471,6 +3472,50 @@ SystemAccount=true
 1. https://superuser.com/questions/1563951/systemd-does-not-assign-a-seat-to-my-session-when-using-nis-authentication
 1. Use `systemctl edit --full systemd-logind` to disable the network restrictions in systemd-logind, by removing the `IPAddressDeny=` and `RestrictAddressFamilies=` options. (And probably `SystemCallFilter=` as well).
    1. Reboot your computer after `systemctl edit --full systemd-logind`
+
+
+#### Use XPresent for XFCE black screens
+
+When `xfwm4` hangs in NVIDIA GLX calls, desktop capture can remain black in both TeamViewer and
+AnyDesk. XPresent provides an alternative synchronization method while retaining composition,
+shadows and transparency. The installed `xfwm4` must have Xpresent support; `xfwm4 --version` lists
+this feature when run inside the graphical session.
+
+Run the following commands as the desktop user, without `sudo`. When connected through SSH, first
+select that user's existing session bus:
+
+```bash
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+```
+
+Save XPresent as the default and keep composition enabled:
+
+```bash
+xfconf-query -c xfwm4 -p /general/vblank_mode -s xpresent
+xfconf-query -c xfwm4 -p /general/use_compositing -s true
+```
+
+Xfconf persists these preferences in
+[`.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml`](.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml),
+so subsequent XFCE logins and reboots retain the selection. Use `xfconf-query` rather than editing
+the XML while the desktop is running. Verify the saved values; expect `xpresent` and `true`:
+
+```bash
+xfconf-query -c xfwm4 -p /general/vblank_mode
+xfconf-query -c xfwm4 -p /general/use_compositing
+```
+
+Saving the preference does not recover an already unresponsive window manager. That process needs
+separate recovery. A session already running with `--vblank=xpresent` needs no restart just to save
+the default. Reconnect through TeamViewer and check the image, mouse and keyboard; verify again
+after the next normal login or reboot.
+
+To restore the saved automatic synchronization choice while keeping composition enabled:
+
+```bash
+xfconf-query -c xfwm4 -p /general/vblank_mode -s auto
+```
 
 
 #### Restart TeamViewer when its graphical session becomes stale
