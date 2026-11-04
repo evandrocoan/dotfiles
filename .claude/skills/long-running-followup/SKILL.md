@@ -60,7 +60,8 @@ Proposed schedules and queued messages do not prove active monitoring or parent 
 ## Assign the observation directly
 
 Pass the execution identity, its existing log/status source or prescribed wait command, the actual
-exit-code/log-event condition, the return route and applicable access instructions. The observer
+exit-code/log-event condition, return conditions and applicable access instructions. Explicitly
+assign the native-final-only return contract below; do not ask for routine snapshots. The observer
 returns facts; diagnosis, repair and decisions about the next action remain with the parent.
 For scheduled checks, include the cadence, timezone and any supplied deadline/check cap.
 
@@ -71,16 +72,20 @@ existing monitoring state only when resumption or deduplication needs it.
 
 Observe the assigned execution once per due check, including visible failures or prompts. Use
 native blocking waits or scheduling rather than short model-driven polling. Preserve the execution
-identity and attempt. Stay silent on unchanged state unless updates were requested.
+identity and attempt. All normal progress stays silent, including changed job counts, jobs starting
+or passing, and queue movement. These changes do not themselves require the parent to act.
 Missing or failed observations mean uncertainty; report intervention when needed, without repair.
 
 ## Finish monitoring and return evidence
 
-Deliver each requested handback once through native final or the agreed supported fallback.
-Do not send routine start/progress/waiting messages or duplicate a native return with a manual send.
-A requested progress update does not end monitoring: send it and continue without acknowledgment.
-Use an interim native final only for an explicitly requested handback; interrupt early when the
-parent must act before completion.
+By default, do not call `send_message` to the parent. Return once through native final when the
+assigned execution completes, fails, or needs parent intervention; normal progress is not a return
+condition. The parent does not request snapshots or monitor the same progress in parallel.
+If native return is unavailable, agree on a supported fallback before observing.
+
+An explicit update or intermediate-handback request is an exception. Send only that requested
+update and keep observing without acknowledgment; use an interim native final only when the
+request actually asks to hand control back. Never duplicate a native return with a manual send.
 
 Return identity, observed time/state, exit code or matched event and concise evidence. Uncertain
 delivery requires read-back/deduplication or an uncertainty report, never a blind resend or restart.

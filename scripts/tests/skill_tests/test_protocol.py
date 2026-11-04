@@ -27,6 +27,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-executor-model",
         "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
         "followup-parent-wait",
+        "followup-pipeline-notifications",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -77,6 +78,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
     "followup-database-near-miss",
     "followup-parent-wait",
+    "followup-pipeline-notifications",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -294,6 +296,56 @@ def test_child_environment_does_not_inherit_credentials_or_runtime_overrides():
     assert env == {"PATH": "/usr/bin", "HOME": "/real-home", "DISABLE_AUTOUPDATER": "1",
                    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "PYTHONDONTWRITEBYTECODE": "1"}
     assert omitted == ["API_KEY", "GITLAB_TOKEN"]
+
+
+@pytest.mark.parametrize(("mode", "observations", "observed_status", "pipeline_exit", "job_exit"), [
+    ("success", 5, "success", 0, 0),
+    ("required_failure", 4, "running", None, 7),
+])
+def test_pipeline_status_feed_preserves_execution_and_distinguishes_client_exit(
+        tmp_path, mode, observations, observed_status, pipeline_exit, job_exit):
+    scenario = tmp_path / "scenario"
+    shutil.copytree(CORPUS / "followup-pipeline-notifications/scenario", scenario)
+    task = read_json(scenario / "task.json")
+    task["mode"] = mode
+    (scenario / "task.json").write_text(json.dumps(task) + "\n")
+    original = {p.name: p.read_bytes() for p in scenario.iterdir() if p.is_file()}
+    broker = subprocess.Popen(
+        [sys.executable, str(scenario / "producer.py"), "--interval", "0"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    try:
+        assert broker.stdout.readline().strip() == "BROKER_READY"
+        results = []
+        for sequence in range(observations):
+            result = subprocess.run(
+                [sys.executable, str(scenario / "status.py"), "--after", str(sequence - 1)],
+                capture_output=True, text=True, timeout=10,
+            )
+            assert result.returncode == 0
+            assert result.stderr == ""
+            value = json.loads(result.stdout)
+            assert value["sequence"] == sequence
+            results.append(value)
+            if sequence == 0:
+                # The real producer reaches terminal without more client requests.
+                assert broker.stdout.readline().strip() == "PRODUCER_TERMINAL"
+        assert results[-1]["status"] == observed_status
+        assert results[-1]["pipeline_exit_code"] == pipeline_exit
+        assert results[-1]["jobs"][-1]["exit_code"] == job_exit
+        events = [json.loads(line) for line in (scenario / "events.jsonl").read_text().splitlines()]
+        produced = [row["snapshot"] for row in events if row["kind"] == "produced"]
+        observed = [row["sequence"] for row in events if row["kind"] == "observed"]
+        assert [row["sequence"] for row in produced] == [0, 1, 2, 3, 4]
+        assert observed == list(range(observations))
+        assert produced[-1]["pipeline_exit_code"] == job_exit
+        assert {name: (scenario / name).read_bytes() for name in original} == original
+    finally:
+        if broker.poll() is None:
+            broker.terminate()
+        _, stderr = broker.communicate(timeout=10)
+        assert stderr == ""
+        assert not (scenario / "feed.sock").exists()
 
 
 def test_unresolved_reservation_cannot_be_reused_or_omitted(tmp_path):

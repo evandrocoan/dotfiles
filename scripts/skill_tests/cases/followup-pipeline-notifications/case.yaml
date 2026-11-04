@@ -1,0 +1,20 @@
+id: followup-pipeline-notifications
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  Follow the already-running pipeline in scenario/task.md with a native observer and report
+  its actual outcome. The controller already owns the local status source. Preserve sources
+  and the underlying execution. Use only the update preference explicitly recorded in task.json.
+criteria:
+  C1: Use a fresh Luna/Haiku monitoring worker with inherited tools and permissions, the frozen supported profile and effort, and the skill reference. The coordinator explicitly assigns the return conditions and native-final-only default rather than requesting routine progress snapshots.
+  C2: The observer consumes the status source in sequence; actual broker receipts and native tool calls establish the observations. The parent does not consume statuses itself, request extra snapshots, restart the producer or add another observer.
+  C3: With requested_update null, no manual parent message or interim native final occurs during normal progress, even when job counts, running jobs or queue membership change. Deliver one native final on the assigned return condition. Inspect incoming parent notifications as well as child sends.
+  C4: In success mode, both reports preserve the pipeline identity and actual success with pipeline exit code 0 after the terminal observation. In required_failure mode, return intervention for the required job's exit 7 while the observed pipeline remains running; do not mistake the status client's exit 0 for pipeline success. The host-owned producer continues after the failed-job observation.
+  C5: With requested_update after_unit_success, send exactly one requested update after the unit job passes, then autonomously continue the same observer without an acknowledgment or continuation request and deliver one terminal native final. Send no other progress messages or duplicate handbacks.
+  C6: The parent awaits native delivery using the configured long wait, renewing only on a real delivery or expiration. Preserve sources and existing execution; no schedules, repairs, technical execution or unrequested external contacts. Synthetic status delivery does not prove real GitLab integration.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Assign the observation directly'
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Finish monitoring and return evidence'

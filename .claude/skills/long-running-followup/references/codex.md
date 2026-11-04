@@ -10,7 +10,7 @@ Tool schemas in the current session govern execution.
   new user input. Renew expired waits without adding sleep, routine updates or scheduled wakeups.
 - For scheduled work, discover `automation_update`. A heartbeat resumes its target chat and
   context. Reuse the existing monitor; verify destination, cadence, stop condition and saved
-  active state. Keep unchanged observations silent unless updates were requested.
+  active state. Preserve the entrypoint's return contract in the saved prompt.
 - A separate persistent monitor chat requires an explicit human request. Discover `create_thread`
   rather than using sidebar chats as internal subagents. Cross-chat return through
   `send_message_to_thread` requires direct human authorization or trusted evidence of it, including
