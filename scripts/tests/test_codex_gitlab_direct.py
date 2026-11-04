@@ -111,6 +111,33 @@ def test_codex_dispatch_receives_child_review_instructions(flow,monkeypatch):
     assert f.q.job(job['id'])['stages'][0]['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
 
 
+def test_codex_dispatch_forces_standard_speed_in_new_and_resumed_chats(flow,monkeypatch):
+    f=flow;request=f.m['monitor_native'];calls=[]
+    config_path=Path(f.config['codex_home'])/'config.toml'
+    config_path.write_text('service_tier = "priority"\n'+config_path.read_text())
+    original_config=config_path.read_bytes()
+    def native(c,method,params,**kw):
+        calls.append((method,copy.deepcopy(params)))
+        return request(c,method,params,**kw)
+    monkeypatch.setitem(f.m,'monitor_native',native)
+    first=automatic(f,reviewers=['codex']);f.drain()
+    second=f.q.enqueue(11,82,source_key='later-standard-speed',kind='discussion',head='a'*40,
+        source={'origin':'automatic','head':'a'*40},context=copy.deepcopy(f.context),reviewers=['codex'])
+    f.drain()
+    starts=[p for method,p in calls if method=='thread/start']
+    resumes=[p for method,p in calls if method=='thread/resume']
+    turns=[p for method,p in calls if method=='turn/start']
+    assert len(starts)==1 and len(resumes)==1 and len(turns)==2
+    session=f.q.job(first['id'])['stages'][0]['session']
+    assert resumes[0]['threadId']==session
+    assert [p['threadId'] for p in turns]==[session,session]
+    assert [p.get('serviceTierForTurn') for p in turns]==['default','default']
+    assert all('serviceTier' not in p for _,p in calls)
+    assert [(p['model'],p['effort']) for p in turns]==[(f.config['model'],f.config['effort'])]*2
+    assert f.q.job(first['id'])['state']==f.q.job(second['id'])['state']=='completed'
+    assert config_path.read_bytes()==original_config
+
+
 def test_claude_dispatch_receives_child_review_instructions(flow):
     f=flow;job=automatic(f,reviewers=['claude']);f.step()
     command=next(c for c in f.service.commands if c[0]=='systemd-run')

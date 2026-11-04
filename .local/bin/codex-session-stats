@@ -3727,6 +3727,7 @@ def mq_codex_dispatch(config, queue, job, stage):
         try:
             started = await request('turn/start',{'threadId':session,'clientUserMessageId':stage['id'],
                 'input':[{'type':'text','text':stage['input']}],'approvalPolicy':'never',
+                'serviceTierForTurn':'default',
                 'model':config['model'],'effort':config['effort'],'permissions':mq_codex_permissions(config)})
         except MonitorCycleYield as yielded:
             if not yielded.issued:mq_update_stage(queue,job,stage['id'],delivery='prepared')
