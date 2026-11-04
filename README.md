@@ -1423,8 +1423,9 @@ directory remains private and may be removed manually only after evidence and re
 
 This repository's work tree must never be written by Git: many tracked files are live configuration
 read by running applications, the tree carries long-lived uncommitted work, and some paths are
-hidden with `assume-unchanged`. [`scripts/isolated_pull.sh`](./scripts/isolated_pull.sh) keeps `.git`
-in the repository and creates a fresh temporary directory for files. It explicitly selects the
+hidden with `assume-unchanged`.
+[`scripts/pull_home_git_repository.sh`](./scripts/pull_home_git_repository.sh) keeps `.git` in the
+repository and creates a fresh temporary directory for files. It explicitly selects the
 original database with `--git-dir` and the temporary directory with `--work-tree`, prepares that
 directory with `reset --hard HEAD`, then runs `pull --rebase --no-autostash` in the foreground.
 It does not create a registered Git worktree. Run it from this repository's root:
@@ -1432,8 +1433,8 @@ It does not create a registered Git worktree. Run it from this repository's root
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-bash scripts/isolated_pull.sh --dry-run
-bash scripts/isolated_pull.sh
+bash scripts/pull_home_git_repository.sh --dry-run
+bash scripts/pull_home_git_repository.sh
 ```
 
 Nothing in the repository root is reverted, deleted or stashed. Afterwards the history has advanced

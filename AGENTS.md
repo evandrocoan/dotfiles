@@ -275,8 +275,8 @@ in-place fast-forward also aborts whenever a locally modified file was also
 changed upstream, which is the condition that makes the isolated helper
 necessary.
 
-Updating from `origin` goes through `scripts/isolated_pull.sh`, which keeps `.git` in place and
-uses explicit `--git-dir` and `--work-tree` arguments to prepare and pull inside a temporary
+Updating from `origin` goes through `scripts/pull_home_git_repository.sh`, which keeps `.git` in
+place and uses explicit `--git-dir` and `--work-tree` arguments to prepare and pull inside a temporary
 directory. The original branch and index are shared, so staged changes are refused and other
 Git clients must remain idle. All resets and rebase aborts must use that temporary directory;
 never recover a pending rebase by running a bare abort in the original work tree. Failed runs

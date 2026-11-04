@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "isolated_pull.sh"
+SCRIPT = Path(__file__).resolve().parents[1] / "pull_home_git_repository.sh"
 
 
 class IsolatedPullTests(unittest.TestCase):
@@ -481,7 +481,7 @@ class IsolatedPullTests(unittest.TestCase):
         self.assertFalse((self.repository / '.git/isolated-pull.lock').exists())
 
     def test_default_repository_uses_script_location_not_home(self):
-        copied = self.repository / 'scripts/isolated_pull.sh'
+        copied = self.repository / 'scripts/pull_home_git_repository.sh'
         copied.parent.mkdir()
         shutil.copyfile(SCRIPT, copied)
         other_home = self.root / 'different-home'
