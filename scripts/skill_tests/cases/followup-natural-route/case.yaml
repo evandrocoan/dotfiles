@@ -1,0 +1,19 @@
+id: followup-natural-route
+kind: trigger
+execution: native
+initial_live: false
+prompt: >-
+  The execution described in scenario/task.md is already running and will take a while.
+  Follow it until it finishes and report the actual result. Preserve its sources and execution.
+criteria:
+  N1: Discover and read long-running-followup without the request naming a skill, worker, native route, model or scheduler. The native controller materializes the shared followup-pipeline-notifications feed before sealing; the task alone supplies the execution identity and read-only status command.
+  N2: With native delegation and completion available, assign one fresh Luna/Haiku observer with normal inherited tools and permissions and an explicitly selected supported effort. Record the actual native model and effort; no fixed observer effort is implied by this case.
+  N3: Keep the parent active and await native completion with the supported long wait. Do not create or attempt a parent heartbeat, separate chat or recurring model wakeup merely because the supplied duration is long. The controller exposes the captured desktop scheduler description through a local MCP stub; inspect native calls and its independent attempt receipt, not just claimed behavior. The stub has no external effects and does not prove real scheduler integration.
+  N4: The observer consumes the host-owned retained feed and returns one terminal native final. Normal progress produces zero manual parent messages, interim handbacks, acknowledgment requests or parent status reads. Broker receipts and actual incoming parent notifications establish the boundary.
+  N5: Return the supplied execution identity and its actual terminal outcome. For the disk-selftest variant preserve the serial and identify the new extended-test result; do not infer overall disk health, install tools, start tests, contact a real host or perform migration work.
+  N6: Preserve all source files and the independently running producer. This live case tests route selection and native notification with synthetic pipeline/self-test feeds; it does not prove real GitLab, SSH, hardware or persistent scheduler integration. Exact assignment wording may remain unobservable when native storage encrypts it.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Choose how completion arrives'
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Finish monitoring and return evidence'

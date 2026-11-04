@@ -2,15 +2,17 @@
 
 Tool schemas in the current session govern execution.
 
-- Use native subagents for the wait-only monitoring role. Completion can return to active
-  orchestration. Verify the lifecycle contract before ending the parent turn: durable wakeup
-  afterward and scheduling of native subagent IDs are not established by this skill.
+- Keep the parent turn active while awaiting its native monitoring subagent. Completion returns
+  to that active orchestration; do not end the turn merely because the execution takes hours.
+  Durable wakeup after an ended turn and scheduling native subagent IDs are not established here.
 - For the entrypoint's parent wait, call `wait_agent` with `{"timeout_ms":900000}`, reduced only
   by the tool's actual maximum or an earlier supplied deadline. It wakes early on delivery or
   new user input. Renew expired waits without adding sleep, routine updates or scheduled wakeups.
-- For scheduled work, discover `automation_update`. A heartbeat resumes its target chat and
-  context. Reuse the existing monitor; verify destination, cadence, stop condition and saved
-  active state. Preserve the entrypoint's return contract in the saved prompt.
+- For scheduling selected under the entrypoint's completion-route rule, discover
+  `automation_update`. A heartbeat resumes its target chat with that chat's context, including
+  the parent when it is the target. A silent check still invokes the model. Reuse the existing
+  monitor; verify destination, cadence, stop condition and saved active state. Preserve the
+  entrypoint's return contract in the saved prompt.
 - A separate persistent monitor chat requires an explicit human request. Discover `create_thread`
   rather than using sidebar chats as internal subagents. Cross-chat return through
   `send_message_to_thread` requires direct human authorization or trusted evidence of it, including

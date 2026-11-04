@@ -1,0 +1,7 @@
+{
+  "pipeline_id": "pipeline-quiet-1",
+  "mode": "success",
+  "requested_update": null,
+  "expected_duration_seconds": 6900,
+  "return_condition": "Return at pipeline success or failure, or when a required job fails and the parent must act. Do not repair or cancel anything."
+}

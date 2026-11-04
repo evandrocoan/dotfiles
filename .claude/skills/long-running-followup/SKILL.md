@@ -48,10 +48,15 @@ do not loop on short mailbox checks or wake the parent for cache warming.
 
 ## Choose how completion arrives
 
-Prefer native completion, then an existing deterministic wait tied to the original execution,
-then supported scheduling. Do not poll alongside reliable completion delivery. When following a
-log, include existing terminal output, avoid read/subscribe gaps and terminate the wait on the
-matched event or producer exit; an open-ended tail can remain blocked after completion.
+Keep the parent active while awaiting native observer completion. Use an available native route;
+do not replace it with heartbeats that repeatedly resume the parent. If native delivery is
+unavailable, use an existing deterministic wait tied to the execution. Use supported scheduling
+only when these routes cannot meet the required lifetime or return, and state the concrete
+limitation. Long duration alone is not such a limitation. Honor explicit scheduling requests.
+
+Do not poll alongside reliable completion delivery. When following a log, include existing
+terminal output, avoid read/subscribe gaps and terminate the wait on the matched event or producer
+exit; an open-ended tail can remain blocked after completion.
 
 Verify lifetime and return support before yielding. Read the relevant host details:
 [Codex](references/codex.md), [Claude](references/claude.md) or [other hosts](references/clients.md).
@@ -81,7 +86,7 @@ Missing or failed observations mean uncertainty; report intervention when needed
 By default, do not call `send_message` to the parent. Return once through native final when the
 assigned execution completes, fails, or needs parent intervention; normal progress is not a return
 condition. The parent does not request snapshots or monitor the same progress in parallel.
-If native return is unavailable, agree on a supported fallback before observing.
+If native return is unavailable, use the verified return route selected above.
 
 An explicit update or intermediate-handback request is an exception. Send only that requested
 update and keep observing without acknowledgment; use an interim native final only when the

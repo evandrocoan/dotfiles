@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import os
+import runpy
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
         "followup-parent-wait",
         "followup-pipeline-notifications",
+        "followup-natural-route",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -79,6 +81,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-database-near-miss",
     "followup-parent-wait",
     "followup-pipeline-notifications",
+    "followup-natural-route",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):
@@ -346,6 +349,70 @@ def test_pipeline_status_feed_preserves_execution_and_distinguishes_client_exit(
         _, stderr = broker.communicate(timeout=10)
         assert stderr == ""
         assert not (scenario / "feed.sock").exists()
+
+
+def test_disk_selftest_feed_preserves_identity_and_waits_for_new_extended_record():
+    producer = CORPUS / "followup-pipeline-notifications/scenario/producer.py"
+    task = {"execution_kind": "disk_selftest", "execution_id": "selftest-42",
+            "serial": "TEST-DISK-42"}
+    rows = runpy.run_path(str(producer))["snapshots"](task)
+    assert [row["sequence"] for row in rows] == [0, 1, 2, 3, 4]
+    assert all(row["execution_id"] == "selftest-42" and row["serial"] == "TEST-DISK-42"
+               for row in rows)
+    assert [row["remaining_percent"] for row in rows] == [80, 60, 40, 20, 0]
+    assert all(row["status"] == "in_progress" and row["test_exit_code"] is None
+               and row["new_test_record"] is None for row in rows[:-1])
+    assert rows[-1]["status"] == "completed"
+    assert rows[-1]["test_exit_code"] == 0
+    assert rows[-1]["new_test_record"] == {
+        "type": "Extended offline", "result": "Completed without error",
+        "lifetime_hours": 12001,
+    }
+
+
+def test_scheduler_fixture_records_real_tool_attempts_without_external_effects(tmp_path):
+    server = CORPUS / "followup-natural-route/scenario/scheduler.py"
+    descriptor = tmp_path / "tool.json"
+    descriptor.write_text(json.dumps({"name": "automation_update", "description": "Fixture",
+                                      "inputSchema": {"type": "object"}}))
+    receipt = tmp_path / "calls.jsonl"
+    create = {"name": "automation_update", "arguments": {
+        "mode": "create", "kind": "heartbeat", "name": "Fixture only",
+        "targetThreadId": "fictional-parent", "status": "ACTIVE",
+    }}
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2024-11-05", "capabilities": {},
+            "clientInfo": {"name": "fixture-test", "version": "1"},
+        }},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": create},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {
+            "name": "automation_update", "arguments": {
+                "mode": "view", "id": "fixture-heartbeat",
+            },
+        }},
+    ]
+    result = subprocess.run(
+        [sys.executable, str(server), "--descriptor", str(descriptor),
+         "--receipt", str(receipt)],
+        input="".join(json.dumps(row) + "\n" for row in requests),
+        capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 0 and result.stderr == ""
+    responses = [json.loads(row) for row in result.stdout.splitlines()]
+    assert [row["id"] for row in responses] == [1, 2, 3, 4]
+    assert responses[1]["result"]["tools"][0]["name"] == "automation_update"
+    assert json.loads((tmp_path / "calls-catalog.json").read_text()) == json.loads(
+        descriptor.read_text())
+    saved = json.loads(responses[2]["result"]["content"][0]["text"])
+    viewed = json.loads(responses[3]["result"]["content"][0]["text"])
+    assert saved == viewed and viewed["targetThreadId"] == "fictional-parent"
+    attempts = [json.loads(row) for row in receipt.read_text().splitlines()]
+    assert attempts[0]["name"] == create["name"]
+    assert attempts[0]["arguments"] == create["arguments"]
+    assert [row["arguments"]["mode"] for row in attempts] == ["create", "view"]
 
 
 def test_unresolved_reservation_cannot_be_reused_or_omitted(tmp_path):

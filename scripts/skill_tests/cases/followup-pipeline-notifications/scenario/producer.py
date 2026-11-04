@@ -14,6 +14,21 @@ ROOT = Path(__file__).resolve().parent
 
 
 def snapshots(task):
+    if task.get('execution_kind') == 'disk_selftest':
+        return [
+            {
+                'execution_id': task['execution_id'], 'serial': task['serial'],
+                'sequence': index,
+                'status': 'completed' if index == 4 else 'in_progress',
+                'remaining_percent': max(0, 80 - index * 20),
+                'test_exit_code': 0 if index == 4 else None,
+                'new_test_record': {
+                    'type': 'Extended offline', 'result': 'Completed without error',
+                    'lifetime_hours': 12001,
+                } if index == 4 else None,
+            }
+            for index in range(5)
+        ]
     if task['mode'] not in ('success', 'required_failure'):
         raise ValueError('Unsupported pipeline fixture mode')
     base = {
