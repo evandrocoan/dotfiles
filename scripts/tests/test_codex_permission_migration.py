@@ -77,7 +77,7 @@ def test_exact_transform_preserves_existing_profiles_approvals_and_comments(migr
 ])
 def test_unreviewed_legacy_network_shape_is_refused(migration, network):
     source = SOURCE.replace(b'network_access = true # direct network', network)
-    with pytest.raises(RuntimeError, match='formato aprovado'):
+    with pytest.raises(RuntimeError, match='approved migration format'):
         migration.transform(source)
 
 
@@ -88,7 +88,7 @@ def test_unreviewed_legacy_network_shape_is_refused(migration, network):
     b'sandbox_mode = "workspace-write"\n[profiles.other]\nmodel = "other"',
 ])
 def test_unreviewed_source_shape_is_refused(migration, change):
-    with pytest.raises(RuntimeError, match='formato aprovado'):
+    with pytest.raises(RuntimeError, match='approved migration format'):
         migration.transform(change + b'\n[sandbox_workspace_write]\nnetwork_access = true\n')
 
 
@@ -115,11 +115,11 @@ def test_inventory_rechecks_real_absent_and_present_sources(migration, shape):
     migration.revalidate_inventory(original, home, [work], [report], {'requirements': None})
     # Both the previously missing directory and a new project policy invalidate the seal.
     (work / '.codex').mkdir(mode=0o700)
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate(original['sources'])
     (work / '.codex/config.toml').write_text('sandbox_mode = "read-only"\n')
     (work / '.codex/config.toml').chmod(0o600)
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate(original['sources'])
     assert target.read_bytes() == SOURCE
 
@@ -131,7 +131,7 @@ def test_same_bytes_with_new_file_identity_invalidate_inventory(migration, shape
     replacement.write_bytes(SOURCE)
     replacement.chmod(0o600)
     replacement.replace(target)
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate(original['sources'])
 
 
@@ -139,24 +139,24 @@ def test_same_bytes_with_new_file_identity_invalidate_inventory(migration, shape
 def test_unknown_and_unbound_managed_layers_refuse_inventory(migration, shape, kind):
     home, work, _, report = shape
     report['layers'].insert(0, {'name': {'type': kind}, 'version': 'new', 'config': {}})
-    with pytest.raises(RuntimeError, match='desconhecida ou não vinculável'):
+    with pytest.raises(RuntimeError, match='unknown or unbindable'):
         migration.inventory(home, [work], [report], {'requirements': None})
 
 
 def test_changed_requirements_and_session_policy_cannot_be_hidden(migration, shape):
     home, work, _, report = shape
-    with pytest.raises(RuntimeError, match='requisitos gerenciados'):
+    with pytest.raises(RuntimeError, match='managed requirements'):
         migration.inventory(home, [work], [report], {'requirements': {}})
     report['layers'].insert(0, {'name': {'type': 'sessionFlags'}, 'version': 'flags',
                                'config': {'sandbox_mode': 'danger-full-access'}})
-    with pytest.raises(RuntimeError, match='opções de sessão'):
+    with pytest.raises(RuntimeError, match='session options'):
         migration.inventory(home, [work], [report], {'requirements': None})
 
 
 def test_source_changed_since_native_read_is_refused(migration, shape):
     home, work, target, report = shape
     target.write_bytes(SOURCE.replace(b'workspace-write', b'read-only'))
-    with pytest.raises(RuntimeError, match='não corresponde'):
+    with pytest.raises(RuntimeError, match='does not match'):
         migration.inventory(home, [work], [report], {'requirements': None})
 
 
@@ -186,7 +186,7 @@ def test_inventory_refuses_different_native_numbers_and_types(migration, shape, 
     target.write_bytes(source)
     report['layers'][0]['config'] = tomllib.loads(source.decode())
     report['layers'][0]['config']['mcp_servers']['fixture']['startup_timeout_sec'] = native_value
-    with pytest.raises(RuntimeError, match='não corresponde'):
+    with pytest.raises(RuntimeError, match='does not match'):
         migration.inventory(home, [work], [report], {'requirements': None})
     assert target.read_bytes() == source
 
@@ -227,7 +227,7 @@ def test_inventory_refuses_other_skill_changes(migration, native_paths_shape, ch
     else:
         skills['config'][0]['enabled'] = 0
     before = target.read_bytes()
-    with pytest.raises(RuntimeError, match='não corresponde'):
+    with pytest.raises(RuntimeError, match='does not match'):
         migration.inventory(home, [work], [report], {'requirements': None})
     assert target.read_bytes() == before
 
@@ -248,7 +248,7 @@ def test_unsafe_source_witness_refused(migration, tmp_path, unsafe, expected_err
     if unsafe == 'symlink':
         assert caught.value.errno == errno.ELOOP
     else:
-        assert str(caught.value) == 'origem insegura de configuração'
+        assert str(caught.value) == 'unsafe configuration source'
 
 
 @pytest.mark.parametrize('directory_mode, file_mode', [
@@ -291,7 +291,7 @@ def test_writable_source_changes_still_invalidate_witness(migration, tmp_path, c
         assert target.stat().st_ino != original_inode
     else:
         target.chmod(0o664)
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate([recorded])
 
 
@@ -400,7 +400,7 @@ def test_prepared_shared_monitor_source_changes_are_refused(migration, shared_in
         replacement.replace(monitor)
         assert monitor.stat().st_ino != original_inode
         assert monitor.read_bytes() == original_bytes
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.static_revalidate(manifest)
     assert shared_inputs['target'].read_bytes() == SOURCE
 
@@ -446,7 +446,7 @@ def test_real_client_process_denies_quiescence_even_without_native_records(migra
             stderr=subprocess.PIPE, text=True)
         try:
             assert process.stdout.readline() == 'ready\n'
-            with pytest.raises(RuntimeError, match='ainda está ativo'):
+            with pytest.raises(RuntimeError, match='still active'):
                 migration.quiescent(owner, client_executables=[sys.executable], consumer_scripts=[])
             assert target.read_bytes() == SOURCE
         finally:
@@ -461,12 +461,12 @@ def test_new_git_root_marker_and_auth_change_invalidate_seal(migration, shape):
     home, work, _, report = shape
     sealed = migration.inventory(home, [work], [report], {'requirements': None})
     (work / '.git').mkdir(mode=0o700)
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate(sealed['sources'])
     sealed = migration.inventory(home, [work], [report], {'requirements': None})
     (home / 'auth.json').write_text('{}')
     (home / 'auth.json').chmod(0o600)
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate(sealed['sources'])
 
 
@@ -487,7 +487,7 @@ def test_running_automatic_obligation_denies_without_queue_writes(migration, sha
     queue.close()
     before = Path(config['queue_file']).read_bytes()
     with migration.MonitorColdStart(config, [sys.executable]) as owner:
-        with pytest.raises(RuntimeError, match='trabalho automático'):
+        with pytest.raises(RuntimeError, match='automatic work'):
             migration.quiescent(owner, client_executables=[], consumer_scripts=[])
     assert Path(config['queue_file']).read_bytes() == before
     assert target.read_bytes() == SOURCE
@@ -650,8 +650,8 @@ def test_recovery_accepts_unchanged_contents_after_historical_changes(operator, 
 @pytest.mark.parametrize('changed, message', [
     ('target_time', 'Codex config changed concurrently; preparation refused'),
     ('target_replacement', 'Codex config changed concurrently; preparation refused'),
-    ('backup_time', 'origem presente ou ausente mudou; prepare novamente'),
-    ('program', 'origem presente ou ausente mudou; prepare novamente'),
+    ('backup_time', 'source presence or identity changed; prepare again'),
+    ('program', 'source presence or identity changed; prepare again'),
 ])
 def test_recovery_rechecks_fresh_inputs_after_reader(operator, monkeypatch, changed, message):
     migration, target, artifact, seal = operator
@@ -699,7 +699,7 @@ def test_public_recovery_after_source_update_reports_actual_result(operator):
         '--manifest-sha256', seal, '--after-normal-close'], env=environment,
         stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
     assert result.returncode == 0, result.stderr
-    assert 'Configuração anterior restaurada.' in result.stdout
+    assert 'Previous configuration restored.' in result.stdout
     assert result.stderr == ''
     assert 'SENTINEL-DO-NOT-PRINT' not in result.stdout
     assert target.read_bytes() == previous
@@ -725,7 +725,7 @@ def test_operator_refuses_its_active_consumer_before_reader_or_backup(operator, 
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         assert process.stdout.readline() == 'ready\n'
-        with pytest.raises(RuntimeError, match='consumidor automático ainda está ativo'):
+        with pytest.raises(RuntimeError, match='automatic consumer is still active'):
             migration.apply_artifact(artifact, manifest_sha256=seal, recover=recover)
         assert target.read_bytes() == previous
         assert set(artifact.glob('reader-*')) == readers
@@ -754,7 +754,7 @@ def test_changed_monitor_queue_refuses_before_reader_or_backup(operator, already
     previous = target.read_bytes(), target.stat().st_mtime_ns
     readers = set(artifact.glob('reader-*'))
     backups = set(target.parent.glob('config.toml.before-monitor-*.bak'))
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.apply_artifact(artifact, manifest_sha256=seal)
     assert (target.read_bytes(), target.stat().st_mtime_ns) == previous
     assert set(artifact.glob('reader-*')) == readers
@@ -768,7 +768,7 @@ def test_monitor_sources_refuse_stale_derived_queue_selection(operator):
     raw = json.loads(path.read_text())
     raw['queue_file'] = str(target.parent.parent / 'another-queue.sqlite3')
     path.write_text(json.dumps(raw))
-    with pytest.raises(RuntimeError, match='seleção da configuração do monitor mudou'):
+    with pytest.raises(RuntimeError, match='monitor configuration selection changed'):
         migration.monitor_sources(config)
 
 
@@ -791,7 +791,7 @@ def test_linked_monitor_analysis_source_is_revalidated(operator):
     sources = migration.monitor_sources(config)
     assert [item['path'] for item in sources] == [str(path), str(analysis)]
     analysis.write_text(analysis.read_text() + '\n# external edit\n')
-    with pytest.raises(RuntimeError, match='origem presente ou ausente mudou'):
+    with pytest.raises(RuntimeError, match='source presence or identity changed'):
         migration.revalidate(sources)
 
 
@@ -837,7 +837,7 @@ def test_edit_after_native_shutdown_refuses_backup_and_reports_reader_activity(o
         return value
     monkeypatch.setattr(codex_monitor_cold, 'monitor_read_cold_native', after_shutdown)
     previous = target.read_bytes()
-    with pytest.raises(RuntimeError, match='mudaram') as caught:
+    with pytest.raises(RuntimeError, match='changed') as caught:
         migration.apply_artifact(artifact, manifest_sha256=seal)
     state = caught.value.migration_state
     assert state['native_started'] and state['native_terminated'] and not state['published']
@@ -852,6 +852,6 @@ def test_guarded_recovery_refuses_later_edits(operator, changed):
     path = target if changed == 'target' else Path(result['backup'])
     path.write_bytes(path.read_bytes() + b'# later edit\n')
     before = target.read_bytes(), target.stat().st_mtime_ns
-    with pytest.raises(RuntimeError, match='recuperação recusada'):
+    with pytest.raises(RuntimeError, match='recovery refused'):
         migration.apply_artifact(artifact, manifest_sha256=seal, recover=True)
     assert (target.read_bytes(), target.stat().st_mtime_ns) == before

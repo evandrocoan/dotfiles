@@ -56,7 +56,7 @@ def test_help_does_not_need_installation_or_optional_packages(monkeypatch, capsy
         pytest.fail('launcher help attempted application discovery')
     monkeypatch.setattr(module['main'].__globals__['shutil'], 'which', denied)
     assert module['main']() == 0
-    assert 'Sem --gui, abre a CLI no terminal' in capsys.readouterr().out
+    assert 'Without --gui, opens the CLI in the terminal' in capsys.readouterr().out
 
 
 @pytest.mark.parametrize('arguments', [
@@ -85,7 +85,7 @@ def test_cli_exec_keeps_cwd_exit_and_arguments_without_restarting_native(
     assert 'CODEX_CLI_PATH' not in env and 'CODEX_STATS_APP_LAUNCH' not in env
     assert cwd == Path.cwd()
     for arguments in (['--remote', 'unix:///other'], ['--remote=unix:///other']):
-        with pytest.raises(RuntimeError, match='remova a opção --remote'):
+        with pytest.raises(RuntimeError, match='remove the --remote option'):
             function({'codex_home': str(tmp_path)}, native, native, arguments)
     assert len(calls) == 1
 
@@ -144,8 +144,8 @@ def independent(launcher, monkeypatch, request):
 
 
 @pytest.mark.parametrize('independent,error,message', [
-    ('ordinary', RuntimeError, 'configuração anterior ou outra instalação'),
-    ('wrong-tools', RuntimeError, 'configuração anterior ou outra instalação'),
+    ('ordinary', RuntimeError, 'previous configuration or another installation'),
+    ('wrong-tools', RuntimeError, 'previous configuration or another installation'),
     ('missing-tools', FileNotFoundError, 'codex-tools-'),
     ('unsafe-tools', RuntimeError, 'must be private'),
 ], indirect=['independent'])
@@ -161,8 +161,8 @@ def test_attach_rejects_incompatible_or_missing_runtime_without_effects(
     monkeypatch.setattr(subprocess, 'run', denied)
     with pytest.raises(error, match=message) as caught:
         launcher['ensure_server_once'](config, Path(sys.executable).resolve())
-    if 'configuração anterior' in message:
-        assert 'Termine os trabalhos e feche o Codex normalmente.' in str(caught.value)
+    if 'previous configuration' in message:
+        assert 'Finish your work and close Codex normally.' in str(caught.value)
         assert launcher['server_stop_instructions'](config) in str(caught.value)
     assert process.poll() is None
     assert ((home / 'config.toml').read_bytes(), (home / 'config.toml').stat().st_mtime_ns) == before
@@ -177,14 +177,14 @@ def test_independent_owner_uses_native_identity_without_gui_and_rejects_stale_re
     assert owner['native']['pid'] == process.pid
     changed = json.loads((runtime/'ready.json').read_text()); changed['native']['birth']='stale'
     (runtime/'ready.json').write_text(json.dumps(changed))
-    with pytest.raises(RuntimeError, match='registro do servidor mudou'):
+    with pytest.raises(RuntimeError, match='server registration changed'):
         launcher['monitor_shared_owner'](config)
     assert process.poll() is None
     launcher['monitor_runtime_write'](runtime/'ready.json', owner)
     (home/'config.toml').write_text((home/'config.toml').read_text()+'\n# external edit\n')
     assert launcher['monitor_shared_owner'](config) == owner
     (home/'config.toml').write_text((home/'config.toml').read_text().replace('code_mode_host=true','code_mode_host=false'))
-    with pytest.raises(RuntimeError, match='não habilitou as ferramentas'):
+    with pytest.raises(RuntimeError, match='has not enabled the tools'):
         launcher['monitor_shared_owner'](config)
     assert process.poll() is None
 
@@ -194,7 +194,7 @@ def test_independent_owner_rejects_other_connected_peer(launcher, independent):
     left, right = socket.socketpair()
     try:
         transport = types.SimpleNamespace(get_extra_info=lambda name: left)
-        with pytest.raises(RuntimeError, match='outro servidor nativo'):
+        with pytest.raises(RuntimeError, match='another native server'):
             launcher['monitor_shared_peer'](config, types.SimpleNamespace(transport=transport))
     finally:
         left.close(); right.close()
@@ -223,7 +223,7 @@ def test_monitor_revalidates_after_initialize_before_protected_rpc(launcher, ind
         async def recv(self):
             return json.dumps({'id': 1, 'result': {}})
     monkeypatch.setattr(websockets.client, 'unix_connect', lambda *args, **kwargs: Connection())
-    with pytest.raises(RuntimeError, match='registro do servidor mudou'):
+    with pytest.raises(RuntimeError, match='server registration changed'):
         core['monitor_native'](dict(config, max_response_bytes=8192), 'thread/start', {'must_not_send': True})
     assert [request.get('method') for request in requests] == ['initialize', 'initialized']
     assert process.poll() is None
@@ -251,7 +251,7 @@ def test_live_attach_requires_effective_flags_without_rewriting_layers(launcher,
         assert methods == [('config/read', {'includeLayers': True})]
         return [{'config': {'features': {'code_mode_host': False}}}]
     monkeypatch.setitem(namespace, 'native_rpc', rpc)
-    with pytest.raises(RuntimeError, match='Outra camada.*features.code_mode_host'):
+    with pytest.raises(RuntimeError, match='Another configuration layer.*features.code_mode_host'):
         launcher['verify_effective']({}, {'native': {'pid': 123}})
 
 
@@ -348,8 +348,8 @@ def test_ordinary_gui_helpers_delegate_without_starting_or_attaching_native(laun
 
 
 @pytest.mark.parametrize('failure,expected', [
-    (subprocess.TimeoutExpired(['native','app-server','daemon','start'], 1), 'pode ter iniciado'),
-    (subprocess.CalledProcessError(1, ['wmctrl','-ia','0x123']), 'trabalhos foram preservados'),
+    (subprocess.TimeoutExpired(['native','app-server','daemon','start'], 1), 'may have started'),
+    (subprocess.CalledProcessError(1, ['wmctrl','-ia','0x123']), 'your work were preserved'),
 ])
 def test_expected_launch_failures_reach_persistent_gui_error_channel(launcher, tmp_path, monkeypatch, failure, expected):
     core = runpy.run_path(str(CLI))
@@ -425,7 +425,7 @@ def test_profile_rejects_multiple_valid_candidates_instead_of_selecting_prefix(l
     prefix = tmp_path/'profile'; prefix.mkdir()
     (prefix/'SingletonLock').symlink_to(f'{socket.gethostname()}-{os.getpid()}')
     try:
-        with pytest.raises(RuntimeError, match='confirmar sua instância'):
+        with pytest.raises(RuntimeError, match='instance could not be verified'):
             launcher['gui_profile'](launcher['monitor_process'](os.getpid()))
     finally:
         child.kill(); child.wait()
@@ -457,9 +457,9 @@ def test_wmctrl_timeouts_use_remaining_budget_and_gui_error(launcher, monkeypatc
         clock[0] += .4
         return types.SimpleNamespace(stdout=f'0x222 0 {gui["pid"]} host Codex\n')
     monkeypatch.setattr(subprocess, 'run', run)
-    with pytest.raises(RuntimeError, match='janela.*prazo') as error:
+    with pytest.raises(RuntimeError, match='window.*time') as error:
         launcher['launch_operation'](launcher['focus_gui'], gui, APP, 1)
-    assert 'gerenciador nativo' not in str(error.value)
+    assert 'native manager' not in str(error.value)
     assert budgets == pytest.approx([1] if stall == '-lp' else [1, .6])
 
 
@@ -519,7 +519,7 @@ def test_window_polling_does_not_reset_the_operation_budget(launcher, monkeypatc
             return types.SimpleNamespace(stdout='')
         monkeypatch.setattr(subprocess, 'run', run)
         try:
-            with pytest.raises(RuntimeError, match='janela.*(prazo|disponível)'):
+            with pytest.raises(RuntimeError, match='window.*(time|available)'):
                 launcher['focus_gui'](gui, APP, 1)
             assert received == [handoff(profile)]
             assert len(budgets) >= 3 and all(a > b > 0 for a, b in zip(budgets, budgets[1:]))
@@ -601,11 +601,11 @@ FOREIGN_PEER = ('import socket, sys\n'
 
 
 @pytest.mark.parametrize('case,expected', [
-    ('foreign-lock', 'não foi possível confirmar sua instância'),
-    ('cookie-mismatch', 'não foi possível confirmar sua instância'),
-    ('shutting-down', 'não aceitou o pedido'),
-    ('silent', 'não respondeu ao pedido'),
-    ('no-window', 'janela ainda não está disponível'),
+    ('foreign-lock', 'instance could not be verified'),
+    ('cookie-mismatch', 'instance could not be verified'),
+    ('shutting-down', 'did not accept the request'),
+    ('silent', 'did not respond to the request'),
+    ('no-window', 'window is not yet available'),
 ], ids=['foreign-lock', 'cookie-mismatch', 'shutting-down', 'silent', 'no-window'])
 def test_unconfirmed_reopen_is_refused_without_focusing(launcher, tmp_path, monkeypatch, case, expected):
     import threading
@@ -641,7 +641,7 @@ def test_reopen_refuses_a_socket_not_served_by_the_registered_gui(launcher, tmp_
     gui = launcher['monitor_process'](os.getpid())
     calls = fake_wmctrl(monkeypatch, gui, lambda: False)
     try:
-        with pytest.raises(RuntimeError, match='não foi possível confirmar sua instância'):
+        with pytest.raises(RuntimeError, match='instance could not be verified'):
             launcher['focus_gui'](gui, APP, 5)
         assert peer.wait(10) == 0
     finally:
@@ -916,7 +916,7 @@ def test_unconfirmed_registration_refuses_before_native_or_gui_effects(
         other = item.runtime/'elsewhere.json'; launch_path.rename(other); launch_path.symlink_to(other)
     effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
     calls = fake_wmctrl(monkeypatch, item.gui, lambda: True)
-    with pytest.raises(RuntimeError, match='confirmar sua configuração') as result:
+    with pytest.raises(RuntimeError, match='configuration and') as result:
         launch()
     assert 'daemon stop' not in str(result.value)
     assert effects == [] and calls == []
@@ -938,7 +938,7 @@ def test_fresh_other_home_is_refused_even_with_initial_profile_override(launcher
     monkeypatch.setenv('CODEX_ELECTRON_USER_DATA_PATH', str(item.profile.parent/'override'))
     effects, launch = gui_launch_boundary(launcher, monkeypatch, item)
     calls = fake_wmctrl(monkeypatch, item.gui, lambda: True)
-    with pytest.raises(RuntimeError, match='outra configuração'):
+    with pytest.raises(RuntimeError, match='another configuration'):
         launch()
     assert effects == [] and calls == []
 
@@ -949,7 +949,7 @@ def test_profile_collision_between_existing_guis_is_refused(launcher, monkeypatc
     other.profile.symlink_to(selected.profile, target_is_directory=True)
     effects, launch = gui_launch_boundary(launcher, monkeypatch, selected)
     calls = fake_wmctrl(monkeypatch, selected.gui, lambda: True)
-    with pytest.raises(RuntimeError, match='confirmar sua configuração'):
+    with pytest.raises(RuntimeError, match='configuration and'):
         launch()
     assert effects == [] and calls == []
 
@@ -984,11 +984,11 @@ def test_reuse_failure_after_inventory_releases_lock(
             launcher['monitor_runtime_write'](ready, {'gui': item.gui, 'proxy': item.gui})
             return original_focus(*args, **kwargs)
         monkeypatch.setitem(namespace, 'focus_gui', focus)
-        expected = 'confirmar sua configuração'
+        expected = 'configuration and'
     else:
         def stall(arguments, **kwargs):raise subprocess.TimeoutExpired(arguments, kwargs['timeout'])
         monkeypatch.setattr(subprocess, 'run', stall)
-        expected = 'janela.*prazo'
+        expected = 'window.*time'
     with pytest.raises(RuntimeError, match=expected):launch()
     assert effects == ['ensure'] and calls == []
     with (item.runtime/'gui.lock').open('r') as lock:

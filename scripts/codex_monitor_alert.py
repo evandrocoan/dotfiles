@@ -22,8 +22,8 @@ UNITS = ('codex-gitlab-monitor.timer', 'codex-gitlab-monitor.service')
 PROPERTIES = ('Id', 'LoadState', 'ActiveState', 'SubState', 'UnitFileState', 'Result',
               'InvocationID', 'ExecMainStartTimestampMonotonic', 'ExecMainExitTimestampMonotonic',
               'ExecMainCode', 'ExecMainStatus')
-RECOVERY_TITLE = 'Monitor: recuperação confirmada'
-REVIEWER_RECOVERY_TITLE = 'Monitor: revisor recuperado'
+RECOVERY_TITLE = 'Monitor: recovery confirmed'
+REVIEWER_RECOVERY_TITLE = 'Monitor: reviewer recovered'
 
 
 def private_directory(path):
@@ -183,28 +183,28 @@ def observation(status, kind, message, episode='local'):
 def collect(snapshot_path, units, state, clock, interval=900):
     checks = {}
     if units is None:
-        checks['observer:units'] = observation('failed', 'Verificação indisponível',
-            'Não foi possível consultar o gerenciador de serviços do usuário. Consulte o journal do alerta.')
+        checks['observer:units'] = observation('failed', 'Check unavailable',
+            'Could not query the user service manager. Check the alert journal.')
     else:
-        checks['observer:units'] = observation('ok', 'Gerenciador de serviços', 'Consulta restabelecida.')
+        checks['observer:units'] = observation('ok', 'Service manager', 'Query restored.')
         timer, service = (units[name] for name in UNITS)
         timer_ok = (timer['LoadState'] == 'loaded' and timer['ActiveState'] == 'active'
                     and timer.get('UnitFileState') not in {'disabled', 'masked', 'masked-runtime'})
-        checks['systemd:timer'] = observation('ok' if timer_ok else 'failed', 'Agendamento do monitor',
-            'Timer ativo.' if timer_ok else 'O timer do monitor está ausente, desabilitado ou parado.')
+        checks['systemd:timer'] = observation('ok' if timer_ok else 'failed', 'Monitor schedule',
+            'Timer active.' if timer_ok else 'The monitor timer is missing, disabled or stopped.')
         service_bad = (service['LoadState'] != 'loaded' or service['ActiveState'] == 'failed'
                        or service.get('Result', '') not in {'', 'success'})
         if service_bad:
-            checks['systemd:service'] = observation('failed', 'Serviço do monitor',
-                'Falha no serviço: ' + service.get('Result', service['LoadState']) + '. Consulte seu journal.')
+            checks['systemd:service'] = observation('failed', 'Monitor service',
+                'Service failure: ' + service.get('Result', service['LoadState']) + '. Check its journal.')
         elif (service.get('Result') == 'success' and service['ActiveState'] == 'inactive'
               and service.get('ExecMainCode') == '1' and service.get('ExecMainStatus') == '0'
               and service.get('ExecMainExitTimestampMonotonic', '0').isdigit()
               and int(service.get('ExecMainExitTimestampMonotonic', '0')) > 0
               and service.get('ExecMainStartTimestampMonotonic', '0').isdigit()
               and int(service.get('ExecMainStartTimestampMonotonic', '0')) > 0):
-            checks['systemd:service'] = observation('ok', 'Serviço do monitor',
-                'Uma execução do serviço terminou com sucesso; consulte a saúde de cada operação.')
+            checks['systemd:service'] = observation('ok', 'Monitor service',
+                'A service run completed successfully; check the health of each operation.')
         if 'systemd:service' in checks:
             checks['systemd:service']['proof'] = service.get('InvocationID', '') + ':' + \
                 service.get('ExecMainStartTimestampMonotonic', '0')
@@ -214,8 +214,8 @@ def collect(snapshot_path, units, state, clock, interval=900):
             raise ValueError('health snapshot is from another boot or the future')
     except (OSError, ValueError, KeyError, TypeError):
         if clock['mono'] >= state['grace_until']:
-            checks['observer:health'] = observation('failed', 'Saúde do monitor desconhecida',
-                'O registro de saúde está ausente, inválido ou ilegível. Consulte o journal do monitor.')
+            checks['observer:health'] = observation('failed', 'Monitor health unknown',
+                'The health record is missing, invalid or unreadable. Check the monitor journal.')
         return checks
     if state.get('queue_id') not in {None, snapshot['queue_id']}:
         # An explicit new queue/config cannot inherit delivery claims from another source.
@@ -225,8 +225,8 @@ def collect(snapshot_path, units, state, clock, interval=900):
     stale = clock['mono'] - snapshot['sampled'] > interval * 2 + 300
     if stale:
         if clock['mono'] >= state['grace_until']:
-            checks['observer:health'] = observation('failed', 'Sem ciclos recentes',
-                'O monitor não produziu saúde recente por dois intervalos mais a margem. Consulte o serviço e seu timer.')
+            checks['observer:health'] = observation('failed', 'No recent cycles',
+                'The monitor has not reported health for two intervals plus the grace period. Check the service and its timer.')
         return checks
     if units is not None:
         service = units[UNITS[1]]
@@ -239,22 +239,22 @@ def collect(snapshot_path, units, state, clock, interval=900):
         if (units is not None and snapshot.get('invocation_id')
                 and snapshot['invocation_id'] == units[UNITS[1]].get('InvocationID')
                 and units[UNITS[1]]['ActiveState'] in {'inactive', 'failed'}):
-            checks['observer:health'] = observation('failed', 'Registro de saúde incompleto',
-                'O serviço terminou, mas não publicou o resultado de saúde do ciclo. Consulte o journal do monitor.')
+            checks['observer:health'] = observation('failed', 'Incomplete health record',
+                'The service ended without publishing the cycle health result. Check the monitor journal.')
         # A start marker is not successful observation of the producer's complete cycle.
         return checks
-    checks['observer:health'] = observation('ok', 'Observação do monitor', 'Há um registro de saúde recente.')
+    checks['observer:health'] = observation('ok', 'Monitor observation', 'A recent health record is available.')
     for key, value in snapshot['checks'].items():
         checks['monitor:' + key] = {**value, 'message': value['message'] +
-            '\nFila de revisões: '+str(snapshot['summary']['pending'])+' aguardando, '+
-            str(snapshot['summary']['running'])+' em execução.'}
+            '\nReview queue: '+str(snapshot['summary']['pending'])+' pending, '+
+            str(snapshot['summary']['running'])+' running.'}
     return checks
 
 
 def notify(command, title, body):
     icon = ('dialog-information' if title in {RECOVERY_TITLE, REVIEWER_RECOVERY_TITLE}
             else 'dialog-warning')
-    run_bounded([str(command), '--app-name=Fila de revisões', '--urgency=normal',
+    run_bounded([str(command), '--app-name=Review queue', '--urgency=normal',
                  '--icon=' + icon, '--expire-time=30000', '--',
                  html.escape(title), html.escape(body)], limit=8192)
 
@@ -266,16 +266,19 @@ def recovery_notice(key, check, previous):
         # Format the existing export; this does not classify results or read native/queue state.
         match = re.fullmatch(r'(codex|claude) / projeto ([1-9][0-9]*) / MR !([1-9][0-9]*) '
             r'produziu um novo resultado válido; consulte o status da fila\.', message)
+        if not match:
+            match = re.fullmatch(r'(codex|claude) / project ([1-9][0-9]*) / MR !([1-9][0-9]*) '
+                r'produced a new valid result; check the queue status\.', message)
         if match:
             reviewer, project, iid = match.groups()
-            body = (f'O {reviewer.capitalize()} voltou a responder na revisão da MR !{iid} '
-                    f'(projeto {project}).\nFalha anterior registrada em {first}.\n'
-                    'Consulte o status da fila para ver o resultado.')
+            body = (f'{reviewer.capitalize()} is responding again on the review of MR !{iid} '
+                    f'(project {project}).\nPrevious failure recorded at {first}.\n'
+                    'Check the queue status for the result.')
             if separator:
                 body += '\n' + queue
             return REVIEWER_RECOVERY_TITLE, body
-    return RECOVERY_TITLE, (f"Verificação recuperada: {check['kind']}.\n"
-                            f'Falha anterior registrada em {first}.\n' + check['message'])
+    return RECOVERY_TITLE, (f"Check recovered: {check['kind']}.\n"
+                            f'Previous failure recorded at {first}.\n' + check['message'])
 
 
 def failure_notice(key, check, first):
@@ -283,15 +286,18 @@ def failure_notice(key, check, first):
     if key.startswith('monitor:reviewer:'):
         match = re.fullmatch(r'(codex|claude) / projeto ([1-9][0-9]*) / MR !([1-9][0-9]*) '
             r'terminou com falha\. Consulte o estágio [A-Za-z0-9-]+ no status da fila\.', message)
+        if not match:
+            match = re.fullmatch(r'(codex|claude) / project ([1-9][0-9]*) / MR !([1-9][0-9]*) '
+                r'failed\. Check stage [A-Za-z0-9-]+ in the queue status\.', message)
         if match:
             reviewer, project, iid = match.groups()
-            body = (f'O {reviewer.capitalize()} não conseguiu concluir a revisão da MR !{iid} '
-                    f'(projeto {project}).\nFalha registrada em {first}.\n'
-                    'Consulte o status da fila para ver o motivo.')
+            body = (f'{reviewer.capitalize()} could not finish the review of MR !{iid} '
+                    f'(project {project}).\nFailure recorded at {first}.\n'
+                    'Check the queue status for the reason.')
             if separator:
                 body += '\n' + queue
-            return 'Monitor: revisão não concluída', body
-    return 'Monitor: ' + check['kind'], check['message'] + '\nObservado desde ' + first + '.'
+            return 'Monitor: review incomplete', body
+    return 'Monitor: ' + check['kind'], check['message'] + '\nObserved since ' + first + '.'
 
 
 def deliver(checks, state, state_path, command, clock, *, sender=notify):

@@ -139,9 +139,9 @@ def notify(args):
         updated = {"version": 1, "boot_id": boot, "seen": files,
                    "last_success": last if files else None}
         if due:
-            title = "Core dump pendente" if len(files) == 1 else "Core dumps pendentes"
-            body = (f"{len(files)} arquivo(s) em {CORE_DIRECTORY}.\n"
-                    "Os lembretes continuam de hora em hora enquanto houver arquivos nessa pasta.")
+            title = "Pending core dump" if len(files) == 1 else "Pending core dumps"
+            body = (f"{len(files)} file(s) in {CORE_DIRECTORY}.\n"
+                    "Reminders continue hourly while files remain in this directory.")
             result = subprocess.run(
                 [str(args.notify_command), "--app-name=Core dumps", "--urgency=normal",
                  "--icon=dialog-warning", "--expire-time=30000", title, body],

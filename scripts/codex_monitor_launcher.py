@@ -81,7 +81,7 @@ def monitor_prepare_bootstrap(authority):
     try:
         import tomlkit
     except ImportError as error:
-        raise RuntimeError('A preparação do Codex requer tomlkit. Em ~/scripts, execute '
+        raise RuntimeError('Codex setup requires tomlkit. In ~/scripts, run '
                            'poetry install --with monitor-tools.') from error
     document = tomlkit.parse(original.decode('utf-8'))
     for path in MONITOR_BOOTSTRAP_OPTIONS:
@@ -379,24 +379,24 @@ def socket_identity(config):
     alias = Path(config['_socket_alias'])
     ordinary = Path(config['codex_home']) / 'app-server-control/app-server-control.sock'
     if alias != ordinary:
-        raise RuntimeError('O lançador requer o endereço padrão do servidor nativo neste CODEX_HOME.')
+        raise RuntimeError('The launcher requires the default native server address in this CODEX_HOME.')
     endpoint = alias.resolve(strict=True)
     directory = Path('/tmp') / ('codex-daemon-' + str(os.getuid()))
     import re
     if endpoint.parent != directory or not re.fullmatch('[a-f0-9]{64}', endpoint.name):
-        raise RuntimeError('O endereço do servidor nativo não corresponde ao gerenciador instalado.')
+        raise RuntimeError('The native server address does not match the installed manager.')
     monitor_private(directory, directory=True)
     meta = endpoint.lstat()
     if not stat.S_ISSOCK(meta.st_mode) or meta.st_uid != os.getuid():
-        raise RuntimeError('O endereço nativo não é um socket Unix do usuário atual.')
+        raise RuntimeError('The native address is not a Unix socket owned by the current user.')
     return str(endpoint), [meta.st_dev, meta.st_ino]
 
 
 def server_stop_instructions(config):
     import shlex
-    return ('Para parar o servidor compartilhado, execute:\n'
+    return ('To stop the shared server, run:\n'
             f'CODEX_HOME={shlex.quote(config["codex_home"])} codex app-server daemon stop\n'
-            'Depois, abra Codex Monitor novamente.')
+            'Then open Codex Monitor again.')
 
 
 def native_owner(config):
@@ -412,7 +412,7 @@ def native_owner(config):
     executable = installed_native(config)
     executable_identity = list(cold()['MonitorColdStart'].file_identity(executable.stat()))
     if list(cold()['MonitorColdStart'].file_identity(Path(f'/proc/{pid}/exe').stat())) != executable_identity:
-        raise RuntimeError('O executável do servidor não corresponde à instalação atual.')
+        raise RuntimeError('The server executable does not match the current installation.')
     environment = process_environment(pid)
     expected = {
         'CODEX_HOME': config['codex_home'],
@@ -422,8 +422,8 @@ def native_owner(config):
     if (uid != os.getuid() or native['exe'] != str(executable)
             or any(environment.get(key) != value for key, value in expected.items())
             or b'app-server' not in Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')):
-        raise RuntimeError('O servidor aberto usa a configuração anterior ou outra instalação. '
-                           'Termine os trabalhos e feche o Codex normalmente.\n' +
+        raise RuntimeError('The running server uses the previous configuration or another installation. '
+                           'Finish your work and close Codex normally.\n' +
                            server_stop_instructions(config))
     monitor_app_tools_directory(config)
     import tomllib
@@ -433,9 +433,9 @@ def native_owner(config):
         for key in path:
             value = value.get(key) if isinstance(value, dict) else None
         if value is not True:
-            raise RuntimeError('O servidor aberto não habilitou as ferramentas necessárias à interface.')
+            raise RuntimeError('The running server has not enabled the tools required by the interface.')
     if socket_identity(config) != (endpoint, identity) or not same_process(native):
-        raise RuntimeError('A identidade do servidor mudou durante a verificação; tente novamente.')
+        raise RuntimeError('The server identity changed during verification; try again.')
     return {'version': 1, 'codex_home': config['codex_home'], 'socket': endpoint,
             'native': native, 'native_executable': executable_identity, 'socket_identity': identity}
 
@@ -447,14 +447,14 @@ def monitor_shared_owner(config):
         monitor_private(recorded)
         saved = json.loads(recorded.read_text())
         if saved != receipt:
-            raise RuntimeError('O registro do servidor mudou; abra codex-monitor para verificar a conexão.')
+            raise RuntimeError('The server registration changed; open codex-monitor to verify the connection.')
         support()['mq_health_signal'](config, 'native:shared',
-            message='A conexão com o servidor compartilhado foi validada novamente.')
+            message='The connection to the shared server was validated again.')
         return receipt
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as error:
-        failure = RuntimeError('Servidor compartilhado indisponível: ' + str(error))
+        failure = RuntimeError('Shared server unavailable: ' + str(error))
         support()['mq_health_signal'](config, 'native:shared', error=error,
-            kind='Conexão do Codex indisponível', message=str(failure))
+            kind='Codex connection unavailable', message=str(failure))
         failure.health_reported = True
         raise failure from error
 
@@ -465,10 +465,10 @@ def monitor_shared_peer(config, connection):
     receipt = monitor_shared_owner(config)
     peer = connection.transport.get_extra_info('socket')
     if peer is None:
-        raise RuntimeError('A conexão nativa não expôs sua identidade Unix.')
+        raise RuntimeError('The native connection did not expose its Unix identity.')
     pid, uid, _ = struct.unpack('3i', peer.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
     if uid != os.getuid() or pid != receipt['native']['pid']:
-        raise RuntimeError('A conexão pertence a outro servidor nativo.')
+        raise RuntimeError('The connection belongs to another native server.')
     return receipt
 
 
@@ -477,8 +477,8 @@ def websockets_connect():
         from websockets.client import unix_connect
         return unix_connect
     except ImportError as error:
-        raise RuntimeError('A conexão compartilhada requer websockets; em ~/scripts, '
-                           'execute poetry install --with monitor-tools.') from error
+        raise RuntimeError('The shared connection requires websockets; in ~/scripts, '
+                           'run poetry install --with monitor-tools.') from error
 
 
 async def native_rpc(config, methods, *, unpublished=None):
@@ -489,11 +489,11 @@ async def native_rpc(config, methods, *, unpublished=None):
         import struct
         current = native_owner(config) if unpublished else monitor_shared_owner(config)
         if current != owner:
-            raise RuntimeError('O servidor mudou durante a comunicação.')
+            raise RuntimeError('The server changed during communication.')
         peer = connection.transport.get_extra_info('socket')
         pid, uid, _ = struct.unpack('3i', peer.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
         if (pid, uid) != (owner['native']['pid'], os.getuid()):
-            raise RuntimeError('A resposta veio de outro servidor nativo.')
+            raise RuntimeError('The response came from another native server.')
     async with connect(owner['socket'], compression=None, open_timeout=config['native_timeout'],
                        close_timeout=3, max_size=MONITOR_RELAY_LIMIT, max_queue=4) as connection:
         verify(connection)
@@ -505,11 +505,11 @@ async def native_rpc(config, methods, *, unpublished=None):
                 result = json.loads(raw)
                 if result.get('id') == key and 'method' not in result:
                     if 'error' in result:
-                        raise RuntimeError('O servidor recusou ' + method + ': ' + str(result['error'].get('message', 'erro nativo')))
+                        raise RuntimeError('The server rejected ' + method + ': ' + str(result['error'].get('message', 'native error')))
                     return result['result']
                 if 'method' in result and 'id' in result:
                     # This read-only client cannot answer an interactive server request.
-                    raise RuntimeError('O servidor pediu uma resposta interativa ao verificador de conexão.')
+                    raise RuntimeError('The server requested an interactive response from the connection checker.')
         await request('init', 'initialize', {'clientInfo': {'name': 'codex-monitor-launcher',
             'version': '1'}, 'capabilities': {'experimentalApi': True}})
         await connection.send(json.dumps({'method': 'initialized', 'params': {}}))
@@ -527,8 +527,8 @@ def verify_effective(config, owner):
         for key in path:
             value = value.get(key) if isinstance(value, dict) else None
         if value is not True:
-            raise RuntimeError('Outra camada da configuração desabilitou ' + '.'.join(path) +
-                               '. O servidor foi preservado; confira a configuração antes de continuar.')
+            raise RuntimeError('Another configuration layer disabled ' + '.'.join(path) +
+                               '. The server was preserved; check the configuration before continuing.')
 
 
 def ensure_server_once(config, codex):
@@ -557,17 +557,17 @@ def ensure_server_once(config, codex):
             'CODEX_ELECTRON_RESOURCES_PATH': str(codex.parent), 'CODEX_CLI_PATH': str(codex)})
         node = Path(environment['CODEX_MCP_NODE_PATH'])
         if not node.is_file() or not os.access(node, os.X_OK):
-            raise RuntimeError('O runtime Node das ferramentas do aplicativo não foi encontrado.')
+            raise RuntimeError('The application tools Node runtime was not found.')
         before = installed_native(config)
         authority.before_native_start()
         started = subprocess.run([str(codex), 'app-server', 'daemon', 'start'], env=environment,
             stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=config['native_timeout'])
         if started.returncode:
-            raise RuntimeError('O gerenciador nativo não iniciou o servidor: ' + started.stderr.strip()[-2000:])
+            raise RuntimeError('The native manager did not start the server: ' + started.stderr.strip()[-2000:])
         info = json.loads(started.stdout)
         owner = native_owner(config)
         if owner['native']['pid'] != info['pid'] or installed_native(config) != before:
-            raise RuntimeError('A seleção nativa mudou durante a abertura. O servidor foi preservado; confira a instalação.')
+            raise RuntimeError('The native selection changed during startup. The server was preserved; check the installation.')
         verify_effective(config, owner)
         # Native management now owns its control directories and may change their
         # modes. Our remaining authority is only the unchanged coordinator lock.
@@ -575,10 +575,10 @@ def ensure_server_once(config, codex):
         for lock_path, descriptor, identity in authority.descriptors:
             if (authority.file_identity(os.fstat(descriptor)) != identity
                     or authority.file_identity(lock_path.lstat()) != identity):
-                raise RuntimeError('A reserva de abertura mudou durante o início do servidor.')
+                raise RuntimeError('The startup reservation changed while the server was starting.')
         for executable, identity in authority.native.items():
             if authority.file_identity(Path(executable).stat()) != identity:
-                raise RuntimeError('O executável nativo mudou durante a abertura.')
+                raise RuntimeError('The native executable changed during startup.')
         monitor_runtime_write(runtime / 'ready.json', owner)
         return owner, True, prepared['backup']
 
@@ -594,7 +594,7 @@ def ensure_server(config, codex):
             return ensure_server_once(config, codex)
         except BlockingIOError as error:
             if time.monotonic() >= deadline:
-                raise RuntimeError('Outra abertura do servidor ainda está em andamento. Tente novamente em instantes.') from error
+                raise RuntimeError('Another server startup is still in progress. Try again shortly.') from error
             time.sleep(.1)
 
 
@@ -613,7 +613,7 @@ def clean_environment():
 def message(text, *, gui=False, error=False):
     import shutil
     import subprocess
-    print(('Codex Monitor: ' if not error else 'Codex Monitor — falha: ') + text, file=sys.stderr, flush=True)
+    print(('Codex Monitor: ' if not error else 'Codex Monitor — error: ') + text, file=sys.stderr, flush=True)
     if gui:
         program = shutil.which('zenity' if error else 'notify-send')
         if program:
@@ -622,7 +622,7 @@ def message(text, *, gui=False, error=False):
             result = subprocess.run(arguments, stdin=subprocess.DEVNULL,
                                     capture_output=True, text=True)
             if result.returncode:
-                print('Não foi possível mostrar a mensagem na área de trabalho: ' + result.stderr.strip(), file=sys.stderr)
+                print('Could not show the desktop message: ' + result.stderr.strip(), file=sys.stderr)
 
 
 def singleton_holder(profile):
@@ -661,7 +661,7 @@ def gui_profile(gui):
                     profiles.add(profile.resolve(strict=True))
     if len(profiles) == 1:
         return profiles.pop()
-    raise RuntimeError('O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.')
+    raise RuntimeError('Codex is already open, but its instance could not be verified to reopen the window.')
 
 
 def gui_children(gui):
@@ -692,7 +692,7 @@ def reopen_gui_window(gui, app, timeout, *, deadline=None, verify=None):
     if deadline is None:
         deadline = time.monotonic() + timeout
     profile = gui_profile(gui)
-    unconfirmed = 'O Codex já está aberto, mas não foi possível confirmar sua instância para reabrir a janela.'
+    unconfirmed = 'Codex is already open, but its instance could not be verified to reopen the window.'
     try:
         # Chromium accepts the socket only when its directory carries the profile's cookie.
         target = Path(os.readlink(profile / 'SingletonSocket'))
@@ -723,13 +723,13 @@ def reopen_gui_window(gui, app, timeout, *, deadline=None, verify=None):
                     break
                 reply += chunk
     except TimeoutError as error:
-        raise RuntimeError('O Codex não respondeu ao pedido para reabrir a janela no prazo; ela ainda pode '
-                           'aparecer. O aplicativo e seus trabalhos foram preservados.') from error
+        raise RuntimeError('Codex did not respond to the request to reopen the window in time; it may still '
+                           'appear. The application and your work were preserved.') from error
     except OSError as error:
         raise RuntimeError(unconfirmed) from error
     if reply != b'ACK':
-        raise RuntimeError('O Codex não aceitou o pedido para reabrir a janela (resposta ' + repr(reply) +
-                           '). O aplicativo e seus trabalhos foram preservados.')
+        raise RuntimeError('Codex did not accept the request to reopen the window (response ' + repr(reply) +
+                           '). The application and your work were preserved.')
 
 
 def focus_gui(gui, app, timeout, *, verify=None):
@@ -738,10 +738,10 @@ def focus_gui(gui, app, timeout, *, verify=None):
     import time
     deadline = time.monotonic() + timeout
     if not same_process(gui):
-        raise RuntimeError('A interface registrada já terminou.')
+        raise RuntimeError('The registered interface has already exited.')
     wmctrl = shutil.which('wmctrl')
     if not wmctrl:
-        raise RuntimeError('O Codex já está aberto, mas wmctrl não está disponível para trazer sua janela à frente.')
+        raise RuntimeError('Codex is already open, but wmctrl is unavailable to bring its window to the front.')
     def windows():
         result = subprocess.run([wmctrl, '-lp'], capture_output=True, text=True, check=True,
                                 timeout=gui_remaining(deadline))
@@ -760,13 +760,13 @@ def focus_gui(gui, app, timeout, *, verify=None):
                     break
                 time.sleep(min(.1, gui_remaining(deadline)))
         if not found or not same_process(gui):
-            raise RuntimeError('O Codex já está aberto, mas sua janela ainda não está disponível para receber foco.')
+            raise RuntimeError('Codex is already open, but its window is not yet available to receive focus.')
         if verify:
             verify()
         subprocess.run([wmctrl, '-ia', found[0]], check=True, timeout=gui_remaining(deadline))
     except (subprocess.TimeoutExpired, TimeoutError) as error:
-        raise RuntimeError('Não foi possível trazer a janela do Codex à frente no prazo. '
-                           'O aplicativo e seus trabalhos foram preservados.') from error
+        raise RuntimeError('Could not bring the Codex window to the front in time. '
+                           'The application and your work were preserved.') from error
 
 
 def gui_processes(app):
@@ -781,7 +781,7 @@ def gui_processes(app):
             except PermissionError as error:
                 if (entry / 'comm').read_text().strip() != app.name:
                     continue
-                raise RuntimeError('Não foi possível verificar o aplicativo Codex já aberto.') from error
+                raise RuntimeError('Could not verify the already running Codex application.') from error
             if (not arguments[0] or Path(os.fsdecode(arguments[0])).name != app.name
                     or any(word.startswith(b'--type=') for word in arguments)):
                 continue
@@ -801,9 +801,9 @@ def gui_processes(app):
 
 def gui_registration(gui):
     """Authenticate an existing launch through its live direct relay, even after GUI env erasure."""
-    unconfirmed = ('O Codex já está aberto, mas não foi possível confirmar sua configuração e seu '
-                   'processo auxiliar. Se acabou de abrir, aguarde e tente novamente. '
-                   'O aplicativo e seus trabalhos foram preservados.')
+    unconfirmed = ('Codex is already open, but its configuration and '
+                   'helper process could not be verified. If it just opened, wait and try again. '
+                   'The application and your work were preserved.')
     registrations = []
     for entry in gui_children(gui):
         try:
@@ -858,9 +858,9 @@ def verify_existing_gui(config, runtime, app):
         return None
     if len(matching) == 1 and len({item['profile'] for item in registrations}) == len(registrations):
         return matching[0]
-    raise RuntimeError('Há uma interface do Codex aberta com outra configuração ou um perfil em conflito. '
-                       'Para abrir esta configuração, termine os trabalhos e use Sair na outra interface. '
-                       'O aplicativo e o servidor foram preservados.')
+    raise RuntimeError('A Codex interface is open with another configuration or a conflicting profile. '
+                       'To open this configuration, finish your work and use Quit in the other interface. '
+                       'The application and server were preserved.')
 
 
 def _monitor_launch_app(config, path, app, codex, app_args):
@@ -875,14 +875,14 @@ def _monitor_launch_app(config, path, app, codex, app_args):
         try:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
-            raise RuntimeError('Outra abertura da interface ainda está em andamento. Tente novamente em instantes.') from error
+            raise RuntimeError('Another interface startup is still in progress. Try again shortly.') from error
         registered = verify_existing_gui(config, runtime, app)
         if registered:
             def verify():
                 if gui_registration(registered['gui']) != registered:
-                    raise RuntimeError('A configuração da interface mudou durante a abertura. Tente novamente.')
+                    raise RuntimeError('The interface configuration changed during startup. Try again.')
             focus_gui(registered['gui'], app, config['native_timeout'], verify=verify)
-            message('O Codex já estava aberto. A janela foi trazida à frente.', gui=True)
+            message('Codex was already open. The window was brought to the front.', gui=True)
             return
         launch_path = runtime / 'launch.json'
         if launch_path.exists():
@@ -893,7 +893,7 @@ def _monitor_launch_app(config, path, app, codex, app_args):
             except (FileNotFoundError, ProcessLookupError, RuntimeError):
                 gui = None
             if gui and gui['birth'] == old['gui']['birth']:
-                raise RuntimeError('Outra abertura do Codex ainda está em andamento. Aguarde e tente novamente.')
+                raise RuntimeError('Another Codex startup is still in progress. Wait and try again.')
         wrapper = runtime / 'codex-proxy'
         temporary = runtime / ('wrapper-' + monitor_id())
         try:
@@ -910,8 +910,8 @@ def _monitor_launch_app(config, path, app, codex, app_args):
         environment.update(CODEX_HOME=config['codex_home'], CODEX_CLI_PATH=str(wrapper),
                            CODEX_STATS_APP_LAUNCH=str(launch_path))
         if created:
-            message('Servidor compartilhado iniciado. A interface está abrindo.' +
-                    (' A configuração foi preparada; uma cópia anterior foi guardada em ' + str(backup) + '.' if backup else ''), gui=True)
+            message('Shared server started. The interface is opening.' +
+                    (' The configuration was prepared; a previous copy was saved at ' + str(backup) + '.' if backup else ''), gui=True)
         os.execve(app, [str(app), *app_args], environment)
     finally:
         os.close(descriptor)
@@ -922,12 +922,12 @@ def _monitor_launch_cli(config, codex, cli, arguments):
     # An alternate endpoint would defeat sharing. Native flags for prompts/cwd remain untouched.
     options = arguments[:arguments.index('--')] if '--' in arguments else arguments
     if any(word == '--remote' or word.startswith('--remote=') for word in options):
-        raise RuntimeError('codex-monitor escolhe o servidor compartilhado; remova a opção --remote.')
+        raise RuntimeError('codex-monitor selects the shared server; remove the --remote option.')
     owner, created, backup = ensure_server(config, codex)
     if created:
-        message('Servidor compartilhado iniciado. A CLI e a interface poderão usá-lo.')
+        message('Shared server started. The CLI and interface can use it.')
     if backup:
-        message('Configuração preparada. Cópia anterior: ' + str(backup))
+        message('Configuration prepared. Previous copy: ' + str(backup))
     environment = dict(os.environ)
     environment['CODEX_HOME'] = config['codex_home']
     for key in ('CODEX_CLI_PATH', 'CODEX_STATS_APP_LAUNCH'):
@@ -949,8 +949,8 @@ async def reload_tools(config):
                 and app.get('pluginId') == 'codex-app-tools@openai-bundled'):
             return
         if asyncio.get_running_loop().time() >= deadline:
-            raise RuntimeError('A interface conectou, mas suas ferramentas ainda estão indisponíveis. '
-                               'Feche e reabra a interface normalmente para tentar de novo. O servidor foi preservado.')
+            raise RuntimeError('The interface connected, but its tools are still unavailable. '
+                               'Close and reopen the interface normally to try again. The server was preserved.')
         await asyncio.sleep(1)
         if app.get('runtimeStatus') == 'failed' or app.get('toolsError') is not None:
             # The renderer may not expose its catalog at the first GUI RPC.
@@ -974,7 +974,7 @@ def monitor_app_proxy_main():
                                close_timeout=3, max_size=MONITOR_RELAY_LIMIT, max_queue=4) as connection:
                 def verify():
                     if not same_process(parent) or monitor_shared_peer(config, connection) != owner:
-                        raise RuntimeError('A interface ou seu servidor mudou durante a conexão.')
+                        raise RuntimeError('The interface or its server changed during connection.')
                 reader = asyncio.StreamReader(limit=MONITOR_RELAY_LIMIT + 1)
                 loop = asyncio.get_running_loop()
                 transport, _ = await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), sys.stdin.buffer)
@@ -989,7 +989,7 @@ def monitor_app_proxy_main():
                         {'gui': parent, 'proxy': monitor_process(os.getpid()), 'native': owner['native'],
                          'binding': binding, 'handshake': receipt})
                     await asyncio.to_thread(message,
-                        'Interface conectada ao servidor compartilhado. Ferramentas do aplicativo disponíveis.', gui=True)
+                        'Interface connected to the shared server. Application tools are available.', gui=True)
                 protocol_task = asyncio.create_task(monitor_relay_protocol(connection, reader, writer,
                     verify=verify, on_ready=handshake.set_result, timeout=config['native_timeout']))
                 tools_task = asyncio.create_task(tools_ready())
@@ -1023,7 +1023,7 @@ def monitor_app_proxy_main():
         config = support()['mq_config'](Path(launch['config']))
         runtime = support()['monitor_shared_runtime'](config)
         if launch_path != runtime / 'launch.json':
-            raise RuntimeError('O descritor de abertura não pertence a este Codex Monitor.')
+            raise RuntimeError('The startup descriptor does not belong to this Codex Monitor.')
         parent = monitor_process(os.getppid())
         main = (parent['pid'] == launch['gui']['pid'] and parent['birth'] == launch['gui']['birth']
             and parent['exe'] == launch['app'] and os.environ.get('CODEX_HOME') == launch['codex_home']
@@ -1057,7 +1057,7 @@ def monitor_app_proxy_main():
                     if saved.get('binding') == binding:
                         ready.unlink()
             except Exception as error:
-                print('Codex Monitor: falha ao remover a conexão encerrada: ' + str(error), file=sys.stderr)
+                print('Codex Monitor: failed to remove the closed connection: ' + str(error), file=sys.stderr)
 
 
 def launch_operation(function, *arguments):
@@ -1065,18 +1065,18 @@ def launch_operation(function, *arguments):
     try:
         return function(*arguments)
     except subprocess.TimeoutExpired as error:
-        raise RuntimeError('O gerenciador nativo não confirmou a abertura no prazo. '
-                           'O servidor pode ter iniciado; ele foi preservado. Tente abrir novamente '
-                           'para verificar a conexão antes de executar qualquer parada.') from error
+        raise RuntimeError('The native manager did not confirm startup in time. '
+                           'The server may have started; it was preserved. Try opening again '
+                           'to verify the connection before stopping anything.') from error
     except subprocess.CalledProcessError as error:
-        raise RuntimeError('Não foi possível trazer a janela do Codex à frente. '
-                           'O aplicativo e seus trabalhos foram preservados.') from error
+        raise RuntimeError('Could not bring the Codex window to the front. '
+                           'The application and your work were preserved.') from error
     except (OSError, ValueError, KeyError, RuntimeError):
         raise
     except Exception as error:
         # Transport-library exceptions are command-local and must use the same user-facing channel.
-        raise RuntimeError('A conexão de abertura falhou (' + type(error).__name__ + '). '
-                           'O servidor e os trabalhos foram preservados; tente novamente.') from error
+        raise RuntimeError('The startup connection failed (' + type(error).__name__ + '). '
+                           'The server and your work were preserved; try again.') from error
 
 
 def monitor_launch_app(config, path, app, codex, app_args):

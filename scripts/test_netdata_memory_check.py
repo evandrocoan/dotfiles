@@ -147,7 +147,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["host"]["swap_in_windows_bytes_per_second"], [1048576] * 2)
         self.assertEqual(result["host"]["attribution"]["processes"][0]["swap_in_wait_seconds"], 1.2)
-        self.assertIn("example-app (PID 123): 1.200 s aguardando swap-in", self.notifications()[0][-1])
+        self.assertIn("example-app (PID 123): 1.200 s waiting for swap-in", self.notifications()[0][-1])
         self.assertNotIn("system.slice", self.notifications()[0][-1])
         self.assertTrue(all(q["points"] == ["12"] for _, q in self.requests))
 
@@ -157,7 +157,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["host"]["swap_out_windows_bytes_per_second"], [2097152] * 2)
-        self.assertIn("Possível thrashing", self.notifications()[0][-1])
+        self.assertIn("Possible thrashing", self.notifications()[0][-1])
 
     def test_burst_and_psi_alone_do_not_warn(self):
         self.psi = 20
@@ -177,7 +177,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result["conditions"], ["demand"])
         self.assertEqual(result["anonymous_plus_swap_bytes"], 900)
-        self.assertIn("não comprova thrashing", self.notifications()[0][-1])
+        self.assertIn("does not establish active thrashing", self.notifications()[0][-1])
 
     def test_file_cache_alone_does_not_warn(self):
         self.write_cgroup(anon=100, cache=100000)
@@ -290,7 +290,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result["sent"], ["memory-pressure"])
         self.assertEqual(result["host"]["attribution"]["status"], "unavailable")
-        self.assertIn("Histórico por PID indisponível", self.notifications()[0][-1])
+        self.assertIn("Per-PID history unavailable", self.notifications()[0][-1])
 
     def test_partial_coverage_and_gaps_are_visible(self):
         self.incoming = [1024] * 12
@@ -299,7 +299,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result["host"]["attribution"]["status"], "partial")
         self.assertIn("example-app (PID 123)", self.notifications()[0][-1])
-        self.assertIn("Cobertura por PID parcial", self.notifications()[0][-1])
+        self.assertIn("Partial per-PID coverage", self.notifications()[0][-1])
 
     def test_measured_zero_is_distinct_from_partial_and_occupied_swap(self):
         self.incoming = [1024] * 12
@@ -307,7 +307,7 @@ class NetdataMemoryCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result["host"]["attribution"]["status"], "measured")
         self.assertEqual(result["host"]["attribution"]["processes"], [])
-        self.assertIn("Nenhum PID com espera de swap-in", self.notifications()[0][-1])
+        self.assertIn("No PID had observed swap-in wait", self.notifications()[0][-1])
 
     def test_top_three_ranks_by_wait_and_escapes_names(self):
         self.incoming = [1024] * 12

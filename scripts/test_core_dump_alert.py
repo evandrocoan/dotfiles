@@ -78,7 +78,7 @@ class CoreDumpAlertTest(unittest.TestCase):
         self.assertEqual(self.state.read_bytes(), saved)
         self.assertEqual(len(self.attempts()), 1)
         self.assertIn("--expire-time=30000", self.attempts()[0])
-        self.assertIn("1 arquivo(s) em /root/coredumps", self.attempts()[0][-1])
+        self.assertIn("1 file(s) in /root/coredumps", self.attempts()[0][-1])
 
     def test_hourly_reminder_including_suspend_equivalent_elapsed_jump(self):
         self.core()

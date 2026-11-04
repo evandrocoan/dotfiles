@@ -9,10 +9,10 @@ import sys
 def main():
     arguments = sys.argv[1:]
     if arguments[:1] in (['--help'], ['-h']):
-        print('Uso: codex-monitor [opções da CLI]\n'
-              '     codex-monitor --gui [opções do aplicativo]\n\n'
-              'Sem --gui, abre a CLI no terminal. Ambos usam o mesmo servidor.\n'
-              'Use codex-monitor -- --help para ver as opções da CLI.')
+        print('Usage: codex-monitor [CLI options]\n'
+              '     codex-monitor --gui [application options]\n\n'
+              'Without --gui, opens the CLI in the terminal. Both use the same server.\n'
+              'Use codex-monitor -- --help to see CLI options.')
         return 0
     gui = arguments[:1] == ['--gui']
     if gui or arguments[:1] == ['--']:
@@ -20,7 +20,7 @@ def main():
     try:
         application = shutil.which('chatgpt')
         if application is None:
-            raise RuntimeError('chatgpt não foi encontrado no PATH; confira a instalação do aplicativo.')
+            raise RuntimeError('chatgpt was not found in PATH; check the application installation.')
         directory = Path(application).resolve(strict=True).parent
         control = Path(__file__).resolve(strict=True).with_name('codex-session-stats')
         command = [str(control), 'monitor-gitlab', 'launch-app' if gui else 'launch-cli',
@@ -30,15 +30,15 @@ def main():
         else:
             cli = shutil.which('codex')
             if cli is None:
-                raise RuntimeError('codex não foi encontrado no PATH; confira a instalação da CLI.')
+                raise RuntimeError('codex was not found in PATH; check the CLI installation.')
             command.extend(['--cli', cli])
         python = control.parents[2] / 'scripts/.venv/bin/python'
         if not python.is_file():
-            raise RuntimeError('O ambiente Python do monitor não foi encontrado; em ~/scripts, '
-                               'execute poetry install --with monitor-tools.')
+            raise RuntimeError('The monitor Python environment was not found; in ~/scripts, '
+                               'run poetry install --with monitor-tools.')
         os.execv(python, [str(python), *command, '--', *arguments])
     except (OSError, RuntimeError) as error:
-        print('Codex Monitor — não foi possível abrir: ' + str(error), file=sys.stderr)
+        print('Codex Monitor — could not open: ' + str(error), file=sys.stderr)
         if gui:
             import subprocess
             dialog = shutil.which('zenity')

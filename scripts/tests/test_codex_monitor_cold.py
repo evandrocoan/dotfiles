@@ -656,7 +656,7 @@ def test_shared_publisher_reports_publication_without_automatic_rollback(cold, m
     with factory() as owner:
         original = module['monitor_config_snapshot'](owner)
         monkeypatch.setattr(os, 'replace', concurrent_after_replace)
-        with pytest.raises(RuntimeError, match='confirmação falhou') as caught:
+        with pytest.raises(RuntimeError, match='verification failed') as caught:
             module['monitor_publish_config'](owner, original, previous + b'# candidate\n')
         state = caught.value.publication_state
         assert state['published'] and state['backup_complete']

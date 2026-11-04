@@ -190,7 +190,7 @@ def test_duplicate_failure_recovery_and_new_episode_survive_restart(alert, state
     deliver({'monitor:other': issue(status='ok')}, restarted, path, Path('/fixture'), clock, sender=sender)
     assert len(sent) == 1
     deliver({'monitor:shared': issue(status='ok')}, restarted, path, Path('/fixture'), clock, sender=sender)
-    assert len(sent) == 2 and 'recuperação' in sent[-1][1]
+    assert len(sent) == 2 and 'recovery' in sent[-1][1]
     deliver({'monitor:shared': issue(episode='new')}, restarted, path, Path('/fixture'), clock, sender=sender)
     assert len(sent) == 3
 
@@ -205,15 +205,16 @@ def test_service_manager_recovery_identifies_the_restored_check(alert, state, cl
                                 clock, sender=sender) == (1, [])
     first = alert['time'].strftime('%d/%m %H:%M', alert['time'].localtime(clock['wall']))
     assert len(sent) == 2
-    assert sent[-1][1] == 'Monitor: recuperação confirmada'
-    assert sent[-1][2] == ('Verificação recuperada: Gerenciador de serviços.\n'
-        f'Falha anterior registrada em {first}.\nConsulta restabelecida.')
+    assert sent[-1][1] == 'Monitor: recovery confirmed'
+    assert sent[-1][2] == ('Check recovered: Service manager.\n'
+        f'Previous failure recorded at {first}.\nQuery restored.')
     assert state['incidents'] == {}
 
 
 @pytest.mark.parametrize('reviewer,label', [('codex', 'Codex'), ('claude', 'Claude')])
+@pytest.mark.parametrize('legacy', [False, True], ids=['english', 'historical-portuguese'])
 def test_reviewer_recovery_notification_explains_previous_failure_with_information_icon(
-        alert, state, clock, tmp_path, reviewer, label):
+        alert, state, clock, tmp_path, reviewer, label, legacy):
     log = tmp_path / 'notifications.jsonl'
     command = tmp_path / 'notify-fixture'
     command.write_text(f'#!{sys.executable}\nimport json,sys\n'
@@ -221,17 +222,22 @@ def test_reviewer_recovery_notification_explains_previous_failure_with_informati
                        '    stream.write(json.dumps(sys.argv[1:])+"\\n")\n')
     command.chmod(0o700)
     key = 'reviewer:fixture-job:' + reviewer
-    failed = {**issue(), 'kind': 'Falha do revisor',
-              'message': reviewer + ' / projeto 2693 / MR !78 terminou com falha. '
-                         'Consulte o estágio fixture-stage no status da fila.'}
+    failed_message = (reviewer + ' / projeto 2693 / MR !78 terminou com falha. '
+                      'Consulte o estágio fixture-stage no status da fila.' if legacy else
+                      reviewer + ' / project 2693 / MR !78 failed. '
+                      'Check stage fixture-stage in the queue status.')
+    failed = {**issue(), 'kind': 'Reviewer failure', 'message': failed_message}
     snapshot = write(tmp_path / 'health.json', document(clock, {key: failed},
         summary={'pending': 11, 'running': 1, 'holds': 0}))
     checks = alert['collect'](snapshot, healthy_units(), state, clock)
     assert alert['deliver'](checks, state, tmp_path / 'state.json', command, clock) == (1, [])
     previous_time = alert['time'].strftime('%d/%m %H:%M',
                                           alert['time'].localtime(clock['wall']))
-    recovered = {**failed, 'status': 'ok', 'message': reviewer +
-        ' / projeto 2693 / MR !78 produziu um novo resultado válido; consulte o status da fila.'}
+    recovered_message = (reviewer + ' / projeto 2693 / MR !78 produziu um novo resultado válido; '
+                         'consulte o status da fila.' if legacy else
+                         reviewer + ' / project 2693 / MR !78 produced a new valid result; '
+                         'check the queue status.')
+    recovered = {**failed, 'status': 'ok', 'message': recovered_message}
     write(snapshot, document(clock, {key: recovered},
         summary={'pending': 11, 'running': 1, 'holds': 0}))
     original_snapshot = snapshot.read_bytes()
@@ -239,19 +245,19 @@ def test_reviewer_recovery_notification_explains_previous_failure_with_informati
     assert alert['deliver'](checks, state, tmp_path / 'state.json', command, clock) == (1, [])
     requests = [json.loads(line) for line in log.read_text().splitlines()]
     assert len(requests) == 2
-    assert requests[0][-2] == 'Monitor: revisão não concluída'
+    assert requests[0][-2] == 'Monitor: review incomplete'
     assert '--icon=dialog-warning' in requests[0]
-    assert requests[0][-1] == (f'O {label} não conseguiu concluir a revisão da MR !78 '
-        f'(projeto 2693).\nFalha registrada em {previous_time}.\n'
-        'Consulte o status da fila para ver o motivo.\n'
-        'Fila de revisões: 11 aguardando, 1 em execução.')
-    assert requests[1][-2] == 'Monitor: revisor recuperado'
+    assert requests[0][-1] == (f'{label} could not finish the review of MR !78 '
+        f'(project 2693).\nFailure recorded at {previous_time}.\n'
+        'Check the queue status for the reason.\n'
+        'Review queue: 11 pending, 1 running.')
+    assert requests[1][-2] == 'Monitor: reviewer recovered'
     assert '--icon=dialog-information' in requests[1]
     assert '--icon=dialog-warning' not in requests[1]
-    assert requests[1][-1] == (f'O {label} voltou a responder na revisão da MR !78 '
-        f'(projeto 2693).\nFalha anterior registrada em {previous_time}.\n'
-        'Consulte o status da fila para ver o resultado.\n'
-        'Fila de revisões: 11 aguardando, 1 em execução.')
+    assert requests[1][-1] == (f'{label} is responding again on the review of MR !78 '
+        f'(project 2693).\nPrevious failure recorded at {previous_time}.\n'
+        'Check the queue status for the result.\n'
+        'Review queue: 11 pending, 1 running.')
     assert state['incidents'] == {}
     assert alert['read_private'](tmp_path / 'state.json')['incidents'] == {}
     assert snapshot.read_bytes() == original_snapshot
@@ -567,4 +573,4 @@ def test_successful_terminal_retry_exports_and_delivers_matching_recovery(flow, 
     assert f.config['_health']['checks'][key]['status'] == 'ok'
     alert['deliver']({'monitor:' + key: f.config['_health']['checks'][key]}, state,
         tmp_path / 'state.json', Path('/fixture'), clock, sender=sender)
-    assert len(calls) == 2 and calls[-1][1] == 'Monitor: revisor recuperado'
+    assert len(calls) == 2 and calls[-1][1] == 'Monitor: reviewer recovered'

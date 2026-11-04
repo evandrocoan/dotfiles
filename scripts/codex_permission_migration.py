@@ -60,7 +60,7 @@ def transform(source):
             or before.get('profiles') or before.get('profile')
             or not isinstance(before.get('permissions', {}), dict)
             or PROFILE in before.get('permissions', {})):
-        raise RuntimeError('configuração fora do formato aprovado para migração')
+        raise RuntimeError('configuration does not match the approved migration format')
     document = tomlkit.parse(source.decode('utf-8'))
     del document['sandbox_mode']
     # The current interactive CLI explicitly selects the legacy workspace mode.
@@ -79,7 +79,7 @@ def transform(source):
     # Independent parser enforces the exact edit boundary. Reject special NaN values
     # rather than treating unequal values as proof that unrelated content survived.
     if semantic(tomllib.loads(result.decode('utf-8'))) != semantic(expected):
-        raise RuntimeError('a transformação alterou valores fora do escopo aprovado')
+        raise RuntimeError('the transformation changed values outside the approved scope')
     return result
 
 
@@ -91,7 +91,7 @@ def witness(path, *, allow_directory=False):
     """Bind a regular source or its absence and every existing ancestor identity."""
     path = Path(path)
     if not path.is_absolute() or path != Path(os.path.normpath(str(path))):
-        raise RuntimeError('a origem precisa ter caminho absoluto normalizado')
+        raise RuntimeError('the source must have a normalized absolute path')
     parents = []
     missing = None
     for parent in reversed(path.parents):
@@ -103,7 +103,7 @@ def witness(path, *, allow_directory=False):
             missing = str(parent)
             continue
         if not stat.S_ISDIR(meta.st_mode) or meta.st_uid not in {0, os.getuid()}:
-            raise RuntimeError('ancestral inseguro da origem de configuração')
+            raise RuntimeError('unsafe configuration source ancestor')
         parents.append([str(parent), directory_identity(meta)])
     result = {'path': str(path), 'parents': parents, 'missing_ancestor': missing,
               'allow_directory': allow_directory}
@@ -117,7 +117,7 @@ def witness(path, *, allow_directory=False):
             meta = None
         if meta is not None and stat.S_ISDIR(meta.st_mode):
             if meta.st_uid not in {0, os.getuid()}:
-                raise RuntimeError('marcador de projeto não confiável')
+                raise RuntimeError('untrusted project marker')
             result.update(file=None, directory=directory_identity(meta))
             return result
     try:
@@ -129,15 +129,15 @@ def witness(path, *, allow_directory=False):
         meta = os.fstat(stream.fileno())
         if (not stat.S_ISREG(meta.st_mode) or meta.st_uid not in {0, os.getuid()}
                 or meta.st_nlink != 1):
-            raise RuntimeError('origem insegura de configuração')
+            raise RuntimeError('unsafe configuration source')
         data = stream.read(8 * 1024 * 1024 + 1)
         if len(data) > 8 * 1024 * 1024:
-            raise RuntimeError('origem de configuração excede 8 MiB')
+            raise RuntimeError('configuration source exceeds 8 MiB')
         identity = list(MonitorColdStart.file_identity(meta)) + [meta.st_ctime_ns]
         current, named = os.fstat(stream.fileno()), path.lstat()
         if (identity != list(MonitorColdStart.file_identity(current)) + [current.st_ctime_ns]
                 or identity != list(MonitorColdStart.file_identity(named)) + [named.st_ctime_ns]):
-            raise RuntimeError('origem mudou durante a leitura')
+            raise RuntimeError('source changed during reading')
     result['file'] = {'identity': identity, 'sha256': digest(data)}
     return result
 
@@ -145,7 +145,7 @@ def witness(path, *, allow_directory=False):
 def revalidate(witnesses):
     for original in witnesses:
         if witness(original['path'], allow_directory=original.get('allow_directory', False)) != original:
-            raise RuntimeError('origem presente ou ausente mudou; prepare novamente')
+            raise RuntimeError('source presence or identity changed; prepare again')
 
 
 def inventory(home, contexts, reports, requirements):
@@ -157,9 +157,9 @@ def inventory(home, contexts, reports, requirements):
     """
     home = Path(home)
     if not contexts or len(contexts) != len(reports):
-        raise RuntimeError('inventário sem todos os contextos de cliente')
+        raise RuntimeError('inventory does not include all client contexts')
     if requirements.get('requirements', object()) is not None:
-        raise RuntimeError('requisitos gerenciados não vinculáveis; migração recusada')
+        raise RuntimeError('managed requirements cannot be bound; migration refused')
     paths = {home / 'config.toml', home / 'auth.json', Path('/etc/codex/config.toml'),
              Path('/etc/codex/requirements.toml'), Path('/etc/codex/managed_config.toml'),
              home / 'managed_config.toml', home / 'requirements.toml'}
@@ -168,7 +168,7 @@ def inventory(home, contexts, reports, requirements):
     for context, report in zip(contexts, reports):
         context = Path(context)
         if context.resolve(strict=True) != context or not context.is_dir():
-            raise RuntimeError('contexto de cliente não canônico')
+            raise RuntimeError('non-canonical client context')
         # Watch the whole finite ancestry, including absent project files. Native
         # root markers/trust decide activation; additions still invalidate this seal.
         for parent in (context, *context.parents):
@@ -176,7 +176,7 @@ def inventory(home, contexts, reports, requirements):
             markers.add(parent / '.git')
         layers = report.get('layers')
         if not isinstance(layers, list) or not layers:
-            raise RuntimeError('resposta nativa sem proveniência completa de camadas')
+            raise RuntimeError('native response lacks complete layer provenance')
         active = []
         user = []
         for layer in layers:
@@ -186,40 +186,40 @@ def inventory(home, contexts, reports, requirements):
                 # Current GUI supplies plugin paths, never migration policy. Their
                 # raw identity is sealed separately; the cold reader has no flags.
                 if set(layer.get('config', {})) != {'plugins'} or layer.get('disabledReason'):
-                    raise RuntimeError('opções de sessão fora do escopo inspecionado')
+                    raise RuntimeError('session options outside the inspected scope')
                 continue
             if kind == 'user':
                 if name != {'type': 'user', 'file': str(home / 'config.toml'), 'profile': None}:
-                    raise RuntimeError('perfil ou origem de usuário inesperado')
+                    raise RuntimeError('unexpected profile or user source')
                 user.append(layer)
             elif kind == 'system':
                 if name != {'type': 'system', 'file': '/etc/codex/config.toml'} or layer.get('config'):
-                    raise RuntimeError('configuração de sistema fora do escopo inspecionado')
+                    raise RuntimeError('system configuration outside the inspected scope')
             elif kind == 'project':
                 folder = Path(name.get('dotCodexFolder', ''))
                 if not folder.is_absolute() or folder / 'config.toml' not in paths:
-                    raise RuntimeError('camada de projeto fora dos contextos selados')
+                    raise RuntimeError('project layer outside the sealed contexts')
                 paths.add(folder / 'config.toml')
                 if (any(key in layer.get('config', {}) for key in POLICY_KEYS)
                         or 'network_proxy' in layer.get('config', {}).get('features', {})):
-                    raise RuntimeError('política de projeto conflita com a migração global')
+                    raise RuntimeError('project policy conflicts with global migration')
             else:
-                raise RuntimeError('origem nativa desconhecida ou não vinculável')
+                raise RuntimeError('unknown or unbindable native source')
             if not isinstance(layer.get('version'), str) or not isinstance(layer.get('config'), dict):
-                raise RuntimeError('identidade de camada nativa incompleta')
+                raise RuntimeError('incomplete native layer identity')
             active.append(layer)
         if len(user) != 1:
-            raise RuntimeError('camada base de usuário ausente ou ambígua')
+            raise RuntimeError('missing or ambiguous base user layer')
         source = tomllib.loads((home / 'config.toml').read_text())
         if native_user_semantic(user[0]['config'], home) != native_user_semantic(source, home):
-            raise RuntimeError('camada nativa não corresponde ao arquivo de usuário')
+            raise RuntimeError('native layer does not match the user file')
         # Reject origins that cannot be accounted for by actual returned layers.
         names = [item['name'] for item in layers]
         for key, origin in report.get('origins', {}).items():
             if origin.get('name') not in names:
-                raise RuntimeError('origem efetiva sem camada correspondente')
+                raise RuntimeError('effective source has no matching layer')
             if key.split('.')[0] in POLICY_KEYS and origin.get('name') != user[0]['name']:
-                raise RuntimeError('política efetiva selecionada por outra origem')
+                raise RuntimeError('effective policy selected by another source')
         signatures.append({'context': str(context), 'layers': active})
     result = {'reports': signatures, 'requirements': requirements,
               'sources': [witness(path) for path in sorted(paths)]
@@ -228,7 +228,7 @@ def inventory(home, contexts, reports, requirements):
         if item['file'] and item['path'] in {
                 '/etc/codex/requirements.toml', '/etc/codex/managed_config.toml',
                 str(home / 'managed_config.toml'), str(home / 'requirements.toml')}:
-            raise RuntimeError('fonte gerenciada presente fora do escopo inspecionado')
+            raise RuntimeError('managed source present outside the inspected scope')
     revalidate(result['sources'])
     return result
 
@@ -236,7 +236,7 @@ def inventory(home, contexts, reports, requirements):
 def revalidate_inventory(original, home, contexts, reports, requirements):
     revalidate(original['sources'])
     if inventory(home, contexts, reports, requirements) != original:
-        raise RuntimeError('inventário nativo mudou; prepare novamente')
+        raise RuntimeError('native inventory changed; prepare again')
 
 
 def quiescent(authority, *, client_executables, consumer_scripts, allowed_reader=None):
@@ -250,7 +250,7 @@ def quiescent(authority, *, client_executables, consumer_scripts, allowed_reader
         queue = support['MonitorQueue'](authority.config, readonly=True)
         try:
             if any(job['state'] == 'running' for job in queue.jobs()):
-                raise RuntimeError('há trabalho automático em execução ou aguardando reconciliação')
+                raise RuntimeError('automatic work is running or awaiting reconciliation')
         finally:
             queue.close()
     for entry in Path('/proc').iterdir():
@@ -279,20 +279,20 @@ def quiescent(authority, *, client_executables, consumer_scripts, allowed_reader
             if current['exe'] not in executable_paths and not any(value in script_paths for value in arguments):
                 continue
             if any(value in script_paths for value in arguments):
-                raise RuntimeError('consumidor automático ainda está ativo')
+                raise RuntimeError('automatic consumer is still active')
             environment = dict(value.split(b'=', 1) for value in
                 (entry / 'environ').read_bytes().split(b'\0') if b'=' in value)
             selected = environment.get(b'CODEX_HOME')
             if selected is None:
                 selected = environment.get(b'HOME', b'') + b'/.codex'
             if not Path(os.fsdecode(selected)).is_absolute():
-                raise RuntimeError('cliente com origem de configuração não vinculável')
+                raise RuntimeError('client has an unbindable configuration source')
             if Path(os.fsdecode(selected)).resolve(strict=False) == authority.home:
-                raise RuntimeError('cliente gráfico, CLI ou consumidor ainda está ativo')
+                raise RuntimeError('GUI, CLI or consumer is still active')
         except (FileNotFoundError, ProcessLookupError):
             continue
         except PermissionError as error:
-            raise RuntimeError('identidade de possível consumidor não pôde ser lida') from error
+            raise RuntimeError('could not read the identity of a possible consumer') from error
 
 
 ENVIRONMENT_KEYS = {'HOME', 'CODEX_HOME', 'PATH', 'TMPDIR', 'XDG_RUNTIME_DIR',
@@ -318,26 +318,26 @@ def executable_pin(path):
         meta = part.lstat()
         if stat.S_ISLNK(meta.st_mode):
             if meta.st_uid not in {0, os.getuid()}:
-                raise RuntimeError('seleção de executável não confiável')
+                raise RuntimeError('untrusted executable selection')
             links.append([str(part), list(MonitorColdStart.file_identity(meta)), os.readlink(part)])
         elif part != path and (not stat.S_ISDIR(meta.st_mode)
                 or meta.st_uid not in {0, os.getuid()}
                 or meta.st_mode & 0o002 and not meta.st_mode & stat.S_ISVTX
                 or meta.st_mode & 0o020 and not meta.st_mode & stat.S_ISVTX
                 and not (meta.st_uid == os.getuid() and meta.st_gid == os.getgid())):
-            raise RuntimeError('ancestral inseguro do executável')
+            raise RuntimeError('unsafe executable ancestor')
     actual = path.resolve(strict=True)
     with actual.open('rb') as stream:
         meta = os.fstat(stream.fileno())
         if (not stat.S_ISREG(meta.st_mode) or meta.st_uid not in {0, os.getuid()}
                 or meta.st_mode & 0o022 or not os.access(actual, os.X_OK)):
-            raise RuntimeError('executável não confiável')
+            raise RuntimeError('untrusted executable')
         value = hashlib.file_digest(stream, 'sha256').hexdigest()
         identity = list(MonitorColdStart.file_identity(meta)) + [meta.st_ctime_ns]
         current, named = os.fstat(stream.fileno()), actual.stat()
         if (identity != list(MonitorColdStart.file_identity(current)) + [current.st_ctime_ns]
                 or identity != list(MonitorColdStart.file_identity(named)) + [named.st_ctime_ns]):
-            raise RuntimeError('executável mudou durante a leitura')
+            raise RuntimeError('executable changed during reading')
     return {'path': str(path), 'actual': str(actual), 'links': links,
             'identity': identity, 'sha256': value}
 
@@ -371,17 +371,17 @@ def private_read(path):
     _monitor_support()['monitor_private'](path)
     record = witness(path)
     if record['file']['identity'][2] != os.getuid() or record['file']['identity'][4] & 0o077:
-        raise RuntimeError('artefato precisa ser um arquivo privado do usuário')
+        raise RuntimeError('artifact must be a private user file')
     value = Path(path).read_bytes()
     if digest(value) != record['file']['sha256'] or witness(path) != record:
-        raise RuntimeError('artefato mudou durante a leitura')
+        raise RuntimeError('artifact changed during reading')
     return value
 
 
 def monitor_sources(config):
     """Bind automatic-work selection to the actual monitor configuration sources."""
     if not config.get('_config_path'):
-        raise RuntimeError('origem da configuração do monitor ausente')
+        raise RuntimeError('monitor configuration source is missing')
     path = Path(config['_config_path'])
     sources = [witness(path)]
     current = _monitor_support()['mq_config'](path)
@@ -393,7 +393,7 @@ def monitor_sources(config):
     for key in ('codex_home', 'queue_file', 'state_file', 'gitlab_url',
                 '_socket_alias', 'analysis_config'):
         if current.get(key) != config.get(key):
-            raise RuntimeError('seleção da configuração do monitor mudou; prepare novamente')
+            raise RuntimeError('monitor configuration selection changed; prepare again')
     revalidate(sources)
     return sources
 
@@ -411,7 +411,7 @@ def prepare_artifact(config, contexts, reports, requirements, *, native_paths,
     authority = MonitorColdStart(cold_config, native_paths)
     original = monitor_config_snapshot(authority)
     if original[0] is None:
-        raise RuntimeError('arquivo de configuração inspecionado ausente')
+        raise RuntimeError('inspected configuration file is missing')
     prepared = transform(original[1])
     sources = inventory(authority.home, contexts, reports, requirements)
     native = [executable_pin(path) for path in native_paths]
@@ -421,7 +421,7 @@ def prepare_artifact(config, contexts, reports, requirements, *, native_paths,
                  str(source_root / '.local/bin/codex-monitor')]
     artifact = Path(artifact).absolute()
     if artifact.resolve(strict=False) != artifact or artifact.is_relative_to(authority.home):
-        raise RuntimeError('artefato deve ficar fora do armazenamento nativo, sem links')
+        raise RuntimeError('artifact must be outside native storage and have no links')
     artifact.mkdir(mode=0o700)
     _monitor_support()['monitor_private'](artifact, directory=True)
     manifest = {'version': 1, 'config': cold_config, 'contexts': [str(path) for path in contexts],
@@ -432,7 +432,7 @@ def prepare_artifact(config, contexts, reports, requirements, *, native_paths,
                 'code': code_sources(), 'python': executable_pin(sys.executable),
                 'systemctl': executable_pin(__import__('shutil').which('systemctl'))}
     if monitor_config_snapshot(authority) != original:
-        raise RuntimeError('arquivo de usuário mudou durante a preparação')
+        raise RuntimeError('user file changed during preparation')
     revalidate(sources['sources'])
     revalidate(monitor_inputs)
     private_write(artifact / 'proposed.toml', prepared)
@@ -447,35 +447,35 @@ def systemd_quiescent(executable):
         result = subprocess.run([executable, '--user', 'show', unit, '--property=ActiveState', '--value'],
             stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
         if result.returncode != 0 or result.stdout.strip() != 'inactive':
-            raise RuntimeError('agendamento ou serviço ativo/não verificável: ' + unit)
+            raise RuntimeError('schedule or service is active or cannot be verified: ' + unit)
 
 
 def artifact_inputs(artifact, manifest_sha256, *, recovery=False):
     artifact = Path(artifact).absolute()
     if artifact.resolve(strict=True) != artifact:
-        raise RuntimeError('diretório de artefatos não canônico')
+        raise RuntimeError('non-canonical artifact directory')
     _monitor_support()['monitor_private'](artifact, directory=True)
     encoded = private_read(artifact / 'manifest.json')
     if digest(encoded) != manifest_sha256:
-        raise RuntimeError('manifesto mudou depois da revisão; prepare novamente')
+        raise RuntimeError('manifest changed after review; prepare again')
     manifest = json.loads(encoded)
     if manifest.get('version') != 1:
-        raise RuntimeError('versão de artefato não suportada')
+        raise RuntimeError('unsupported artifact version')
     prepared = private_read(artifact / 'proposed.toml')
     if (digest(prepared) != manifest['candidate_sha256']
             or not recovery and witness(artifact / 'proposed.toml') != manifest['candidate_witness']):
-        raise RuntimeError('prévia mudou depois da preparação')
+        raise RuntimeError('preview changed after preparation')
     return artifact, manifest, prepared
 
 
 def static_revalidate(manifest):
     if environment_seal() != manifest['environment']:
-        raise RuntimeError('ambiente de execução mudou; prepare novamente')
+        raise RuntimeError('runtime environment changed; prepare again')
     revalidate(manifest['code'])
     revalidate(manifest['monitor_sources'])
     for item in (*manifest['native'], *manifest['clients'], manifest['python'], manifest['systemctl']):
         if executable_pin(item['path']) != item:
-            raise RuntimeError('código, pacote ou executável mudou; prepare novamente')
+            raise RuntimeError('code, package or executable changed; prepare again')
 
 
 def apply_artifact(artifact, *, manifest_sha256, recover=False):
@@ -500,11 +500,11 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
         backup = Path(receipt['backup'])
         if (backup.parent != authority.home
                 or not __import__('re').fullmatch(r'config\.toml\.before-monitor-[a-f0-9]{32}\.bak', backup.name)):
-            raise RuntimeError('backup fora do local conhecido')
+            raise RuntimeError('backup is outside the known location')
         backup_witness = witness(backup)
         restored = private_read(backup)
         if digest(restored) != manifest['source_sha256']:
-            raise RuntimeError('backup original mudou; recuperação recusada')
+            raise RuntimeError('original backup changed; recovery refused')
         recovery_sources = [witness(artifact / 'manifest.json'), witness(artifact / 'proposed.toml'),
                             receipt_witness, backup_witness]
         revalidate(recovery_sources)
@@ -523,11 +523,11 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
                 return {**state, 'unchanged': True, 'activation_verified': False}
             if recover:
                 if original[1] != prepared:
-                    raise RuntimeError('configuração mudou após a aplicação; recuperação recusada')
+                    raise RuntimeError('configuration changed after application; recovery refused')
             elif (list(original[0] or ()) != manifest['source_identity']
                   or digest(original[1]) != manifest['source_sha256']
                   or transform(original[1]) != prepared):
-                raise RuntimeError('configuração mudou; prepare novamente')
+                raise RuntimeError('configuration changed; prepare again')
             # Other sources must remain byte/identity-exact. The restored user image
             # is the sole permitted inventory difference for a recovery read.
             watched = [item for item in manifest['inventory']['sources']
@@ -555,10 +555,10 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
                             old_layer['version'] = new_layer['version']
                             if (native_user_semantic(new_layer['config'], authority.home)
                                     != native_user_semantic(tomllib.loads(prepared.decode()), authority.home)):
-                                raise RuntimeError('camada nativa não corresponde à prévia de recuperação')
+                                raise RuntimeError('native layer does not match the recovery preview')
                             old_layer['config'] = new_layer['config']
             if actual != expected:
-                raise RuntimeError('camadas ou requisitos nativos mudaram; gravação recusada')
+                raise RuntimeError('native layers or requirements changed; write refused')
             observed = witness(authority.home / 'config.toml')
 
             def recheck():
@@ -569,7 +569,7 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
                 consumers()
                 revalidate(actual['sources'])
                 if witness(authority.home / 'config.toml') != observed:
-                    raise RuntimeError('configuração mudou após o leitor; gravação recusada')
+                    raise RuntimeError('configuration changed after the reader; write refused')
 
             result = monitor_publish_config(authority, original, restored if recover else prepared, recheck=recheck)
             state.update(result)
@@ -588,15 +588,15 @@ def apply_artifact(artifact, *, manifest_sha256, recover=False):
 def main(argv=None):
     import argparse
     import sys
-    parser = argparse.ArgumentParser(description='Preparar e aplicar a migração revisada de permissões do Codex.')
+    parser = argparse.ArgumentParser(description='Prepare and apply the reviewed Codex permissions migration.')
     commands = parser.add_subparsers(dest='command', required=True)
-    prepare = commands.add_parser('prepare', help='preparar prévia privada usando a conexão autenticada atual')
+    prepare = commands.add_parser('prepare', help='prepare a private preview using the current authenticated connection')
     prepare.add_argument('--monitor-config', type=Path, required=True)
     prepare.add_argument('--native', type=Path, action='append', required=True)
     prepare.add_argument('--context', type=Path, action='append', required=True)
     prepare.add_argument('--artifact', type=Path, required=True)
     for operation in ('apply', 'recover'):
-        command = commands.add_parser(operation, help='fase externa após fechamento normal do aplicativo')
+        command = commands.add_parser(operation, help='external phase after the application closes normally')
         command.add_argument('--artifact', type=Path, required=True)
         command.add_argument('--after-normal-close', action='store_true', required=True)
         command.add_argument('--manifest-sha256', required=True)
@@ -609,39 +609,39 @@ def main(argv=None):
             config.pop('_health', None)
             owner = support['monitor_shared_owner'](config)
             if str(args.native[0].resolve(strict=True)) != owner['native']['exe']:
-                raise RuntimeError('o primeiro executável deve ser o nativo da conexão autenticada atual')
+                raise RuntimeError('the first executable must be the native executable of the current authenticated connection')
             contexts = [path.expanduser().resolve(strict=True) for path in args.context]
             reports = [support['monitor_native'](config, 'config/read', {'cwd': str(path), 'includeLayers': True})
                        for path in contexts]
             requirements = support['monitor_native'](config, 'configRequirements/read', {})
             prepare_artifact(config, contexts, reports, requirements, native_paths=args.native,
                              client_executables=[owner['gui']['exe']], artifact=args.artifact)
-            print('Prévia preparada. Sua configuração continua sem alterações. Artefatos: ' + str(args.artifact))
-            print('SHA-256 do manifesto: ' + digest(private_read(args.artifact / 'manifest.json')))
+            print('Preview prepared. Your configuration remains unchanged. Artifacts: ' + str(args.artifact))
+            print('Manifest SHA-256: ' + digest(private_read(args.artifact / 'manifest.json')))
             return 0
         state = apply_artifact(args.artifact, manifest_sha256=args.manifest_sha256,
                                recover=args.command == 'recover')
         if state['unchanged']:
-            print('A configuração já contém os bytes preparados; nenhum arquivo foi alterado. '
-                  'A ativação nos clientes ainda precisa ser verificada.')
+            print('The configuration already contains the prepared bytes; no file was changed. '
+                  'Activation in the clients still needs to be verified.')
         else:
-            print(('Configuração anterior restaurada.' if args.command == 'recover' else 'Configuração migrada.')
-                  + ' Backup privado: ' + str(state['backup'])
-                  + ' Reabra o aplicativo e verifique as permissões; a ativação ainda não foi confirmada.')
+            print(('Previous configuration restored.' if args.command == 'recover' else 'Configuration migrated.')
+                  + ' Private backup: ' + str(state['backup'])
+                  + ' Reopen the application and check the permissions; activation has not yet been confirmed.')
         return 0
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
         state = getattr(error, 'migration_state', state)
-        operation = 'Recuperação' if args.command == 'recover' else 'Migração'
-        print(operation + ' recusada: ' + str(error), file=sys.stderr)
+        operation = 'Recovery' if args.command == 'recover' else 'Migration'
+        print(operation + ' refused: ' + str(error), file=sys.stderr)
         if state.get('published'):
-            print('A gravação ocorreu, mas a confirmação falhou. Não houve reversão automática. '
+            print('The write occurred, but verification failed. No automatic rollback was performed. '
                   'Backup: ' + str(state.get('backup')), file=sys.stderr)
         elif state.get('native_started'):
-            print('O leitor nativo foi iniciado. Encerramento confirmado: '
-                  + ('sim' if state.get('native_terminated') else 'não')
-                  + '. A configuração não foi substituída.', file=sys.stderr)
+            print('The native reader was started. Termination confirmed: '
+                  + ('yes' if state.get('native_terminated') else 'no')
+                  + '. The configuration was not replaced.', file=sys.stderr)
         else:
-            print('Nenhum leitor nativo foi iniciado e a configuração não foi substituída.', file=sys.stderr)
+            print('No native reader was started and the configuration was not replaced.', file=sys.stderr)
         return 1
 
 

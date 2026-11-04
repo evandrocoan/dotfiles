@@ -2313,14 +2313,14 @@ def monitor_native(config: dict, method: str, params: dict, *, followup=None) ->
         return await asyncio.wait_for(exchange(),timeout)
     try:
         result = asyncio.run(bounded())
-        mq_health_signal(config,'native:transport',message='Uma nova chamada ao servidor Codex foi concluída.')
+        mq_health_signal(config,'native:transport',message='A new Codex server request completed.')
         return result
     except (OSError, TimeoutError, WebSocketException) as error:
         if mq_expired(config):
             raise MonitorCycleYield('cycle ended during native RPC; reconcile delivery',issued=True) from error
         diagnostic = f"{type(error).__name__}, errno={getattr(error, 'errno', None)}"
-        mq_health_signal(config,'native:transport',error=error,kind='Comunicação com o Codex',
-            message='Uma chamada ao servidor Codex falhou ou excedeu o prazo; consulte o diagnóstico da fila.')
+        mq_health_signal(config,'native:transport',error=error,kind='Codex communication',
+            message='A Codex server request failed or timed out; check the queue diagnostics.')
         failure = RuntimeError(f"native {method} transport failed or timed out ({diagnostic}); reconcile before retry")
         failure.health_reported = True
         raise failure from error
@@ -2423,23 +2423,23 @@ class MonitorGitLab:
                     self.last_date = response.headers.get("Date")
                     self.last_headers = response.headers
                     value = json.loads(body)
-                    mq_health_signal(self.config,health_key,message='A mesma leitura do GitLab voltou a responder.')
-                    mq_health_signal(self.config,transport_key,message='Uma nova conexão ao GitLab foi concluída.')
+                    mq_health_signal(self.config,health_key,message='The same GitLab read is responding again.')
+                    mq_health_signal(self.config,transport_key,message='A new GitLab connection succeeded.')
                     return value
         except urllib.error.HTTPError as error:
-            mq_health_signal(self.config,health_key,error=error,kind='Leitura do GitLab',
+            mq_health_signal(self.config,health_key,error=error,kind='GitLab read',
                 repository=repository,iid=iid,
                 threshold=1 if error.code in {401,403} else 2,
-                message='GitLab recusou uma leitura (HTTP '+str(error.code)+'). Consulte o diagnóstico da fila.')
+                message='GitLab rejected a read (HTTP '+str(error.code)+'). Check the queue diagnostics.')
             failure = RuntimeError(f"GitLab GET rejected (HTTP {error.code}); no redirect followed")
             failure.health_reported = True
             raise failure from error
         except (urllib.error.URLError,OSError) as error:
             if mq_expired(self.config):
                 raise MonitorCycleYield('cycle ended during GitLab read') from error
-            mq_health_signal(self.config,transport_key,error=error,kind='Conexão com o GitLab',threshold=2,
+            mq_health_signal(self.config,transport_key,error=error,kind='GitLab connection',threshold=2,
                 repository=repository,
-                message='A conexão de leitura do GitLab falhou em ciclos distintos. Consulte o diagnóstico da fila.')
+                message='The GitLab read connection failed in separate cycles. Check the queue diagnostics.')
             failure = RuntimeError("GitLab GET transport failed")
             failure.health_reported = True
             raise failure from error
@@ -3655,7 +3655,7 @@ def mq_codex_create(config, queue, job, *, start=None):
         identifier = record['chats']['codex']
         if not record.get('codex_assigned'):
             monitor_native(config,'thread/name/set',{'threadId':identifier,
-                'name':config['project_path'].split('/')[-1]+f" !{job['iid']} — Revisão automática"})
+                'name':config['project_path'].split('/')[-1]+f" !{job['iid']} — Automatic review"})
             if config.get('codex_project_name'):
                 monitor_assign_app_project(config,identifier)
             with queue.atomic():
@@ -3698,7 +3698,7 @@ def mq_codex_create(config, queue, job, *, start=None):
             record['codex_assigned'] = False
             queue.put_mr(record)
         await request('thread/name/set', {'threadId': identifier,
-            'name': config['project_path'].split('/')[-1] + f" !{job['iid']} — Revisão automática"})
+            'name': config['project_path'].split('/')[-1] + f" !{job['iid']} — Automatic review"})
         if config.get('codex_project_name'):
             import asyncio
             await asyncio.to_thread(monitor_assign_app_project,config,identifier)
@@ -6541,7 +6541,7 @@ def mq_rotate_history(queue,config,*,include_remote=False):
     mq_rotate_metadata(queue,limit)
 
 
-def mq_health_signal(config,key,*,error=None,kind='Falha operacional',message=None,threshold=1,job=None,repository=None,iid=None,retired=False):
+def mq_health_signal(config,key,*,error=None,kind='Operational failure',message=None,threshold=1,job=None,repository=None,iid=None,retired=False):
     """Observational only. No exporter failure may change a native/queue transition."""
     health = config.get('_health')
     if health is None:return
@@ -6550,13 +6550,13 @@ def mq_health_signal(config,key,*,error=None,kind='Falha operacional',message=No
         if error is None:
             if previous is None:return
             previous.update(status='retired' if retired else 'ok',last_seen=mq_stamp(),
-                message=message or 'Uma nova observação da mesma operação confirmou recuperação.')
+                message=message or 'A new observation of the same operation confirmed recovery.')
             return
         same = previous is not None and previous['status']=='failed'
         count = previous['failures'] if same else 0
         if not same or previous['cycle']!=health['cycle_id']:count += 1
         health['checks'][key] = {'status':'failed','kind':kind,'message':(message or
-            'A operação falhou; consulte o diagnóstico '+key+'.')[:600],
+            'The operation failed; check diagnostics '+key+'.')[:600],
             'episode':previous['episode'] if same else monitor_id(),
             'first_seen':previous['first_seen'] if same else mq_stamp(),'last_seen':mq_stamp(),
             'failures':count,'cycle':health['cycle_id'],
@@ -6590,9 +6590,9 @@ def mq_health_diagnostic(queue,key,error):
         owner = queue.job(job)
         if owner:repository,iid = owner['repository_id'],owner['iid']
     mq_health_signal(config,'diagnostic:'+scope,error=error,
-        kind='Processamento da fila' if key=='consumer_error' else 'Leitura ou recuperação',
+        kind='Queue processing' if key=='consumer_error' else 'Read or recovery',
         threshold=1 if key=='consumer_error' else 2,job=job,repository=repository,iid=iid,
-        message='A operação '+scope+' falhou ('+type(error).__name__+'). Consulte o diagnóstico da fila.')
+        message='Operation '+scope+' failed ('+type(error).__name__+'). Check the queue diagnostics.')
 
 
 def mq_health_ok(config,key):
@@ -6604,7 +6604,7 @@ def mq_health_retire_scope(config,repository,iid):
     try:
         for value in config.get('_health',{}).get('checks',{}).values():
             if (value.get('repository'),value.get('iid'))==(repository,iid):
-                value.update(status='retired',message='O MR saiu do escopo ativo, sem crédito de revisão.')
+                value.update(status='retired',message='The MR left active scope without review credit.')
     except Exception as failure:
         print('monitor health retirement failed: '+type(failure).__name__,file=sys.stderr)
 
@@ -6619,9 +6619,9 @@ def mq_health_publish(config,queue,phase):
                   if j['repository_id'] in {p['id'] for p in mq_repositories(config)}}
         current = {key:job for key,job in scoped.items() if job['state']!='completed'}
         if phase=='failed':
-            mq_health_signal(config,'cycle',error=True,kind='Ciclo interrompido',message='O ciclo não terminou normalmente. Consulte o journal do monitor.')
+            mq_health_signal(config,'cycle',error=True,kind='Interrupted cycle',message='The cycle did not finish normally. Check the monitor journal.')
         elif phase=='finished':
-            mq_health_signal(config,'cycle',message='Um novo ciclo terminou normalmente; falhas de operações permanecem separadas.')
+            mq_health_signal(config,'cycle',message='A new cycle finished normally; operation failures remain separate.')
         if phase!='running':
             for job in scoped.values():
                 latest = {}
@@ -6629,22 +6629,22 @@ def mq_health_publish(config,queue,phase):
                     latest[stage['reviewer']] = mq_effective_stage(stage)
                 for reviewer,stage in latest.items():
                     key = 'reviewer:'+job['id']+':'+reviewer
-                    label = reviewer+' / projeto '+str(job['repository_id'])+' / MR !'+str(job['iid'])
+                    label = reviewer+' / project '+str(job['repository_id'])+' / MR !'+str(job['iid'])
                     if stage['state']=='failed' and job['state']!='completed':
-                        mq_health_signal(config,key,error=True,job=job['id'],kind='Falha do revisor',
-                            message=label+' terminou com falha. Consulte o estágio '+stage['id']+' no status da fila.')
+                        mq_health_signal(config,key,error=True,job=job['id'],kind='Reviewer failure',
+                            message=label+' failed. Check stage '+stage['id']+' in the queue status.')
                     elif stage['state']=='succeeded':
-                        mq_health_signal(config,key,message=label+' produziu um novo resultado válido; consulte o status da fila.')
+                        mq_health_signal(config,key,message=label+' produced a new valid result; check the queue status.')
                     overdue = 'overdue:'+job['id']+':'+reviewer
                     if (stage['state']=='running' and stage['id'] in config.get('_observed_attempts',set())
                             and mq_stamp()>stage.get('review_deadline',float('inf'))):
-                        mq_health_signal(config,overdue,error=True,job=job['id'],kind='Execução incerta ou atrasada',
-                            message=label+' excedeu o prazo e seu término ainda não foi comprovado. Nenhuma execução foi reiniciada.')
+                        mq_health_signal(config,overdue,error=True,job=job['id'],kind='Uncertain or overdue execution',
+                            message=label+' exceeded its deadline and its termination has not been proven. No execution was restarted.')
                     elif stage['state'] in {'failed','succeeded'}:
-                        mq_health_signal(config,overdue,message=label+' teve o término comprovado; isso não afirma sucesso da revisão.')
+                        mq_health_signal(config,overdue,message=label+' has been proven terminated; this does not establish review success.')
         for value in health['checks'].values():
             if value.get('job') and value['job'] not in current and value['status']!='ok':
-                value.update(status='retired',message='O trabalho saiu do escopo ativo, sem crédito de revisão.')
+                value.update(status='retired',message='The job left active scope without review credit.')
         # Operational scope expires on validated closure, independently of history retention.
         configured = {p['id'] for p in mq_repositories(config)}
         for record in queue.mrs():
@@ -6740,10 +6740,10 @@ def mq_tick(path):
                     settled = mq_reconcile_effects(recovery,queue,pending)
                     if settled:
                         mq_health_ok(config,'recovery_error:'+pending['id'])
-                        mq_health_signal(config,'effect:'+pending['id'],message='A recuperação do efeito foi confirmada por leitura.')
+                        mq_health_signal(config,'effect:'+pending['id'],message='Effect recovery was confirmed by read-back.')
                     else:
-                        mq_health_signal(config,'effect:'+pending['id'],error=True,job=pending['id'],kind='Recuperação pendente',
-                            message='MR !'+str(pending['iid'])+' ainda tem entrega histórica incerta. Consulte recover/status; nenhum envio foi repetido.')
+                        mq_health_signal(config,'effect:'+pending['id'],error=True,job=pending['id'],kind='Recovery pending',
+                            message='MR !'+str(pending['iid'])+' still has an uncertain historical delivery. Check recover/status; no send was repeated.')
                 except MonitorCycleYield:pass
                 except (OSError,RuntimeError,ValueError) as error:
                     mq_diagnostic(queue,'recovery_error:'+pending['id'],error)

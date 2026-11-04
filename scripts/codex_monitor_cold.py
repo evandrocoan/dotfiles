@@ -622,8 +622,8 @@ def monitor_publish_config(authority, original, prepared, *, recheck=lambda: Non
     except BaseException as error:
         error.publication_state = state
         if state['published']:
-            failure = RuntimeError('A configuração do Codex foi gravada, mas a confirmação falhou. '
-                                   'Consulte o backup antes de tentar novamente.')
+            failure = RuntimeError('The Codex configuration was written, but verification failed. '
+                                   'Check the backup before trying again.')
             failure.publication_state = state
             raise failure from error
         raise

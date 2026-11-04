@@ -106,23 +106,23 @@ def historical(api, before, threshold, pressure_threshold):
 
 
 def pressure_message(host):
-    body = (f"Swap e pressão sustentados por 2 minutos: entrada "
-            f"{host['swap_in_windows_bytes_per_second'][-1] / 1048576:.2f} MiB/s; saída "
+    body = (f"Sustained swap activity and pressure for 2 minutes: swap-in "
+            f"{host['swap_in_windows_bytes_per_second'][-1] / 1048576:.2f} MiB/s; swap-out "
             f"{host['swap_out_windows_bytes_per_second'][-1] / 1048576:.2f} MiB/s. "
-            f"PSI de memória: {host['psi_some_windows_percent'][-1]:.2f}%. Possível thrashing.")
+            f"Memory PSI: {host['psi_some_windows_percent'][-1]:.2f}%. Possible thrashing.")
     evidence = host["attribution"]
     for process in evidence["processes"]:
         name = html.escape(''.join(c for c in process["name"][:64] if c.isprintable()))
         body += (f"\n{name} (PID {process['pid']}): "
-                 f"{process['swap_in_wait_seconds']:.3f} s aguardando swap-in.")
+                 f"{process['swap_in_wait_seconds']:.3f} s waiting for swap-in.")
     if evidence["processes"]:
-        body += "\nProcessos afetados; não comprova quem causou a falta de memória."
+        body += "\nAffected processes; this does not establish which process caused the memory shortage."
     elif evidence["status"] == "measured":
-        body += "\nNenhum PID com espera de swap-in observada nessa janela."
+        body += "\nNo PID had observed swap-in wait during this window."
     if evidence["status"] == "unavailable":
-        body += "\nHistórico por PID indisponível."
+        body += "\nPer-PID history unavailable."
     elif evidence["status"] == "partial":
-        body += "\nCobertura por PID parcial; outros processos podem não aparecer."
+        body += "\nPartial per-PID coverage; other processes may be missing."
     return body
 
 
@@ -200,12 +200,12 @@ def check(args):
                 suppressed.append(condition)
                 continue
             if condition == "memory-pressure":
-                title = "Memória: pressão e swap sustentados"
+                title = "Memory: sustained pressure and swap activity"
                 body = pressure_message(host)
             else:
-                title = "Netdata: demanda de memória elevada"
-                body = (f"Memória anônima + swap: {demand['demand_ratio']:.0%} do limite de pressão. "
-                        "É um alerta de capacidade; não comprova thrashing ativo.")
+                title = "Netdata: high memory demand"
+                body = (f"Anonymous memory + swap: {demand['demand_ratio']:.0%} of the pressure limit. "
+                        "This is a capacity alert; it does not establish active thrashing.")
             try:
                 subprocess.run([args.notify_command, "-a", "netdata-memory-check", "-u", "normal", title, body],
                                check=True, capture_output=True, text=True, timeout=5)
