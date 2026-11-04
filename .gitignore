@@ -157,6 +157,7 @@
 !/scripts/tampermonkey/
 !/scripts/tampermonkey/*.user.js
 !/scripts/tampermonkey/LICENSE
+!/scripts/tampermonkey/LICENSE.CertainPerformance
 
 !/scripts/skill_tests/
 !/scripts/skill_tests/**
