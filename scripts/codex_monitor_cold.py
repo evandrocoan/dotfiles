@@ -183,7 +183,12 @@ class MonitorColdStart:
             if (endpoint.parent != native_directory
                     or not re.fullmatch(r'[a-f0-9]{64}', endpoint.name)):
                 raise RuntimeError('native alias has an unexpected destination')
-            self.private(native_directory, directory=True)
+            try:
+                self.private(native_directory, directory=True)
+            except FileNotFoundError:
+                # Reboot can remove the native temporary directory while leaving
+                # its persistent alias. Remaining owner checks still apply.
+                pass
             if endpoint.exists() or endpoint.is_symlink():
                 raise RuntimeError('native endpoint already exists; cold preparation denied')
         if Path(self.config['socket']).exists():

@@ -19,7 +19,7 @@ SOURCE = SOURCE_ROOT / 'scripts/codex_monitor_cold.py'
 
 
 @pytest.fixture
-def cold(monkeypatch):
+def cold(monkeypatch, request):
     module = runpy.run_path(str(SOURCE))
     support = module['_monitor_support']()
     module = {**support, **module}
@@ -34,6 +34,18 @@ def cold(monkeypatch):
         target = home/'config.toml'
         target.write_text('# keep exact bytes\n[features]\ncode_mode_host = false\n')
         target.chmod(0o600)
+        if getattr(request, 'param', None):
+            temporary = root / 'tmp'
+            temporary.mkdir(mode=0o700)
+            namespace = module['MonitorColdStart'].verify.__globals__
+            monkeypatch.setitem(namespace, 'Path', lambda path: temporary if path == '/tmp' else Path(path))
+            native_directory = temporary / ('codex-daemon-' + str(os.getuid()))
+            if request.param == 'private-parent':
+                native_directory.mkdir(mode=0o700)
+            endpoint = native_directory / ('a' * 64)
+            alias.parent.mkdir(mode=0o700)
+            alias.symlink_to(endpoint)
+            config['socket'] = str(endpoint)
         factory = lambda: module['MonitorColdStart'](config,[sys.executable])
         yield module, root, config, target, factory
 
@@ -126,9 +138,22 @@ def test_trusted_native_still_constructs_without_configuration_effects(cold):
     assert (target.read_bytes(), target.stat().st_mtime_ns) == before
 
 
+@pytest.mark.parametrize('cold', [None, 'missing-parent', 'private-parent'], indirect=True)
 def test_cold_guard_holds_three_real_locks_and_changes_no_config(cold):
     _,root,config,target,factory = cold
     before = target.read_bytes(),target.stat().st_mtime_ns
+    alias = Path(config['_socket_alias'])
+    def alias_state():
+        if not alias.is_symlink():
+            return None
+        meta = alias.lstat()
+        # Resolving or reading the alias can update atime without changing it.
+        return (meta.st_dev, meta.st_ino, meta.st_uid, meta.st_gid, meta.st_mode,
+                meta.st_nlink, meta.st_size, meta.st_mtime_ns, meta.st_ctime_ns,
+                alias.readlink())
+    alias_before = alias_state()
+    native_directory = Path(config['socket']).parent
+    parent_existed = native_directory.exists()
     with factory() as guard:
         guard.verify()
         assert len(guard.descriptors)==3
@@ -143,9 +168,52 @@ def test_cold_guard_holds_three_real_locks_and_changes_no_config(cold):
         with pytest.raises(BlockingIOError):
             with factory():pass
     assert (target.read_bytes(),target.stat().st_mtime_ns)==before
+    if alias_before is not None:
+        assert alias_state() == alias_before
+        assert native_directory.exists() == parent_existed
     with factory() as guard:guard.verify()
 
 
+@pytest.mark.parametrize('cold', ['missing-parent'], indirect=True)
+@pytest.mark.parametrize('kind,message', [
+    ('public-parent', 'must be private'),
+    ('file-parent', 'must be private'),
+    ('dangling-parent', 'unexpected destination'),
+    ('present-endpoint', 'endpoint already exists'),
+])
+def test_stale_alias_still_rejects_unsafe_parent_or_present_endpoint(cold, kind, message):
+    _, root, config, target, factory = cold
+    directory = Path(config['socket']).parent
+    if kind == 'file-parent':
+        directory.touch(mode=0o600)
+    elif kind == 'dangling-parent':
+        directory.symlink_to(root / 'missing', target_is_directory=True)
+    else:
+        directory.mkdir(mode=0o700)
+        if kind == 'public-parent':
+            directory.chmod(0o777)
+        else:
+            Path(config['socket']).touch(mode=0o600)
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with pytest.raises(RuntimeError, match=message):
+        with factory():pass
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize('cold', ['missing-parent'], indirect=True)
+def test_missing_native_parent_becoming_unsafe_revokes_cold_guard(cold):
+    _, _, config, target, factory = cold
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with factory() as guard:
+        directory = Path(config['socket']).parent
+        directory.mkdir(mode=0o700)
+        directory.chmod(0o777)
+        with pytest.raises(RuntimeError, match='must be private'):
+            guard.verify()
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize('cold', [None, 'missing-parent'], indirect=True)
 @pytest.mark.parametrize('relative',['app-server-daemon/daemon.lock',
                                    'app-server-control/app-server-startup.lock'])
 def test_external_native_lock_denies_cold_preparation(cold,relative):
@@ -239,6 +307,7 @@ def test_existing_unix_endpoint_denies_before_config_effects(cold):
         assert (target.read_bytes(),target.stat().st_mtime_ns)==before
 
 
+@pytest.mark.parametrize('cold', [None, 'missing-parent'], indirect=True)
 def test_live_pid_or_invalid_native_record_denies(cold):
     _,_,config,target,factory = cold
     record = Path(config['codex_home'])/'app-server-daemon/daemon.pid'
@@ -251,6 +320,7 @@ def test_live_pid_or_invalid_native_record_denies(cold):
         assert (target.read_bytes(),target.stat().st_mtime_ns)==before
 
 
+@pytest.mark.parametrize('cold', [None, 'missing-parent'], indirect=True)
 def test_live_gui_reservation_is_not_mistaken_for_a_cold_home(cold):
     module,_,config,target,factory = cold
     runtime = module['monitor_shared_runtime'](config,create=True)
@@ -262,6 +332,7 @@ def test_live_gui_reservation_is_not_mistaken_for_a_cold_home(cold):
     assert (target.read_bytes(),target.stat().st_mtime_ns)==before
 
 
+@pytest.mark.parametrize('cold', [None, 'missing-parent'], indirect=True)
 @pytest.mark.parametrize('known',[True,False])
 def test_unrecorded_native_start_revokes_a_held_cold_guard(cold,known):
     module,_,config,target,factory = cold

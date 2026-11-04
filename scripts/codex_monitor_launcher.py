@@ -111,7 +111,8 @@ def monitor_prepare_bootstrap(authority):
     return {'changed': result['changed'], 'backup': result['backup']}
 
 
-def monitor_app_tools_directory(config, *, create=False):
+def monitor_app_tools_address(config):
+    """Compute the stable address without requiring its runtime directory to exist."""
     import stat
     base = Path('/tmp').resolve(strict=True)
     meta = base.lstat()
@@ -122,6 +123,11 @@ def monitor_app_tools_directory(config, *, create=False):
         hashlib.sha256(config['codex_home'].encode()).hexdigest()[:20])
     if len(os.fsencode(str(directory / 'host.sock'))) >= 108:
         raise RuntimeError('app-tool Unix address exceeds the supported length')
+    return directory / 'host.sock'
+
+
+def monitor_app_tools_directory(config, *, create=False):
+    directory = monitor_app_tools_address(config).parent
     if create:
         directory.mkdir(mode=0o700, exist_ok=True)
     monitor_private(directory, directory=True)
@@ -410,7 +416,7 @@ def native_owner(config):
     environment = process_environment(pid)
     expected = {
         'CODEX_HOME': config['codex_home'],
-        'CODEX_APP_TOOLS_PIPE_PATH': str(monitor_app_tools_directory(config) / 'host.sock'),
+        'CODEX_APP_TOOLS_PIPE_PATH': str(monitor_app_tools_address(config)),
         'CODEX_MONITOR_LAUNCHER_PROTOCOL': '1',
     }
     if (uid != os.getuid() or native['exe'] != str(executable)
@@ -419,6 +425,7 @@ def native_owner(config):
         raise RuntimeError('O servidor aberto usa a configuração anterior ou outra instalação. '
                            'Termine os trabalhos e feche o Codex normalmente.\n' +
                            server_stop_instructions(config))
+    monitor_app_tools_directory(config)
     import tomllib
     data = tomllib.loads((Path(config['codex_home']) / 'config.toml').read_text())
     for path in MONITOR_BOOTSTRAP_OPTIONS:

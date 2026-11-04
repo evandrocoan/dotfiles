@@ -91,7 +91,7 @@ def test_cli_exec_keeps_cwd_exit_and_arguments_without_restarting_native(
 
 
 @pytest.fixture
-def independent(launcher, monkeypatch):
+def independent(launcher, monkeypatch, request):
     # The real peer lives separately from its clients and reports exec-time bootstrap.
     with tempfile.TemporaryDirectory(prefix='cm-owner-') as name:
         root = Path(name); home = root/'codex'; home.mkdir(mode=0o700)
@@ -109,6 +109,17 @@ def independent(launcher, monkeypatch):
         tools = launcher['monitor_app_tools_directory'](config, create=True)
         environment = dict(os.environ, CODEX_HOME=str(home), CODEX_APP_TOOLS_PIPE_PATH=str(tools/'host.sock'),
             CODEX_MONITOR_LAUNCHER_PROTOCOL='1')
+        variant = getattr(request, 'param', None)
+        if variant in {'ordinary', 'missing-tools'}:
+            tools.rmdir()
+        if variant == 'ordinary':
+            for key in ('CODEX_HOME', 'CODEX_APP_TOOLS_PIPE_PATH', 'CODEX_MONITOR_LAUNCHER_PROTOCOL'):
+                environment.pop(key)
+            environment['HOME'] = str(root)
+        elif variant == 'wrong-tools':
+            environment['CODEX_APP_TOOLS_PIPE_PATH'] = str(root / 'other.sock')
+        elif variant == 'unsafe-tools':
+            tools.chmod(0o777)
         namespace = launcher['native_owner'].__globals__
         monkeypatch.setitem(namespace, 'installed_native', lambda config: Path(sys.executable).resolve())
         script = ('import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); '
@@ -119,15 +130,44 @@ def independent(launcher, monkeypatch):
         try:
             assert process.stdout.readline() == 'ready\n'
             alias.symlink_to(endpoint)
-            owner = launcher['native_owner'](config)
+            owner = launcher['native_owner'](config) if variant is None else None
             runtime_path = launcher['support']()['monitor_shared_runtime'](config, create=True)
-            launcher['monitor_runtime_write'](runtime_path/'ready.json', owner)
+            if owner is not None:
+                launcher['monitor_runtime_write'](runtime_path/'ready.json', owner)
             yield config, owner, process, runtime_path, home
         finally:
             process.terminate(); process.wait(timeout=5)
             process.stdin.close(); process.stdout.close(); process.stderr.close()
             endpoint.unlink(missing_ok=True)
-            tools.rmdir()
+            if tools.exists():
+                tools.rmdir()
+
+
+@pytest.mark.parametrize('independent,error,message', [
+    ('ordinary', RuntimeError, 'configuração anterior ou outra instalação'),
+    ('wrong-tools', RuntimeError, 'configuração anterior ou outra instalação'),
+    ('missing-tools', FileNotFoundError, 'codex-tools-'),
+    ('unsafe-tools', RuntimeError, 'must be private'),
+], indirect=['independent'])
+def test_attach_rejects_incompatible_or_missing_runtime_without_effects(
+        launcher, independent, monkeypatch, error, message):
+    config, _, process, runtime, home = independent
+    before = (home / 'config.toml').read_bytes(), (home / 'config.toml').stat().st_mtime_ns
+    namespace = launcher['ensure_server_once'].__globals__
+    def denied(*args, **kwargs):
+        pytest.fail('rejected live attach attempted bootstrap, native start or ready publication')
+    monkeypatch.setitem(namespace, 'monitor_prepare_bootstrap', denied)
+    monkeypatch.setitem(namespace, 'monitor_runtime_write', denied)
+    monkeypatch.setattr(subprocess, 'run', denied)
+    with pytest.raises(error, match=message) as caught:
+        launcher['ensure_server_once'](config, Path(sys.executable).resolve())
+    if 'configuração anterior' in message:
+        assert 'Termine os trabalhos e feche o Codex normalmente.' in str(caught.value)
+        assert launcher['server_stop_instructions'](config) in str(caught.value)
+    assert process.poll() is None
+    assert ((home / 'config.toml').read_bytes(), (home / 'config.toml').stat().st_mtime_ns) == before
+    assert not (runtime / 'ready.json').exists()
+    assert not (home / 'app-server-daemon').exists()
 
 
 def test_independent_owner_uses_native_identity_without_gui_and_rejects_stale_receipt(launcher, independent):
