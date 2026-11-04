@@ -6,7 +6,7 @@ project_doc_fallback_filenames = [
 ]
 approvals_reviewer = "user"
 service_tier = "default"
-default_permissions = "local-workspace"
+default_permissions = ":danger-full-access"
 
 [sandbox_workspace_write]
 network_access = true
@@ -165,3 +165,7 @@ enabled = true
 
 [features]
 code_mode_host = true
+
+[features.multi_agent_v2]
+min_wait_timeout_ms = 900000
+default_wait_timeout_ms = 900000
