@@ -215,7 +215,8 @@ class MonitorColdStart:
         owners = self.native_owners()
         if owners:
             kind = 'installed native' if owners[0]['exe'] in self.native else 'unknown'
-            raise RuntimeError('an ' + kind + ' app-server start is live or pending')
+            raise RuntimeError('an ' + kind + ' app-server start is live or pending '
+                               f'(PID {owners[0]["pid"]})')
 
     def native_owners(self):
         owners = []
@@ -233,20 +234,33 @@ class MonitorColdStart:
                 arguments = (entry / 'cmdline').read_bytes().split(b'\0')
                 if b'app-server' not in arguments:
                     continue
+                current = self.live_process(int(entry.name))
+                if current is None:
+                    continue
                 executable = str((entry / 'exe').resolve(strict=True))
+                raw_environment = (entry / 'environ').read_bytes()
                 environment = dict(value.split(b'=', 1) for value in
-                    (entry / 'environ').read_bytes().split(b'\0') if b'=' in value)
+                    raw_environment.split(b'\0') if b'=' in value)
                 selected = os.fsdecode(environment.get(b'CODEX_HOME',
                     environment.get(b'HOME', b'') + b'/.codex'))
                 selected = Path(selected)
                 if not selected.is_absolute():
                     selected = (entry / 'cwd').resolve(strict=True) / selected
                 if selected.resolve(strict=False) == self.home:
-                    current = self.live_process(int(entry.name))
-                    if current is not None:
-                        if current['exe'] != executable:
-                            raise RuntimeError('native process changed during classification')
-                        owners.append(current)
+                    if current['exe'] != executable:
+                        raise RuntimeError('native process changed during classification')
+                    # The installed updater survives daemon stop. Its server
+                    # restarts are serialized by the native operation lock.
+                    expected = self.native.get(executable)
+                    if (arguments[1:] == [b'app-server', b'daemon', b'pid-update-loop', b'']
+                            and self.file_identity((entry / 'exe').stat()) == expected):
+                        if ((entry / 'cmdline').read_bytes().split(b'\0') != arguments
+                                or (entry / 'environ').read_bytes() != raw_environment
+                                or self.live_process(current['pid']) != current
+                                or self.file_identity((entry / 'exe').stat()) != expected):
+                            raise RuntimeError('native updater identity changed during classification')
+                        continue
+                    owners.append(current)
             except (FileNotFoundError, ProcessLookupError):
                 continue
             except PermissionError as error:

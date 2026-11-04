@@ -50,6 +50,132 @@ def cold(monkeypatch, request):
         yield module, root, config, target, factory
 
 
+@pytest.fixture
+def native_helper(cold, request):
+    _, root, config, _, _ = cold
+    work = root / 'updater'
+    work.mkdir(mode=0o700)
+    (work / 'app-server').write_text('import sys\nprint("ready", flush=True)\nsys.stdin.read()\n')
+    arguments = getattr(request, 'param', ['daemon', 'pid-update-loop'])
+    child = subprocess.Popen([sys.executable, 'app-server', *arguments], cwd=work,
+        env={**os.environ, 'CODEX_HOME': config['codex_home']},
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert child.stdout.readline() == 'ready\n'
+        yield child
+    finally:
+        child.terminate(); child.wait(timeout=5)
+        child.stdin.close(); child.stdout.close(); child.stderr.close()
+
+
+def test_installed_updater_does_not_prevent_cold_start(cold, native_helper):
+    _, _, _, target, factory = cold
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with factory() as guard:
+        assert guard.native_owners() == []
+        guard.verify()
+        assert len(guard.descriptors) == 3
+        for path, _, _ in guard.descriptors:
+            with path.open('r+') as competitor:
+                with pytest.raises(BlockingIOError):
+                    fcntl.flock(competitor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    assert native_helper.poll() is None
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize('trusted,native_helper', [
+    (False, ['daemon', 'pid-update-loop']),
+    (True, ['daemon', 'pid-update-loop', '--listen', 'unix://']),
+    (True, ['daemon', 'start']),
+], indirect=['native_helper'])
+def test_only_the_exact_installed_updater_is_excluded(cold, native_helper, trusted):
+    module, _, config, target, factory = cold
+    if not trusted:
+        factory = lambda: module['MonitorColdStart'](config, ['/usr/bin/true'])
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with pytest.raises(RuntimeError, match='app-server start is live or pending') as caught:
+        with factory():pass
+    assert f'PID {native_helper.pid}' in str(caught.value)
+    assert native_helper.poll() is None
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize('changed', ['argv', 'environment', 'birth', 'executable'])
+def test_changing_updater_identity_is_not_excluded(cold, native_helper, monkeypatch, changed):
+    _, _, _, target, factory = cold
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    process_root = Path('/proc') / str(native_helper.pid)
+    with factory() as guard:
+        reads = 0
+        if changed in {'argv', 'environment'}:
+            observed = process_root / ('cmdline' if changed == 'argv' else 'environ')
+            original_read = Path.read_bytes
+            def read_bytes(path):
+                nonlocal reads
+                value = original_read(path)
+                if path == observed:
+                    reads += 1
+                    if reads == 2:
+                        return value + (b'--stdio\0' if changed == 'argv' else b'CODEX_HOME=/changed\0')
+                return value
+            monkeypatch.setattr(Path, 'read_bytes', read_bytes)
+        elif changed == 'birth':
+            original_process = guard.process
+            def process(pid):
+                nonlocal reads
+                value = original_process(pid)
+                if pid == native_helper.pid:
+                    reads += 1
+                    if reads == 2:
+                        return dict(value, birth='changed')
+                return value
+            monkeypatch.setattr(guard, 'process', process)
+        else:
+            original_stat = Path.stat
+            def stat(path, *args, **kwargs):
+                nonlocal reads
+                value = original_stat(path, *args, **kwargs)
+                if path == process_root / 'exe':
+                    reads += 1
+                    if reads == 2:
+                        fields = list(value)
+                        fields[1] += 1
+                        return os.stat_result(fields)
+                return value
+            monkeypatch.setattr(Path, 'stat', stat)
+        with pytest.raises(RuntimeError, match='updater identity changed'):
+            guard.verify()
+    assert reads >= 2
+    assert native_helper.poll() is None
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
+def test_private_reader_remains_the_only_owner_beside_installed_updater(cold, native_helper):
+    module, root, config, target, factory = cold
+    work = root / 'reader'
+    work.mkdir(mode=0o700)
+    (work / 'app-server').write_text('''import json,os,sys
+for line in sys.stdin:
+    row=json.loads(line)
+    if 'id' not in row:continue
+    value={'codexHome':os.environ['CODEX_HOME']} if row['method']=='initialize' else {}
+    print(json.dumps({'id':row['id'],'result':value}),flush=True)
+''')
+    evidence = root / 'reader-evidence'
+    evidence.mkdir(mode=0o700)
+    before = target.read_bytes(), target.stat().st_mtime_ns
+    with factory() as guard:
+        result = module['monitor_read_cold_native'](guard, sys.executable, [work],
+            environment={**os.environ, 'CODEX_HOME': config['codex_home']},
+            evidence=evidence, timeout=5)
+        assert result['native_started'] and result['native_terminated']
+        assert result['locks_reacquired'] and result['exit_code'] == 0
+        assert result['reports'] == [{}] and result['requirements'] == {}
+        assert guard.native_owners() == []
+    assert native_helper.poll() is None
+    assert (target.read_bytes(), target.stat().st_mtime_ns) == before
+
+
 def test_ci_prepares_a_private_runner_from_world_writable_python(cold, tmp_path):
     module, _, config, _, _ = cold
     prefix = tmp_path / 'provider'
