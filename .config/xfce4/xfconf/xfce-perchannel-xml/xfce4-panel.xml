@@ -155,6 +155,7 @@
         <value type="string" value="TeamViewer"/>
       </property>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="mattermost_tray.py"/>
         <value type="string" value="claude-desktop"/>
         <value type="string" value="copyq"/>
         <value type="string" value="ferdium"/>
