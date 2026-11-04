@@ -154,6 +154,10 @@
 !/scripts/
 !/scripts/*
 
+!/scripts/tampermonkey/
+!/scripts/tampermonkey/*.user.js
+!/scripts/tampermonkey/LICENSE
+
 !/scripts/skill_tests/
 !/scripts/skill_tests/**
 !/scripts/tests/
