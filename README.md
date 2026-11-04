@@ -28,6 +28,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Update the repository with an isolated pull](#update-the-repository-with-an-isolated-pull)
       - [Recover an interrupted isolated pull](#recover-an-interrupted-isolated-pull)
     - [Install XFCE from sources](#install-xfce-from-sources)
+    - [Hide the Xfce unread notification badge](#hide-the-xfce-unread-notification-badge)
     - [Vim style cheat](#vim-style-cheat)
     - [Historical performance monitoring](#historical-performance-monitoring)
       - [Host swap and thrashing notifications](#host-swap-and-thrashing-notifications)
@@ -1617,6 +1618,40 @@ before returning `.git`.
    1. https://gitlab.freedesktop.org/libinput/libinput/-/issues/185 - Support setting scroll speed
    1. https://askubuntu.com/questions/255890/how-can-i-adjust-the-mouse-scroll-speed/1278266#1278266
 
+
+### Hide the Xfce unread notification badge
+
+The [transparent unread emblem](.local/share/icons/hicolor/scalable/status/org.xfce.notification.unread-emblem-symbolic.svg)
+hides the red badge in the panel and notification history while keeping notification logging and
+popups enabled. The [theme index symlink](.local/share/icons/hicolor/index.theme) reuses the packaged
+`/usr/share/icons/hicolor/index.theme` so GTK recognizes the local override.
+
+To reapply the adjustment after removing or changing these files, run from the installed
+home-directory checkout as the desktop user, without sudo. This restores only the committed icon
+override and its index link, then uses the [panel recovery helper](#manual-xfce-recovery):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+git -C "$HOME" restore --source=HEAD --worktree -- \
+    .local/share/icons/hicolor/index.theme \
+    .local/share/icons/hicolor/scalable/status/org.xfce.notification.unread-emblem-symbolic.svg
+python3 "$HOME/scripts/recover_xfce.py" --restart-panel
+```
+
+To restore the original unread indicator, remove only the transparent SVG and restart the panel.
+Keep the theme index link, which also serves other local icons:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+rm -- "$HOME/.local/share/icons/hicolor/scalable/status/org.xfce.notification.unread-emblem-symbolic.svg"
+python3 "$HOME/scripts/recover_xfce.py" --restart-panel
+```
+
+Neither procedure clears the notification history. To hide the badge again, rerun the first block.
 
 ### Vim style cheat
 

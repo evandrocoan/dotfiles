@@ -19,7 +19,6 @@
         <value type="int" value="14"/>
         <value type="int" value="6"/>
         <value type="int" value="7"/>
-        <value type="int" value="9"/>
         <value type="int" value="8"/>
         <value type="int" value="3"/>
         <value type="int" value="10"/>
@@ -27,6 +26,7 @@
         <value type="int" value="16"/>
         <value type="int" value="5"/>
         <value type="int" value="13"/>
+        <value type="int" value="9"/>
       </property>
       <property name="span-monitors" type="bool" value="false"/>
       <property name="length-adjust" type="bool" value="true"/>
@@ -155,6 +155,7 @@
         <value type="string" value="TeamViewer"/>
       </property>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="mattermost"/>
         <value type="string" value="mattermost_tray.py"/>
         <value type="string" value="claude-desktop"/>
         <value type="string" value="copyq"/>
