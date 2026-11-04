@@ -51,4 +51,5 @@
     <property name="hide-on-read" type="bool" value="false"/>
     <property name="hide-clear-prompt" type="bool" value="false"/>
   </property>
+  <property name="do-not-disturb" type="bool" value="false"/>
 </channel>
