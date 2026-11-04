@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def tracked(pattern):
@@ -84,10 +84,10 @@ class RepositoryConfigurationTests(unittest.TestCase):
     def test_ci_and_test_sources_are_allowlisted_while_secrets_remain_ignored(self):
         visible = [
             ".github/workflows/tests.yml",
-            "scripts/test_repository_configuration.py",
-            "scripts/test_redmine_time_send.py",
-            "scripts/test_smartgit_create_mr.py",
-            "scripts/test_fix_windows_zip_paths.py",
+            "scripts/tests/test_repository_configuration.py",
+            "scripts/tests/test_redmine_time_send.py",
+            "scripts/tests/test_smartgit_create_mr.py",
+            "scripts/tests/test_fix_windows_zip_paths.py",
             "scripts/run_repository_tests.sh",
         ]
         for path in visible:

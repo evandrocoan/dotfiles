@@ -10,7 +10,7 @@ import textwrap
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
     "redmine_time_send", ROOT / ".local/bin/redmine_time_send.py"
 )

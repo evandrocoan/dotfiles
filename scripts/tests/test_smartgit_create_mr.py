@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import call, patch
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class SilentLogger:

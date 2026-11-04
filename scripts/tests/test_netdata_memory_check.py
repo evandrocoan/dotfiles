@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from process_swap_history import History
 
-SCRIPT = Path(os.environ.get("NETDATA_CHECK_SCRIPT", Path(__file__).with_name("netdata_memory_check.py")))
+SCRIPT = Path(os.environ.get("NETDATA_CHECK_SCRIPT", Path(__file__).resolve().parents[1] / "netdata_memory_check.py"))
 spec = importlib.util.spec_from_file_location("netdata_check", SCRIPT)
 check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)

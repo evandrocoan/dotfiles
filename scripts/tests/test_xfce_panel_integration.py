@@ -15,6 +15,9 @@ import sys
 import unittest
 import xml.etree.ElementTree as ET
 
+# The private D-Bus probe also runs this file directly in a subprocess.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import diagnose_xfce_panel_boot as capture
 import xfce_panel_startup as fix
 from test_xfce_panel_startup import Fixture, EXPECTED

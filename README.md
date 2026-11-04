@@ -2516,7 +2516,7 @@ the Mint/local-build host and uses a disposable home and private D-Bus, never th
 
 ```bash
 cd ~/scripts
-XFCE_PANEL_INTEGRATION_TESTS=1 poetry run python -B -m unittest test_xfce_panel_integration -v
+XFCE_PANEL_INTEGRATION_TESTS=1 poetry run python -B -m pytest tests/test_xfce_panel_integration.py -v
 ```
 
 #### Shared XFWM launcher

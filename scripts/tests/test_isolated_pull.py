@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().with_name("isolated_pull.sh")
+SCRIPT = Path(__file__).resolve().parents[1] / "isolated_pull.sh"
 
 
 class IsolatedPullTests(unittest.TestCase):

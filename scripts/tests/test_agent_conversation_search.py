@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / '.local/bin/codex-session-stats'
+SCRIPT = Path(__file__).resolve().parents[2] / '.local/bin/codex-session-stats'
 STAMP = '2026-09-08T15:37:00Z'
 URL = 'https://gitlab.example/ai/example-ai/-/merge_requests/82'
 

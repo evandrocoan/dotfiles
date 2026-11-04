@@ -58,7 +58,6 @@ PY
 }
 
 python3 -m unittest discover -s scripts/performance-monitoring -p 'test_*.py' -v
-python3 -m unittest discover -s scripts -p 'test_*.py' -v
 python3 -m unittest discover -s .claude/skills/codex-claude-loop/tests -p 'test_*.py' -v
 python3 -m pytest -c scripts/pyproject.toml scripts/tests
 (

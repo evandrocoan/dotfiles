@@ -14,7 +14,7 @@ import unittest
 from unittest import mock
 
 
-SCRIPT = Path(os.environ.get("CORE_DUMP_ALERT_SCRIPT", Path(__file__).with_name("core_dump_alert.py")))
+SCRIPT = Path(os.environ.get("CORE_DUMP_ALERT_SCRIPT", Path(__file__).resolve().parents[1] / "core_dump_alert.py"))
 SPEC = importlib.util.spec_from_file_location("core_dump_alert", SCRIPT)
 alert = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(alert)

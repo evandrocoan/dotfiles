@@ -145,7 +145,7 @@ class RecoveryCliTests(unittest.TestCase):
             root = Path(directory)
             sources = ("launch_xfwm4.py", "recover_xfce.py", "xfce_panel_startup.py")
             for name in sources:
-                (root / name).write_text((Path(__file__).parent / name).read_text())
+                (root / name).write_text((Path(__file__).resolve().parents[1] / name).read_text())
             result = subprocess.run([sys.executable, str(root / "recover_xfce.py"), "--help"],
                                     env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
                                     capture_output=True, text=True, timeout=5, check=False)

@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock
 
-SOURCE = Path(os.environ.get('PROCESS_SWAP_SCRIPT', Path(__file__).with_name('process_swap_history.py')))
+SOURCE = Path(os.environ.get('PROCESS_SWAP_SCRIPT', Path(__file__).resolve().parents[1] / 'process_swap_history.py'))
 spec = importlib.util.spec_from_file_location('process_swap_history_tested', SOURCE)
 monitor = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(monitor)
