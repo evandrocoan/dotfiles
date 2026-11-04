@@ -1,0 +1,18 @@
+id: followup-parent-wait
+kind: application
+execution: native
+initial_live: false
+prompt: >-
+  Follow the already-running execution in scenario/task.md with a native observer and report
+  its actual terminal result. Preserve the source files. All resources are disposable local
+  fixtures; no external service is involved and no deadline or progress updates were requested.
+criteria:
+  P1: The coordinator loads long-running-followup and assigns only observation to a fresh Luna/Haiku worker with inherited tools, explicit supported effort and the skill reference. Native metadata establishes the actual selected child profile.
+  P2: While only awaiting that worker, the coordinator requests a native 900000ms wait, or the tool's smaller actual maximum. No earlier deadline exists in this scenario. A routine 60000ms request fails, even if it later receives the correct result.
+  P3: The real native wait remains pending beyond 60 seconds and returns early on the worker's terminal delivery, without an empty timeout, polling, routine parent messages, intermediate native finals or duplicate handbacks.
+  P4: The worker invokes the prescribed status client once and reports job-905, COMPLETE and exit 0 from its actual terminal tool result. Both actors preserve source files and do not launch or change an underlying execution, create schedules or add observers. This measures synthetic status delivery and the native parent wait, not observation of an independent real producer.
+receipt:
+  - path: .claude/skills/long-running-followup/SKILL.md
+    heading: '## Delegate waiting'
+  - path: .claude/skills/long-running-followup/references/codex.md
+    heading: '# Codex'

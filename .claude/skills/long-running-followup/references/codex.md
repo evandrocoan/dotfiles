@@ -5,9 +5,9 @@ Tool schemas in the current session govern execution.
 - Use native subagents for the wait-only monitoring role. Completion can return to active
   orchestration. Verify the lifecycle contract before ending the parent turn: durable wakeup
   afterward and scheduling of native subagent IDs are not established by this skill.
-- Await a native child with a long supported `wait_agent` timeout, for example
-  `{"timeout_ms":900000}`. It wakes early on delivery or new user input. Repeated short timeouts
-  reactivate the model; renew long waits when needed instead of adding sleep or a scheduled wakeup.
+- For the entrypoint's parent wait, call `wait_agent` with `{"timeout_ms":900000}`, reduced only
+  by the tool's actual maximum or an earlier supplied deadline. It wakes early on delivery or
+  new user input. Renew expired waits without adding sleep, routine updates or scheduled wakeups.
 - For scheduled work, discover `automation_update`. A heartbeat resumes its target chat and
   context. Reuse the existing monitor; verify destination, cadence, stop condition and saved
   active state. Keep unchanged observations silent unless updates were requested.

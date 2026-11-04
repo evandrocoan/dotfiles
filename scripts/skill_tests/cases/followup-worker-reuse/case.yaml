@@ -11,7 +11,7 @@ criteria:
   R2: The same native worker makes the first observation and subsequent blocking wait for job-91 attempt-3; do not create another worker for the next check or delegate recursively.
   R3: The actual client receipts show one --once request and one --wait request, both made by that worker; the coordinator does not poll status while waiting.
   R4: Return observed RUNNING followed by SUCCEEDED and exit_code 0 through native delivery, supported by actual tool outputs; preserve the source files and operation identity.
-  R5: While awaiting the child, use event-driven delivery or minute-scale blocking waits within applicable tool, runtime and deadline constraints. Distinguish real message/completion wakeups from repeated short timeout-driven mailbox or worker-status checks; the latter fail this criterion when longer waits are permitted. Do not create timers, schedules or another observer for the same wait.
+  R5: While only awaiting the child, use native event delivery or a 15-minute blocking wait, shortened only by an earlier supplied deadline or the tool's actual maximum. Distinguish real message/completion wakeups from short timeout-driven checks; a routine 60-second timeout fails when the tool supports 15 minutes. Do not create timers, schedules or another observer for the same wait.
 receipt:
   - path: .claude/skills/long-running-followup/SKILL.md
     heading: '## Delegate waiting'

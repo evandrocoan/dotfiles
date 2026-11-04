@@ -26,6 +26,7 @@ def test_all_cases_valid_and_live_budget_exact():
         "followup-worker-lifetime", "followup-command-contract", "followup-evidence-only",
         "followup-executor-model",
         "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
+        "followup-parent-wait",
     }
     selected = [key for key, case in corpus.items() if case["initial_live"]]
     assert selected == ["architecture", "authorization", "references"]
@@ -75,6 +76,7 @@ def test_empty_corpus_does_not_look_valid(tmp_path):
     "followup-executor-model",
     "followup-parent-takeover", "followup-task-continuation", "followup-quiet-batch",
     "followup-database-near-miss",
+    "followup-parent-wait",
 ])
 def test_native_case_rejected_before_cli_discovery_or_output(tmp_path, monkeypatch, case_id):
     def unexpected_client_lookup(name):

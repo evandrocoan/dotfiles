@@ -41,9 +41,10 @@ context for a new assignment outside that scope or after the prior assignment is
 Tell each fresh observer to load this skill. Keep its model and effort across continuations; it
 does not delegate its own waiting again. Independent monitoring tasks may have independent workers.
 
-The parent awaits delivery with a long event-driven blocking call, using minute-scale supported
-waits unless a real tool limit or supplied deadline requires less. Do not loop on short mailbox
-checks or wake the parent for cache warming.
+When the parent is only awaiting a child, use a native event-driven wait with a 15-minute timeout.
+Shorten it only for an earlier supplied deadline or the tool's actual maximum. Completion,
+messages or user input can wake the wait early. Renew an expired wait without routine updates;
+do not loop on short mailbox checks or wake the parent for cache warming.
 
 ## Choose how completion arrives
 
