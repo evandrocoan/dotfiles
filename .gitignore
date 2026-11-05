@@ -170,6 +170,10 @@
 !/scripts/tests/
 !/scripts/tests/**
 
+!/scripts/core-dump-filter/
+!/scripts/core-dump-filter/*.conf
+!/scripts/core-dump-filter/*.py
+
 !/scripts/codex-vscode-history-fix/
 !/scripts/codex-vscode-history-fix/*.cjs
 

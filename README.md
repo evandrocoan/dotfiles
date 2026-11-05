@@ -40,7 +40,9 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Check the NVMe SSD health](#check-the-nvme-ssd-health)
       - [Remove the monitoring setup](#remove-the-monitoring-setup)
     - [Fix system crash](#fix-system-crash)
+      - [Core dump capture and filtering](#core-dump-capture-and-filtering)
       - [Core dump alerts](#core-dump-alerts)
+      - [Processes pending core dump disablement](#processes-pending-core-dump-disablement)
       - [Restore GNOME Keyring SSH after a crash](#restore-gnome-keyring-ssh-after-a-crash)
       - [Rebuild GNOME Keyring and GCR repairs](#rebuild-gnome-keyring-and-gcr-repairs)
       - [Manual XFCE recovery](#manual-xfce-recovery)
@@ -2241,6 +2243,194 @@ and `/var/cache/netdata` can be removed separately once they are no longer neede
 
 ### Fix system crash
 
+#### Core dump capture and filtering
+
+[`scripts/core-dump-filter/core_dump_filter.py`](scripts/core-dump-filter/core_dump_filter.py) is an
+optional kernel pipe collector.
+It ignores the exact kernel `%e` process names in
+[`ignore.conf`](scripts/core-dump-filter/ignore.conf) before reading the dump. Other captures go to
+`/root/coredumps/` as `root:root`, mode `0600`; use sudo to inspect or move them. The source files in
+this repository do not activate the collector. It needs Linux 5.3 or newer (pipe arguments preserve
+spaces in names) and the existing system Python, without Poetry or third-party packages at runtime.
+
+The original native setup, before enabling the filter, is:
+
+| Setting | Original configuration |
+| --- | --- |
+| `/etc/sysctl.d/99-local-coredumps.conf` | `kernel.core_pattern=/root/coredumps/core-%e-%s-%u-%g-%p-%t` |
+| `/etc/tmpfiles.d/local-coredumps.conf` | `d /root/coredumps 1733 root root - -` |
+| `/etc/security/limits.d/90-coredumps.conf` | `* - core unlimited` and `root - core unlimited` |
+| `/root` | `root:root`, mode `0711` |
+| `/root/coredumps` | `root:root`, mode `1733`, sticky and writable but not listable by other users |
+| Native core files | Mode `0600`; ownership follows the kernel's native dump rules |
+| Other active sysctls | `kernel.core_pipe_limit=16`, `fs.suid_dumpable=2` |
+
+The last two sysctls originally came from the installed systemd-coredump package's
+`/usr/lib/sysctl.d/50-coredump.conf`; the local `99-local-coredumps.conf` overrides its collector.
+The supplied [native](scripts/core-dump-filter/native.sysctl.conf) and
+[filtered](scripts/core-dump-filter/filter.sysctl.conf) templates set these values explicitly so a
+new machine does not depend on that package. Mode `2` also permits privileged-process dumps, which
+the filter always keeps accessible only to root. PAM limits apply to new login sessions; a systemd
+service has its own limits. Check a real process with `prlimit --pid PID --core`; configure that
+service's `LimitCORE=` separately if needed.
+
+**Save the destination machine's previous configuration before the first installation.** Run the
+following in a terminal as the desktop user. Keep the printed backup path for rollback; this backup
+contains settings, not the existing core files. Do not replace an earlier installation's backup
+when updating the collector.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+COREDUMP_BACKUP="$(sudo mktemp -d /root/core-dump-backup.XXXXXXXX)"
+for COREDUMP_FILE in /etc/sysctl.d/99-local-coredumps.conf /etc/tmpfiles.d/local-coredumps.conf /etc/security/limits.d/90-coredumps.conf; do
+    if sudo test -e "${COREDUMP_FILE}" || sudo test -L "${COREDUMP_FILE}"; then
+        sudo cp -a --parents -- "${COREDUMP_FILE}" "${COREDUMP_BACKUP}/"
+    else
+        sudo mkdir -p -- "${COREDUMP_BACKUP}$(dirname -- "${COREDUMP_FILE}")"
+        sudo touch -- "${COREDUMP_BACKUP}${COREDUMP_FILE}.absent"
+    fi
+done
+sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable | sudo tee "${COREDUMP_BACKUP}/runtime.sysctl.conf"
+sudo stat -c '%a %u %g %n' /root | sudo tee "${COREDUMP_BACKUP}/modes.txt"
+if sudo test -d /root/coredumps; then
+    sudo stat -c '%a %u %g %n' /root/coredumps | sudo tee -a "${COREDUMP_BACKUP}/modes.txt"
+fi
+printf 'Keep this backup path: %s\n' "${COREDUMP_BACKUP}"
+```
+
+**Install and activate the filter.** On a fresh machine, leave `/root` private (`0700`); this
+root-run collector does not require opening traversal. Existing permissions can remain as they are.
+Install only the reviewed copy into the root-owned location, not a link into the home checkout.
+All components of its installation path must belong to root and not be writable by other users.
+This first-install recipe refuses existing collector directories, including an inactive or
+customized installation. Use the update procedure below for an existing installation.
+
+First inspect the installation parents:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+namei -l /usr/local/lib /etc
+```
+
+Stop before installing if an ancestor is not root-owned, is writable by group/others, or a symlink
+leads into a user-controlled tree. Resolve that condition first. The collector's `--check` validates
+the configuration and dump-directory trees; it does not validate its own installation ancestry.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+for COREDUMP_DESTINATION in /usr/local/lib/core-dump-filter /etc/core-dump-filter; do
+    if sudo test -e "${COREDUMP_DESTINATION}" || sudo test -L "${COREDUMP_DESTINATION}"; then
+        printf 'Existing destination: %s; use the update procedure.\n' "${COREDUMP_DESTINATION}" >&2
+        exit 1
+    fi
+done
+sudo install -d -o root -g root -m 0755 /usr/local/lib/core-dump-filter /etc/core-dump-filter
+sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/core_dump_filter.py /usr/local/lib/core-dump-filter/core_dump_filter.py
+sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/ignore.conf /etc/core-dump-filter/ignore.conf
+sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/local-coredumps.tmpfiles.conf /etc/tmpfiles.d/local-coredumps.conf
+sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/90-coredumps.limits.conf /etc/security/limits.d/90-coredumps.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/local-coredumps.conf
+sudo /usr/bin/python3 -I /usr/local/lib/core-dump-filter/core_dump_filter.py --check
+sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/filter.sysctl.conf /etc/sysctl.d/99-local-coredumps.conf
+sudo sysctl -p /etc/sysctl.d/99-local-coredumps.conf
+sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
+```
+
+The pattern must now start with `|/usr/bin/python3 -I /usr/local/lib/core-dump-filter/`.
+This takes effect immediately for subsequent crashes and survives reboot; PAM-limit changes need a
+new login. It does not restart applications or remove existing dumps. Other sysctl files or another
+crash collector can override the pattern later, so check it again after reboot or package changes.
+Install the [desktop alerts](#core-dump-alerts) separately if they are not already configured.
+
+**Change exclusions or update the code.** Edit `/etc/core-dump-filter/ignore.conf` with `sudoedit`,
+then run the installed collector's `--check`. The next crash reads the new list; no service restart
+is needed. For a portable change, also update the repository's `ignore.conf` and install that copy.
+Entries are literal kernel `%e` names, at most 15 bytes, one per line; blank lines and `#` comments
+are accepted, and surrounding whitespace is removed. There are no wildcards or executable paths.
+Read `/proc/PID/comm` to identify a process. For unusual names, account for the kernel's `%e`
+normalization: `/` becomes `!`, and empty names, `.` and `..` are adjusted. The initial panel names
+need no conversion. The panel plugin instance number is part of its name;
+if it changes, update the entry. Other plugins using the same wrapper remain eligible for capture.
+To update the code, save the installed copy, repeat only its `install` command above, and run
+`--check`; do not overwrite a customized ignore list with the defaults.
+
+**Check capture and diagnose failures.** These commands inspect configuration and pending files
+without deliberately crashing a desktop application:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+sudo /usr/bin/python3 -I /usr/local/lib/core-dump-filter/core_dump_filter.py --check
+sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
+sudo stat -c '%a %U:%G %n' /root /root/coredumps
+sudo ls -lah /root/coredumps/
+sudo journalctl -t core-dump-filter -n 30 --no-pager
+```
+
+Complete captures retain the `core-NAME-SIGNAL-UID-GID-PID-TIME` layout. PID is the global host PID
+(`%P`); unsafe name bytes are percent-encoded, and collisions receive a random suffix instead of
+overwriting an existing file. All-zero chunks are stored as sparse holes. A zero original core
+limit skips capture; a finite limit caps the logical bytes written. A proven truncated capture has
+the `.partial` suffix. This logical-byte cap is not identical to native sparse-hole accounting.
+Read, write or sync failures retain the available prefix as `.partial` when possible; publication
+failure or abrupt termination can leave a hidden `.core-dump-filter-*` file. These hidden files
+need manual inspection and are not included in desktop alerts. Logging is best effort through
+syslog/journald. An unavailable or invalid ignore list logs an error and captures without exclusions;
+`--check` instead fails so it can be corrected before activation.
+
+The collector runs in the host's initial namespaces and stores eligible dumps in the host directory,
+including crashes from containers or services with a private `/root`. This differs from ordinary
+native file capture, whose path is resolved in the crashing process's filesystem namespace;
+privileged native dumps using the `suidsafe` mode can instead use the initial root. It does not change
+the limits of applications launched by the panel. The kernel invokes the collector before the
+exclusion decision; ignoring avoids reading and storing that stream. At most 16 collectors run
+concurrently; excess captures are skipped by the kernel. There is no retention or storage cap.
+
+**Restore the previous capture configuration.** Substitute the backup path from this machine's
+first installation. Restore its saved files or remove only files marked originally absent, then
+restore and inspect the saved runtime sysctls. Do not copy another machine's rollback settings.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+COREDUMP_BACKUP=/root/core-dump-backup.REPLACE_WITH_SAVED_NAME
+for COREDUMP_FILE in /etc/sysctl.d/99-local-coredumps.conf /etc/tmpfiles.d/local-coredumps.conf /etc/security/limits.d/90-coredumps.conf; do
+    if sudo test -f "${COREDUMP_BACKUP}${COREDUMP_FILE}.absent"; then
+        sudo rm -f -- "${COREDUMP_FILE}"
+    else
+        sudo cp -a -- "${COREDUMP_BACKUP}${COREDUMP_FILE}" "${COREDUMP_FILE}"
+    fi
+done
+sudo sysctl -p "${COREDUMP_BACKUP}/runtime.sysctl.conf"
+sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
+if [[ "$(sysctl -n kernel.core_pattern)" == *core_dump_filter.py* ]]; then
+    printf 'The filter is still configured; keep its installed files.\n' >&2
+    exit 1
+fi
+sudo rm -- /usr/local/lib/core-dump-filter/core_dump_filter.py /etc/core-dump-filter/ignore.conf
+sudo rmdir -- /usr/local/lib/core-dump-filter /etc/core-dump-filter
+sudo cat "${COREDUMP_BACKUP}/modes.txt"
+```
+
+Use the recorded modes/owners to restore `/root/coredumps` if it existed before installation.
+The installation does not change `/root` itself. Keep dumps and the backup until reviewed; remove
+neither directory as part of uninstalling the filter. Desktop alerts continue watching existing
+files independently of which collector creates them.
+
+**Reproduce the original native setup instead of using the filter.** Install
+`native.sysctl.conf` as `/etc/sysctl.d/99-local-coredumps.conf`, and install the same tmpfiles and PAM
+templates shown above. Create the directory with `systemd-tmpfiles --create` and apply that sysctl
+file with `sysctl -p`. Native capture additionally needs traversal through `/root`. Before opening
+it, save and review the modes/owners of its direct children; handle symlinks and non-root-owned
+entries separately. Make other child directories private and remove group/other access from regular
+files, preserving root's access. Only after that privacy preparation, set `/root` to `root:root`
+mode `0711`. Keep future children private too. The collector's filtered mode does not require this
+change. The [kernel interface reference](https://man7.org/linux/man-pages/man5/core.5.html) describes
+native filenames, pipe collectors and namespace behavior.
+
 #### Core dump alerts
 
 The [core dump monitor](scripts/core_dump_alert.py) reports new native core files and reminds the
@@ -2248,24 +2438,10 @@ desktop user every hour while files remain in `/root/coredumps/`. Moving the las
 stops future reminders. The monitor reads file metadata only and never moves or deletes dumps.
 The hourly interval includes time spent suspended; a fresh check after resume handles overdue alerts.
 
-This requires native core capture to be configured already: `kernel.core_pattern` must name files
-under `/root/coredumps/`, and the crashing process needs a nonzero core limit. Check the pattern
-with `sysctl kernel.core_pattern` and a process with `prlimit --pid PID --core`. A shell's `ulimit -c`
-does not describe unrelated services. The monitor considers regular files named `core-*`, matching
-the native filename pattern, and ignores symlinks and subdirectories.
-
-The host configuration is in `/etc/sysctl.d/99-local-coredumps.conf`, with
-`kernel.core_pattern=/root/coredumps/core-%e-%s-%u-%g-%p-%t`; `/etc/tmpfiles.d/local-coredumps.conf`
-creates `/root/coredumps` as `root:root` with mode `1733`. `/root` has mode `0711`, allowing traversal
-of known paths without directory listing or creation of other entries. Before opening traversal,
-group and other access was removed from its existing direct children, preserving root's own access.
-Keep future content outside `coredumps` private too: directories need mode `0700`, and regular
-files must not grant group or other access. Native core files have mode `0600`.
-
-The kernel resolves the destination in the crashing process's filesystem namespace. Services
-that hide `/root`, use a different root, or mount it read-only need a compatible capture location
-in that namespace. Containers with their own `/root` bind mounts keep their dumps in those mounts;
-the host monitor watches only the host directory.
+Configure [capture with or without filtering](#core-dump-capture-and-filtering) first. The monitor
+considers regular files named `core-*` in the host directory, including marked partial captures,
+and ignores symlinks, hidden temporary files and subdirectories. Its behavior does not depend on
+whether the kernel writes native files or invokes the optional filter.
 
 The root-owned publisher can enumerate the protected directory. Its sandbox exposes only a
 read-only bind of `/root/coredumps` inside an otherwise hidden home directory tree.
@@ -2348,6 +2524,16 @@ sudo systemctl daemon-reload
 
 This preserves native capture, all pending core files, and private reminder state. There is no
 automatic dump retention or storage cap. Keep archived dumps outside the watched directory.
+
+#### Processes pending core dump disablement
+
+Disable core dumps for the following processes. Names are recorded as they appear in the core
+filenames; the initial filter entries are in [ignore.conf](scripts/core-dump-filter/ignore.conf).
+These remain pending until the installed filter is activated and its configuration is verified:
+
+- [ ] `panel-5-pulseau`
+- [ ] `panel-8-systray`
+- [ ] `xfce4-panel`
 
 #### Restore GNOME Keyring SSH after a crash
 

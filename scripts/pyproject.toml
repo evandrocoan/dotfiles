@@ -35,7 +35,7 @@ websockets = "^10.4"
 tomlkit = "0.15.2"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "core-dump-filter"]
 pythonpath = ["."]
 addopts = "--strict-config --strict-markers"
 
