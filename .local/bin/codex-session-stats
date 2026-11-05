@@ -2706,7 +2706,7 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 8
+MQ_INSTRUCTIONS_VERSION = 9
 MQ_COMPACT_ASSESSMENT_VERSION = 3
 
 
@@ -3278,7 +3278,19 @@ def mq_instructions(*,historical_intake=False):
     text = '''Review the supplied GitLab MR link using the ordinary GitLab MCP tools. Read
 AGENTS.md before project commands. Choose repositories, branches, context and useful tests from
 the supplied workspace, preserve existing work and verify the actual SHAs used for test coverage.
-Do not delegate, commit, reset, clean, stash or create worktrees unless explicitly requested.
+Do not delegate, commit, reset, run git clean, stash or create worktrees unless explicitly requested.
+For automatic reviews and their actual continuations, keep review-only scratch outside
+repository checkouts. Use /tmp/codex-monitor as the scratch base, creating it if needed, and
+allocate a fresh uniquely named subdirectory per review. Put exported Git snapshots,
+generated test helpers, temporary scripts, logs and test outputs in that subdirectory.
+Do not create .review-* or other review scratch in repository folders. Run checks that
+generate files from the scratch snapshot or configure their output/cache paths there;
+actual requested source edits still belong in the selected repository.
+Track only the subdirectory created by this review. Arrange cleanup on success, failure
+or interruption, after all commands and containers using it have stopped. If execution or
+termination is uncertain, preserve the subdirectory and report its path and pending cleanup.
+Never delete the shared scratch base, another review's data, historical .review-* leftovers,
+or user files. Do not run git clean to perform scratch cleanup.
 The operator has already selected the configured model and thinking effort for this dispatched
 stage. Do not offer model changes or ask for confirmation. This does not answer domain questions.
 For the automatic review, also review child MRs explicitly linked as dependencies in the supplied
