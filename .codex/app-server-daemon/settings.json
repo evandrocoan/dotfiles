@@ -1,0 +1,6 @@
+{
+  "remoteControlEnabled": true,
+  "updater": {
+    "autoUpdateEnabled": false
+  }
+}

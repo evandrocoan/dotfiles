@@ -230,6 +230,8 @@
 !/.codex/AGENTS.md
 !/.codex/config.toml
 !/.codex/.env.example
+!/.codex/app-server-daemon/
+!/.codex/app-server-daemon/settings.json
 !/.claude/
 !/.claude/CLAUDE.md
 !/.claude/settings.json
