@@ -209,6 +209,21 @@ A failed stage never contributes reviewed coverage. At least one complete valid 
 exact target head is required before advancing a code checkpoint. Publication during an active
 review does not depend on that reviewer or a later reviewer ultimately succeeding.
 
+The MR record also retains reusable code coverage independently for each reviewer. During the
+existing atomic settlement, only that reviewer's successful actual code stage at the admitted and
+current open head, with a matching target and diff basis, establishes its baseline. The shared
+checkpoint and historical input formats do not supply individual coverage. Missing or invalid
+basis preserves ordinary settlement without establishing a reusable baseline. Job rotation keeps
+coverage in the MR record; validated whole-MR retirement removes it with that record.
+
+New versioned automatic code tasks freeze the individual baseline, target head and basis with the
+input. A reviewer without reusable coverage receives complete scope. For an incremental candidate,
+the native reviewer verifies the current target and basis and proves ancestry; uncertain ancestry,
+rewritten history or unavailable objects require a complete review. Reviewers inspect necessary
+surrounding context, complete discussions and applicable child MRs. An explicit complete restart
+retains complete scope through failure-only retries. Historical inputs and held continuations keep
+their original identity and readers; individual credit uses the effective completed stage.
+
 After all reviewers in an attempt terminate, only reviewers whose latest review failed return to
 the tail of the same FIFO, eligible after the configured interval. Successful reviewers are not
 rerun. A subsequent failed attempt follows the same rule. Keep the same job, exact head, frozen
@@ -419,6 +434,9 @@ continuation and recovery; historical inputs remain on their original reader. Ex
 restart adds a selected round-discard transition and late-answer handling without changing normal
 native human conversations.
 
+Individual code coverage uses a distinct versioned task context without rewriting historical
+readers or loaded conversations. Its saved scope is reused during delivery recovery.
+
 Each 15-minute systemd trigger runs one bounded queue cycle and exits, using a oneshot service
 without automatic restart or a resident scan helper. The current TOML cadence/window governs
 automatic inventory. A singleton cycle lock and durable running job preserve serial capacity between
@@ -528,11 +546,13 @@ tests after replacement protections pass. Never edit native databases or runtime
 The direct-route update pauses scheduling until implementation, validation, selected reviews and
 local commits finish. Prove issued native executions terminal before editing their runtime.
 Retain original `message-v1` and older file validators and finish/question intent readers for
-issued results. New inputs use `message-v3` and fresh instructions; `message-v2` retains its exact renderer. Transactionally archive only
+issued results. The direct-route update introduced `message-v3` and fresh instructions;
+`message-v2` retains its exact renderer. Transactionally archive only
 proven-unissued old preparations outside executed attempts, preserving original lookup, successful
 stages and selective retry bounds. Unknown native delivery is reconciled exactly, never relaunched.
 Existing holds and confirmed/uncertain journals remain authoritative outside the explicit operator
-abandonment transition. No old chat is rewritten.
+abandonment transition. No old chat is rewritten. Individual incremental coverage uses a later
+input format; earlier direct-route formats retain their original readers and cannot be backfilled.
 
 | Invariant | Owner | Required evidence |
 | --- | --- | --- |
@@ -540,6 +560,7 @@ abandonment transition. No old chat is rewritten.
 | Automatic event grouping | `MonitorQueue` enqueue/reserve coalescing and original admissions | `test_codex_gitlab_coalescing.py`: FIFO, frozen work, barriers, repeat/restart, concurrent transactions; sanitized pending-event artifact replay |
 | Operation recovery | Native collectors, cold context normalization, consumer retry/status | `test_codex_gitlab_recovery.py`: sanitized native artifacts, retry/restart without relaunch, two-failure tick progress, prepared/confirmed effects, source/context denials and CLI resume commands |
 | Selective reviewer retry | `MonitorQueue` attempt bounds, transactional tail move and worker settlement | `test_codex_gitlab_retries.py`: both orders, interval/FIFO/restart, partial-success backfill, native questions, reset interruption, old-call denial, receipt reuse and checkpoint guards |
+| Individual incremental coverage | `MonitorQueue.finish`, MR JSON, `mq_review_scope` and versioned native input | `test_codex_gitlab_incremental.py`: independent credit, partial failures, saved inputs, continuation, complete fallback/restart, coalescing and retention; historical message fixtures and installed-client local-provider probes; no recorded production session or model-quality claim |
 | Finite Claude execution | Transient service, receipt and stream collector | `test_codex_gitlab_print.py` and installed-client fixtures: native identities, split finals, lost acknowledgment, live descendants, timeout and resume |
 | Exact native/result identity | Original native source, versioned input and terminal result collector | `test_codex_gitlab_direct_native.py`: installed clients, real HTTP MCP and local model fixtures, scoped positive/negative permissions and exact output provenance |
 | Native human conversations and held reviews | Targeted `mq_intake`, original native collectors and `mq_effective_stage` | `test_codex_gitlab_direct.py`: no general producer/classifier, causal continuations, original finals, failures/retries, checkpoints, source denials and transaction recovery; installed-client cold-resume probes; historical tools holds/fences |

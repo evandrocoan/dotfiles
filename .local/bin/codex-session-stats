@@ -2706,7 +2706,7 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 9
+MQ_INSTRUCTIONS_VERSION = 10
 MQ_COMPACT_ASSESSMENT_VERSION = 3
 
 
@@ -3107,7 +3107,7 @@ class MonitorQueue:
             job.update(state='pending', wait_reason=reason, retry_at=retry_at)
             self.save(job)
 
-    def finish(self, job, outcome, *, reviewed=False):
+    def finish(self, job, outcome, *, reviewed=False, current_context=None):
         with self.atomic():
             self.check_running(job)
             if any(s['state'] == 'running' for s in job['stages']):
@@ -3127,6 +3127,31 @@ class MonitorQueue:
                     raise RuntimeError('only actual admitted code provenance advances checkpoint')
                 record = self.mr(job['repository_id'], job['iid'])
                 record['reviewed_head'] = job['head']
+                basis = mq_review_basis(current_context, job['head'])
+                if basis is not None:
+                    coverage = record.get('reviewed_code_by_reviewer')
+                    coverage = dict(coverage) if isinstance(coverage,dict) else {}
+                    latest = {s['reviewer']:s for s in job['stages'] if s.get('purpose')!='question'}
+                    for reviewer,original in latest.items():
+                        effective = mq_effective_stage(original)
+                        if (original.get('input_format')!='message-v4' or effective['state']!='succeeded'
+                                or not isinstance(effective.get('result'),dict)
+                                or effective['result'].get('outcome')!='complete'
+                                or effective['result'].get('head')!=job['head']):
+                            continue
+                        try:
+                            data = mq_input_context(self,original)
+                        except (RuntimeError,KeyError,TypeError,ValueError):
+                            continue
+                        scope = data.get('code_review_scope')
+                        if (data.get('kind')!='code' or data.get('head')!=job['head']
+                                or not isinstance(scope,dict) or scope.get('head')!=job['head']
+                                or scope.get('basis')!=basis):
+                            continue
+                        coverage[reviewer] = {'head':job['head'],'basis':basis,
+                                              'job_id':job['id'],'stage_id':original['id']}
+                    if coverage:
+                        record['reviewed_code_by_reviewer'] = coverage
                 self.put_mr(record)
             job.update(state='completed', outcome=outcome, completed_at=mq_stamp())
             self.save(job)
@@ -3272,6 +3297,46 @@ def mq_fingerprint(context):
     return monitor_digest({'head': context['head'], 'diff_refs':context['mr'].get('diff_refs'),
         'description':context['mr'].get('description'), 'target_branch':context['mr'].get('target_branch'), 'threads': [{'snapshot':monitor_thread_snapshot(t), 'positions':[n.get('position') for n in t['notes']]}
         for t in sorted(context['threads'], key=lambda item: item['id'])]})
+
+
+def mq_review_basis(context, head):
+    """Return only an authenticated, complete target and diff basis for this head."""
+    if not isinstance(context,dict) or context.get('head')!=head:
+        return None
+    mr = context.get('mr')
+    if not isinstance(mr,dict) or mr.get('sha')!=head:
+        return None
+    refs = mr.get('diff_refs')
+    project,branch = mr.get('target_project_id'),mr.get('target_branch')
+    if (type(project) is not int or project<1 or not isinstance(branch,str) or not branch.strip()
+            or not isinstance(refs,dict) or refs.get('head_sha')!=head
+            or any(not isinstance(refs.get(k),str) or not re.fullmatch(r'[0-9a-f]{40}',refs[k])
+                   for k in ('base_sha','start_sha'))
+            or not isinstance(head,str) or not re.fullmatch(r'[0-9a-f]{40}',head)):
+        return None
+    return {'target_project_id':project,'target_branch':branch,
+            'base_sha':refs['base_sha'],'start_sha':refs['start_sha']}
+
+
+def mq_review_scope(queue, job, stage, context):
+    basis = mq_review_basis(context,job['head'])
+    record = queue.mr(job['repository_id'],job['iid'])
+    coverage = record.get('reviewed_code_by_reviewer')
+    entry = coverage.get(stage['reviewer']) if isinstance(coverage,dict) else None
+    valid = (isinstance(entry,dict) and isinstance(entry.get('head'),str)
+             and re.fullmatch(r'[0-9a-f]{40}',entry['head'])
+             and isinstance(entry.get('job_id'),str) and bool(entry['job_id'])
+             and isinstance(entry.get('stage_id'),str) and bool(entry['stage_id'])
+             and basis is not None and entry.get('basis')==basis)
+    if job.get('force_complete_review') or job.get('operator_restart'):
+        mode,reason,baseline = 'complete','operator_restart',None
+    elif basis is None:
+        mode,reason,baseline = 'complete','missing_basis',None
+    elif not valid:
+        mode,reason,baseline = 'complete','no_coverage',None
+    else:
+        mode,reason,baseline = 'incremental','eligible',entry['head']
+    return {'mode':mode,'reason':reason,'baseline':baseline,'head':job['head'],'basis':basis}
 
 
 def mq_instructions(*,historical_intake=False):
@@ -3607,6 +3672,25 @@ def mq_render_input(data):
     return preamble+'\n--- BEGIN SUPPLIED CONTEXT ---\n'+context
 
 
+def mq_render_input_v4(data):
+    text = mq_render_input(data)
+    scope = data.get('code_review_scope')
+    if scope is None:
+        return text
+    if scope['mode']=='incremental':
+        instruction = ('Focus the code review on all changes from the baseline to the target head '
+            'and their interactions, reading surrounding source and tests as needed. Verify the current '
+            'MR target and diff basis match the frozen facts and prove the baseline is an ancestor '
+            'of the actual head using ordinary GitLab tools or exact local Git objects. If any fact, '
+            'ancestry or object is uncertain, or history was rewritten, conduct a complete review. '
+            'Older code may be read whenever useful.')
+    else:
+        instruction = 'Conduct a complete review of the current MR code.'
+    facts = 'Frozen code review scope: '+json.dumps(scope,ensure_ascii=False,sort_keys=True)
+    return text.replace('\n--- BEGIN SUPPLIED CONTEXT ---\n',
+                        '\n'+instruction+'\n'+facts+'\n--- BEGIN SUPPLIED CONTEXT ---\n',1)
+
+
 def mq_effective_stage(stage):
     """A held review can continue natively without replacing its original captured final."""
     observations = stage.get('continuations',[])
@@ -3616,7 +3700,7 @@ def mq_effective_stage(stage):
 def mq_native_human_policy(stage):
     # Old issued inputs keep their original policy. A frozen old preparation can be sent
     # unchanged in a fresh chat: record the instructions actually used by that dispatch.
-    version = stage.get('instructions_version',7 if stage.get('input_format')=='message-v3' else 0)
+    version = stage.get('instructions_version',7 if stage.get('input_format') in {'message-v3','message-v4'} else 0)
     return stage.get('protocol')=='direct' and version>=7
 
 
@@ -3636,8 +3720,11 @@ def mq_input(queue, job, stage, context):
                            for original in job['stages'][:-1] for s in [mq_effective_stage(original)]
                            if s['state']=='succeeded'],
         'pending_question':job.get('pending_question')}
-    text = mq_render_input(data)
-    mq_update_stage(queue,job,stage['id'],input=text,input_format='message-v3',
+    if job['kind']=='code' and stage.get('purpose')!='question' and (
+            job['source'].get('origin')=='automatic' or job.get('operator_restart')):
+        data['code_review_scope'] = mq_review_scope(queue,job,stage,context)
+    text = mq_render_input_v4(data)
+    mq_update_stage(queue,job,stage['id'],input=text,input_format='message-v4',
                     input_context=data,input_digest=monitor_digest(data))
     return text
 
@@ -4418,7 +4505,7 @@ def mq_input_context(queue,stage):
     if 'input_format' in stage:
         data = stage.get('input_context')
         renderer = {'message-v1':mq_render_input_v1,'message-v2':mq_render_input_v2,
-                    'message-v3':mq_render_input}.get(stage['input_format'])
+                    'message-v3':mq_render_input,'message-v4':mq_render_input_v4}.get(stage['input_format'])
         if (renderer is None or not isinstance(data,dict)
                 or data.get('stage')!=stage['id'] or data.get('reviewer')!=stage['reviewer']
                 or monitor_digest(data)!=stage.get('input_digest')
@@ -5921,7 +6008,7 @@ def mq_step(config,queue):
         if current['head']!=job['head'] or result['head']!=job['head'] or current['mr']['state']!='opened':
             queue.finish(job,'context changed; completed publications preserved',reviewed=False)
         else:
-            queue.finish(job,'reviewed',reviewed=job['kind']=='code')
+            queue.finish(job,'reviewed',reviewed=job['kind']=='code',current_context=current)
             queue.requeue_failed(job)
         return True
     raise RuntimeError('unsupported review protocol')
@@ -6990,7 +7077,7 @@ def mq_restart_review(config,identifier,stage_id,reason):
             job.setdefault('original_sequence',old)
             queue.db.execute('UPDATE jobs SET sequence=? WHERE id=? AND sequence=?',(position,identifier,old))
             job.update(sequence=position,stages=[],batch=None,outcome=None,workspace=None,
-                       wait_reason=None,retry_at=0,coalescing_frozen=True)
+                       wait_reason=None,retry_at=0,coalescing_frozen=True,force_complete_review=True)
             for key in ('validation_error','last_error','pending_question','review_attempt','needs_round_reset'):
                 job.pop(key,None)
             queue.save(job)

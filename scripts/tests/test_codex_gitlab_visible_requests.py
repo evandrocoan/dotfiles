@@ -51,7 +51,7 @@ def test_readable_native_requests_and_no_external_input_json(flow):
     f.drain();saved=f.q.job(job['id'])
     assert f.launched==['claude','codex'] and saved['outcome']=='reviewed' and not f.model_errors
     for stage in saved['stages']:
-        assert stage.get('input_format')=='message-v3'
+        assert stage.get('input_format')=='message-v4'
         assert 'https://gitlab.example.test/team/repo/-/merge_requests/82' in stage['input']
         assert 'Exact admitted head:' not in stage['input']
         assert f.config['cwd'] in stage['input']
@@ -320,7 +320,7 @@ def test_cold_resume_empty_preparation_completes_exact_stage(flow,monkeypatch,ga
     try:
         assert f.step(connection)
         recovered=connection.job(job['id'])['stages'][0]
-        assert recovered['id']==stage['id'] and recovered['input_format']=='message-v3'
+        assert recovered['id']==stage['id'] and recovered['input_format']=='message-v4'
         f.drain()
         assert connection.job(job['id'])['outcome']=='reviewed' and f.launched==['claude','codex']
     finally:connection.close()

@@ -721,6 +721,12 @@ retrying. Execution recovery preserves completed stages and workspace; already p
 An omitted GitLab diff does not block dispatch. The model investigates local Git at the MR's exact
 base/start/head objects in that workspace.
 
+Each reviewer first completes a full code review to establish its own baseline. Later automatic
+code reviews can focus on changes since that review, including the surrounding context needed to
+assess them. The reviewer verifies ancestry and the current target and diff basis; missing or
+uncertain coverage, changed basis, rewritten history, or an explicit restart calls for a full
+review. Both reviewers still read complete discussions and review applicable child MRs.
+
 `status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
 include their native `name`, `session`, saved result or error, and a copyable `resume_command`
 to open the conversation later in the CLI using its original directory and native history.

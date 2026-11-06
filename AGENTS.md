@@ -130,6 +130,12 @@ history. Original consumer chats remain valid human and hold sources. Only actua
 review advances a code checkpoint. Explicit restart preserves retired questions and late answers as
 read-only.
 
+Individual code coverage belongs to each reviewer in the MR record and advances only through
+validated code settlement, never from the shared checkpoint or historical stages. Freeze the
+reviewer's baseline and basis in its versioned input. Native reviewers verify ancestry and use a
+complete review when coverage or basis cannot be established; explicit complete restarts retain
+that scope through failed-reviewer retries. Preserve original inputs and full discussion duties.
+
 Rotate monitor history on successful ticks using `history_limit` independently for
 `jobs`, `effects`, `mrs`, `metadata`, and compact `retired_jobs` identity markers. Count rows, not
 bytes. Never delete active work, retry/output obligations, holds, unread notices, unsettled effects,

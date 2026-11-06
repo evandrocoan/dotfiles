@@ -253,9 +253,12 @@ def test_installed_clients_direct_http_tools(native_workspace, ordinary_gitlab, 
     worker.start()
     data=json.loads((Path(__file__).parent/'fixtures/gitlab-message-v1.json').read_text())['input_context']
     data.update(stage=str(uuid.uuid4()),reviewer=reviewer,kind='code' if mode=='review' else 'intake',workspace=c['_workspace'])
-    task=m['mq_render_input'](data)
+    if mode=='review':
+        data['code_review_scope']={'mode':'incremental','reason':'eligible','baseline':'b'*40,'head':'a'*40,
+            'basis':{'target_project_id':11,'target_branch':'main','base_sha':'c'*40,'start_sha':'d'*40}}
+    task=m['mq_render_input_v4'](data)
     stage={'id':data['stage'],'reviewer':reviewer,'input':task,'input_context':data,
-        'input_format':'message-v3','input_digest':m['monitor_digest'](data)}
+        'input_format':'message-v4','input_digest':m['monitor_digest'](data)}
     native = None
     ordinary = {'gitlab': {'url': fixture['url'], 'http_headers': {'Private-Token':'fixture-only',
         'X-Gitlab-Api-Url':c['gitlab_url']+'/api/v4'}}}
@@ -307,6 +310,7 @@ def test_installed_clients_direct_http_tools(native_workspace, ordinary_gitlab, 
             stage.update(session=session)
             records = m['mq_claude_records'](c, session)
             (home/'direct-history.json').write_text(json.dumps(records))
+        assert json.dumps(task)[1:-1] in json.dumps(server.requests[0])
         calls=m['mq_native_gitlab_calls'](c,None,stage)
         successful=[call for call in calls if not call.get('error')]
         assert {call['tool'] for call in successful}&set(WRITES)==(set(WRITES) if mode=='review' else set())

@@ -233,10 +233,12 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
         thread=created['thread'];identifier=thread['id']
         assert thread['projectId']==project['id']
         assert m['monitor_thread_source_roots'](c,thread)==c['_workspace']['roots']
-        visible=m['mq_render_input']({'stage':str(uuid.uuid4()),'kind':'code',
+        visible=m['mq_render_input_v4']({'stage':str(uuid.uuid4()),'kind':'code',
             'url':'https://gitlab.example.test/team/repo/-/merge_requests/82','head':'a'*40,
             'workspace':c['_workspace'],'model_selection':{'model':'gpt-6.1-sol','effort':'xhigh'},
-            'original_source':{'origin':'automatic'},'prior_reviewers':[]})
+            'original_source':{'origin':'automatic'},'prior_reviewers':[],
+            'code_review_scope':{'mode':'incremental','reason':'eligible','baseline':'b'*40,'head':'a'*40,
+                'basis':{'target_project_id':11,'target_branch':'main','base_sha':'c'*40,'start_sha':'d'*40}}})
         native.turn(identifier,m['mq_codex_permissions'](c),visible)
         history=native.rpc('thread/turns/list',{'threadId':identifier,'itemsView':'notLoaded'})
         turn=history['data'][0]['id']
@@ -244,6 +246,7 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
         users=[r['item'] for r in wire['data'] if r['item']['type']=='userMessage']
         assert len(users)==1 and len(users[0]['content'])==1
         assert users[0]['content'][0]['type']=='text' and users[0]['content'][0]['text']==visible
+        assert json.dumps(visible)[1:-1] in json.dumps(server.requests[0])
         assert server.targets[0].read_text()=='native edit\n'
         assert all(p.read_text()=='native edit\n' for p in server.targets[1:])
         outputs=[i for i in server.requests[-1]['input'] if i.get('type')=='custom_tool_call_output']
@@ -261,6 +264,7 @@ def test_native_codex_project_cold_resume_and_edit(native_workspace):
         native.turn(identifier,m['mq_codex_permissions'](c))
         assert len(server.requests)==6
         assert json.dumps(m['mq_instructions']())[1:-1] in json.dumps(server.requests[-1])
+        assert json.dumps(visible)[1:-1] in json.dumps(server.requests[-1])
         for writable in (False,True):
             c['_workspace_write']=writable
             target=main/('role-'+str(writable))
@@ -478,6 +482,11 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         monkeypatch.setenv(key,value)
     stage=None
     try:
+        f.context['mr'].update(target_project_id=11,target_branch='main')
+        record=f.q.mr(11,82)
+        record['reviewed_code_by_reviewer']={'claude':{'head':'d'*40,'job_id':'prior-job','stage_id':'prior-stage',
+            'basis':{'target_project_id':11,'target_branch':'main','base_sha':'b'*40,'start_sha':'c'*40}}}
+        with f.q.atomic():f.q.put_mr(record)
         job=f.q.enqueue(11,82,source_key='native-print',kind='code',head='a'*40,
             source={'origin':'automatic'},context=f.context)
         if large:
@@ -500,6 +509,9 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         native_records=m['mq_claude_records'](f.config,stage['session'])
         user=next(r for r in native_records if r['type']=='user')
         assert user['message']['content']==request
+        assert saved['stages'][index]['input_format']=='message-v4'
+        assert saved['stages'][index]['input_context']['code_review_scope']['baseline']=='d'*40
+        assert json.dumps(request)[1:-1] in json.dumps(server.requests[0])
         assert saved['stages'][index]['result']['question']=='Which fixture rule should be used?'
         assert f.q.mr(11,82)['hold']['native_anchor']==saved['stages'][index]['anchor']
         assert m['mq_print_execution'](f.config,saved['stages'][index])['terminal'] is True

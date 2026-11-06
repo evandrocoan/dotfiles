@@ -66,7 +66,7 @@ def test_new_stage_uses_normal_gitlab_without_private_server(flow):
     job=automatic(flow);flow.step();saved=flow.q.job(job['id']);stage=saved['stages'][0]
     c=flow.m['mq_workspace_config'](flow.config,saved)
     selection=flow.m['mq_native_selection'](c)['config']
-    assert stage['protocol']=='direct' and stage['input_format']=='message-v3'
+    assert stage['protocol']=='direct' and stage['input_format']=='message-v4'
     assert 'gitlab_review' not in stage['input'] and 'Exact admitted head:' not in stage['input']
     assert 'mcp_servers.gitlab_review' not in selection
     server=selection['mcp_servers.gitlab']
