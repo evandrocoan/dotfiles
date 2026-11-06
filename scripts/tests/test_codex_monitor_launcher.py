@@ -122,15 +122,34 @@ def independent(launcher, monkeypatch, request):
             tools.chmod(0o777)
         namespace = launcher['native_owner'].__globals__
         monkeypatch.setitem(namespace, 'installed_native', lambda config: Path(sys.executable).resolve())
+        monkeypatch.setitem(launcher, 'installed_native', lambda config: Path(sys.executable).resolve())
         script = ('import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); '
                   's.listen(); print("ready",flush=True); '\
                   '\nwhile True:\n c,_=s.accept(); c.close()\n')
+        if variant == 'rpc':
+            script = '''import asyncio,json,os,sys,tomllib
+from pathlib import Path
+from websockets.server import unix_serve
+async def handler(connection):
+ async for raw in connection:
+  request=json.loads(raw)
+  if 'id' not in request: continue
+  if request['method']=='initialize': result={'codexHome':os.environ['CODEX_HOME']}
+  elif request['method']=='config/read': result={'config':tomllib.loads((Path(os.environ['CODEX_HOME'])/'config.toml').read_text())}
+  else: raise AssertionError('unexpected RPC '+request['method'])
+  await connection.send(json.dumps({'id':request['id'],'result':result}))
+async def main():
+ async with unix_serve(handler,path=sys.argv[1]):
+  print('ready',flush=True)
+  await asyncio.Future()
+asyncio.run(main())
+'''
         process = subprocess.Popen([sys.executable, '-c', script, str(endpoint), 'app-server'],
             env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
             assert process.stdout.readline() == 'ready\n'
             alias.symlink_to(endpoint)
-            owner = launcher['native_owner'](config) if variant is None else None
+            owner = launcher['native_owner'](config) if variant in {None, 'rpc'} else None
             runtime_path = launcher['support']()['monitor_shared_runtime'](config, create=True)
             if owner is not None:
                 launcher['monitor_runtime_write'](runtime_path/'ready.json', owner)
@@ -168,6 +187,312 @@ def test_attach_rejects_incompatible_or_missing_runtime_without_effects(
     assert ((home / 'config.toml').read_bytes(), (home / 'config.toml').stat().st_mtime_ns) == before
     assert not (runtime / 'ready.json').exists()
     assert not (home / 'app-server-daemon').exists()
+
+
+@pytest.mark.parametrize('previous', ['same-pid', 'live-owner', 'malformed'])
+def test_every_attach_writer_preserves_conflicting_registration(launcher, independent, monkeypatch, previous):
+    import fcntl
+    config, owner, process, runtime, home = independent
+    saved = json.loads(json.dumps(owner))
+    if previous == 'same-pid':
+        saved['native']['birth'] = '1'
+        expected = 'same process'
+    elif previous == 'live-owner':
+        saved['native'] = launcher['monitor_process'](os.getpid())
+        expected = 'still live'
+    else:
+        saved['native'] = {'pid': process.pid + 1}
+        expected = 'invalid'
+    launcher['monitor_runtime_write'](runtime / 'ready.json', saved)
+    before = (runtime / 'ready.json').read_bytes(), (home / 'config.toml').read_bytes()
+    def forbidden(*args):
+        pytest.fail('a rejected registration reached protocol/config verification')
+    monkeypatch.setitem(launcher['verify_effective'].__globals__, 'verify_effective', forbidden)
+    with pytest.raises(RuntimeError, match=expected):
+        launcher['ensure_server_once'](config, Path(sys.executable).resolve())
+    assert ((runtime / 'ready.json').read_bytes(), (home / 'config.toml').read_bytes()) == before
+    assert process.poll() is None
+    with (runtime / 'launch.lock').open('r+') as descriptor:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def retired_owner(launcher, owner):
+    child = subprocess.Popen([sys.executable, '-c', 'import sys; print("ready",flush=True);sys.stdin.read()'],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    try:
+        assert child.stdout.readline() == 'ready\n'
+        identity = launcher['monitor_process'](child.pid)
+    finally:
+        child.terminate(); child.wait(timeout=5)
+        child.stdin.close(); child.stdout.close()
+    return dict(owner, native=identity)
+
+
+@pytest.mark.parametrize('independent', ['rpc'], indirect=True)
+def test_new_gui_admission_replaces_terminated_native_after_real_protocol_check(launcher, independent):
+    config, owner, process, runtime, home = independent
+    old = retired_owner(launcher, owner)
+    launcher['monitor_runtime_write'](runtime / 'ready.json', old)
+    calls = []
+    assert launcher['register_gui_native'](config, lambda: calls.append('gui-verified')) == owner
+    assert calls == ['gui-verified']
+    assert json.loads((runtime / 'ready.json').read_text()) == owner
+    before = (runtime / 'ready.json').stat().st_mtime_ns
+    assert launcher['register_gui_native'](config, lambda: None) == owner
+    assert (runtime / 'ready.json').stat().st_mtime_ns == before
+    assert process.poll() is None
+
+
+@pytest.mark.parametrize('independent', ['rpc'], indirect=True)
+@pytest.mark.parametrize('change', ['receipt', 'gui', 'effective-config', 'lock'])
+def test_replacement_failure_preserves_registration_and_releases_lock(launcher, independent, change):
+    import fcntl
+    config, owner, process, runtime, home = independent
+    old = retired_owner(launcher, owner)
+    launcher['monitor_runtime_write'](runtime / 'ready.json', old)
+    before = (runtime / 'ready.json').read_bytes()
+    descriptor = None
+    def revalidate():
+        if change == 'gui':
+            raise RuntimeError('GUI identity changed')
+        if change == 'receipt':
+            launcher['monitor_runtime_write'](runtime / 'ready.json', dict(old, version=2))
+    if change == 'effective-config':
+        target = home / 'config.toml'
+        target.write_text(target.read_text().replace('code_mode_host=true', 'code_mode_host=false'))
+    if change == 'lock':
+        descriptor = (runtime / 'launch.lock').open('w')
+        (runtime / 'launch.lock').chmod(0o600)
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    try:
+        expected = {'receipt': 'registration changed', 'gui': 'GUI identity changed',
+                    'effective-config': 'has not enabled', 'lock': None}[change]
+        with pytest.raises(BlockingIOError if change == 'lock' else RuntimeError, match=expected):
+            launcher['register_gui_native'](config, revalidate)
+    finally:
+        if descriptor is not None:
+            descriptor.close()
+    current = (runtime / 'ready.json').read_bytes()
+    if change == 'receipt':
+        assert json.loads(current) == dict(old, version=2)
+    else:
+        assert current == before
+    with (runtime / 'launch.lock').open('r+') as descriptor:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    assert process.poll() is None
+
+
+def test_gui_reconnect_never_creates_a_missing_native_registration(launcher, independent):
+    config, _, process, runtime, _ = independent
+    (runtime / 'ready.json').unlink()
+    with pytest.raises(RuntimeError, match='registration is missing'):
+        launcher['register_gui_native'](config, lambda: None)
+    assert not (runtime / 'ready.json').exists()
+    assert process.poll() is None
+
+
+def test_native_notification_stream_cannot_extend_overall_deadline(launcher, independent, monkeypatch):
+    import asyncio
+    config, owner, _, _, _ = independent
+    config = dict(config, native_timeout=1)
+    class Connection:
+        notifications = 0
+        async def __aenter__(self):
+            self.peer = socket.socket(socket.AF_UNIX); self.peer.connect(config['socket'])
+            self.transport = types.SimpleNamespace(get_extra_info=lambda name: self.peer)
+            return self
+        async def __aexit__(self, *args):
+            self.peer.close()
+        async def send(self, raw):
+            assert json.loads(raw)['method'] == 'initialize'
+        async def recv(self):
+            await asyncio.sleep(0)
+            self.notifications += 1
+            return json.dumps({'method': 'notice', 'params': {}})
+    connection = Connection()
+    monkeypatch.setitem(launcher['native_rpc'].__globals__, 'websockets_connect',
+                        lambda: lambda *args, **kwargs: connection)
+    async def scenario():
+        task = asyncio.create_task(launcher['native_rpc'](config, [], unpublished=owner))
+        try:
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(task), 3)
+            assert task.done(), 'only the external test watchdog expired; native RPC has no overall deadline'
+            assert connection.notifications > 1
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+    asyncio.run(scenario())
+
+
+def test_issued_monitor_request_is_not_replayed_after_connection_loss(launcher, independent, monkeypatch):
+    import websockets.client
+    config, owner, _, runtime, _ = independent
+    core = runpy.run_path(str(CLI)); requests, connections = [], []
+    monkeypatch.setitem(core['monitor_native'].__globals__, 'monitor_launcher', lambda: launcher)
+    class Connection:
+        async def __aenter__(self):
+            connections.append(self)
+            self.peer = socket.socket(socket.AF_UNIX); self.peer.connect(config['socket'])
+            self.transport = types.SimpleNamespace(get_extra_info=lambda name: self.peer)
+            return self
+        async def __aexit__(self, *args):
+            self.peer.close()
+        async def send(self, raw):
+            self.last = json.loads(raw); requests.append(self.last)
+            if self.last.get('method') == 'thread/start':
+                launcher['monitor_runtime_write'](runtime / 'ready.json',
+                                                  dict(owner, native=dict(owner['native'], birth='revoked')))
+        async def recv(self):
+            if self.last.get('method') == 'thread/start':
+                raise ConnectionResetError('connection lost after request delivery')
+            return json.dumps({'id': 1, 'result': {}})
+    monkeypatch.setattr(websockets.client, 'unix_connect', lambda *args, **kwargs: Connection())
+    with pytest.raises(RuntimeError, match='reconcile before retry'):
+        core['monitor_native'](dict(config, max_response_bytes=8192), 'thread/start', {'fixture': True})
+    assert len(connections) == 1
+    assert [r.get('method') for r in requests] == ['initialize', 'initialized', 'thread/start']
+
+
+@pytest.mark.parametrize('missing_runtime', [False, True])
+def test_passive_diagnostics_have_no_writes_or_optional_dependency(launcher, independent, monkeypatch,
+                                                                  missing_runtime):
+    import builtins
+    import shutil
+    config, owner, process, runtime, home = independent
+    diagnostic = runpy.run_path(str(CLI.parents[2] / 'scripts/codex_monitor_diagnostics.py'))
+    monkeypatch.setitem(diagnostic['monitor_status'].__globals__, 'launcher', lambda: launcher)
+    if missing_runtime:
+        shutil.rmtree(runtime.parent)
+    before = {str(p): (p.read_bytes(), p.stat().st_mtime_ns) for p in home.parent.rglob('*') if p.is_file()}
+    real_open, real_import = os.open, builtins.__import__
+    def read_only(path, flags, *args, **kwargs):
+        assert not flags & (os.O_CREAT | os.O_WRONLY | os.O_RDWR), 'diagnostics attempted a filesystem write'
+        return real_open(path, flags, *args, **kwargs)
+    def no_websockets(name, *args, **kwargs):
+        if name.startswith('websockets'):
+            raise ImportError('optional package deliberately unavailable')
+        return real_import(name, *args, **kwargs)
+    with monkeypatch.context() as observation:
+        observation.setattr(os, 'open', read_only)
+        observation.setattr(builtins, '__import__', no_websockets)
+        result = diagnostic['monitor_status'](config, codex=Path(sys.executable).resolve())
+    assert result['server']['state'] == 'authenticated'
+    assert result['check']['protocol'] == 'not_probed'
+    assert result['gui']['tools'] == 'not_verified'
+    assert result['cold_start']['errors'] == []
+    assert process.poll() is None
+    assert {str(p): (p.read_bytes(), p.stat().st_mtime_ns) for p in home.parent.rglob('*') if p.is_file()} == before
+
+
+@pytest.mark.parametrize('independent', ['rpc'], indirect=True)
+def test_check_observes_protocol_without_republishing_registration(launcher, independent, monkeypatch):
+    config, owner, _, runtime, home = independent
+    diagnostic = runpy.run_path(str(CLI.parents[2] / 'scripts/codex_monitor_diagnostics.py'))
+    monkeypatch.setitem(diagnostic['monitor_status'].__globals__, 'launcher', lambda: launcher)
+    before = (runtime / 'ready.json').read_bytes(), (runtime / 'ready.json').stat().st_mtime_ns
+    result = diagnostic['monitor_status'](config, codex=Path(sys.executable).resolve(), check=True)
+    assert result['check'] == {'ready': True, 'protocol': 'verified'}
+    assert ((runtime / 'ready.json').read_bytes(), (runtime / 'ready.json').stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize('flag', ['--status', '--check'])
+def test_public_diagnostics_do_not_require_app_cli_or_venv(monkeypatch, flag):
+    module = runpy.run_path(str(CLI.with_name('codex-monitor')))
+    monkeypatch.setattr(sys, 'argv', ['codex-monitor', flag])
+    monkeypatch.setattr(module['shutil'], 'which', lambda name: None)
+    monkeypatch.setattr(Path, 'is_file', lambda path: False)
+    calls = []
+    def execute(binary, args):
+        calls.append((str(binary), args)); raise SystemExit(37)
+    monkeypatch.setattr(os, 'execv', execute)
+    with pytest.raises(SystemExit) as result:
+        module['main']()
+    assert result.value.code == 37
+    assert calls == [(sys.executable, [sys.executable, str(CLI), 'monitor-gitlab', 'launcher-status',
+                                      *(['--check'] if flag == '--check' else [])])]
+
+
+@pytest.mark.parametrize('independent', ['rpc'], indirect=True)
+def test_incident_receipt_artifact_reconnects_only_after_old_native_termination(launcher, independent):
+    config, owner, _, runtime, _ = independent
+    artifact = json.loads((Path(__file__).parent / 'fixtures/codex-monitor-recovery.json').read_text())
+    saved = artifact['ready']
+    saved.update(codex_home=config['codex_home'], socket=owner['socket'],
+                 native=retired_owner(launcher, owner)['native'])
+    launcher['monitor_runtime_write'](runtime / 'ready.json', saved)
+    assert launcher['register_gui_native'](config, lambda: None) == owner
+    assert json.loads((runtime / 'ready.json').read_text()) == owner
+    client = dict(artifact['separate_client'], pid=1)
+    assert launcher['cold']()['describe_native_process'](client).startswith('VS Code Codex extension')
+
+
+@pytest.mark.parametrize('independent', ['ordinary'], indirect=True)
+def test_incident_missing_environment_reports_exact_launch_keys(launcher, independent):
+    artifact = json.loads((Path(__file__).parent / 'fixtures/codex-monitor-recovery.json').read_text())
+    config, _, process, _, _ = independent
+    with pytest.raises(RuntimeError, match='Missing or incompatible launch settings') as result:
+        launcher['native_owner'](config)
+    for name in artifact['missing_launch_settings']:
+        assert name in str(result.value)
+    assert process.poll() is None
+
+
+@pytest.mark.parametrize('independent', ['rpc'], indirect=True)
+def test_registration_contenders_publish_one_generation_under_real_coordinator(launcher, independent):
+    import threading
+    config, owner, _, runtime, _ = independent
+    old = retired_owner(launcher, owner)
+    launcher['monitor_runtime_write'](runtime / 'ready.json', old)
+    entered, release = threading.Event(), threading.Event()
+    results, errors = [], []
+    def hold():
+        entered.set()
+        assert release.wait(5), 'test did not release the held coordinator'
+    def first():
+        try:
+            results.append(launcher['register_gui_native'](config, hold))
+        except BaseException as error:
+            errors.append(error)
+    thread = threading.Thread(target=first)
+    thread.start()
+    try:
+        assert entered.wait(5), 'first contender never reached validated admission'
+        with pytest.raises(BlockingIOError):
+            launcher['register_gui_native'](config, lambda: None)
+        assert json.loads((runtime / 'ready.json').read_text()) == old
+    finally:
+        release.set(); thread.join(5)
+    assert not thread.is_alive()
+    assert errors == []
+    assert results == [owner]
+    modified = (runtime / 'ready.json').stat().st_mtime_ns
+    assert launcher['register_gui_native'](config, lambda: None) == owner
+    assert (runtime / 'ready.json').stat().st_mtime_ns == modified
+
+
+@pytest.mark.parametrize('independent', ['rpc'], indirect=True)
+def test_check_reports_separate_same_home_stdio_client_before_recovery(launcher, independent, monkeypatch):
+    config, _, process, runtime, home = independent
+    diagnostic = runpy.run_path(str(CLI.parents[2] / 'scripts/codex_monitor_diagnostics.py'))
+    monkeypatch.setitem(diagnostic['monitor_status'].__globals__, 'launcher', lambda: launcher)
+    child = subprocess.Popen([sys.executable, '-c', 'import sys;print("ready",flush=True);sys.stdin.read()',
+                              'app-server'], env=dict(os.environ, CODEX_HOME=config['codex_home']),
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    before = (runtime / 'ready.json').read_bytes(), (home / 'config.toml').read_bytes()
+    try:
+        assert child.stdout.readline() == 'ready\n'
+        result = diagnostic['monitor_status'](config, codex=Path(sys.executable).resolve(), check=True)
+        assert result['server']['state'] == 'authenticated'
+        assert result['check'] == {'protocol': 'verified', 'ready': False}
+        assert len(result['cold_start']['blockers']) == 1
+        assert result['cold_start']['blockers'][0]['process']['pid'] == child.pid
+        assert result['cold_start']['blockers'][0]['client'] == 'separate stdio app-server'
+        assert ((runtime / 'ready.json').read_bytes(), (home / 'config.toml').read_bytes()) == before
+        assert child.poll() is None and process.poll() is None
+    finally:
+        child.terminate();child.wait(timeout=5)
+        child.stdin.close();child.stdout.close()
 
 
 def test_independent_owner_uses_native_identity_without_gui_and_rejects_stale_receipt(launcher, independent):

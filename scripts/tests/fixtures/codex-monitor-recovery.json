@@ -1,0 +1,20 @@
+{
+  "boundary": "Sanitized incident artifacts, not a complete native or GUI session",
+  "missing_launch_settings": [
+    "CODEX_HOME",
+    "CODEX_APP_TOOLS_PIPE_PATH",
+    "CODEX_MONITOR_LAUNCHER_PROTOCOL"
+  ],
+  "ready": {
+    "version": 1,
+    "codex_home": "<home>",
+    "socket": "<socket>",
+    "native": {"pid": "<pid>", "birth": "<birth>", "parent": "<parent>", "exe": "<exe>"},
+    "native_executable": [64515, 9183650, 1000, 1000, 33261, 1, 319346888, 1793297072592252500],
+    "socket_identity": [64514, 3932515]
+  },
+  "separate_client": {
+    "exe": ".vscode/extensions/openai.chatgpt-<release>/bin/linux-x86_64/codex",
+    "argv": ["codex", "-c", "features.code_mode_host=true", "app-server", "--analytics-default-enabled"]
+  }
+}

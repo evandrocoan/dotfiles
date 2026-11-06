@@ -457,7 +457,16 @@ of history retention; retained history alone does not keep an obsolete incident 
 One authenticated native server per configured Codex
 home must have a lifetime independent of the GUI and CLI clients. A single lifecycle authority
 serializes startup and validates an adopted server's actual identity, configuration and protocol;
-a socket or saved receipt alone is insufficient. The main GUI relay forwards initialization and
+a socket or saved receipt alone is insufficient. Explicit launcher attach and fresh main-GUI
+admission use the same guarded registration rule. A different generation requires a valid old
+registration and proven termination of its native owner, followed by new peer/executable/bootstrap
+and effective-protocol verification under the per-home coordinator. Recheck the registration,
+coordinator and new native identity before publication. Reject malformed or same-process conflicting
+registrations and preserve live previous owners. A GUI reconnect cannot create a missing native
+registration, start or stop a server, or retry a request already sent on an older connection.
+Ordinary monitor RPCs retain their original generation checks. Bound the whole admission probe;
+uncorrelated notifications cannot extend its deadline. Registration alone grants no GUI readiness
+or credit for interrupted work. The main GUI relay forwards initialization and
 owns exactly one native `initialized` notification after correlated native success. It serializes
 that write before releasing the initialization response, accepts subsequent GUI RPCs without
 waiting for output-drain return or final readiness, and consumes a redundant valid GUI
@@ -497,6 +506,11 @@ while an existing server is being used; authenticate its actual compatibility or
 incompatibility without interruption or automatic restart.
 Persisted settings do not establish process compatibility: verify effective configuration and
 the actual native/GUI/tool boundaries after start. A parent-bound legacy server cannot be adopted as independent in place.
+Launcher diagnostics are observational. Report present server reuse separately from additional
+cold-recovery blockers, retain unreadable evidence as unknown, and label past GUI/tool validation
+as such. Status and preflight never create locks, publish registrations or health, initialize a
+queue, refresh tools, change configuration or stop processes. Their samples reserve no startup
+authority; startup still performs its own coordinated validation.
 
 ## Transition and traceability
 
@@ -532,6 +546,7 @@ abandonment transition. No old chat is rewritten.
 | Direct publications and observation | Native GitLab tools, passive collector and raw inventory deltas | `test_codex_gitlab_direct.py`: self-output race, human edits, version/hold/transition boundaries and honest checkpoints; legacy recovery tests retain original journals |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
 | Shared native lifetime and GUI tools | `scripts/codex_monitor_launcher.py`, lazy standalone CLI entry points and desktop launcher | `test_codex_monitor_launcher.py`, `test_codex_monitor_bootstrap.py`, `test_codex_monitor_handshake.py`, `test_codex_monitor_app_tools.py`; isolated installed native/GUI/CLI proofs with retained threads and in-flight native/non-app MCP work |
+| Replacement admission and observational diagnostics | Guarded launcher publication and `scripts/codex_monitor_diagnostics.py`; ordinary RPCs remain generation-bound | `test_codex_monitor_launcher.py`: real Unix peer/protocol replacement, registration denials, lock contention, bounded notification stream, issued-request loss without replay and read-only diagnostics; sanitized `codex-monitor-recovery.json` is an artifact replay, not a complete session replay; app-tool tests protect relay handoff and generation cleanup |
 | Independent operational alerts | Bounded health export, `scripts/codex_monitor_alert.py`, separate user timer and private delivery state | `scripts/tests/test_codex_monitor_alert.py`: caught failures, busy and incomplete cycles, scoped recovery, terminal retries, validated MR retirement and holds, startup/suspend, stale evidence, bounded delivery and restart suppression |
 | Static desktop bootstrap preparation | Shared lifecycle backend before cold native start; existing-server validation remains read-only | Actual preparation-helper protection for exact three-key writes, TOML/comment preservation, private backup, no-op and failure/concurrency/path denials; installed absent/false-config cold start and effective native/GUI/tool verification; no permission-default edit at launch |
 | Operator permission-profile migration | Separately authorized external applicator reusing the lifecycle cold-start authority; explicit reviewer/intake policies stay with their existing owners | Fresh layer/requirement and GUI/CLI/automatic-work quiescence evidence before publication, sealed source/artifact identities, private exact backup/read-back/guarded recovery, installed default filesystem/network/approval behavior without selection overrides, historical scope continuity and explicit concurrent role selection; `scripts/codex_permission_migration.py` and its focused cold/reader/operator regression tests |

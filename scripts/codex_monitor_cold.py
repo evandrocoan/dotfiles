@@ -16,6 +16,18 @@ def _monitor_support():
     return runpy.run_path(str(Path(__file__).resolve().parent.parent / ".local/bin/codex-session-stats"))
 
 
+def describe_native_process(process):
+    """Diagnostic labels never grant an exception to the cold-start ownership guard."""
+    executable = Path(process['exe'])
+    if (any(part in {'.vscode', '.vscode-server'} for part in executable.parts)
+            and any(part.startswith('openai.chatgpt-') for part in executable.parts)):
+        return 'VS Code Codex extension (separate app-server)'
+    arguments = (Path('/proc') / str(process['pid']) / 'cmdline').read_bytes().split(b'\0')
+    if b'app-server' in arguments and not any(word.startswith(b'--listen') for word in arguments):
+        return 'separate stdio app-server'
+    return 'another app-server or pending start'
+
+
 class MonitorColdStart:
     """The shared backend's cold-start slice; never adopts or stops a server."""
 
@@ -216,7 +228,9 @@ class MonitorColdStart:
         if owners:
             kind = 'installed native' if owners[0]['exe'] in self.native else 'unknown'
             raise RuntimeError('an ' + kind + ' app-server start is live or pending '
-                               f'(PID {owners[0]["pid"]})')
+                               f'(PID {owners[0]["pid"]}): {describe_native_process(owners[0])}. '
+                               'Run codex-monitor --check before stopping the shared server. '
+                               'Finish that client normally; no process was stopped.')
 
     def native_owners(self):
         owners = []

@@ -7189,6 +7189,10 @@ def mq_main():
     launch_cli.add_argument('--codex',type=Path,required=True)
     launch_cli.add_argument('--cli',type=Path,required=True)
     launch_cli.add_argument('cli_args',nargs=argparse.REMAINDER)
+    diagnostic = commands.add_parser('launcher-status',help='observe native/GUI state and cold-recovery blockers')
+    diagnostic.add_argument('--codex',type=Path)
+    diagnostic.add_argument('--app',type=Path)
+    diagnostic.add_argument('--check',action='store_true',help='also verify native protocol/effective configuration')
     arguments = parser.parse_args(sys.argv[2:])
     try:
         path = Path(os.path.abspath(arguments.config.expanduser()))
@@ -7219,8 +7223,16 @@ def mq_main():
                 json.dump(data,stream,ensure_ascii=False,indent=2); stream.write('\n')
             result = {'configured':True,'config':str(path)}
         else:
-            config = mq_config(path,diagnostic=arguments.action=='status')
-            if arguments.action=='launch-app':
+            config = mq_config(path,diagnostic=arguments.action in {'status','launcher-status'})
+            if arguments.action=='launcher-status':
+                import runpy
+                diagnostic = runpy.run_path(str(Path(__file__).resolve().parents[2] /
+                                                'scripts/codex_monitor_diagnostics.py'))
+                result = diagnostic['monitor_status'](config,app=arguments.app,codex=arguments.codex,
+                                                       check=arguments.check)
+                print(json.dumps(result,ensure_ascii=False,indent=2))
+                return 0 if not arguments.check or result['check']['ready'] else 1
+            elif arguments.action=='launch-app':
                 extra = arguments.app_args[1:] if arguments.app_args[:1]==['--'] else arguments.app_args
                 monitor_launch_app(config,path,arguments.app,arguments.codex,extra)
                 return 0

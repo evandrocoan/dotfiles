@@ -88,6 +88,30 @@ def test_old_cleanup_cannot_remove_new_generation(binding, tmp_path):
         first.close();second.close()
 
 
+def test_same_gui_rebind_requires_old_relay_termination(binding, tmp_path):
+    m, directory, gui = binding
+    first_path, next_path = tmp_path/'old.sock', tmp_path/'new.sock'
+    first, second = listener(first_path, b'old'), listener(next_path, b'new')
+    child = subprocess.Popen(['/bin/sleep', '30'])
+    try:
+        proxy = m['monitor_process'](child.pid)
+        old = m['monitor_app_tools_bind'](directory, first_path, gui, proxy, 'old-relay')
+        with pytest.raises(RuntimeError, match='proxy is still live'):
+            m['monitor_app_tools_bind'](directory, next_path, gui, gui, 'new-relay')
+        assert json.loads((directory/'binding.json').read_text()) == old
+        assert request(directory/'host.sock') == b'old'
+        child.terminate(); child.wait(timeout=5)
+        new = m['monitor_app_tools_bind'](directory, next_path, gui, gui, 'new-relay')
+        assert m['monitor_app_tools_unbind'](directory, old) is False
+        assert json.loads((directory/'binding.json').read_text()) == new
+        assert request(directory/'host.sock') == b'new'
+        assert m['monitor_app_tools_unbind'](directory, new) is True
+    finally:
+        if child.poll() is None:
+            child.terminate(); child.wait(timeout=5)
+        first.close(); second.close()
+
+
 def test_wrong_peer_is_not_published(binding, tmp_path):
     m, directory, proxy = binding
     public = tmp_path/'other.sock'

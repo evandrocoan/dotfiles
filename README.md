@@ -855,7 +855,24 @@ codex-session-stats monitor-gitlab launch-cli \
   --codex path/to/resources/codex --cli path/to/installed/codex -- --no-alt-screen
 ```
 
-For diagnostics, inspect the private per-home directory under
+Before stopping anything for recovery, run `codex-monitor --status` for passive JSON diagnostics,
+then `codex-monitor --check` to also verify the native protocol and effective bootstrap configuration.
+Both commands leave configuration, queue, health and registration state unchanged. `--check` exits
+nonzero when verification fails or another same-home app-server would block a cold recovery,
+including a separate VS Code Codex extension. Finish those clients normally first. The current
+Monitor GUI/CLI also need normal closure before an explicit cold recovery; diagnostics report that
+separately. These observations reserve no startup capacity, so the launcher still rechecks ownership.
+GUI tools reported as `last_validated` refer to matching live processes and the last verified binding,
+not a newly executed app-tool call. `-- --status` forwards that argument to the ordinary Codex CLI.
+
+A fresh connection from the registered GUI can recognize a compatible replacement server after
+the previous registered native process has terminated. It verifies the new peer, executable,
+bootstrap environment, effective configuration and protocol before updating registration. The
+GUI must still complete its normal handshake and tool validation. Incompatible servers, live
+previous owners and uncertain evidence are preserved and reported. Requests already sent on an
+older connection are never replayed; reconcile interrupted work before retrying it.
+
+For lower-level diagnostics, inspect the private per-home directory under
 `$XDG_RUNTIME_DIR/codex-session-stats/shared-*` and the existing queue status. `ready.json` identifies
 the independent native process; `gui-ready.json` identifies a connected GUI and its tools. Neither
 file alone proves that a process is live. Do not remove native sockets or kill processes to clear

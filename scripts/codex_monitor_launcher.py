@@ -419,10 +419,14 @@ def native_owner(config):
         'CODEX_APP_TOOLS_PIPE_PATH': str(monitor_app_tools_address(config)),
         'CODEX_MONITOR_LAUNCHER_PROTOCOL': '1',
     }
+    mismatched = [key for key, value in expected.items() if environment.get(key) != value]
     if (uid != os.getuid() or native['exe'] != str(executable)
-            or any(environment.get(key) != value for key, value in expected.items())
+            or mismatched
             or b'app-server' not in Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')):
         raise RuntimeError('The running server uses the previous configuration or another installation. '
+                           + ('Missing or incompatible launch settings: ' + ', '.join(mismatched) + '. '
+                              if mismatched else 'The native process identity or command is incompatible. ')
+                           + 'Run codex-monitor --check before stopping anything. '
                            'Finish your work and close Codex normally.\n' +
                            server_stop_instructions(config))
     monitor_app_tools_directory(config)
@@ -482,6 +486,13 @@ def websockets_connect():
 
 
 async def native_rpc(config, methods, *, unpublished=None):
+    # One deadline includes handshake, sends and every requested response. Notifications
+    # cannot extend verification indefinitely while the launch coordinator is held.
+    return await asyncio.wait_for(_native_rpc(config, methods, unpublished=unpublished),
+                                  config['native_timeout'])
+
+
+async def _native_rpc(config, methods, *, unpublished=None):
     connect = websockets_connect()
     owner = unpublished or monitor_shared_owner(config)
     def verify(connection):
@@ -531,6 +542,64 @@ def verify_effective(config, owner):
                                '. The server was preserved; check the configuration before continuing.')
 
 
+def register_existing_native(config, authority, *, require_record=False, revalidate=lambda: None):
+    """Publish a validated generation under the caller's held per-home coordinator.
+
+    This is used only at connection admission, never to retry an issued monitor RPC.
+    """
+    authority.verify_coordinator()
+    path = authority.runtime / 'ready.json'
+
+    def snapshot():
+        value = authority.read_record(path, private=True)
+        return (authority.file_identity(path.lstat()), value) if value is not None else (None, None)
+
+    original, saved = snapshot()
+    owner = native_owner(config)
+    if saved is None:
+        if require_record:
+            raise RuntimeError('The GUI server registration is missing; open codex-monitor again.')
+    elif saved != owner:
+        identity = saved.get('native', {})
+        if (set(saved) != set(owner) or saved.get('version') != 1
+                or saved.get('codex_home') != config['codex_home']
+                or not isinstance(saved.get('socket'), str) or not Path(saved['socket']).is_absolute()
+                or not isinstance(identity, dict) or set(identity) != set(owner['native'])
+                or type(identity.get('pid')) is not int or identity['pid'] <= 0
+                or type(identity.get('parent')) is not int or identity['parent'] < 0
+                or not isinstance(identity.get('birth'), str) or not identity['birth'].isdigit()
+                or not isinstance(identity.get('exe'), str) or not Path(identity['exe']).is_absolute()
+                or not isinstance(saved.get('native_executable'), list)
+                or len(saved['native_executable']) != 8
+                or not isinstance(saved.get('socket_identity'), list) or len(saved['socket_identity']) != 2
+                or any(type(value) is not int for value in saved['native_executable'] + saved['socket_identity'])):
+            raise RuntimeError('The previous server registration is invalid; it was preserved.')
+        if identity['pid'] == owner['native']['pid']:
+            raise RuntimeError('The server registration changed for the same process; it was preserved.')
+        previous = authority.live_process(identity['pid'])
+        if previous is not None and previous['birth'] == identity['birth']:
+            raise RuntimeError('The previous registered server is still live; it was preserved.')
+    verify_effective(config, owner)
+    revalidate()
+    authority.verify_coordinator()
+    if snapshot() != (original, saved) or native_owner(config) != owner:
+        raise RuntimeError('The server or its registration changed during verification; try again.')
+    if saved != owner:
+        monitor_runtime_write(path, owner)
+    return owner
+
+
+def register_gui_native(config, revalidate):
+    """Admit a fresh main-GUI connection, without starting/stopping any server."""
+    authority = cold()['MonitorColdStart'](config, [installed_native(config)])
+    try:
+        authority.runtime = support()['monitor_shared_runtime'](config)
+        authority.coordinator = authority.lock_file(authority.runtime / 'launch.lock', private=True)
+        return register_existing_native(config, authority, require_record=True, revalidate=revalidate)
+    finally:
+        authority.__exit__(None, None, None)
+
+
 def ensure_server_once(config, codex):
     """Serialize attach/start using the same cold exclusion as the config writer."""
     import subprocess
@@ -542,9 +611,7 @@ def ensure_server_once(config, codex):
         authority.coordinator = authority.lock_file(runtime / 'launch.lock', private=True)
         alias = Path(config['_socket_alias'])
         if alias.exists():
-            owner = native_owner(config)
-            verify_effective(config, owner)
-            monitor_runtime_write(runtime / 'ready.json', owner)
+            owner = register_existing_native(config, authority)
             return owner, False, None
         authority.acquire_native_exclusion()
         prepared = monitor_prepare_bootstrap(authority)
@@ -1039,6 +1106,13 @@ def monitor_app_proxy_main():
             environment.pop('CODEX_STATS_APP_LAUNCH', None)
             environment['CODEX_CLI_PATH'] = launch['codex']
             os.execve(launch['codex'], [launch['codex'], *sys.argv[1:]], environment)
+        def revalidate():
+            monitor_private(launch_path)
+            if not same_process(parent) or json.loads(launch_path.read_text()) != launch:
+                raise RuntimeError('The GUI launch changed during native reconnection.')
+        # Verification is synchronous and may run its own event loop; finish admission
+        # before starting the relay loop. Existing connections remain generation-bound.
+        register_gui_native(config, revalidate)
         asyncio.run(relay(config, launch, parent))
         return 0
     except KeyboardInterrupt:

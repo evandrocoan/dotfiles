@@ -76,7 +76,12 @@ managed server per Codex home, independent of client lifetime, with one lifecycl
 `scripts/codex_monitor_launcher.py`. Never adopt a legacy GUI-owned child as independent or stop
 an unknown/live server during startup. Authenticate the native Unix peer, process birth/executable,
 selected home, bootstrap and protocol; a saved receipt alone is insufficient. The relay owns the
-native handshake and requires genuine delivered GUI traffic before readiness. Pin the actual GUI
+native generation it connected to; never replay issued calls after a disconnect. Fresh main-GUI
+admission and explicit launcher attach share guarded registration: reauthenticate a replacement
+only after proven previous-owner termination, under the per-home coordinator. Passive status and
+preflight never change registrations, configuration, health or queue state; unknown evidence stays
+unknown. The relay owns the native handshake and requires genuine delivered GUI traffic before
+readiness. Pin the actual GUI
 tools socket by authenticated private hard link and remove only its own binding generation.
 Only cold startup may prepare the three approved static feature/plugin booleans, preserving exact
 backup and unrelated config. Permission migration remains a separate operator action. Reopen

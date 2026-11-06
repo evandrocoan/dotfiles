@@ -11,18 +11,35 @@ def main():
     if arguments[:1] in (['--help'], ['-h']):
         print('Usage: codex-monitor [CLI options]\n'
               '     codex-monitor --gui [application options]\n\n'
+              '     codex-monitor --status | --check\n\n'
               'Without --gui, opens the CLI in the terminal. Both use the same server.\n'
               'Use codex-monitor -- --help to see CLI options.')
         return 0
+    diagnostic = arguments[:1] in (['--status'], ['--check'])
+    if diagnostic and len(arguments) != 1:
+        print('Codex Monitor: --status and --check do not accept additional arguments.', file=sys.stderr)
+        return 2
     gui = arguments[:1] == ['--gui']
     if gui or arguments[:1] == ['--']:
         arguments = arguments[1:]
     try:
         application = shutil.which('chatgpt')
-        if application is None:
+        if application is None and not diagnostic:
             raise RuntimeError('chatgpt was not found in PATH; check the application installation.')
-        directory = Path(application).resolve(strict=True).parent
+        directory = Path(application).resolve(strict=True).parent if application else None
         control = Path(__file__).resolve(strict=True).with_name('codex-session-stats')
+        if diagnostic:
+            command = [str(control), 'monitor-gitlab', 'launcher-status']
+            if directory:
+                command.extend(['--codex', str(directory / 'resources/codex'),
+                                '--app', str(directory / 'ChatGPT')])
+            if arguments == ['--check']:
+                command.append('--check')
+            python = control.parents[2] / 'scripts/.venv/bin/python'
+            if not python.is_file():
+                python = Path(sys.executable)
+            os.execv(python, [str(python), *command])
+            return 0
         command = [str(control), 'monitor-gitlab', 'launch-app' if gui else 'launch-cli',
                    '--codex', str(directory / 'resources/codex')]
         if gui:
