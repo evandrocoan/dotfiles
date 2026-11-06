@@ -123,6 +123,11 @@ result, and returns unresolved assumptions or decisions beyond its scope to the 
 Its checks are part of execution and do not replace a user-selected independent plan or result
 review. Nested delegation, like direct delegation, requires authorization covering that work.
 
+Resume the implementer (`followup_task` in Codex) for the same authorized delivery, including
+tests and fixes. Reassess the assignment if scope, ownership, or model suitability changes
+materially. Start with fresh context when delegating a separate delivery. On handoff, preserve
+existing work and transfer write ownership before a replacement edits the same files.
+
 In a chosen plan, record only the selected arrangement and applicable roles: each agent's
 responsibility, bounded scope, concrete model and effort, verification criteria, and conditions
 for returning a decision to its coordinator. Distinguish proposed from authorized assignments
