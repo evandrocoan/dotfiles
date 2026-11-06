@@ -10,8 +10,9 @@ materially different scope in the same project. In Codex, call `spawn_agent` wit
 records, the current plan if chosen, the relevant proposed scope or final diff, and actual
 validation evidence. Withhold the intended verdict.
 
-Resume a reviewer (`followup_task` in Codex) only to clarify evidence or recheck its findings
-within the same review, phase, and approved scope. That recheck is part of the original review.
+Resume a reviewer (`followup_task` in Codex) only to continue the same review in the same phase
+and approved scope. This includes finishing pending checks, clarifying evidence, and rechecking
+findings. A continuation is part of the original review.
 
 Record applied and rejected findings with reasons. A reviewer reads and reports; it never edits
 or delivers.
