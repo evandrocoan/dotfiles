@@ -2,11 +2,19 @@
 
 ## Review or formal audit when the user selects it
 
-Identify the reviewer's actual settings. Recommend a different capable
-model from the advisor, with fresh task context, the original user request and decisions,
-applicable instructions, governing records, current plan if chosen, final diff or proposed scope,
-and actual validation evidence. Withhold the intended verdict. Record applied and rejected
-findings with reasons. A reviewer reads and reports; it never edits or delivers.
+Identify the reviewer's actual settings. Recommend a capable model different from the advisor.
+
+Start each authorized independent review in a fresh reviewer context, including a new phase or
+materially different scope in the same project. In Codex, call `spawn_agent` with
+`fork_turns: "none"`. Pass the original request and decisions, applicable instructions and
+records, the current plan if chosen, the relevant proposed scope or final diff, and actual
+validation evidence. Withhold the intended verdict.
+
+Resume a reviewer (`followup_task` in Codex) only to clarify evidence or recheck its findings
+within the same review, phase, and approved scope. That recheck is part of the original review.
+
+Record applied and rejected findings with reasons. A reviewer reads and reports; it never edits
+or delivers.
 
 Use the selected timing:
 
