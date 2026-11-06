@@ -17,8 +17,8 @@ user decides independently whether to have a formal plan and a review, including
 
 | Acting group | Routine local reversible edit | Non-trivial local reversible edit |
 | --- | --- | --- |
-| Supervised: Terra, Sonnet, Opus, Luna, Haiku | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Offer each independently. |
-| Autonomous: Sol, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and offer each independently. |
+| Supervised: Terra, Sonnet, Luna, Haiku | Recommend direct work and an independent result review. Ask about review; offer a plan if the user wants one. | Recommend a compact plan and independent result review. Offer each independently. |
+| Autonomous: Sol, Opus, Astra, Fable | Recommend direct work without a separate reviewer when owner and check are clear. Ask whether the user's sense of importance warrants review; offer a plan if requested. | Recommend direct work or a compact plan according to uncertainty, coordination, and the user's stakes. Recommend an independent result review and offer each independently. |
 
 When settings remain unknown under the global fallback, base the recommendation on task risk and
 persistence without assigning an unverified model group.
@@ -42,6 +42,93 @@ high-risk route, including a recommendation for direct work without extra review
 routine-local exception to offering a plan. Then use
 [proposal approval](../SKILL.md#present-the-proposal-and-wait-for-approval) for the selected route.
 A review before drafting assesses the approach; a review of the plan itself follows its creation.
+
+## Recommend models and effort separately for each role
+
+Keep detection of the acting agent's settings separate from recommendations for the work. When
+the roles apply, recommend a concrete supported model and reasoning effort for each, with a short
+reason tied to its scope, uncertainty, consequences, and available verification:
+
+| Role | Assess independently |
+| --- | --- |
+| Planner | Investigation and decisions needed to produce an executable plan. |
+| Plan reviewer | Assumptions, omitted consumers, sequencing, and validation gaps in that plan. |
+| Implementer | Difficulty of carrying out the approved approach, remaining decisions, and checks available during execution. |
+| Implementation reviewer | Defects, regressions, and unmet requirements in the actual result and its validation. |
+
+Recommend review scope and timing separately for the plan and implementation. A plan review does
+not review future code, select a result review, or determine the implementer's model. A result
+review does not substitute for a selected plan review. Distinguish proposed assignments from
+user-selected ones; omit unused roles rather than creating a plan or review to fill the table.
+Use these recommendations on both formal-plan and direct routes, including plan-only requests
+without implying implementation authority. Reassess the implementer when the plan reveals a
+materially different execution scope.
+
+Use these corresponding families as starting points for role recommendations:
+
+| Families | Work to consider |
+| --- | --- |
+| Luna / Haiku | Small, repetitive implementations with complete requirements, an established pattern, and objective checks. |
+| Terra / Sonnet | Bounded work that requires interpreting context and resolving local decisions. |
+| Sol / Opus | Ambiguity, investigation, or coordination that requires broader judgment. |
+| Astra / Fable | Demanding analysis or complex interactions that justify additional reasoning capability. |
+
+These are local routing conventions, not claims of identical performance, capabilities, or effort
+settings across models or providers. Other available models remain eligible when adequate for the
+particular role; verify suitability rather than treating the table as a universal ranking.
+
+Family names here are version-independent. For a new recommendation or authorized assignment,
+resolve each family to its latest version actually available through the intended client, account,
+and launch mechanism. Use current authoritative catalog or tool metadata, with provider
+documentation when needed, and name the concrete model identifier and supported effort. Do not
+infer release order or availability solely from version numbers, a default alias, or this skill's
+examples. If the newest announced release is unavailable, use the latest verified available
+version and disclose that limitation; if availability is unknown, say so. Honor an explicit
+version pin. A catalog establishes available choices, not the acting agent's current settings;
+this preference does not upgrade a running agent or authorize a new launch automatically.
+
+For each role, choose the lowest adequate effort supported by that exact model and client.
+`high` and `xhigh` are examples, not required levels or a minimum. Consider other supported levels
+when appropriate, and do not translate an effort label between providers or invent one for a
+client without effort support. A stronger reviewer does not make an inadequate author suitable;
+consider the checks and review actually selected, without assuming a review will repair the work.
+
+For example, Terra or Sol can author a plan reviewed by a fresh Sol or Astra agent, while Terra
+implements and a separate Sol agent reviews the implementation. Sol can also author a plan
+reviewed by another Sol agent when fresh context and the review scope provide independence. A
+harder implementation may instead warrant Sol or Astra, independently of the planner or plan
+reviewer. Apply the corresponding groups for Claude where available and select effort separately
+for every assignment. These examples do not require one reviewer across phases, a stronger model
+than every author, or automatic delegation; the existing user choices and execution permissions
+still govern assigning agents and invoking reviews.
+
+## Choose the smallest useful agent arrangement
+
+Recommend the simplest arrangement that meets the task's needs. Justify each additional agent by
+the work it removes from the principal agent or the focused execution it enables, considering
+transferred context, communication, latency, validation, and rework. More agents can increase
+total tokens even when their individual model rates are lower; do not promise unmeasured savings.
+
+| Arrangement | When to consider |
+| --- | --- |
+| Current agent alone | A small task with straightforward execution and verification. |
+| Principal with a direct implementer, such as Sol -> Terra or Luna | A bounded delivery that can be delegated without an intermediate coordinator. |
+| Principal, coordinator, and implementer, such as Sol -> Terra -> Luna | A package of tasks where the coordinator meaningfully decomposes, checks, and consolidates work, reducing the principal's coordination burden. |
+
+These are examples, not a required hierarchy of model families. Assign a coordinator only when
+its responsibility is concrete; forwarding messages alone does not justify another layer. Bound
+each implementer's writable scope and follow the entrypoint's rules for shared resources and
+parallel work. The coordinator checks actual changes and validation evidence, consolidates the
+result, and returns unresolved assumptions or decisions beyond its scope to the principal.
+Its checks are part of execution and do not replace a user-selected independent plan or result
+review. Nested delegation, like direct delegation, requires authorization covering that work.
+
+In a chosen plan, record only the selected arrangement and applicable roles: each agent's
+responsibility, bounded scope, concrete model and effort, verification criteria, and conditions
+for returning a decision to its coordinator. Distinguish proposed from authorized assignments
+and keep plan review and implementation review separate. A single-agent plan needs only a brief
+assignment; do not add unused roles or create agents to fill a template. On the direct route,
+describe the applicable arrangement in the proposal summary without creating a plan artifact.
 
 ## Select a reviewer when chosen
 

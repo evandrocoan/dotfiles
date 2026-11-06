@@ -54,6 +54,12 @@ contents instead of copying child implementation sections.
 - Prohibited effects: <changes outside the authorized creation or editorial fields, plus workflow,
   authority, commitment, deployment, operational, and destructive effects>.
 
+## Agents and responsibilities
+
+Record the selected arrangement and applicable assignments using
+[agent arrangements](../references/model-routing.md#choose-the-smallest-useful-agent-arrangement).
+Keep a single-agent assignment brief.
+
 ## Execution
 
 | Status | Step and owners | Validation or result |

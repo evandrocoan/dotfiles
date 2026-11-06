@@ -42,6 +42,12 @@ State the observable result and terminal condition.
 
 - Mark every unverified fact that could change the execution route.
 
+## Agents and responsibilities
+
+Record the selected arrangement and applicable assignments using
+[agent arrangements](../references/model-routing.md#choose-the-smallest-useful-agent-arrangement).
+Keep a single-agent assignment brief.
+
 ## Execution steps
 
 | Status | Step and owners | Material premise | Validation or result |
