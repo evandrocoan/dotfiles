@@ -73,9 +73,11 @@ when relevant, preserving the user's separate plan and review choices.
 ## Choose Claude's model and effort
 
 - Before launch, apply the [global model and effort choice](../../../../.codex/AGENTS.md#model-and-reasoning-effort-at-task-entry),
-  reading that canonical source if it is not already in context. Recommend any unspecified setting
-  and obtain the user's choice unless the user explicitly delegated it. Keep an independently
-  selected model or effort intact. For complex work, recommend Opus 5.5 xhigh when available. Select
+  reading that canonical source if it is not already in context. Preserve each user-specified model
+  or effort. The coordinator chooses suitable supported values for any unspecified settings without
+  requiring prior explicit delegation. Briefly state the chosen configuration and its reason, then
+  continue without asking for confirmation of those unspecified settings. For complex work,
+  recommend Opus 5.5 xhigh when available. Select
   the exact model ID for the active provider, or verify that an alias resolves to Opus 5.5; `opus` can resolve
   to an older version.
   For shorter work, recommend a compatible model and, when supported, effort suited to the task.
