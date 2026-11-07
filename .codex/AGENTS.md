@@ -113,8 +113,8 @@ Select the actual client explicitly: child clients can inherit their parent's id
 - For Copilot CLI, supply its own `--session-id` from the hook or trusted runtime metadata.
   Native Claude/Copilot subagents also need their own `--agent-id`.
 - Delegated agents use their own metadata, command result, or accepted launcher assignment,
-  never the parent's command result or `CODEX_SESSION_ID`. If unavailable, Codex leaves settings
-  unknown; other clients ask the parent.
+  never the parent's command result or `CODEX_SESSION_ID`. If unavailable, Codex and Claude leave
+  settings unknown; other clients ask the parent.
 
 Accept CLI evidence only on success with a nonempty model and known effort or explicit
 `unsupported` effort status. The CLI validates identity; do not repeat that check.
@@ -135,7 +135,7 @@ When verification fails, label an explicit user-reported setting as such; leave 
 unknown. A reply, recommendation, or postponed switch does not configure the client, authorize
 task actions, bypass plan/review/permission choices, or release question-only deferred work.
 
-### Codex: inform and continue
+### Codex and Claude: inform and continue
 
 At a new task boundary, briefly state the current settings only when known and the recommendation
 with its reason, in the user's language. Continue the task in the same turn with the actual
@@ -146,9 +146,10 @@ automatically. This informational behavior also governs model/effort prerequisit
 
 ### Other clients: confirm settings
 
-Identify settings before a substantive answer, plan, project command, or edit. If verification
-and an explicit user report leave a value unknown, ask only for that missing value and wait.
-A bare "ok" identifies a pair only when answering a pending recommendation naming it.
+This section applies only to clients other than Codex and Claude. Identify settings before a
+substantive answer, plan, project command, or edit. If verification and an explicit user report
+leave a value unknown, ask only for that missing value and wait. A bare "ok" identifies a pair
+only when answering a pending recommendation naming it.
 
 At a task boundary, offer a sufficient lower setting unless the user already chose to keep the
 current pair for that scope. For an upgrade or downgrade, ask once using the visible-question
