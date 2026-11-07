@@ -1,6 +1,6 @@
 ---
 name: gitlab-ci
-description: Design, create, edit, review, secure, validate, and troubleshoot GitLab CI/CD pipelines, shared templates, and CI/CD components. Use when Codex works with .gitlab-ci.yml, GitLab CI YAML includes, workflow or job rules, stages, needs or DAGs, artifacts, caches, inputs, variables, runners, downstream or child pipelines, monorepo change scoping, containerized CI, shared image catalogs, image or package promotion, security scanners, merge request reporting, CODEOWNERS gates, deployment gates or verification, or GitLab pipeline failures.
+description: Design, create, edit, review, secure, validate, and troubleshoot GitLab CI/CD pipelines, shared templates, and CI/CD components. Use when an agent works with .gitlab-ci.yml, GitLab CI YAML includes, workflow or job rules, stages, needs or DAGs, artifacts, caches, inputs, variables, runners, downstream or child pipelines, monorepo change scoping, containerized CI, shared image catalogs, image or package promotion, security scanners, merge request reporting, CODEOWNERS gates, deployment gates or verification, or GitLab pipeline failures.
 ---
 
 # GitLab CI/CD
