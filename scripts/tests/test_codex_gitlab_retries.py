@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from test_codex_gitlab_queue import historical_hold, module, queue, flow, enqueue, domain, human_turn, assessment, compact, resolution_fixture
+from test_codex_gitlab_queue import review_evidence
 
 
 def automatic(f, **values):
@@ -148,7 +149,8 @@ def test_completed_partial_success_is_reopened_once_with_checkpoint_unchanged(fl
     old=copy.deepcopy(job)
     assert f.step() is False  # Backfill requeues, but the interval is not yet eligible.
     retry=f.q.job(original['id'])
-    assert retry['wait_reason']=='reviewer_retry' and retry['stages']==old['stages']
+    assert retry['wait_reason']=='reviewer_retry'
+    assert review_evidence(retry['stages'])==review_evidence(old['stages'])
     assert retry['completion_history']==[{'outcome':'reviewed','completed_at':old['completed_at']}]
     assert f.q.mr(11,82)['reviewed_head']=='a'*40
     assert f.step() is False and f.q.job(original['id'])==retry

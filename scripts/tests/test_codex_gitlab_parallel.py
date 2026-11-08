@@ -8,6 +8,7 @@ import uuid
 import pytest
 
 from test_codex_gitlab_queue import historical_hold, assessment, domain, flow, module, rendered, compact
+from test_codex_gitlab_queue import review_evidence
 from test_codex_gitlab_recovery import FIXTURES, captured_claude, enqueue, finding
 
 
@@ -190,7 +191,9 @@ def test_recorded_mr7_result_survives_restart_and_next_reviewer_receives_proposa
     try:
         assert f.step(reopened)
         current=reopened.job(job['id'])
-        assert current['stages'][0]==first and current['stages'][1]['reviewer']=='codex'
+        assert review_evidence(current['stages'][:1])==review_evidence([first])
+        assert current['stages'][0]['scratch']['state']=='removed'
+        assert current['stages'][1]['reviewer']=='codex'
         assert current['stages'][1]['state']=='running' and f.launched==['claude','codex']
         immutable=f.m['mq_input_context'](reopened,current['stages'][1])
         assert immutable['prior_reviewers'][0]['summary']==rendered(f.results['claude'])

@@ -66,7 +66,7 @@ def test_new_stage_uses_normal_gitlab_without_private_server(flow):
     job=automatic(flow);flow.step();saved=flow.q.job(job['id']);stage=saved['stages'][0]
     c=flow.m['mq_workspace_config'](flow.config,saved)
     selection=flow.m['mq_native_selection'](c)['config']
-    assert stage['protocol']=='direct' and stage['input_format']=='message-v4'
+    assert stage['protocol']=='direct' and stage['input_format']=='message-v5'
     assert 'gitlab_review' not in stage['input'] and 'Exact admitted head:' not in stage['input']
     assert 'mcp_servers.gitlab_review' not in selection
     server=selection['mcp_servers.gitlab']
@@ -100,12 +100,12 @@ def assert_child_review_instructions(text):
 
 
 def assert_review_scratch_instructions(text):
-    for requirement in ('/tmp/codex-monitor', 'fresh uniquely named subdirectory per review',
+    for requirement in ('supplied temporary directory', 'exported Git snapshots',
                         'Do not create .review-*', 'output/cache paths there',
-                        'after all commands and containers using it have stopped',
-                        'termination is uncertain', 'Never delete the shared scratch base',
-                        'historical .review-* leftovers'):
+                        'actual requested source edits'):
         assert requirement in text
+    assert 'cleanup' not in text.lower()
+    assert 'Stop the commands and containers' not in text
 
 
 def test_codex_dispatch_receives_child_review_instructions(flow,monkeypatch):

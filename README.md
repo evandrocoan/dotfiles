@@ -727,6 +727,15 @@ assess them. The reviewer verifies ancestry and the current target and diff basi
 uncertain coverage, changed basis, rewritten history, or an explicit restart calls for a full
 review. Both reviewers still read complete discussions and review applicable child MRs.
 
+New review stages receive a dedicated temporary directory under `/tmp/codex-monitor`.
+The consumer removes only its registered directory after checking the native execution and
+Docker bind mounts. Cleanup is separate from the review result and is retried on later ticks;
+`status` exposes its path, state and pending reason. Human questions preserve the directory.
+Unloaded Codex chats have no usable terminal inventory, and manually resumed Claude reviews
+have no registered continuation process group, so these cases remain pending. Existing
+unregistered `.review-*` folders require a separate operator inspection. The consumer never
+scans unrelated desktop processes or asks a reviewer to manage cleanup.
+
 `status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
 include their native `name`, `session`, saved result or error, and a copyable `resume_command`
 to open the conversation later in the CLI using its original directory and native history.

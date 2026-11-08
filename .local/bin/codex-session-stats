@@ -2706,7 +2706,8 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 10
+MQ_INSTRUCTIONS_VERSION = 11
+MQ_SCRATCH_BASE = Path('/tmp/codex-monitor')
 MQ_COMPACT_ASSESSMENT_VERSION = 3
 
 
@@ -3134,7 +3135,7 @@ class MonitorQueue:
                     latest = {s['reviewer']:s for s in job['stages'] if s.get('purpose')!='question'}
                     for reviewer,original in latest.items():
                         effective = mq_effective_stage(original)
-                        if (original.get('input_format')!='message-v4' or effective['state']!='succeeded'
+                        if (original.get('input_format') not in {'message-v4','message-v5'} or effective['state']!='succeeded'
                                 or not isinstance(effective.get('result'),dict)
                                 or effective['result'].get('outcome')!='complete'
                                 or effective['result'].get('head')!=job['head']):
@@ -3345,17 +3346,11 @@ AGENTS.md before project commands. Choose repositories, branches, context and us
 the supplied workspace, preserve existing work and verify the actual SHAs used for test coverage.
 Do not delegate, commit, reset, run git clean, stash or create worktrees unless explicitly requested.
 For automatic reviews and their actual continuations, keep review-only scratch outside
-repository checkouts. Use /tmp/codex-monitor as the scratch base, creating it if needed, and
-allocate a fresh uniquely named subdirectory per review. Put exported Git snapshots,
-generated test helpers, temporary scripts, logs and test outputs in that subdirectory.
+repository checkouts. Use the supplied temporary directory for exported Git snapshots,
+generated test helpers, temporary scripts, logs and test outputs.
 Do not create .review-* or other review scratch in repository folders. Run checks that
 generate files from the scratch snapshot or configure their output/cache paths there;
 actual requested source edits still belong in the selected repository.
-Track only the subdirectory created by this review. Arrange cleanup on success, failure
-or interruption, after all commands and containers using it have stopped. If execution or
-termination is uncertain, preserve the subdirectory and report its path and pending cleanup.
-Never delete the shared scratch base, another review's data, historical .review-* leftovers,
-or user files. Do not run git clean to perform scratch cleanup.
 The operator has already selected the configured model and thinking effort for this dispatched
 stage. Do not offer model changes or ask for confirmation. This does not answer domain questions.
 For the automatic review, also review child MRs explicitly linked as dependencies in the supplied
@@ -3691,6 +3686,15 @@ def mq_render_input_v4(data):
                         '\n'+instruction+'\n'+facts+'\n--- BEGIN SUPPLIED CONTEXT ---\n',1)
 
 
+def mq_render_input_v5(data):
+    text = mq_render_input_v4(data)
+    path = data.get('scratch_path')
+    instruction = ('Temporary directory for review-only files: '+path if path else
+        'This read-only task has no temporary working directory.')
+    return text.replace('\n--- BEGIN SUPPLIED CONTEXT ---\n',
+                        '\n'+instruction+'\n--- BEGIN SUPPLIED CONTEXT ---\n',1)
+
+
 def mq_effective_stage(stage):
     """A held review can continue natively without replacing its original captured final."""
     observations = stage.get('continuations',[])
@@ -3700,7 +3704,7 @@ def mq_effective_stage(stage):
 def mq_native_human_policy(stage):
     # Old issued inputs keep their original policy. A frozen old preparation can be sent
     # unchanged in a fresh chat: record the instructions actually used by that dispatch.
-    version = stage.get('instructions_version',7 if stage.get('input_format') in {'message-v3','message-v4'} else 0)
+    version = stage.get('instructions_version',7 if stage.get('input_format') in {'message-v3','message-v4','message-v5'} else 0)
     return stage.get('protocol')=='direct' and version>=7
 
 
@@ -3723,8 +3727,9 @@ def mq_input(queue, job, stage, context):
     if job['kind']=='code' and stage.get('purpose')!='question' and (
             job['source'].get('origin')=='automatic' or job.get('operator_restart')):
         data['code_review_scope'] = mq_review_scope(queue,job,stage,context)
-    text = mq_render_input_v4(data)
-    mq_update_stage(queue,job,stage['id'],input=text,input_format='message-v4',
+    data['scratch_path'] = (stage.get('scratch') or {}).get('path')
+    text = mq_render_input_v5(data)
+    mq_update_stage(queue,job,stage['id'],input=text,input_format='message-v5',
                     input_context=data,input_digest=monitor_digest(data))
     return text
 
@@ -4337,7 +4342,7 @@ def mq_legacy_claude_rejection(config,job,stage):
             'ctime_ns':st.st_ctime_ns,'size':st.st_size}}
 
 
-def mq_claude_records(config, session):
+def mq_claude_records(config, session, *, require_complete=False):
     if not re.fullmatch(r'[a-f0-9-]{36}', session):
         raise RuntimeError('invalid native Claude session identity')
     root = Path(config['claude_home']) / 'projects'
@@ -4352,6 +4357,8 @@ def mq_claude_records(config, session):
     records = []
     with source.open() as stream:
         for raw in stream:
+            if require_complete and not raw.endswith('\n'):
+                raise RuntimeError('native Claude transcript append is incomplete')
             try:
                 item = json.loads(raw)
             except json.JSONDecodeError:
@@ -4505,7 +4512,8 @@ def mq_input_context(queue,stage):
     if 'input_format' in stage:
         data = stage.get('input_context')
         renderer = {'message-v1':mq_render_input_v1,'message-v2':mq_render_input_v2,
-                    'message-v3':mq_render_input,'message-v4':mq_render_input_v4}.get(stage['input_format'])
+                    'message-v3':mq_render_input,'message-v4':mq_render_input_v4,
+                    'message-v5':mq_render_input_v5}.get(stage['input_format'])
         if (renderer is None or not isinstance(data,dict)
                 or data.get('stage')!=stage['id'] or data.get('reviewer')!=stage['reviewer']
                 or monitor_digest(data)!=stage.get('input_digest')
@@ -4634,7 +4642,8 @@ def mq_claude_arguments(config, text, name):
     allowed = ['Read','Grep','Glob']
     if writable:
         allowed.append('Bash')
-        for root in [*workspace['roots'],*workspace['git_metadata']]:
+        for root in [*workspace['roots'],*workspace['git_metadata'],
+                     *([config['_scratch_path']] if config.get('_scratch_path') else [])]:
             allowed.extend(['Edit(/'+root+'/**)','Write(/'+root+'/**)'])
     else:
         allowed.extend(['Bash(codex-session-stats current --client claude --format json)',
@@ -4651,6 +4660,9 @@ def mq_claude_arguments(config, text, name):
         allowed.extend('mcp__'+config['credential_mcp_server']+'__'+name for name in mq_gitlab_tools(config))
     if len(workspace['roots']) > 1:
         arguments.extend(['--add-dir',*workspace['roots'][1:]])
+    if config.get('_scratch_path') and not any(
+            Path(config['_scratch_path']).is_relative_to(root) for root in workspace['roots']):
+        arguments.extend(['--add-dir',config['_scratch_path']])
     return [*arguments,'--allowedTools',*allowed,'--',text] if text is not None else [*arguments,'--allowedTools',*allowed,'--']
 
 
@@ -5831,7 +5843,259 @@ def mq_restore_question(queue,job):
     return False
 
 
+def mq_scratch_directory(path, identity=None):
+    import stat
+    metadata = path.lstat()
+    if (not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid!=os.getuid()
+            or metadata.st_mode & 0o022):
+        raise RuntimeError('scratch directory is not an owned non-writable-by-others directory')
+    actual = [metadata.st_dev,metadata.st_ino]
+    if identity is not None and actual!=identity:
+        raise RuntimeError('registered scratch directory identity changed')
+    return actual
+
+
+def mq_allocate_scratch(queue,job,stage):
+    """Persist intent before creation; never adopt an interrupted, unregistered directory."""
+    base = MQ_SCRATCH_BASE
+    if not stage.get('scratch'):
+        base.mkdir(mode=0o700,exist_ok=True)
+        # The existing model-created base may have inherited a group-writable umask.
+        descriptor = os.open(base,os.O_DIRECTORY|os.O_NOFOLLOW)
+        try:
+            if os.fstat(descriptor).st_uid!=os.getuid():
+                raise RuntimeError('scratch base belongs to another user')
+            os.fchmod(descriptor,0o700)
+        finally:os.close(descriptor)
+        base_identity = mq_scratch_directory(base)
+        path = base/('review-'+stage['id'])
+        mq_update_stage(queue,job,stage['id'],scratch={'path':str(path),'base_identity':base_identity,
+            'identity':None,'state':'allocating'})
+        path.mkdir(mode=0o700)  # An existing name is not ownership evidence.
+        mq_update_stage(queue,job,stage['id'],scratch={**stage['scratch'],
+            'identity':mq_scratch_directory(path),'state':'ready'})
+    scratch = stage['scratch']
+    mq_scratch_directory(base,scratch['base_identity'])
+    if scratch['path']!=str(base/('review-'+stage['id'])) or not scratch.get('identity'):
+        raise RuntimeError('scratch allocation ownership is incomplete')
+    mq_scratch_directory(Path(scratch['path']),scratch['identity'])
+
+
+def mq_scratch_docker(config,path):
+    """Read mount inventories from every configured local Docker endpoint, without mutation."""
+    import shutil
+    import subprocess
+    executable = shutil.which('docker')
+    if not executable:raise RuntimeError('Docker mount inventory is unavailable')
+    def command(arguments):
+        try:
+            result = subprocess.run([executable,*arguments],capture_output=True,text=True,
+                timeout=min(5,mq_io_timeout(config,'native_timeout')))
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError('Docker mount inventory timed out') from error
+        if result.returncode:
+            raise RuntimeError('Docker mount inventory failed: '+result.stderr.strip()[:300])
+        if len(result.stdout.encode())>config.get('max_response_bytes',8*1024*1024):
+            raise RuntimeError('Docker mount inventory exceeds the response bound')
+        return result.stdout
+    contexts = [json.loads(line) for line in command(['context','ls','--format','{{json .}}']).splitlines()]
+    endpoints = {item['DockerEndpoint'] for item in contexts}
+    if os.environ.get('DOCKER_HOST'):endpoints.add(os.environ['DOCKER_HOST'])
+    if not endpoints or any(not endpoint.startswith('unix:///') for endpoint in endpoints):
+        raise RuntimeError('Docker contexts do not establish a complete local mount inventory')
+    for endpoint in sorted(endpoints):
+        ids = command(['--host',endpoint,'ps','--all','--quiet']).splitlines()
+        for identifier in ids:
+            if not re.fullmatch('[0-9a-f]{12,64}',identifier):
+                raise RuntimeError('Docker inventory returned an invalid container identity')
+            mounts = json.loads(command(['--host',endpoint,'inspect','--format','{{json .Mounts}}',identifier]))
+            for mount in mounts:
+                if mount.get('Type')!='bind':continue
+                source = Path(mount['Source'])
+                if not source.is_absolute():raise RuntimeError('Docker mount source is not absolute')
+                # A stopped container can be restarted, so retain even its registered bind.
+                if path.is_relative_to(source) or source.is_relative_to(path):
+                    raise RuntimeError('scratch is referenced by Docker container '+identifier)
+
+
+def mq_scratch_resources(config,path):
+    mq_scratch_docker(config,path)
+    # Refuse nested host mounts too, including same-device bind mounts.
+    for line in Path('/proc/self/mountinfo').read_text().splitlines():
+        target = re.sub(r'\\([0-7]{3})',lambda m:chr(int(m[1],8)),line.split()[4])
+        if Path(target).is_relative_to(path):
+            raise RuntimeError('scratch contains a mounted filesystem')
+
+
+def mq_scratch_native_stopped(config,stage):
+    if stage['delivery']=='prepared' or (stage.get('error') or {}).get('not_started'):
+        return
+    if stage['reviewer']=='claude':
+        if stage.get('continuations'):
+            raise RuntimeError('manual Claude continuation has no registered execution-resource ownership')
+        if not mq_print_execution(config,stage)['terminal']:
+            raise RuntimeError('registered Claude execution is not proven terminal')
+        records = mq_claude_records(config,stage['session'],require_complete=True)
+        users = []
+        for row in records:
+            if row.get('type')!='user' or row.get('isMeta'):continue
+            content = row.get('message',{}).get('content')
+            if (isinstance(content,list) and content and all(
+                    isinstance(block,dict) and block.get('type')=='tool_result' for block in content)):
+                continue
+            users.append(row)
+        source = users[0] if len(users)==1 else {}
+        identifier = source.get('uuid')
+        if (not isinstance(identifier,str) or not re.fullmatch(
+                r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',identifier)
+                or stage.get('source_id') not in {None,identifier}
+                or source.get('message',{}).get('content')!=stage['input']
+                or source.get('cwd')!=config['cwd']):
+            raise RuntimeError('Claude source changed or manual continuation has no registered execution-resource ownership')
+        return
+    native = monitor_native(config,'thread/read',{'threadId':stage['session'],'includeTurns':False})['thread']
+    if (native.get('id')!=stage['session'] or native.get('cwd')!=config['cwd']
+            or native.get('projectId')!=config['_workspace']['project_id']
+            or native.get('status',{}).get('type')!='idle'):
+        raise RuntimeError('Codex conversation is not loaded and idle; terminal inventory is unavailable')
+    if monitor_thread_source_roots(config,native)!=config['_workspace']['roots']:
+        raise RuntimeError('Codex cleanup workspace context changed')
+    # A settled stage already captured its exact terminal turn. Authenticate its source
+    # again and require the whole conversation idle, including later manual continuations.
+    items = mq_codex_items(config,stage['session'],stage['turn_id'])
+    users = [i for i in items if i.get('type')=='userMessage']
+    if (len(users)!=1 or mq_texts(users[0].get('content'))!=([stage['input']],False)
+            or users[0].get('clientId') not in {None,stage['id']}):
+        raise RuntimeError('registered Codex scratch input changed')
+    cursor,seen = None,set()
+    for _ in range(config['max_history_pages']):
+        params = {'threadId':stage['session'],'limit':100}
+        if cursor is not None:params['cursor']=cursor
+        page = monitor_native(config,'thread/backgroundTerminals/list',params)
+        if not isinstance(page.get('data'),list):
+            raise RuntimeError('invalid Codex background terminal inventory')
+        if page['data']:
+            raise RuntimeError('Codex review conversation still has running background terminals')
+        cursor = page.get('nextCursor')
+        if cursor is None:return
+        if not isinstance(cursor,str) or not cursor or cursor in seen:
+            raise RuntimeError('invalid Codex background terminal cursor')
+        seen.add(cursor)
+    raise RuntimeError('Codex background terminal inventory exceeds the page bound')
+
+
+def mq_remove_scratch(config,stage):
+    scratch = stage['scratch'];base = MQ_SCRATCH_BASE;path = Path(scratch['path'])
+    if path!=base/('review-'+stage['id']) or not scratch.get('identity'):
+        raise RuntimeError('scratch allocation ownership is incomplete')
+    # /tmp may disappear on reboot, or deletion may precede a crashed state write.
+    if not base.exists() and not base.is_symlink():return
+    mq_scratch_directory(base,scratch['base_identity'])
+    if not path.exists() and not path.is_symlink():return
+    mq_scratch_directory(path,scratch['identity'])
+    mq_scratch_resources(config,path)
+    base_fd = os.open(base,os.O_DIRECTORY|os.O_NOFOLLOW)
+    root_fd = None
+    try:
+        if [os.fstat(base_fd).st_dev,os.fstat(base_fd).st_ino]!=scratch['base_identity']:
+            raise RuntimeError('scratch base identity changed')
+        root_fd = os.open(path.name,os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=base_fd)
+        if [os.fstat(root_fd).st_dev,os.fstat(root_fd).st_ino]!=scratch['identity']:
+            raise RuntimeError('scratch directory identity changed before deletion')
+        # Keep traversal and deletion cooperative, including a very wide directory.
+        # Every operation stays relative to an authenticated, open directory inode.
+        def empty(directory_fd):
+            with os.scandir(directory_fd) as entries:
+                for entry in entries:
+                    mq_budget(config)
+                    if entry.is_dir(follow_symlinks=False):
+                        original = entry.stat(follow_symlinks=False)
+                        child_fd = os.open(entry.name,os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=directory_fd)
+                        try:
+                            opened = os.fstat(child_fd)
+                            if (opened.st_ino!=entry.inode() or
+                                    (opened.st_dev,opened.st_ino)!=(original.st_dev,original.st_ino)):
+                                raise RuntimeError('scratch child identity changed before deletion')
+                            empty(child_fd)
+                            mq_budget(config)
+                            named = os.stat(entry.name,dir_fd=directory_fd,follow_symlinks=False)
+                            if (named.st_dev,named.st_ino)!=(opened.st_dev,opened.st_ino):
+                                raise RuntimeError('scratch child identity changed during deletion')
+                            os.rmdir(entry.name,dir_fd=directory_fd)
+                        finally:os.close(child_fd)
+                    else:os.unlink(entry.name,dir_fd=directory_fd)
+        empty(root_fd)
+        mq_budget(config)
+        metadata = os.stat(path.name,dir_fd=base_fd,follow_symlinks=False)
+        if [metadata.st_dev,metadata.st_ino]!=scratch['identity']:
+            raise RuntimeError('scratch directory identity changed during deletion')
+        os.rmdir(path.name,dir_fd=base_fd)
+    finally:
+        if root_fd is not None:os.close(root_fd)
+        os.close(base_fd)
+
+
+def mq_cleanup_scratch(config,queue):
+    """Bounded maintenance in the existing consumer; cleanup never changes review outcomes."""
+    candidates = []
+    for job in queue.jobs():
+        scopes = [(job,job.get('workspace')),*[(r,r.get('workspace')) for r in job.get('rounds',[])]]
+        for scope,workspace in scopes:
+            for stage in [*scope.get('stages',[]),*scope.get('retired_preparations',[])]:
+                scratch = stage.get('scratch')
+                if scratch and scratch.get('state')!='removed' and (stage['state']!='running'
+                        or stage in scope.get('retired_preparations',[])):
+                    candidates.append((scratch.get('checked_at',0),job,stage,workspace,scope))
+    checked = config.setdefault('_scratch_checked',set()) if '_cycle_deadline' in config else set()
+    attempted = 0
+    cleanup_config = dict(config)
+    if '_cycle_deadline' in config:
+        import time
+        now = time.monotonic()
+        cleanup_config['_cycle_deadline'] = now+min(3,max(0,config['_cycle_deadline']-now)/8)
+        cleanup_config['_io_guard'] = lambda:mq_budget(cleanup_config)
+        cleanup_config['_native_guard'] = lambda:mq_budget(cleanup_config)
+    for _,job,stage,workspace,scope in sorted(candidates,key=lambda value:value[0]):
+        if stage['id'] in checked:continue
+        mq_budget(config)
+        checked.add(stage['id']);attempted+=1
+        state,reason = 'pending',None
+        effective = mq_effective_stage(stage)
+        record = queue.mr(job['repository_id'],job['iid'])
+        retirement = scope.get('retirement')
+        retired = (isinstance(retirement,dict) and retirement in record.get('retired_questions',[])
+            and retirement.get('question',{}).get('stage_id')==stage['id']
+            and retirement.get('restart',{}).get('restarted') is True)
+        receipt = scope.get('operator_retirement')
+        if (isinstance(receipt,dict) and receipt.get('restarted') is True
+                and queue.meta('operator_mr_restart:'+str(receipt.get('job')))==receipt):
+            retired = True
+        question = not retired and (effective.get('result') or {}).get('outcome')=='question'
+        if question or any(scope.get(k) for k in ('pending_question','question_scope_pending')) or any(
+                h.get('stage_id')==stage['id'] for h in [record.get('hold') or {},*record.get('held_questions',[])]):
+            state,reason = 'held','review is awaiting a human answer or question snapshot'
+        else:
+            try:
+                scoped = mq_workspace_config(cleanup_config,{**job,'workspace':workspace,'stages':[stage]})
+                mq_verify_input(queue,stage) if stage.get('input') else None
+                if stage.get('input_format')=='message-v5' and mq_input_context(queue,stage).get('scratch_path')!=stage['scratch']['path']:
+                    raise RuntimeError('scratch path differs from its frozen task')
+                mq_scratch_native_stopped(scoped,stage)
+                mq_remove_scratch(scoped,stage)
+                state = 'removed'
+            except MonitorCycleYield as error:
+                reason = 'cleanup observation deferred: '+str(error)
+            except (OSError,RuntimeError,ValueError,KeyError,TypeError) as error:
+                reason = str(error)[:1000]
+        with queue.atomic():
+            if queue.job(job['id'])!=job:continue
+            stage['scratch'].update(state=state,reason=reason,checked_at=mq_stamp())
+            queue.save(job)
+        if attempted>=2:break
+
+
 def mq_step(config,queue):
+    mq_cleanup_scratch(config,queue)
     # Re-admit partial successes from this consumer only; source IDs and checkpoints stay put.
     allowed = {p['id'] for p in mq_repositories(config)}
     for completed in queue.jobs('completed'):
@@ -6028,9 +6292,17 @@ def mq_launch_stage(config,queue,job,stage):
                         else {'claude_model':choice['model'],'claude_effort':choice['effort']})}
     if stage['reviewer']=='claude' and choice['effort'] is None:
         config.pop('claude_effort',None)
-    if not stage['input']:
-        mq_input(queue,job,stage,job['context'])
     try:
+        if not stage['input']:
+            if config.get('_workspace_write'):
+                mq_allocate_scratch(queue,job,stage)
+            mq_input(queue,job,stage,job['context'])
+        if stage.get('input_format')=='message-v5' and config.get('_workspace_write'):
+            if not stage.get('scratch'):
+                raise RuntimeError('managed review scratch registration is missing')
+            mq_allocate_scratch(queue,job,stage)
+        if stage.get('scratch'):
+            config = {**config,'_scratch_path':stage['scratch']['path']}
         mq_admit(config,job['repository_id'])
         mq_verify_job_sources(config,queue,job)
         if stage['reviewer']=='claude':
@@ -6041,7 +6313,8 @@ def mq_launch_stage(config,queue,job,stage):
         if stage['delivery']=='prepared' or isinstance(failure,MonitorNativeRejected) or (
                 isinstance(failure,MonitorClaudeError) and failure.not_started):
             queue.stage_end(job,stage['id'],error={'message':str(failure),
-                **({'operation':failure.operation,'not_started':True} if isinstance(failure,MonitorClaudeError) and failure.not_started else {})},terminal=True)
+                'not_started':True,
+                **({'operation':failure.operation} if isinstance(failure,MonitorClaudeError) else {})},terminal=True)
         else:
             # An issued native input with lost acknowledgment is not a known failed execution.
             mq_update_stage(queue,job,stage['id'],error={'message':str(failure),
@@ -6307,6 +6580,8 @@ def mq_job_terminal_for_history(queue,job,*,check_references=True):
     if any(stage.get('state')=='running' for stage in stages):
         return False
     for stage in stages:
+        if stage.get('scratch') and stage['scratch'].get('state')!='removed':
+            return False
         if stage.get('protocol')=='direct' and stage.get('session') and not stage.get('output_collected'):
             return False
         if stage.get('input'):
@@ -7399,6 +7674,8 @@ def mq_job_status(job, config=None):
                 command = ['env','-u','CLAUDE_CONFIG_DIR',*command]
             value['resume_command'] = 'cd -- '+shlex.quote(workspace['cwd'])+' && '+shlex.join(command)
         value['result'] = effective.get('result')
+        if stage.get('scratch'):
+            value['scratch'] = stage['scratch']
         if stage.get('continuations'):
             value['original_result'] = stage.get('result')
             value['continuations'] = stage['continuations']
@@ -7408,7 +7685,9 @@ def mq_job_status(job, config=None):
         'operator_restart','operator_retired_into','operator_retirement')
     return {**{k:job.get(k) for k in fields},'reviewers':job['reviewers'],
         'source':{k:job['source'].get(k) for k in ('origin','provider','session','source_id','turn_id')},
-        'stages':[stage_status(stage,job.get('workspace')) for stage in job['stages']],
+            'stages':[stage_status(stage,job.get('workspace')) for stage in job['stages']],
+            'retired_preparations':[stage_status(s,job.get('workspace'))
+                for s in job.get('retired_preparations',[]) if s.get('scratch')],
         'rounds':[{'reason':r['reason'],'stages':[stage_status(stage,r.get('workspace')) for stage in r['stages']]}
                   for r in job.get('rounds',[])]}
 

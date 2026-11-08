@@ -11,8 +11,10 @@ CLI = Path(os.environ.get('CODEX_MONITOR_TEST_CLI', Path(__file__).resolve().par
 
 
 @pytest.fixture
-def module():
-    return runpy.run_path(str(CLI), run_name='queue_contract_test')
+def module(tmp_path):
+    loaded = runpy.run_path(str(CLI), run_name='queue_contract_test')
+    loaded['mq_step'].__globals__['MQ_SCRATCH_BASE'] = tmp_path/'review-scratch'
+    return loaded
 
 
 @pytest.fixture
@@ -659,6 +661,18 @@ def test_tick_keeps_database_rotation_when_later_cycle_budget_is_exhausted(flow)
     assert len(flow.q.jobs())==1
 
 
+def review_evidence(stages):
+    """Native evidence and scratch identity stay fixed while cleanup status progresses."""
+    values=[]
+    for stage in stages:
+        value=dict(stage)
+        if 'scratch' in value:
+            value['scratch']={k:v for k,v in value['scratch'].items()
+                if k not in {'state','reason','checked_at'}}
+        values.append(value)
+    return values
+
+
 def domain(iid=82, *, outcome='complete', actions=None, assessment=None, question=None):
     return {'version':1,'repository_id':11,'iid':iid,'head':'a'*40,'outcome':outcome,
             'question':question,'assessment':assessment,'actions':actions or [],'concerns':[],'dispositions':[]}
@@ -731,6 +745,8 @@ def flow(module,tmp_path,monkeypatch):
             return {'thread':chats[params['threadId']],
                 'activePermissionProfile':{'id':profile,
                     'extends':None if profile==':danger-full-access' else ':read-only'}}
+        if method=='thread/backgroundTerminals/list':
+            return {'data':[],'nextCursor':None}
         if method=='thread/name/set': return {}
         if method=='mcpServer/tool/call':
             assert params['server']=='codex_app' and params['tool']=='set_thread_read_state'
@@ -784,6 +800,8 @@ def flow(module,tmp_path,monkeypatch):
     monkeypatch.setitem(m,'mq_service_identity',lambda c:service.identity.copy())
     monkeypatch.setitem(m,'mq_cgroup_empty',lambda group:not service.populated)
     monkeypatch.setitem(m,'mq_send',send)
+    # Host process/Docker observations are external to the deterministic native fixture.
+    monkeypatch.setitem(m,'mq_scratch_resources',lambda config,path:None)
     q=m['MonitorQueue'](config)
     class Flow:
         pass

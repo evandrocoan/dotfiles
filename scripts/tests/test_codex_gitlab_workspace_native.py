@@ -186,8 +186,9 @@ class Responses(http.server.BaseHTTPRequestHandler):
         index=len(self.server.requests)-1
         if index==0 and getattr(self.server,'command',None):
             code=('let r=await tools.exec_command('+json.dumps({'cmd':self.server.command,
-                'yield_time_ms':1000,'max_output_tokens':5000})+');text(r);'
-                'while(r.session_id){r=await tools.write_stdin({session_id:r.session_id,chars:"",yield_time_ms:1000,max_output_tokens:5000});text(r);}')
+                'yield_time_ms':1000,'max_output_tokens':5000})+');text(r);')
+            if not getattr(self.server,'leave_background',False):
+                code+='while(r.session_id){r=await tools.write_stdin({session_id:r.session_id,chars:"",yield_time_ms:1000,max_output_tokens:5000});text(r);}'
             item={'type':'custom_tool_call','id':'host-probe','call_id':'host-probe',
                 'namespace':'functions','name':'exec','input':code}
         elif index<len(self.server.targets):
@@ -206,6 +207,55 @@ class Responses(http.server.BaseHTTPRequestHandler):
         body=''.join('data: '+json.dumps(e)+'\n\n' for e in events).encode()
         self.send_response(200);self.send_header('Content-Type','text/event-stream')
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+
+
+def test_native_background_inventory_proves_review_terminal_use(native_workspace,monkeypatch):
+    m,c,roots,main,script,expected=native_workspace
+    binary=os.environ.get('CODEX_MONITOR_NATIVE_CODEX') or shutil.which('codex');assert binary
+    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Responses)
+    server.requests=[];server.targets=[];server.leave_background=True
+    pidfile=roots[0]/'background.pid'
+    server.command=shlex.join([sys.executable,'-c',
+        'import os,pathlib,time; pathlib.Path('+repr(str(pidfile))+').write_text(str(os.getpid())); time.sleep(60)'])
+    worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
+    settings={'model':'gpt-6.1-sol','model_provider':'fixture','analytics':{'enabled':False},
+        'model_providers':{'fixture':{'name':'Disposable executor fixture',
+            'base_url':f'http://127.0.0.1:{server.server_port}/v1','wire_api':'responses',
+            'requires_openai_auth':False,'supports_websockets':False}}}
+    (Path(c['codex_home'])/'config.toml').write_text(toml_tables(settings))
+    native=Native(binary,c);identifier=None;pid=None;birth=None
+    try:
+        identifier=native.rpc('thread/start',{'cwd':c['cwd'],'ephemeral':False,
+            'runtimeWorkspaceRoots':c['_workspace']['roots'],'approvalPolicy':'never',
+            'permissions':':danger-full-access'})['thread']['id']
+        request='Run the disposable local executor fixture.'
+        native.turn(identifier,':danger-full-access',request)
+        assert len(server.requests)==2 and pidfile.is_file()
+        pid=int(pidfile.read_text());birth=Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()[19]
+        turn=native.rpc('thread/turns/list',{'threadId':identifier,'itemsView':'notLoaded'})['data'][0]
+        assert turn['status']=='completed'
+        stage={'reviewer':'codex','session':identifier,'turn_id':turn['id'],
+            'delivery':'accepted','input':request,'id':'fixture-stage'}
+        monkeypatch.setitem(m,'monitor_native',lambda config,method,params,**kw:native.rpc(method,params))
+        busy=native.rpc('thread/backgroundTerminals/list',{'threadId':identifier})
+        assert len(busy['data'])==1 and busy['data'][0]['cwd']==c['cwd']
+        with pytest.raises(RuntimeError,match='running background terminals'):
+            m['mq_scratch_native_stopped'](c,stage)
+        stopped=native.rpc('thread/backgroundTerminals/terminate',{
+            'threadId':identifier,'processId':busy['data'][0]['processId']})
+        assert stopped=={'terminated':True}
+        assert native.rpc('thread/backgroundTerminals/list',{'threadId':identifier})['data']==[]
+        assert m['mq_scratch_native_stopped'](c,stage) is None
+        if Path(f'/proc/{pid}/stat').exists():
+            fields=Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()
+            assert fields[19]!=birth or fields[0] in {'Z','X'}
+    finally:
+        if identifier:
+            native.rpc('thread/backgroundTerminals/clean',{'threadId':identifier})
+        native.close();server.shutdown();server.server_close();worker.join(5)
+        if pid and Path(f'/proc/{pid}/stat').exists():
+            fields=Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()
+            if fields[19]==birth and fields[0] not in {'Z','X'}:os.kill(pid,signal.SIGTERM)
 
 
 def test_native_codex_project_cold_resume_and_edit(native_workspace):
@@ -509,7 +559,7 @@ def test_native_claude_finite_service_consumer_and_cold_resume(flow,module,tmp_p
         native_records=m['mq_claude_records'](f.config,stage['session'])
         user=next(r for r in native_records if r['type']=='user')
         assert user['message']['content']==request
-        assert saved['stages'][index]['input_format']=='message-v4'
+        assert saved['stages'][index]['input_format']=='message-v5'
         assert saved['stages'][index]['input_context']['code_review_scope']['baseline']=='d'*40
         assert json.dumps(request)[1:-1] in json.dumps(server.requests[0])
         assert saved['stages'][index]['result']['question']=='Which fixture rule should be used?'

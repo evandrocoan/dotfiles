@@ -151,7 +151,9 @@ def test_actual_held_continuation_credits_original_stage_only(flow):
     assert not f.q.mr(11,82).get('reviewed_code_by_reviewer')
     native_answer(f);f.m['mq_intake'](f.config,f.q,f.q.mr(11,82));f.drain()
     saved=f.q.job(job['id'])
-    assert {k:v for k,v in saved['stages'][0].items() if k!='continuations'}==held
+    assert {k:v for k,v in saved['stages'][0].items() if k not in {'continuations','scratch'}}=={
+        k:v for k,v in held.items() if k!='scratch'}
+    assert saved['stages'][0]['scratch']['state']=='removed'
     assert saved['stages'][0]['continuations'][0]['outcome']['result']['outcome']=='complete'
     assert f.q.mr(11,82)['reviewed_code_by_reviewer']['codex']['stage_id']==held['id']
     assert set(f.q.mr(11,82)['reviewed_code_by_reviewer'])=={'codex'}

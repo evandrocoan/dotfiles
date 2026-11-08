@@ -7,6 +7,7 @@ import uuid
 import pytest
 
 from test_codex_gitlab_queue import historical_hold, assessment, domain, flow, module, rendered, compact
+from test_codex_gitlab_queue import review_evidence
 from test_codex_gitlab_workspace import project
 from test_codex_gitlab_periodic import quiet_scan
 
@@ -173,7 +174,8 @@ def test_operation_retry_and_restart_preserve_completed_reviews(flow,monkeypatch
     monkeypatch.setitem(flow.m,'mq_context',fail)
     progressed=flow.m['mq_consume'](flow.config,flow.q)
     saved=flow.q.job(job['id'])
-    assert saved['stages']==before['stages'] and saved['workspace']==before['workspace']
+    assert review_evidence(saved['stages'])==review_evidence(before['stages'])
+    assert saved['workspace']==before['workspace']
     assert saved['state']=='pending' and saved['wait_reason']=='retry' and progressed is True
     assert saved['last_error']['error']=='temporary provider read failure'
     assert flow.q.mr(11,82)['reviewed_head'] is None and flow.sends==[]
@@ -183,7 +185,7 @@ def test_operation_retry_and_restart_preserve_completed_reviews(flow,monkeypatch
     try:
         assert flow.m['mq_consume'](flow.config,reopened)
         assert reopened.job(job['id'])['outcome']=='reviewed'
-        assert reopened.job(job['id'])['stages']==before['stages']
+        assert review_evidence(reopened.job(job['id'])['stages'])==review_evidence(before['stages'])
     finally:reopened.close()
     assert flow.launched==['claude','codex'] and flow.sends==[]
 
@@ -258,7 +260,7 @@ def test_changed_head_after_operation_error_does_not_publish_cached_result(flow,
     flow.context['head']='d'*40;flow.context['mr']['sha']='d'*40
     flow.m['mq_consume'](flow.config,flow.q);flow.m['mq_consume'](flow.config,flow.q)
     assert flow.q.job(job['id'])['outcome']=='context changed; completed publications preserved'
-    assert flow.q.job(job['id'])['stages']==before['stages']
+    assert review_evidence(flow.q.job(job['id'])['stages'])==review_evidence(before['stages'])
     assert flow.q.mr(11,82)['reviewed_head'] is None and flow.sends==[]
 
 
