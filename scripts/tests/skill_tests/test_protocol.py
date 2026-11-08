@@ -17,6 +17,7 @@ def test_all_cases_valid_and_live_budget_exact():
     corpus = cases()
     assert set(corpus) == {
         "architecture", "authorization", "references", "held-out", "natural-trigger", "near-miss",
+        "architecture-closure-residue",
         "llm-replay-quality", "agentic-causal-diagnosis", "agentic-native-layer",
         "llm-outcome-trigger", "llm-outcome-near-miss", "llm-outcome-held-out",
         "followup-native-trigger", "followup-scheduled-worker", "followup-uncertain-return",

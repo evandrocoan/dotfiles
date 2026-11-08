@@ -422,9 +422,17 @@ decision, responsibilities, invariants, flow, failure semantics, risks, rejected
 alternatives, and a compact decision-to-code-to-test/replay trace.
 
 Apply the same content cleanup when the implementation of an amendment recorded under section 7a
-closes, even though the amended record was already `Implemented`: rewrite the amended
-rule and affected flow, consequences, and traceability, then remove the amendment
-block and pending qualifiers. For a replacement, remove the notice from the old record.
+closes, even though the amended record was already `Implemented`. Check the entire edited record,
+including pre-existing headings and cross-references outside the latest diff. Integrate completed
+changes into the current rules, flow, consequences, and traceability, then remove their amendment
+labels, blocks, and pending qualifiers. For a completed replacement, remove the notice from the old
+record. Otherwise a correct new section can leave the surrounding record describing a transition
+that has already closed.
+
+Establish completion from authoritative evidence before consolidating a change. Preserve genuinely
+pending amendments and necessary historical anchors; report uncertain status instead of deleting
+the text or declaring the change implemented. This is the ordinary artifact-consistency check;
+section 9 separately governs runtime conformance and any user-selected full audit.
 
 ### 11. Validate the result
 

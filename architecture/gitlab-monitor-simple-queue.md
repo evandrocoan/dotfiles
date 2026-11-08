@@ -36,10 +36,9 @@ physically. It adds no parallel queue and does not change reviewer order or publ
 
 ### Direct GitLab publication ownership
 
-The operator selected direct use of the existing ordinary GitLab HTTP MCP for newly prepared
-review stages. This amendment supersedes private `gitlab_review` publication ownership for new stages;
-the older operation contract remains only for original issued evidence and
-read-back recovery. The FIFO, native identities, sufficient-answer holds, reviewer order and
+Newly prepared review stages publish directly through the existing ordinary GitLab HTTP MCP.
+The retired private `gitlab_review` operation contract remains only for original issued evidence
+and read-back recovery. The FIFO, native identities, sufficient-answer holds, reviewer order and
 actual code checkpoints remain unchanged. Historical input formats retain their exact readers. Freeze the actual dispatched instruction
 policy independently of input format, including an old preparation sent unchanged in a fresh chat.
 
@@ -87,7 +86,7 @@ tool permissions and the same validated credential source. The shared Compose co
 individually enables required CI readers; it does not activate pipeline mutations. Native clients
 need these reads in the initial catalog, without relying on mid-turn discovery.
 
-**Workspace execution amendment:** Reviewers may execute commands, edit files, change
+**Workspace execution:** Reviewers may execute commands, edit files, change
 branches and run tests in the configured workspace folders and their necessary shared Git
 metadata, without per-command approval. The monitor supplies the same durable workspace snapshot
 to every reviewer in a round; the model chooses the repository, checkout and commands. Refresh
@@ -103,7 +102,8 @@ an OS boundary. Queue and source validators remain application checks, not secur
 against these processes. Intake explicitly reselects its read-only sandbox, network proxy and
 read-only MCP grants. Manual Codex continuations may inherit the latest native chat permissions;
 there is no automatic post-turn restoration. Global defaults, queue capacity and native-source
-validation remain unchanged; direct publication has the explicit limits in the amendment above.
+validation remain unchanged; direct publication has the explicit limits in
+[Direct GitLab publication ownership](#direct-gitlab-publication-ownership).
 
 **Review scratch ownership:** New automatic review stages receive a unique scratch
 directory allocated and registered by the consumer under `/tmp/codex-monitor`. Models receive the
@@ -550,22 +550,23 @@ authority; startup still performs its own coordinated validation.
 
 ## Transition and traceability
 
-Stage source before cutover. Use a separate fresh queue database; never import or modify the
-predecessor database or its chat mappings. Stop its scheduled producer at cutover and verify old
-native execution is terminal before starting conflicting work. Existing public GitLab discussions
-remain authoritative input to the new review. The first inventory queues one review of the current
-head of every open MR; it does not claim any previous reviewed checkpoint. Do not replay historical source messages as new
-human authorization. Accept single-repository and list config through one normalized reader,
-without a preliminary configuration migration. New Codex chats are created lazily per MR using
-the configured Codex project, with fresh chats when folders or shared instructions change.
-Remove superseded queue producers and their implementation-specific
-tests after replacement protections pass. Never edit native databases or runtime history directly.
+The current consumer exclusively owns automatic scheduling and uses a queue database separate
+from predecessor state. Predecessor producers have no scheduling authority; their database and
+chat mappings remain outside intake and must not be imported or modified. Prove old native
+execution terminal before starting conflicting work. Existing public GitLab discussions remain
+authoritative review input. The first inventory queues one review of the current head of every
+open MR; it does not claim any previous reviewed checkpoint. Historical source messages cannot
+supply new human authorization.
 
-The direct-route update pauses scheduling until implementation, validation, selected reviews and
-local commits finish. Prove issued native executions terminal before editing their runtime.
+Single-repository and list configuration use one normalized reader without a preliminary
+configuration migration. Codex chats are created lazily per MR using the configured Codex project,
+with fresh chats when folders or shared instructions change. Native databases and runtime history
+must not be edited directly.
+
+Prove issued native executions terminal before editing their runtime.
 Retain original `message-v1` and older file validators and finish/question intent readers for
-issued results. The direct-route update introduced `message-v3` and fresh instructions;
-`message-v2` retains its exact renderer. Transactionally archive only
+issued results. Direct review stages introduced `message-v3`; historical formats, including
+`message-v2`, retain their exact renderers. Transactionally archive only
 proven-unissued old preparations outside executed attempts, preserving original lookup, successful
 stages and selective retry bounds. Unknown native delivery is reconciled exactly, never relaunched.
 Existing holds and confirmed/uncertain journals remain authoritative outside the explicit operator

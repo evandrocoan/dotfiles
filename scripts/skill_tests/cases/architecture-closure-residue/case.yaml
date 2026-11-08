@@ -1,0 +1,18 @@
+id: architecture-closure-residue
+kind: application
+initial_live: false
+prompt: >-
+  A implementação da limpeza de temporários terminou neste cenário fictício. Encerre a atualização
+  documental usando architecture-records e os artefatos em scenario/. Apresente as alterações
+  necessárias no registro e os limites da conclusão. O diff desta entrega acrescentou somente a
+  seção Scratch ownership. O usuário escolheu execução direta sem plano nem auditoria completa.
+  Esta avaliação é somente por leitura: não altere arquivos, código, Git ou estado externo.
+criteria:
+  C1: Reconcile the whole edited record, including earlier closed publication and workspace changes outside the latest scratch diff; renaming only the latest section is insufficient.
+  C2: Integrate completed publication and workspace rules into current architecture and replace their transitional headings and cross-references while preserving direct publication, immutable workspace scope and legacy read-back-only recovery.
+  C3: Preserve the genuinely pending archive amendment and the current archive rule it supplements; Implemented status alone does not prove every amendment complete.
+  C4: Preserve the necessary historical receipt-format anchor and its rationale; do not apply a blanket keyword ban or erase compatibility obligations.
+  C5: Use the supplied implementation evidence and report the unverified archive work without inventing runtime changes, a new plan or a full conformance audit.
+receipt:
+  - path: .claude/skills/architecture-records/SKILL.md
+    heading: '### 10. Keep records durable'
