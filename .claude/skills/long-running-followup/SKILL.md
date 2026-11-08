@@ -92,6 +92,10 @@ An explicit update or intermediate-handback request is an exception. Send only t
 update and keep observing without acknowledgment; use an interim native final only when the
 request actually asks to hand control back. Never duplicate a native return with a manual send.
 
+If a final reports only normal progress and monitoring is still required, the parent resumes the
+same observer at once with the original stop condition. If the observer cannot continue reliably,
+use a replacement or the verified fallback. Do not take over routine polling.
+
 Return identity, observed time/state, exit code or matched event and concise evidence. Uncertain
 delivery requires read-back/deduplication or an uncertainty report, never a blind resend or restart.
 On completion, failure, deadline, intervention or cancellation, deactivate only the owned schedule,
