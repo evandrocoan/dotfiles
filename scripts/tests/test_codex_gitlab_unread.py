@@ -85,24 +85,24 @@ def test_notification_failure_never_blocks_review_and_retries_after_reopen(notif
     assert f.sends==[]
 
 
-def test_active_chat_defers_ui_work_until_idle_without_reloading_it(notifications,monkeypatch):
+@pytest.mark.parametrize('status',['active','notLoaded'])
+def test_active_or_unloaded_chat_defers_ui_work_until_loaded_and_idle_without_reloading_it(notifications,monkeypatch,status):
     f=notifications;job=enqueue(f);f.drain()
     session=f.q.mr(11,82)['chats']['codex'];native=f.m['monitor_native'];resumes=[]
     def wire(c,method,params,**kw):
         if method=='thread/resume':resumes.append(params)
         return native(c,method,params,**kw)
     monkeypatch.setitem(f.m,'monitor_native',wire)
-    f.chats[session]['status']={'type':'active'}
+    f.chats[session]['status']={'type':status}
     f.tick()
     assert f.unread_calls==[] and resumes==[]
     assert f.q.job(job['id'])['state']=='completed'
+    assert f.q.meta('app_unread:'+session)['pending'] is True
     f.chats[session]['status']={'type':'idle'}
     f.tick()
     assert f.unread_calls==[session]
-    assert len(resumes)==1
-    override=resumes[0]['config']
-    assert override=={'plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled':True}
-    assert 'developerInstructions' not in resumes[0] and f.sends==[]
+    assert resumes==[] and f.sends==[]
+    assert f.q.meta('app_unread:'+session)['pending'] is False
 
 
 def test_prior_results_without_pending_notification_are_not_retroactively_marked(notifications):
@@ -147,12 +147,11 @@ def test_readable_failure_final_is_a_new_result_even_when_review_needs_retry(not
     assert f.unread_calls==[session]
 
 
-@pytest.mark.parametrize('method',['thread/read','thread/resume'])
-def test_mismatched_native_chat_never_marks_a_foreign_thread(notifications,monkeypatch,method):
+def test_mismatched_native_chat_never_marks_a_foreign_thread(notifications,monkeypatch):
     f=notifications;enqueue(f);f.drain();native=f.m['monitor_native']
     session=f.q.mr(11,82)['chats']['codex']
     def wrong(c,name,params,**kw):
-        if name==method:
+        if name=='thread/read':
             response={'thread':{'id':'foreign','status':{'type':'idle'}}}
             if kw.get('followup'):
                 import asyncio
@@ -188,7 +187,7 @@ def test_confirmed_ack_survives_transport_cleanup_failure_without_marking_again(
     session=f.q.mr(11,82)['chats']['codex']
     def cleanup_failure(c,method,params,**kw):
         result=native(c,method,params,**kw)
-        if method=='thread/resume':raise error
+        if method=='thread/read' and kw.get('followup'):raise error
         return result
     monkeypatch.setitem(f.m,'monitor_native',cleanup_failure)
     with expectation:f.tick()

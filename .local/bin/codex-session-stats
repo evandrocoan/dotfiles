@@ -6442,16 +6442,12 @@ def mq_notify_unread(config,queue):
             session = notice['session']
             try:
                 mq_budget(scoped)
-                thread = monitor_native(scoped,'thread/read',{'threadId':session,'includeTurns':False}).get('thread')
-                if (not isinstance(thread,dict) or thread.get('id')!=session
-                        or not isinstance(thread.get('status'),dict)):
-                    raise RuntimeError('unread notification native chat identity is unavailable')
-                if thread['status'].get('type') not in {'idle','notLoaded'}:continue
                 async def mark(request,response):
                     thread = response.get('thread')
                     if (not isinstance(thread,dict) or thread.get('id')!=session
-                            or not isinstance(thread.get('status'),dict) or thread['status'].get('type')!='idle'):
-                        raise RuntimeError('unread notification requires its idle original chat')
+                            or not isinstance(thread.get('status'),dict)):
+                        raise RuntimeError('unread notification native chat identity is unavailable')
+                    if thread['status'].get('type')!='idle':return
                     args = {'threadId':session,'hostId':'local','source':'codex','read':False}
                     result = monitor_app_result('set_thread_read_state',await request('mcpServer/tool/call',
                         {'threadId':session,'server':'codex_app','tool':'set_thread_read_state','arguments':args}))
@@ -6463,10 +6459,9 @@ def mq_notify_unread(config,queue):
                         if queue.meta(key)==notice:queue.set_meta(key,{**notice,'pending':False})
                         queue.set_meta('unread_error:'+session,None)
                     mq_health_ok(config,'unread_error:'+session)
-                # Load only the idle native context and app plugin; send no model input and
-                # preserve its instructions, workspace and permissions. Active chats wait.
-                monitor_native(scoped,'thread/resume',{'threadId':session,'excludeTurns':True,'config':{
-                    'plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled':True}},followup=mark)
+                # Use only an already loaded, idle context. UI notification must not resume
+                # a chat or reload its configuration; unavailable contexts keep their notice.
+                monitor_native(scoped,'thread/read',{'threadId':session,'includeTurns':False},followup=mark)
             except MonitorCycleYield:break
             except InterruptedError:raise
             except (OSError,RuntimeError,ValueError) as failure:
