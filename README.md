@@ -42,7 +42,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Fix system crash](#fix-system-crash)
       - [Core dump capture and filtering](#core-dump-capture-and-filtering)
       - [Core dump alerts](#core-dump-alerts)
-      - [Processes pending core dump disablement](#processes-pending-core-dump-disablement)
+      - [Core dump exclusions](#core-dump-exclusions)
       - [Restore GNOME Keyring SSH after a crash](#restore-gnome-keyring-ssh-after-a-crash)
       - [Rebuild GNOME Keyring and GCR repairs](#rebuild-gnome-keyring-and-gcr-repairs)
       - [Manual XFCE recovery](#manual-xfce-recovery)
@@ -2324,7 +2324,7 @@ for COREDUMP_FILE in /etc/sysctl.d/99-local-coredumps.conf /etc/tmpfiles.d/local
         sudo touch -- "${COREDUMP_BACKUP}${COREDUMP_FILE}.absent"
     fi
 done
-sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable | sudo tee "${COREDUMP_BACKUP}/runtime.sysctl.conf"
+/usr/sbin/sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable | sudo tee "${COREDUMP_BACKUP}/runtime.sysctl.conf"
 sudo stat -c '%a %u %g %n' /root | sudo tee "${COREDUMP_BACKUP}/modes.txt"
 if sudo test -d /root/coredumps; then
     sudo stat -c '%a %u %g %n' /root/coredumps | sudo tee -a "${COREDUMP_BACKUP}/modes.txt"
@@ -2368,8 +2368,8 @@ sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/90-coredumps.lim
 sudo systemd-tmpfiles --create /etc/tmpfiles.d/local-coredumps.conf
 sudo /usr/bin/python3 -I /usr/local/lib/core-dump-filter/core_dump_filter.py --check
 sudo install -o root -g root -m 0644 ~/scripts/core-dump-filter/filter.sysctl.conf /etc/sysctl.d/99-local-coredumps.conf
-sudo sysctl -p /etc/sysctl.d/99-local-coredumps.conf
-sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
+sudo /usr/sbin/sysctl -p /etc/sysctl.d/99-local-coredumps.conf
+/usr/sbin/sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
 ```
 
 The pattern must now start with `|/usr/bin/python3 -I /usr/local/lib/core-dump-filter/`.
@@ -2397,7 +2397,7 @@ without deliberately crashing a desktop application:
 #!/usr/bin/env bash
 set -euo pipefail
 sudo /usr/bin/python3 -I /usr/local/lib/core-dump-filter/core_dump_filter.py --check
-sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
+/usr/sbin/sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
 sudo stat -c '%a %U:%G %n' /root /root/coredumps
 sudo ls -lah /root/coredumps/
 sudo journalctl -t core-dump-filter -n 30 --no-pager
@@ -2437,9 +2437,9 @@ for COREDUMP_FILE in /etc/sysctl.d/99-local-coredumps.conf /etc/tmpfiles.d/local
         sudo cp -a -- "${COREDUMP_BACKUP}${COREDUMP_FILE}" "${COREDUMP_FILE}"
     fi
 done
-sudo sysctl -p "${COREDUMP_BACKUP}/runtime.sysctl.conf"
-sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
-if [[ "$(sysctl -n kernel.core_pattern)" == *core_dump_filter.py* ]]; then
+sudo /usr/sbin/sysctl -p "${COREDUMP_BACKUP}/runtime.sysctl.conf"
+/usr/sbin/sysctl kernel.core_pattern kernel.core_pipe_limit fs.suid_dumpable
+if [[ "$(/usr/sbin/sysctl -n kernel.core_pattern)" == *core_dump_filter.py* ]]; then
     printf 'The filter is still configured; keep its installed files.\n' >&2
     exit 1
 fi
@@ -2456,12 +2456,12 @@ files independently of which collector creates them.
 **Reproduce the original native setup instead of using the filter.** Install
 `native.sysctl.conf` as `/etc/sysctl.d/99-local-coredumps.conf`, and install the same tmpfiles and PAM
 templates shown above. Create the directory with `systemd-tmpfiles --create` and apply that sysctl
-file with `sysctl -p`. Native capture additionally needs traversal through `/root`. Before opening
-it, save and review the modes/owners of its direct children; handle symlinks and non-root-owned
-entries separately. Make other child directories private and remove group/other access from regular
-files, preserving root's access. Only after that privacy preparation, set `/root` to `root:root`
-mode `0711`. Keep future children private too. The collector's filtered mode does not require this
-change. The [kernel interface reference](https://man7.org/linux/man-pages/man5/core.5.html) describes
+file with `/usr/sbin/sysctl -p`. Native capture additionally needs traversal through `/root`.
+Before opening it, save and review the modes/owners of its direct children; handle symlinks and
+non-root-owned entries separately. Make other child directories private and remove group/other
+access from regular files, preserving root's access. Only after that privacy preparation, set
+`/root` to `root:root` mode `0711`. Keep future children private too. The collector's filtered mode
+does not require this change. The [kernel interface reference](https://man7.org/linux/man-pages/man5/core.5.html) describes
 native filenames, pipe collectors and namespace behavior.
 
 #### Core dump alerts
@@ -2558,15 +2558,13 @@ sudo systemctl daemon-reload
 This preserves native capture, all pending core files, and private reminder state. There is no
 automatic dump retention or storage cap. Keep archived dumps outside the watched directory.
 
-#### Processes pending core dump disablement
+#### Core dump exclusions
 
-Disable core dumps for the following processes. Names are recorded as they appear in the core
-filenames; the initial filter entries are in [ignore.conf](scripts/core-dump-filter/ignore.conf).
-These remain pending until the installed filter is activated and its configuration is verified:
-
-- [ ] `panel-5-pulseau`
-- [ ] `panel-8-systray`
-- [ ] `xfce4-panel`
+The exact kernel `%e` names ignored by the collector are listed in
+[ignore.conf](scripts/core-dump-filter/ignore.conf). They take effect only after the filter is
+installed and activated as described above. Starting the Flow container resets
+`kernel.core_pattern`; after each Flow start, restore the filter with
+`sudo /usr/sbin/sysctl -p /etc/sysctl.d/99-local-coredumps.conf`.
 
 #### Restore GNOME Keyring SSH after a crash
 
