@@ -848,6 +848,20 @@ When its last window was closed, the launcher asks that GUI to show a window aga
 CLI arguments and working directory are preserved. Closing either client leaves the server and
 other work running. App tools become available when the GUI connects and reconnect after reopening.
 
+On startup or verified reconnection, the launcher raises the shared server's soft open-file limit
+to at least 50,000 without lowering a higher limit or changing its hard limit. A hard limit below
+50,000 is reported rather than changed. This applies to servers admitted through Codex Monitor;
+a server started independently needs to be admitted by the launcher before this adjustment occurs.
+Check the running server's PID with `codex-monitor --status`, then inspect its actual limit:
+
+```bash
+prlimit --pid PID --nofile
+```
+
+The higher limit gives the server more room for files, pipes and sockets; it does not repair a
+leak. Existing processes receive the adjustment on the next verified launcher admission, while
+new servers receive it during startup. Neither operation requires restarting active work.
+
 The [launcher](.local/bin/codex-monitor) uses the existing Poetry `monitor-tools` environment and
 [shared lifecycle owner](scripts/codex_monitor_launcher.py). Before starting a cold server, it
 prepares only the three static app-tool/code-review feature booleans. A changed config gets an exact

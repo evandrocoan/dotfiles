@@ -230,17 +230,49 @@ def retired_owner(launcher, owner):
 
 @pytest.mark.parametrize('independent', ['rpc'], indirect=True)
 def test_new_gui_admission_replaces_terminated_native_after_real_protocol_check(launcher, independent):
+    import resource
     config, owner, process, runtime, home = independent
+    _, hard = resource.prlimit(process.pid, resource.RLIMIT_NOFILE)
+    assert hard == resource.RLIM_INFINITY or hard >= 50000
+    resource.prlimit(process.pid, resource.RLIMIT_NOFILE, (4096, hard))
     old = retired_owner(launcher, owner)
     launcher['monitor_runtime_write'](runtime / 'ready.json', old)
     calls = []
     assert launcher['register_gui_native'](config, lambda: calls.append('gui-verified')) == owner
+    assert resource.prlimit(process.pid, resource.RLIMIT_NOFILE) == (50000, hard)
     assert calls == ['gui-verified']
     assert json.loads((runtime / 'ready.json').read_text()) == owner
     before = (runtime / 'ready.json').stat().st_mtime_ns
     assert launcher['register_gui_native'](config, lambda: None) == owner
     assert (runtime / 'ready.json').stat().st_mtime_ns == before
     assert process.poll() is None
+
+
+def test_native_file_limit_preserves_higher_limit_and_rejects_low_hard_limit(launcher, independent):
+    import resource
+    _, owner, process, _, _ = independent
+    _, hard = resource.prlimit(process.pid, resource.RLIMIT_NOFILE)
+    assert hard == resource.RLIM_INFINITY or hard >= 60000
+    resource.prlimit(process.pid, resource.RLIMIT_NOFILE, (60000, hard))
+    launcher['ensure_native_file_limit'](owner)
+    assert resource.prlimit(process.pid, resource.RLIMIT_NOFILE) == (60000, hard)
+    resource.prlimit(process.pid, resource.RLIMIT_NOFILE, (4096, 4096))
+    with pytest.raises(RuntimeError, match='hard file limit is below 50000'):
+        launcher['ensure_native_file_limit'](owner)
+    assert resource.prlimit(process.pid, resource.RLIMIT_NOFILE) == (4096, 4096)
+
+
+def test_native_file_limit_preserves_unlimited_soft_limit(launcher, monkeypatch):
+    import resource
+    function = launcher['ensure_native_file_limit']
+    monkeypatch.setitem(function.__globals__, 'same_process', lambda native: True)
+    calls = []
+    def limits(*args):
+        calls.append(args)
+        return resource.RLIM_INFINITY, resource.RLIM_INFINITY
+    monkeypatch.setattr(resource, 'prlimit', limits)
+    function({'native': {'pid': 123}})
+    assert calls == [(123, resource.RLIMIT_NOFILE)]
 
 
 @pytest.mark.parametrize('independent', ['rpc'], indirect=True)
@@ -996,6 +1028,8 @@ def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_
     owner = {'native': {'pid': 4321}, 'codex_home': config['codex_home'], 'socket': str(alias)}
     monkeypatch.setitem(namespace, 'native_owner', lambda config: owner)
     monkeypatch.setitem(namespace, 'verify_effective', lambda *args: None)
+    limit_calls = []
+    monkeypatch.setitem(namespace, 'ensure_native_file_limit', lambda value: limit_calls.append(value))
     cold_class = launcher['cold']()['MonitorColdStart']
     original_lock = cold_class.lock_file
     events = queue.Queue(); second_started = threading.Event(); second_done = threading.Event()
@@ -1036,6 +1070,7 @@ def test_concurrent_launchers_classify_under_one_held_coordinator(launcher, tmp_
         assert errors == {}
         assert {name: result[0] for name, result in results.items()} == {'first': owner, 'second': owner}
         assert len(launches) == 1
+        assert limit_calls == [owner, owner]
         assert sum(result[1] for result in results.values()) == 1
         environment, = environments
         assert environment['SSH_AUTH_SOCK'] == agent_socket

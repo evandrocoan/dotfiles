@@ -542,6 +542,21 @@ def verify_effective(config, owner):
                                '. The server was preserved; check the configuration before continuing.')
 
 
+def ensure_native_file_limit(owner):
+    """Raise the authenticated shared server's soft limit without lowering either limit."""
+    import resource
+    native = owner['native']
+    if not same_process(native):
+        raise RuntimeError('The server identity changed before adjusting its file limit; try again.')
+    soft, hard = resource.prlimit(native['pid'], resource.RLIMIT_NOFILE)
+    if soft != resource.RLIM_INFINITY and soft < 50000:
+        if hard != resource.RLIM_INFINITY and hard < 50000:
+            raise RuntimeError('The server hard file limit is below 50000; it was preserved.')
+        if not same_process(native):
+            raise RuntimeError('The server identity changed before adjusting its file limit; try again.')
+        resource.prlimit(native['pid'], resource.RLIMIT_NOFILE, (50000, hard))
+
+
 def register_existing_native(config, authority, *, require_record=False, revalidate=lambda: None):
     """Publish a validated generation under the caller's held per-home coordinator.
 
@@ -584,6 +599,7 @@ def register_existing_native(config, authority, *, require_record=False, revalid
     authority.verify_coordinator()
     if snapshot() != (original, saved) or native_owner(config) != owner:
         raise RuntimeError('The server or its registration changed during verification; try again.')
+    ensure_native_file_limit(owner)
     if saved != owner:
         monitor_runtime_write(path, owner)
     return owner
@@ -646,6 +662,9 @@ def ensure_server_once(config, codex):
         for executable, identity in authority.native.items():
             if authority.file_identity(Path(executable).stat()) != identity:
                 raise RuntimeError('The native executable changed during startup.')
+        if native_owner(config) != owner:
+            raise RuntimeError('The server identity changed during startup; try again.')
+        ensure_native_file_limit(owner)
         monitor_runtime_write(runtime / 'ready.json', owner)
         return owner, True, prepared['backup']
 
