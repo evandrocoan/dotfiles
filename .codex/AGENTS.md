@@ -448,6 +448,8 @@ of choosing one silently.
   `documentation`; also load `plan-implementation` before implementing or making a
   non-trivial correction governed by a record.
 - `bash-scripts`: Create, edit, review, or debug Bash scripts and Bash snippets.
+- `data-anonymization`: Replace identifying words and values with consistent fictional
+  equivalents while preserving non-identifying content and the user’s requested scope.
 - `dependency-decisions`: Select, add, replace, upgrade, remove, or install any
   library, package, framework, service, or system dependency. Never install a
   missing dependency automatically.
