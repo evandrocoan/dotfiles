@@ -5,9 +5,10 @@ Tool schemas in the current session govern execution.
 - Keep the parent turn active while awaiting its native monitoring subagent. Completion returns
   to that active orchestration; do not end the turn merely because the execution takes hours.
   Durable wakeup after an ended turn and scheduling native subagent IDs are not established here.
-- For the entrypoint's parent wait, call `wait_agent` with `{"timeout_ms":900000}`, reduced only
-  by the tool's actual maximum or an earlier supplied deadline. It wakes early on delivery or
-  new user input. Renew expired waits without adding sleep, routine updates or scheduled wakeups.
+- For the entrypoint's parent wait, call `wait_agent` with `{"timeout_ms":900000}` when permitted
+  by current host instructions and the tool schema; apply the entrypoint's stricter-limit and
+  deadline rules otherwise. It wakes early on delivery or new user input. Renew expired waits
+  without adding sleep, routine updates or scheduled wakeups.
 - For scheduling selected under the entrypoint's completion-route rule, discover
   `automation_update`. A heartbeat resumes its target chat with that chat's context, including
   the parent when it is the target. A silent check still invokes the model. Reuse the existing

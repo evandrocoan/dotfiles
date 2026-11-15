@@ -41,10 +41,11 @@ context for a new assignment outside that scope or after the prior assignment is
 Tell each fresh observer to load this skill. Keep its model and effort across continuations; it
 does not delegate its own waiting again. Independent monitoring tasks may have independent workers.
 
-When the parent is only awaiting a child, use a native event-driven wait with a 15-minute timeout.
-Shorten it only for an earlier supplied deadline or the tool's actual maximum. Completion,
-messages or user input can wake the wait early. Renew an expired wait without routine updates;
-do not loop on short mailbox checks or wake the parent for cache warming.
+When the parent is only awaiting a child, use a native event-driven wait with a 15-minute timeout
+when permitted by current host instructions and the tool schema. Respect any stricter host limit
+or earlier supplied deadline. Completion, messages or user input can wake the wait early. Renew
+an expired wait without routine updates; do not loop on short mailbox checks or wake the parent
+for cache warming. A shorter required wait does not create a reporting obligation.
 
 ## Choose how completion arrives
 
@@ -66,9 +67,12 @@ Proposed schedules and queued messages do not prove active monitoring or parent 
 
 Pass the execution identity, its existing log/status source or prescribed wait command, the actual
 exit-code/log-event condition, return conditions and applicable access instructions. Explicitly
-assign the native-final-only return contract below; do not ask for routine snapshots. The observer
-returns facts; diagnosis, repair and decisions about the next action remain with the parent.
-For scheduled checks, include the cadence, timezone and any supplied deadline/check cap.
+include the completion-only return contract below and the execution-wide stop condition in the
+observer's assignment. Do not request routine snapshots or per-stage reports. Pass intermediate
+updates or handbacks only when explicitly requested by the user for this assignment, preserving
+their scope and cadence. The observer returns facts; diagnosis, repair and decisions about the
+next action remain with the parent. For scheduled checks, include the cadence, timezone and any
+supplied deadline/check cap.
 
 Do not require a checkpoint for a simple wait or pass maintenance plans and old prompts. Use
 existing monitoring state only when resumption or deduplication needs it.
@@ -83,14 +87,20 @@ Missing or failed observations mean uncertainty; report intervention when needed
 
 ## Finish monitoring and return evidence
 
-By default, do not call `send_message` to the parent. Return once through native final when the
-assigned execution completes, fails, or needs parent intervention; normal progress is not a return
-condition. The parent does not request snapshots or monitor the same progress in parallel.
-If native return is unavailable, use the verified return route selected above.
+Do not call `send_message` to the parent for routine progress. Return once through native final
+when the assigned execution completes, fails, or needs parent intervention. Return promptly on
+those conditions, even within 15 minutes; the wait timeout is not a minimum delay for a terminal
+return. If native return is unavailable, use the verified return route selected above.
 
-An explicit update or intermediate-handback request is an exception. Send only that requested
-update and keep observing without acknowledgment; use an interim native final only when the
-request actually asks to hand control back. Never duplicate a native return with a manual send.
+A completed stage, new partial results, elapsed time or an expired tool wait does not by itself
+authorize a message or final response. Keep observation cadence separate from parent notification
+conditions, including when the host requires short waits. The parent does not monitor the same
+progress in parallel.
+
+An explicit user request for an update or intermediate handback is an exception. Send only that
+requested update and keep observing without acknowledgment; use an interim native final only
+when the request actually asks to hand control back. Never duplicate a native return with a
+manual send.
 
 If a final reports only normal progress and monitoring is still required, the parent resumes the
 same observer at once with the original stop condition. If the observer cannot continue reliably,
