@@ -11,13 +11,20 @@ def main():
     if arguments[:1] in (['--help'], ['-h']):
         print('Usage: codex-monitor [CLI options]\n'
               '     codex-monitor --gui [application options]\n\n'
-              '     codex-monitor --status | --check\n\n'
+              '     codex-monitor --status | --check\n'
+              '     codex-monitor --stop [--force]\n\n'
               'Without --gui, opens the CLI in the terminal. Both use the same server.\n'
+              '--stop refuses while a Monitor GUI or GitLab review is active; --force interrupts them.\n'
+              'CLI sessions opened with codex-monitor are disconnected without warning.\n'
               'Use codex-monitor -- --help to see CLI options.')
         return 0
     diagnostic = arguments[:1] in (['--status'], ['--check'])
     if diagnostic and len(arguments) != 1:
         print('Codex Monitor: --status and --check do not accept additional arguments.', file=sys.stderr)
+        return 2
+    stop = arguments[:1] == ['--stop']
+    if stop and arguments[1:] not in ([], ['--force']):
+        print('Codex Monitor: --stop accepts only --force.', file=sys.stderr)
         return 2
     gui = arguments[:1] == ['--gui']
     if gui or arguments[:1] == ['--']:
@@ -40,6 +47,15 @@ def main():
                 python = Path(sys.executable)
             os.execv(python, [str(python), *command])
             return 0
+        if stop:
+            command = [str(control), 'monitor-gitlab', 'launcher-stop',
+                       '--codex', str(directory / 'resources/codex'), *arguments[1:]]
+            python = control.parents[2] / 'scripts/.venv/bin/python'
+            if not python.is_file():
+                raise RuntimeError('The monitor Python environment was not found; in ~/scripts, '
+                                   'run poetry install --with monitor-tools.')
+            os.execv(python, [str(python), *command])
+            return 0
         command = [str(control), 'monitor-gitlab', 'launch-app' if gui else 'launch-cli',
                    '--codex', str(directory / 'resources/codex')]
         if gui:
@@ -55,7 +71,7 @@ def main():
                                'run poetry install --with monitor-tools.')
         os.execv(python, [str(python), *command, '--', *arguments])
     except (OSError, RuntimeError) as error:
-        print('Codex Monitor — could not open: ' + str(error), file=sys.stderr)
+        print('Codex Monitor — could not ' + ('stop' if stop else 'open') + ': ' + str(error), file=sys.stderr)
         if gui:
             import subprocess
             dialog = shutil.which('zenity')

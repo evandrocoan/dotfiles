@@ -1353,3 +1353,242 @@ def test_reuse_failure_after_inventory_releases_lock(
     assert effects == ['ensure'] and calls == []
     with (item.runtime/'gui.lock').open('r') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+
+def fake_native_manager(config, server, runtime, *, terminate=('process', 'socket'), status=0):
+    """Stands in for `codex app-server daemon stop` and records whether startup was excluded meanwhile."""
+    root = Path(config['codex_home']).parent
+    script, record = root / 'manager', root / 'manager-call.json'
+    locks = {'launch': runtime / 'launch.lock', 'gui': runtime / 'gui.lock',
+             'work': Path(config['queue_file']).parent / 'work.lock'}
+    script.write_text(f'#!{sys.executable}\nimport fcntl, json, os, signal, sys\nfrom pathlib import Path\n'
+                      'def held(path):\n'
+                      ' if not os.path.exists(path): return None\n'
+                      ' with open(path, "r+") as lock:\n'
+                      '  try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\n'
+                      '  except BlockingIOError: return True\n'
+                      ' return False\n'
+                      f'locks = {{name: held(path) for name, path in {({k: str(v) for k, v in locks.items()})!r}.items()}}\n'
+                      f'Path({str(record)!r}).write_text(json.dumps({{"args": sys.argv[1:], '
+                      '"home": os.environ.get("CODEX_HOME"), "locks": locks}))\n'
+                      + (f'os.kill({server.pid}, signal.SIGTERM)\n' if 'process' in terminate else '')
+                      + (f'Path({config["socket"]!r}).unlink()\n' if 'socket' in terminate else '')
+                      + 'print(json.dumps({"status": "stopped", "backend": "pid"}))\n'
+                      + f'sys.exit({status})\n')
+    script.chmod(0o700)
+    return script, record
+
+
+def stop_config(config, **changes):
+    root = Path(config['codex_home']).parent
+    return dict(config, queue_file=str(root / 'monitor/queue.sqlite3'), gitlab_url='https://gitlab.example.test',
+                reviewers=['claude', 'codex'], **changes)
+
+
+def assert_unlocked(*paths):
+    import fcntl
+    for path in paths:
+        with path.open('r+') as descriptor:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def test_stop_uses_native_manager_and_waits_for_authenticated_server_exit(launcher, independent):
+    import signal
+    config, owner, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime)
+    before = (runtime / 'ready.json').read_bytes()
+    result = launcher['monitor_stop_server'](config, manager)
+    assert (result['status'], result['process'], result['interrupted']) == ('stopped', owner['native'], [])
+    assert process.wait(timeout=5) == -signal.SIGTERM
+    assert json.loads(record.read_text()) == {'args': ['app-server', 'daemon', 'stop'],
+                                              'home': config['codex_home'],
+                                              'locks': {'launch': True, 'gui': True, 'work': None}}
+    assert not Path(config['_socket_alias']).exists()
+    assert (runtime / 'ready.json').read_bytes() == before
+    assert not Path(config['queue_file']).parent.exists()
+    assert_unlocked(runtime / 'launch.lock', runtime / 'gui.lock')
+
+
+@pytest.mark.parametrize('terminate', [(), ('socket',), ('process',)])
+def test_stop_fails_unless_both_process_and_socket_are_gone(launcher, independent, terminate):
+    config, _, process, runtime, _ = independent
+    config = stop_config(config, native_timeout=.3)
+    manager, record = fake_native_manager(config, process, runtime, terminate=terminate)
+    with pytest.raises(RuntimeError, match='server process or its socket is still present'):
+        launcher['monitor_stop_server'](config, manager)
+    assert record.exists()
+    if 'process' in terminate:
+        assert process.wait(timeout=5) is not None
+    else:
+        assert process.poll() is None
+
+
+def test_stop_reports_native_manager_failure(launcher, independent):
+    config, _, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime, terminate=(), status=3)
+    with pytest.raises(RuntimeError, match='native manager did not stop the server'):
+        launcher['monitor_stop_server'](config, manager)
+    assert record.exists() and process.poll() is None
+
+
+def live_identity(launcher, *, retired=False):
+    child = subprocess.Popen([sys.executable, '-c', 'import sys; print("ready",flush=True);sys.stdin.read()'],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    assert child.stdout.readline() == 'ready\n'
+    identity = launcher['monitor_process'](child.pid)
+    if retired:
+        child.terminate(); child.wait(timeout=5)
+    return child, identity
+
+
+@pytest.mark.parametrize('use', ['review', 'consumer', 'unreadable-queue', 'gui', 'gui-startup', 'stale-gui',
+                                 'reused-pid-gui'])
+def test_stop_refuses_active_use_unless_forced(launcher, independent, use):
+    import fcntl
+    config, _, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime)
+    held, child, expected = [], None, None
+    try:
+        if use == 'review':
+            queue = launcher['support']()['MonitorQueue'](config)
+            try:
+                queue.enqueue(11, 82, source_key='11:82:code:one', kind='code', head='a' * 40,
+                              source={'native_input': 'one'}, context={'head': 'a' * 40})
+                expected = [f'GitLab review in progress (MR !82, job {queue.reserve({11})["id"]})']
+            finally:
+                queue.close()
+        elif use == 'consumer':
+            held.append(launcher['support']()['mq_lock'](config, 'work'))
+            expected = ['GitLab review consumer is working']
+        elif use == 'unreadable-queue':
+            queue_file = Path(config['queue_file'])
+            queue_file.parent.mkdir(mode=0o700)
+            queue_file.write_bytes(b'not a database'); queue_file.chmod(0o600)
+            expected = 'GitLab review queue state unknown: '
+        elif use in {'gui', 'stale-gui', 'reused-pid-gui'}:
+            child, identity = live_identity(launcher, retired=use == 'stale-gui')
+            if use == 'reused-pid-gui':
+                identity = dict(identity, birth=str(int(identity['birth']) - 1))
+            launcher['monitor_runtime_write'](runtime / 'launch.json',
+                                              {'gui': identity, 'codex_home': config['codex_home']})
+            expected = [f'Codex Monitor GUI (PID {child.pid})'] if use == 'gui' else []
+        else:
+            descriptor = os.open(runtime / 'gui.lock', os.O_CREAT | os.O_RDWR, 0o600)
+            held.append(descriptor)
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            expected = ['Codex Monitor GUI startup in progress']
+        if expected:
+            with pytest.raises(RuntimeError, match='in use and was not stopped') as refused:
+                launcher['monitor_stop_server'](config, manager)
+            assert '--stop --force' in str(refused.value)
+            assert process.poll() is None and not record.exists()
+        result = launcher['monitor_stop_server'](config, manager, force=bool(expected))
+        assert result['status'] == 'stopped' and process.wait(timeout=5) is not None
+        if use == 'review':
+            assert json.loads(record.read_text())['locks'] == {'launch': True, 'gui': True, 'work': True}
+        if isinstance(expected, str):
+            assert len(result['interrupted']) == 1 and result['interrupted'][0].startswith(expected)
+        else:
+            assert result['interrupted'] == expected
+        if use not in {'consumer', 'gui-startup'}:
+            assert_unlocked(runtime / 'gui.lock', *([Path(config['queue_file']).parent / 'work.lock']
+                                                    if Path(config['queue_file']).exists() else []))
+    finally:
+        for descriptor in held:
+            os.close(descriptor)
+        if child is not None and child.poll() is None:
+            child.terminate(); child.wait(timeout=5)
+        if child is not None:
+            child.stdin.close(); child.stdout.close()
+
+
+@pytest.mark.parametrize('independent', ['ordinary'], indirect=True)
+def test_stop_never_stops_an_unauthenticated_server_even_when_forced(launcher, independent):
+    config, _, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime)
+    with pytest.raises(RuntimeError, match='previous configuration or another installation') as refused:
+        launcher['monitor_stop_server'](config, manager, force=True)
+    assert str(refused.value).count(launcher['server_stop_instructions'](config)) == 1
+    assert process.poll() is None and not record.exists()
+
+
+def test_stop_adds_manual_command_to_other_authentication_failures(launcher, independent, monkeypatch):
+    config, _, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime)
+    monkeypatch.setitem(launcher['monitor_stop_server'].__globals__, 'installed_native',
+                        lambda config: Path(manager).resolve())
+    with pytest.raises(RuntimeError, match='executable does not match') as refused:
+        launcher['monitor_stop_server'](config, manager, force=True)
+    assert 'The server was not stopped. Run codex-monitor --check first.' in str(refused.value)
+    assert launcher['server_stop_instructions'](config) in str(refused.value)
+    assert process.poll() is None and not record.exists()
+
+
+def test_stop_reauthenticates_immediately_before_native_stop(launcher, independent, monkeypatch):
+    config, owner, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime)
+    namespace = launcher['monitor_stop_server'].__globals__
+    replies = iter([owner, dict(owner, native=dict(owner['native'], birth='1'))])
+    monkeypatch.setitem(namespace, 'native_owner', lambda config: next(replies))
+    with pytest.raises(RuntimeError, match='identity changed before stopping; nothing was stopped'):
+        launcher['monitor_stop_server'](config, manager)
+    assert process.poll() is None and not record.exists()
+
+
+def test_stop_reports_not_running_without_calling_native_manager(launcher, independent):
+    config, _, process, runtime, _ = independent
+    config = stop_config(config)
+    manager, record = fake_native_manager(config, process, runtime)
+    Path(config['_socket_alias']).unlink()
+    assert launcher['monitor_stop_server'](config, manager) == {
+        'status': 'not_running', 'codex_home': config['codex_home']}
+    assert process.poll() is None and not record.exists()
+
+
+def test_stop_waits_for_startup_coordinator_and_then_gives_up(launcher, independent):
+    import fcntl
+    config, _, process, runtime, _ = independent
+    config = stop_config(config, native_timeout=.3)
+    manager, record = fake_native_manager(config, process, runtime)
+    descriptor = os.open(runtime / 'launch.lock', os.O_CREAT | os.O_RDWR, 0o600)
+    with os.fdopen(descriptor, 'r+') as startup:
+        fcntl.flock(startup, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(RuntimeError, match='startup is still in progress'):
+            launcher['monitor_stop_server'](config, manager)
+    assert process.poll() is None and not record.exists()
+
+
+@pytest.mark.parametrize('arguments,expected', [(['--stop'], []), (['--stop', '--force'], ['--force'])])
+def test_public_stop_routes_to_launcher_stop(monkeypatch, tmp_path, arguments, expected):
+    module = runpy.run_path(str(CLI.with_name('codex-monitor')))
+    entry = module['main'].__globals__
+    app = tmp_path/'app'; app.mkdir()
+    (app/'codex-launcher').touch()
+    python = CLI.parents[2]/'scripts/.venv/bin/python'
+    monkeypatch.setattr(Path, 'is_file', lambda self: self == python)
+    monkeypatch.setattr(sys, 'argv', ['codex-monitor', *arguments])
+    monkeypatch.setattr(entry['shutil'], 'which', lambda name: str(app/'codex-launcher') if name == 'chatgpt' else None)
+    calls = []
+    def execute(path, args):
+        calls.append((path, args)); raise SystemExit(37)
+    monkeypatch.setattr(os, 'execv', execute)
+    with pytest.raises(SystemExit) as result:
+        module['main']()
+    assert result.value.code == 37
+    assert calls == [(python, [str(python), str(CLI), 'monitor-gitlab', 'launcher-stop',
+                               '--codex', str(app/'resources/codex'), *expected])]
+
+
+def test_public_stop_rejects_other_arguments(monkeypatch, capsys):
+    module = runpy.run_path(str(CLI.with_name('codex-monitor')))
+    monkeypatch.setattr(sys, 'argv', ['codex-monitor', '--stop', '--now'])
+    monkeypatch.setattr(os, 'execv', lambda *args: pytest.fail('invalid stop arguments reached the launcher'))
+    assert module['main']() == 2
+    assert '--stop accepts only --force' in capsys.readouterr().err

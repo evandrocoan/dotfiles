@@ -905,8 +905,19 @@ For lower-level diagnostics, inspect the private per-home directory under
 `$XDG_RUNTIME_DIR/codex-session-stats/shared-*` and the existing queue status. `ready.json` identifies
 the independent native process; `gui-ready.json` identifies a connected GUI and its tools. Neither
 file alone proves that a process is live. Do not remove native sockets or kill processes to clear
-an opening error. Explicit native shutdown, after work finishes, uses the installed Codex command
-`codex app-server daemon stop` with the same `CODEX_HOME`.
+an opening error.
+
+To shut the shared server down after work finishes, run `codex-monitor --stop`. It waits briefly
+for a startup in progress, authenticates the server like `--status`, stops it through the native
+manager and confirms that the process and its socket are gone. It refuses while a Codex Monitor
+GUI is open or starting, or while the GitLab review consumer is working or a review is running;
+`codex-monitor --stop --force` stops it anyway and lists what was interrupted. An interrupted
+review's outcome is uncertain; check the queue status before retrying it. CLI sessions opened with
+`codex-monitor` are disconnected without being detected first. A server that fails authentication
+is never stopped by `--stop`, even with `--force`; the error prints the manual
+`codex app-server daemon stop` command for its `CODEX_HOME`. While the server is stopped, monitor
+work that needs Codex reports the connection as unavailable. Close any interrupted Codex Monitor
+window, then open `codex-monitor` again to start a new server.
 
 **Preparation candidate; not released for production application.**
 

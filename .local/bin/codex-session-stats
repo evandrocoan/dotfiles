@@ -7550,6 +7550,9 @@ def mq_main():
     diagnostic.add_argument('--codex',type=Path)
     diagnostic.add_argument('--app',type=Path)
     diagnostic.add_argument('--check',action='store_true',help='also verify native protocol/effective configuration')
+    stop = commands.add_parser('launcher-stop',help='stop the authenticated shared native server')
+    stop.add_argument('--codex',type=Path,required=True)
+    stop.add_argument('--force',action='store_true',help='also stop while a Monitor GUI or review is active')
     arguments = parser.parse_args(sys.argv[2:])
     try:
         path = Path(os.path.abspath(arguments.config.expanduser()))
@@ -7589,6 +7592,8 @@ def mq_main():
                                                        check=arguments.check)
                 print(json.dumps(result,ensure_ascii=False,indent=2))
                 return 0 if not arguments.check or result['check']['ready'] else 1
+            elif arguments.action=='launcher-stop':
+                result = monitor_launcher()['monitor_stop_server'](config,arguments.codex,force=arguments.force)
             elif arguments.action=='launch-app':
                 extra = arguments.app_args[1:] if arguments.app_args[:1]==['--'] else arguments.app_args
                 monitor_launch_app(config,path,arguments.app,arguments.codex,extra)

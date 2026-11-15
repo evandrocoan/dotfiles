@@ -684,6 +684,126 @@ def ensure_server(config, codex):
             time.sleep(.1)
 
 
+def recorded_process_live(identity):
+    """Compare PID and birth from /proc directly: a replaced executable must not hide a live GUI."""
+    try:
+        root = Path(f'/proc/{identity["pid"]}')
+        fields = (root / 'stat').read_text().rsplit(')', 1)[1].split()
+        return fields[0] not in {'Z', 'X'} and root.stat().st_uid == os.getuid() and fields[19] == identity['birth']
+    except (FileNotFoundError, ProcessLookupError):
+        return False
+
+
+def server_active_use(config, runtime, held):
+    """Hold the GUI and review-consumer locks; describe what a stop would interrupt, unknown counts as in use."""
+    import fcntl
+    active = []
+    try:
+        descriptor = os.open(runtime / 'gui.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        held.append(descriptor)
+        monitor_private(runtime / 'gui.lock')
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            active.append('Codex Monitor GUI startup in progress')
+        launch_path = runtime / 'launch.json'
+        if launch_path.exists():
+            monitor_private(launch_path)
+            gui = json.loads(launch_path.read_text())['gui']
+            if recorded_process_live(gui):
+                active.append(f'Codex Monitor GUI (PID {gui["pid"]})')
+    except (OSError, ValueError, KeyError, TypeError, IndexError, RuntimeError) as error:
+        active.append('Codex Monitor GUI state unknown: ' + type(error).__name__ + ': ' + str(error))
+    try:
+        # Without its directory there is no consumer lock or queue, and the stop must not create them.
+        if Path(config['queue_file']).parent.exists():
+            try:
+                held.append(support()['mq_lock'](config, 'work'))
+            except BlockingIOError:
+                active.append('GitLab review consumer is working')
+        if Path(config['queue_file']).exists():
+            queue = support()['MonitorQueue'](config, readonly=True)
+            try:
+                running = queue.jobs('running')
+            finally:
+                queue.close()
+            active.extend(f'GitLab review in progress (MR !{job["iid"]}, job {job["id"]})' for job in running)
+    except Exception as error:
+        active.append('GitLab review queue state unknown: ' + type(error).__name__ + ': ' + str(error))
+    return active
+
+
+def monitor_stop_server(config, codex, *, force=False):
+    """Stop only the authenticated managed server, serialized with startup by the coordinator lock."""
+    import subprocess
+    import time
+    runtime = support()['monitor_shared_runtime'](config, create=True)
+    authority = cold()['MonitorColdStart'](config, [codex])
+    deadline = time.monotonic() + config['native_timeout']
+    held = []
+    try:
+        while True:
+            try:
+                authority.lock_file(runtime / 'launch.lock', private=True)
+                break
+            except BlockingIOError as error:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('A server startup is still in progress. Try again shortly.') from error
+                time.sleep(.1)
+        if not Path(config['_socket_alias']).exists():
+            return {'status': 'not_running', 'codex_home': config['codex_home']}
+        def authenticated():
+            # An unauthenticated or incompatible server is never stopped here, even with --force.
+            try:
+                return native_owner(config)
+            except (OSError, ValueError, RuntimeError) as error:
+                text = str(error)
+                if server_stop_instructions(config) not in text:
+                    text += ('\nThe server was not stopped. Run codex-monitor --check first. '
+                             + server_stop_instructions(config))
+                raise RuntimeError(text) from error
+        owner = authenticated()
+        active = server_active_use(config, runtime, held)
+        if active and not force:
+            raise RuntimeError('The server is in use and was not stopped:\n- ' + '\n- '.join(active)
+                               + '\nClose these clients or wait for the review to finish, '
+                               'or run codex-monitor --stop --force to interrupt them.')
+        if authenticated() != owner:
+            raise RuntimeError('The server identity changed before stopping; nothing was stopped. Try again.')
+        environment = clean_environment()
+        environment['CODEX_HOME'] = config['codex_home']
+        try:
+            stopped = subprocess.run([str(codex), 'app-server', 'daemon', 'stop'], env=environment,
+                stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=config['native_timeout'])
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError('The native manager did not confirm the stop in time. '
+                               'Check the server with codex-monitor --status.') from error
+        if stopped.returncode:
+            raise RuntimeError('The native manager did not stop the server: ' + stopped.stderr.strip()[-2000:])
+        # The manager's output format is not a contract; the authenticated exit decides the result.
+        deadline = time.monotonic() + config['native_timeout']
+        while True:
+            try:
+                live = same_process(owner['native'])
+            except (OSError, RuntimeError):
+                live = False
+            if not live and not Path(config['_socket_alias']).exists():
+                break
+            if time.monotonic() >= deadline:
+                raise RuntimeError('The native manager returned, but the server process or its socket is '
+                                   'still present. Check the server with codex-monitor --status. '
+                                   'Manager output: ' + stopped.stdout.strip()[-2000:])
+            time.sleep(.1)
+        return {'status': 'stopped', 'codex_home': config['codex_home'], 'process': owner['native'],
+                'interrupted': active, 'note': 'Any Codex CLI sessions opened with codex-monitor were '
+                'disconnected as well. Close any interrupted Codex Monitor window, then open '
+                'codex-monitor again to start a new server.'}
+    finally:
+        for descriptor in held:
+            os.close(descriptor)
+        authority.__exit__(None, None, None)
+
+
 def clean_environment():
     # Preserve ordinary desktop/session context, never a caller's tools pipe or verification identity.
     names = {'PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LANGUAGE', 'TERM', 'COLORTERM',
