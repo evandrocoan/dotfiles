@@ -1129,6 +1129,11 @@ observable even when the cycle's process exits successfully. Old stored diagnost
 produce warnings. Idle time, normal retry backoff, a valid human hold and a review within its
 deadline are normal conditions.
 
+Repeated failed executions of the same review generate a suspected-loop alert with the MR,
+reviewer, commit, attempt count, elapsed time and recent errors. The detector counts distinct
+native executions with unchanged input and resets when accepted results or new context appear.
+The alert observes the retry history and follows the hourly reminder policy below.
+
 Install/update the checker units from a terminal in the graphical user session:
 
 ```bash

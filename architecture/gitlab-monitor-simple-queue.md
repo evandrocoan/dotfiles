@@ -485,6 +485,11 @@ execution. Matching successful observations are required for recovery notices; a
 service exit or an unrelated operation cannot clear an operational failure. Notification delivery
 and reminder timing have their own private state and cannot block review progress. An ongoing
 confirmed failure repeats at the checker's reminder interval from its last accepted delivery.
+The consumer also detects consecutive failed native executions of the same work and reviewer.
+Only distinct accepted native execution identities count, scoped to unchanged dispatched context
+and instruction version. Dispatch bookkeeping cannot create a new context. Accepted results end
+the streak; new context retires the previous suspicion without claiming a successful review.
+Suspected repetition is observational and cannot change retry order or release native capacity.
 A successful lock-busy invocation without an export is unknown until the freshness bound, not a
 failed cycle. Running exports are attributed to a stopped service only by exact invocation
 identity. MR alert retirement uses validated closed/removal evidence and the existing obligation

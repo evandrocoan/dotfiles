@@ -6977,6 +6977,33 @@ def mq_health_retire_scope(config,repository,iid):
         print('monitor health retirement failed: '+type(failure).__name__,file=sys.stderr)
 
 
+def mq_failed_review_attempts(job,reviewer):
+    """Observe distinct failed executions of unchanged work, newest context only."""
+    attempts,seen,context = [],set(),None
+    for original in reversed(job['stages']):
+        if original['reviewer']!=reviewer:continue
+        stage = mq_effective_stage(original)
+        if (stage['state']=='succeeded' or stage.get('purpose')=='question'
+                or stage.get('continuations')):break
+        supplied = stage.get('input_context')
+        if not isinstance(supplied,dict):break
+        # Dispatch IDs and scratch paths change on each execution of the same work.
+        material = {key:value for key,value in supplied.items()
+                    if key not in {'stage','scratch_path'}}
+        signature = monitor_digest([material,stage.get('instructions_version')])
+        if context is not None and context!=signature:break
+        context = signature
+        if (stage['state']!='failed' or stage.get('delivery')!='accepted'
+                or (stage.get('error') or {}).get('not_started')):continue
+        execution = (stage.get('turn_id') if reviewer=='codex' else
+                     stage.get('invocation') or stage.get('background_id'))
+        identity = (stage.get('session'),execution)
+        if all(identity) and identity not in seen:
+            seen.add(identity)
+            attempts.append(stage)
+    return list(reversed(attempts))
+
+
 def mq_health_publish(config,queue,phase):
     import time
     try:
@@ -7003,6 +7030,25 @@ def mq_health_publish(config,queue,phase):
                             message=label+' failed. Check stage '+stage['id']+' in the queue status.')
                     elif stage['state']=='succeeded':
                         mq_health_signal(config,key,message=label+' produced a new valid result; check the queue status.')
+                    repeated = 'repetition:'+job['id']+':'+reviewer
+                    attempts = mq_failed_review_attempts(job,reviewer) if job['state']!='completed' else []
+                    if len(attempts)>=3:
+                        minutes = max(0,int((mq_stamp()-attempts[0]['started_at'])/60))
+                        reasons = list(dict.fromkeys(re.sub(r'\s+',' ',
+                            str((attempt.get('error') or {}).get('message','unspecified failure')))[:100]
+                            for attempt in attempts[-2:]))
+                        head = attempts[-1]['input_context'].get('head',job['head'])
+                        mq_health_signal(config,repeated,error=True,job=job['id'],
+                            kind='Repeated review without progress',
+                            message=label+' repeated '+str(len(attempts))+' distinct executions without an accepted '
+                            'result for commit '+head+' over '+str(minutes)+' minutes. Last failures: '
+                            +' | '.join(reasons)+'. Check the monitor; a retry loop is suspected.')
+                    elif stage['state']=='succeeded':
+                        mq_health_signal(config,repeated,
+                            message=label+' produced a new accepted result after repeated failures.')
+                    elif job['state']=='completed' or isinstance(stage.get('input_context'),dict):
+                        mq_health_signal(config,repeated,retired=True,
+                            message=label+' no longer has repeated failures for the same active review context.')
                     overdue = 'overdue:'+job['id']+':'+reviewer
                     if (stage['state']=='running' and stage['id'] in config.get('_observed_attempts',set())
                             and mq_stamp()>stage.get('review_deadline',float('inf'))):

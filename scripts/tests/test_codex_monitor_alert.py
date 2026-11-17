@@ -165,6 +165,105 @@ def test_effective_native_continuation_controls_reviewer_health(flow):
     assert f.q.mr(11, 82)['reviewed_head'] is None
 
 
+@pytest.mark.parametrize('reviewer,reason', [
+    ('codex', 'native execution failed'), ('claude', 'Claude terminal error: error_during_execution'),
+])
+def test_repeated_review_alert_counts_executions_and_recovers_without_queue_changes(
+        flow, alert, state, clock, tmp_path, monkeypatch, reviewer, reason):
+    f = flow
+    job = f.q.enqueue(11, 82, source_key='repeated-review', kind='code', head=f.context['head'],
+        source={'origin': 'automatic'}, context=copy.deepcopy(f.context), reviewers=[reviewer])
+    f.results[reviewer] = RuntimeError('native execution failed')
+    key = 'repetition:' + job['id'] + ':' + reviewer
+    snapshot = Path(f.config['queue_file']).with_name('health.json')
+    sent = []
+
+    def export():
+        before = copy.deepcopy(f.q.jobs())
+        f.m['mq_health_begin'](f.config, f.q)
+        f.m['mq_health_publish'](f.config, f.q, 'finished')
+        assert f.q.jobs() == before
+        return json.loads(snapshot.read_text())['checks']
+
+    for attempt in range(1, 4):
+        f.drain()
+        saved = f.q.job(job['id'])
+        assert len(saved['stages']) == attempt
+        assert saved['wait_reason'] == 'reviewer_retry'
+        checks = export()
+        if attempt < 3:
+            assert key not in checks
+        else:
+            assert checks[key]['status'] == 'failed'
+            assert '3 distinct executions' in checks[key]['message']
+            assert f.context['head'] in checks[key]['message']
+            assert reason in checks[key]['message']
+        monkeypatch.setitem(f.m, 'mq_stamp', lambda due=saved['retry_at'] + 1: due)
+    episode = checks[key]['episode']
+    for _ in range(3):
+        checks = export()
+        assert checks[key]['episode'] == episode
+        assert '3 distinct executions' in checks[key]['message']
+    reserved = f.q.reserve({11})
+    prepared = f.q.stage_start(reserved, reviewer, '')
+    checks = export()
+    assert checks[key]['status'] == 'failed' and checks[key]['episode'] == episode
+    f.q.retire_preparation(reserved, prepared)
+    # The existing independent notifier consumes the new health check without queue access.
+    notifier_checks = {'monitor:' + key: checks[key]}
+    sender = lambda *args: sent.append(args)
+    path = tmp_path / 'alerts.json'
+    assert alert['deliver'](notifier_checks, state, path, Path('/fixture'), clock,
+                            sender=sender) == (1, [])
+    f.results[reviewer] = domain()
+    f.drain()
+    assert f.q.job(job['id'])['state'] == 'completed'
+    checks = export()
+    assert checks[key]['status'] == 'ok'
+    assert checks[key]['episode'] == episode
+    assert alert['deliver']({'monitor:' + key: checks[key]}, state, path, Path('/fixture'),
+                            clock, sender=sender) == (1, [])
+    assert [item[1] for item in sent] == ['Monitor: Repeated review without progress',
+                                         'Monitor: recovery confirmed']
+    assert state['incidents'] == {} and len(f.launched) == 4
+
+
+@pytest.mark.parametrize('change,expected', [
+    ('unchanged', 3), ('same-execution', 2), ('not-started', 2), ('sending', 2),
+    ('running', 2), ('succeeded', 0), ('question', 0), ('head', 1), ('source', 1),
+    ('answer', 1), ('instructions', 1), ('missing-context', 0), ('missing-execution', 2),
+    ('peer-result', 1), ('other-reviewer', 2), ('earlier-success', 1), ('continuation-success', 0),
+    ('continuation-failure', 0),
+])
+def test_repeated_review_streak_uses_native_identity_and_material_input(module, change, expected):
+    stages = [{'id': str(n), 'reviewer': 'codex', 'state': 'failed', 'delivery': 'accepted',
+        'session': 'same-chat', 'turn_id': str(n), 'instructions_version': 11,
+        'input_context': {'head': 'a' * 40, 'original_source': {'origin': 'automatic'},
+                          'answers': [], 'stage': str(n), 'scratch_path': '/fixture/' + str(n)}}
+        for n in range(3)]
+    last = stages[-1]
+    if change == 'same-execution': last['turn_id'] = stages[-2]['turn_id']
+    if change == 'not-started': last['error'] = {'not_started': True}
+    if change == 'sending': last['delivery'] = 'sending'
+    if change in {'running', 'succeeded'}: last['state'] = change
+    if change == 'question': last['purpose'] = 'question'
+    if change == 'head': last['input_context']['head'] = 'b' * 40
+    if change == 'source': last['input_context']['original_source'] = {'origin': 'human'}
+    if change == 'answer': last['input_context']['answers'] = [{'texts': ['new human answer']}]
+    if change == 'instructions': last['instructions_version'] = 12
+    if change == 'missing-context': last.pop('input_context')
+    if change == 'missing-execution': last['turn_id'] = None
+    if change == 'peer-result': last['input_context']['prior_reviewers'] = [{'summary': 'new result'}]
+    if change == 'other-reviewer': last['reviewer'] = 'claude'
+    if change == 'earlier-success': stages[-2]['state'] = 'succeeded'
+    if change == 'continuation-success': last['continuations'] = [{'outcome': {'state': 'succeeded'}}]
+    if change == 'continuation-failure': last['continuations'] = [{'outcome': {'state': 'failed'}}]
+    original = copy.deepcopy(stages)
+    attempts = module['mq_failed_review_attempts']({'stages': stages}, 'codex')
+    assert len(attempts) == expected
+    assert stages == original
+
+
 @pytest.mark.parametrize('value', ['idle', 'busy', 'backoff', 'human', 'active'])
 def test_expected_queue_conditions_do_not_create_alerts(alert, state, clock, tmp_path, value):
     path = write(tmp_path / 'health.json', document(clock,
