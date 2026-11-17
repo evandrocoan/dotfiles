@@ -1735,7 +1735,7 @@ def monitor_launch_cli(config: dict, codex: Path, cli: Path, arguments: list):
 
 
 def monitor_main_bootstrap(arguments: list) -> bool:
-    # Both main GUI plugin keys distinguish its server from startup probes/helpers.
+    # The app-tool override distinguishes the main GUI server from startup probes/helpers.
     overrides, words = {}, []
     index = 0
     while index < len(arguments):
@@ -1750,9 +1750,7 @@ def monitor_main_bootstrap(arguments: list) -> bool:
             index += 1
     return (words == ["app-server", "--analytics-default-enabled"]
         and overrides.get("features.code_mode_host") == "true"
-        and all(key in overrides for key in (
-            "plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled",
-            "plugins.code-review@openai-bundled.mcp_servers.code-review.enabled")))
+        and "plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled" in overrides)
 
 
 def monitor_app_proxy_main() -> int:
@@ -5778,9 +5776,9 @@ def mq_direct_result(job,stage,observed):
             continue
         if fence is not None:continue
         status = re.fullmatch(r'Estado da revisão: (concluída|aguardando resposta|não concluída)\s*',line)
-        head = re.fullmatch(r'Commit revisado: ([a-f0-9]{40,64})\s*',line)
+        head = re.fullmatch(r'Commit revisado: (`?)([a-f0-9]{40,64})\1\s*',line)
         if status:statuses.append((status[1],offset))
-        if head:heads.append(head[1])
+        if head:heads.append(head[2])
     if len(statuses)!=1:
         raise RuntimeError('expected one readable terminal review status')
     state, after_status = statuses[0]

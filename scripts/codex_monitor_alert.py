@@ -18,6 +18,7 @@ import time
 
 MAX_BYTES = 1024 * 1024
 MAX_CHECKS = 2048
+REMINDER_SECONDS = 3600
 UNITS = ('codex-gitlab-monitor.timer', 'codex-gitlab-monitor.service')
 PROPERTIES = ('Id', 'LoadState', 'ActiveState', 'SubState', 'UnitFileState', 'Result',
               'InvocationID', 'ExecMainStartTimestampMonotonic', 'ExecMainExitTimestampMonotonic',
@@ -167,7 +168,8 @@ def load_state(path, clock, interval=900):
         raise ValueError('invalid persisted alert state')
     for item in value['incidents'].values():
         if (not isinstance(item, dict) or not isinstance(item.get('episode'), str)
-                or not number(item.get('first_seen')) or type(item.get('notified')) is not bool):
+                or not number(item.get('first_seen')) or type(item.get('notified')) is not bool
+                or ('last_notified_at' in item and not number(item['last_notified_at']))):
             raise ValueError('invalid persisted alert incident')
     if value['boot'] != clock['boot'] or clock['suspend'] - value['suspend'] > 5:
         value.update(boot=clock['boot'], grace_until=clock['mono'] + interval + 300)
@@ -333,7 +335,9 @@ def deliver(checks, state, state_path, command, clock, *, sender=notify):
             state['incidents'][key] = previous
         if key == 'systemd:service':
             previous['proof'] = check.get('proof')
-        if previous['notified']:
+        # Older state recorded only first_seen. Use it until the next accepted delivery.
+        last_notified_at = previous.get('last_notified_at', previous['first_seen'])
+        if previous['notified'] and clock['wall'] < last_notified_at + REMINDER_SECONDS:
             continue
         if attempts >= 5:
             continue
@@ -346,6 +350,7 @@ def deliver(checks, state, state_path, command, clock, *, sender=notify):
             failures.append(str(error))
         else:
             previous['notified'] = True
+            previous['last_notified_at'] = clock['wall']
             sent += 1
         # Failed delivery remains pending; accepted delivery survives the next checker invocation.
         atomic_write(state_path, state)

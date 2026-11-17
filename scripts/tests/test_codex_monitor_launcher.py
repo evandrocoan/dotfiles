@@ -104,8 +104,7 @@ def independent(launcher, monkeypatch, request):
         config = {'codex_home': str(home), '_socket_alias': str(alias), 'socket': str(endpoint),
                   'state_file': str(root/'monitor/state.sqlite3'), 'native_timeout': 3}
         (home/'config.toml').write_text('[features]\ncode_mode_host=true\n'
-            '[plugins."codex-app-tools@openai-bundled".mcp_servers.codex_app]\nenabled=true\n'
-            '[plugins."code-review@openai-bundled".mcp_servers.code-review]\nenabled=true\n')
+            '[plugins."codex-app-tools@openai-bundled".mcp_servers.codex_app]\nenabled=true\n')
         tools = launcher['monitor_app_tools_directory'](config, create=True)
         environment = dict(os.environ, CODEX_HOME=str(home), CODEX_APP_TOOLS_PIPE_PATH=str(tools/'host.sock'),
             CODEX_MONITOR_LAUNCHER_PROTOCOL='1')
@@ -298,7 +297,7 @@ def test_replacement_failure_preserves_registration_and_releases_lock(launcher, 
         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
     try:
         expected = {'receipt': 'registration changed', 'gui': 'GUI identity changed',
-                    'effective-config': 'has not enabled', 'lock': None}[change]
+                    'effective-config': r'must enable features\.code_mode_host', 'lock': None}[change]
         with pytest.raises(BlockingIOError if change == 'lock' else RuntimeError, match=expected):
             launcher['register_gui_native'](config, revalidate)
     finally:
@@ -541,7 +540,7 @@ def test_independent_owner_uses_native_identity_without_gui_and_rejects_stale_re
     (home/'config.toml').write_text((home/'config.toml').read_text()+'\n# external edit\n')
     assert launcher['monitor_shared_owner'](config) == owner
     (home/'config.toml').write_text((home/'config.toml').read_text().replace('code_mode_host=true','code_mode_host=false'))
-    with pytest.raises(RuntimeError, match='has not enabled the tools'):
+    with pytest.raises(RuntimeError, match=r'must enable features\.code_mode_host'):
         launcher['monitor_shared_owner'](config)
     assert process.poll() is None
 
@@ -1185,8 +1184,7 @@ def gui_instances(launcher, monkeypatch, tmp_path):
         environment = {'CODEX_HOME': str(home), 'CODEX_STATS_APP_LAUNCH': str(runtime/'launch.json'),
                        'XDG_RUNTIME_DIR': str(base), 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE': 'Codex Desktop'}
         bootstrap = ['-c', 'features.code_mode_host=true', 'app-server', '--analytics-default-enabled',
-            '-c', 'plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled=true',
-            '-c', 'plugins.code-review@openai-bundled.mcp_servers.code-review.enabled=true']
+            '-c', 'plugins.codex-app-tools@openai-bundled.mcp_servers.codex_app.enabled=true']
         process.stdin.write(json.dumps({'relay': relay, 'wrapper': str(wrapper), 'bootstrap': bootstrap,
                                        'environment': environment, 'profile': str(profile)})+'\n')
         process.stdin.flush()
@@ -1393,9 +1391,16 @@ def assert_unlocked(*paths):
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
 
-def test_stop_uses_native_manager_and_waits_for_authenticated_server_exit(launcher, independent):
+@pytest.mark.parametrize('app_tools_enabled', [True, False])
+def test_stop_uses_native_manager_and_waits_for_authenticated_server_exit(
+        launcher, independent, app_tools_enabled):
     import signal
-    config, owner, process, runtime, _ = independent
+    config, owner, process, runtime, home = independent
+    if not app_tools_enabled:
+        settings = home/'config.toml'
+        settings.write_text(settings.read_text().replace('enabled=true', 'enabled=false'))
+        with pytest.raises(RuntimeError, match='codex_app.enabled'):
+            launcher['native_owner'](config)
     config = stop_config(config)
     manager, record = fake_native_manager(config, process, runtime)
     before = (runtime / 'ready.json').read_bytes()
@@ -1536,7 +1541,7 @@ def test_stop_reauthenticates_immediately_before_native_stop(launcher, independe
     manager, record = fake_native_manager(config, process, runtime)
     namespace = launcher['monitor_stop_server'].__globals__
     replies = iter([owner, dict(owner, native=dict(owner['native'], birth='1'))])
-    monkeypatch.setitem(namespace, 'native_owner', lambda config: next(replies))
+    monkeypatch.setitem(namespace, 'native_owner', lambda config, *, require_tools: next(replies))
     with pytest.raises(RuntimeError, match='identity changed before stopping; nothing was stopped'):
         launcher['monitor_stop_server'](config, manager)
     assert process.poll() is None and not record.exists()

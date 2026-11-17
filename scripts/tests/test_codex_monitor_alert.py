@@ -195,6 +195,37 @@ def test_duplicate_failure_recovery_and_new_episode_survive_restart(alert, state
     assert len(sent) == 3
 
 
+@pytest.mark.parametrize('legacy', [False, True])
+def test_current_failure_reminds_hourly_across_checker_restarts(alert, state, clock, tmp_path, legacy):
+    path = tmp_path / 'state.json'
+    sent = []
+    key = 'monitor:shared'
+
+    def run(now, status='failed', sender=lambda *args: sent.append(args)):
+        saved = alert['load_state'](path, now) if path.exists() else state
+        return alert['deliver']({key: issue(status=status)}, saved, path, Path('/fixture'), now,
+                                sender=sender)
+
+    assert run(clock) == (1, [])
+    if legacy:
+        saved = alert['read_private'](path)
+        saved['incidents'][key].pop('last_notified_at', None)
+        write(path, saved)
+    due = {**clock, 'wall': clock['wall'] + 3600}
+    assert run({**due, 'wall': due['wall'] - 1}) == (0, [])
+
+    def offline(*args):
+        raise RuntimeError('desktop offline')
+
+    assert run(due, sender=offline) == (0, ['desktop offline'])
+    assert run(due) == (1, [])
+    assert run(due) == (0, [])
+    assert run({**due, 'wall': due['wall'] + 3600}, status='ok') == (1, [])
+    assert [item[1] for item in sent] == ['Monitor: Conexão do Codex',
+                                         'Monitor: Conexão do Codex', 'Monitor: recovery confirmed']
+    assert alert['read_private'](path)['incidents'] == {}
+
+
 def test_service_manager_recovery_identifies_the_restored_check(alert, state, clock, tmp_path):
     snapshot = write(tmp_path / 'health.json', document(clock))
     sent = []

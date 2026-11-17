@@ -31,9 +31,7 @@ command = 'unchanged-tool'
 args = [ "one", 'two' ]
 '''
 TRUE = FALSE.replace('code_mode_host = false', 'code_mode_host = true').replace(
-    'enabled = false # Preserve app comment.', 'enabled = true # Preserve app comment.').replace(
-    '[plugins."code-review@openai-bundled".mcp_servers.code-review]\nenabled = false',
-    '[plugins."code-review@openai-bundled".mcp_servers.code-review]\nenabled = true')
+    'enabled = false # Preserve app comment.', 'enabled = true # Preserve app comment.')
 
 
 @pytest.fixture
@@ -222,7 +220,7 @@ def test_semantic_roundtrip_rejects_unrelated_data_change(editor, monkeypatch):
     original = tomlkit.dumps
     monkeypatch.setattr(tomlkit, 'dumps', lambda doc: original(doc).replace('fixture-model', 'altered-model'))
     with factory() as authority:
-        with pytest.raises(RuntimeError, match='beyond the three approved'):
+        with pytest.raises(RuntimeError, match='beyond the approved'):
             module['monitor_prepare_bootstrap'](authority)
     assert (target.read_bytes(), target.stat()) == before
     assert outputs(target) == []

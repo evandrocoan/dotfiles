@@ -33,7 +33,6 @@ def monitor_id():
 MONITOR_BOOTSTRAP_OPTIONS = (
     ('features', 'code_mode_host'),
     ('plugins', 'codex-app-tools@openai-bundled', 'mcp_servers', 'codex_app', 'enabled'),
-    ('plugins', 'code-review@openai-bundled', 'mcp_servers', 'code-review', 'enabled'),
 )
 
 
@@ -105,7 +104,7 @@ def monitor_prepare_bootstrap(authority):
         return left == right
 
     if not same(tomllib.loads(prepared.decode('utf-8')), expected):
-        raise RuntimeError('TOML preparation changed data beyond the three approved options')
+        raise RuntimeError('TOML preparation changed data beyond the approved options')
 
     result = cold()['monitor_publish_config'](authority, (original_identity, original), prepared)
     return {'changed': result['changed'], 'backup': result['backup']}
@@ -399,7 +398,7 @@ def server_stop_instructions(config):
             'Then open Codex Monitor again.')
 
 
-def native_owner(config):
+def native_owner(config, *, require_tools=True):
     """Authenticate an independent managed native process; no GUI ancestry is required."""
     import socket
     import struct
@@ -429,15 +428,16 @@ def native_owner(config):
                            + 'Run codex-monitor --check before stopping anything. '
                            'Finish your work and close Codex normally.\n' +
                            server_stop_instructions(config))
-    monitor_app_tools_directory(config)
-    import tomllib
-    data = tomllib.loads((Path(config['codex_home']) / 'config.toml').read_text())
-    for path in MONITOR_BOOTSTRAP_OPTIONS:
-        value = data
-        for key in path:
-            value = value.get(key) if isinstance(value, dict) else None
-        if value is not True:
-            raise RuntimeError('The running server has not enabled the tools required by the interface.')
+    if require_tools:
+        monitor_app_tools_directory(config)
+        import tomllib
+        data = tomllib.loads((Path(config['codex_home']) / 'config.toml').read_text())
+        for path in MONITOR_BOOTSTRAP_OPTIONS:
+            value = data
+            for key in path:
+                value = value.get(key) if isinstance(value, dict) else None
+            if value is not True:
+                raise RuntimeError('The Codex configuration must enable ' + '.'.join(path) + '.')
     if socket_identity(config) != (endpoint, identity) or not same_process(native):
         raise RuntimeError('The server identity changed during verification; try again.')
     return {'version': 1, 'codex_home': config['codex_home'], 'socket': endpoint,
@@ -755,7 +755,8 @@ def monitor_stop_server(config, codex, *, force=False):
         def authenticated():
             # An unauthenticated or incompatible server is never stopped here, even with --force.
             try:
-                return native_owner(config)
+                # The manager can stop its own authenticated process even if its tools are broken.
+                return native_owner(config, require_tools=False)
             except (OSError, ValueError, RuntimeError) as error:
                 text = str(error)
                 if server_stop_instructions(config) not in text:

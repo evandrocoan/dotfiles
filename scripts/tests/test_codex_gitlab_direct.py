@@ -34,11 +34,28 @@ def test_captured_original_message_stays_on_its_original_reader(flow,mutation,ve
     '```text\nEstado da revisão: concluída\nCommit revisado: '+'a'*40+'\n```',
     'Estado da revisão: concluída\nEstado da revisão: concluída\nCommit revisado: '+'a'*40,
     'Estado da revisão: concluída', 'Estado da revisão: aguardando resposta\n',
+    'Estado da revisão: concluída\nCommit revisado: `'+'a'*40,
+    'Estado da revisão: concluída\nCommit revisado: `'+'a'*7+'`',
+    'Estado da revisão: concluída\nCommit revisado: '+'a'*40+'\nCommit revisado: `'+'b'*40+'`',
 ])
 def test_native_final_requires_unquoted_unambiguous_status_and_code_head(flow,text):
     job=automatic(flow)
     with pytest.raises(RuntimeError):
         flow.m['mq_direct_result'](job,{}, {'text':text,'anchor':'actual-final'})
+
+
+def test_native_final_with_inline_code_settles_review_without_retry(flow):
+    job=automatic(flow,reviewers=['codex'])
+    assert flow.step()
+    stage=flow.q.job(job['id'])['stages'][-1]
+    # Recorded output shape from the retry loop, with synthetic content and commit ID.
+    flow.items[stage['turn_id']][-1]['text']=(
+        'Revisei o código e as discussões.\nCommit revisado: `'+'a'*40+'`\nEstado da revisão: concluída')
+    flow.drain()
+    saved=flow.q.job(job['id'])
+    assert (saved['state'],saved['outcome'])==('completed','reviewed')
+    assert [s['state'] for s in saved['stages']]==['succeeded']
+    assert flow.q.mr(11,82)['reviewed_head']==job['head']
 
 
 def test_different_reviewed_head_never_advances_admitted_checkpoint(flow):

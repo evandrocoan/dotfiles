@@ -864,7 +864,7 @@ new servers receive it during startup. Neither operation requires restarting act
 
 The [launcher](.local/bin/codex-monitor) uses the existing Poetry `monitor-tools` environment and
 [shared lifecycle owner](scripts/codex_monitor_launcher.py). Before starting a cold server, it
-prepares only the three static app-tool/code-review feature booleans. A changed config gets an exact
+prepares only the static options required by the Desktop app tools. A changed config gets an exact
 private `config.toml.before-monitor-*.bak`; an already prepared file is untouched. The launcher
 preserves permission profiles, network settings and approval policy. It never restarts a live
 incompatible server: finish work and close its clients normally before changing the server mode.
@@ -1140,10 +1140,10 @@ systemctl --user daemon-reload
 systemctl --user enable --now codex-monitor-alert.timer
 ```
 
-One warning is delivered per incident, without periodic reminders. A matching new successful
-observation can produce one recovery notice; an unrelated successful read or cycle cannot clear a
-failure. Scope retirement is not a successful review. Failed desktop sends remain pending for a
-later check. Popup lifetime/history depends on the desktop notification server; accepted delivery
+An active failure generates a warning and repeats hourly while checks still confirm it. A matching
+new successful observation can produce one recovery notice. An unrelated successful read or cycle
+cannot clear a failure. Scope retirement is not a successful review. Failed desktop sends remain
+pending for a later check. Popup lifetime/history depends on the desktop notification server; accepted delivery
 does not prove the user read it. The checker cannot guarantee immediate warnings while the host,
 user manager or desktop notification service is unavailable.
 
