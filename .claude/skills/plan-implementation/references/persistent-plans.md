@@ -34,8 +34,9 @@ only; it holds no execution authority and is not evidence of current behavior.
 
 An optional `evidence/<task-slug>.md` beside the lifecycle directories holds concise local
 findings and source pointers when they would overfill a plan. Do not create the directory without
-such a need. It is ignored by default and never owns current obligations, complete plan snapshots,
-or raw logs. Keep the current contract in the active plan and executable evidence in its source.
+such a need. The entire directory is ignored by default, regardless of file extension or nesting,
+and never owns current obligations, complete plan snapshots, or raw logs. Keep the current contract
+in the active plan and executable evidence in its source.
 
 When establishing a new default root, including when `discussion-briefs` establishes it first,
 create `implementation-plans/.gitignore` with these rules:
@@ -44,11 +45,11 @@ create `implementation-plans/.gitignore` with these rules:
 /active/*.md
 /completed/*.md
 /briefs/*.md
-/evidence/*.md
+/evidence/
 ```
 
-These rules keep default plans and briefs local while leaving the root `README.md`, `.gitignore`,
-and files outside those Markdown paths visible. Architecture records and templates stay in their
+These rules keep default plans, briefs, and evidence local while leaving the root `README.md`,
+`.gitignore`, and files outside those paths visible. Architecture records and templates stay in their
 own locations. Account for any parent allowlist so the README and `.gitignore` can be tracked when
 Git delivery is requested.
 
