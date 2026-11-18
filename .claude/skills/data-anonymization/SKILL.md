@@ -25,9 +25,21 @@ instructions; do not infer permission to publish, commit, or send data elsewhere
 - Preserve ordering, timestamps, segment boundaries, and other structure unless they identify
   someone or the user requests a change. Do not remove meaningful material merely because someone
   who already has the original could recognize it.
+- When the user requests broader substitutions, apply that scope explicitly. For example, a request
+  to change all spoken numbers includes digits and numbers written as words; a request may also
+  include cities, addresses, and animal names. Do not treat an indefinite article as a number.
+  Preserve repeated references, arithmetic, ordering, relative dates, and other relationships.
+  Retain values the user has authorized keeping when changing them would distort the meaning.
+- Prefer targeted substitutions over rewriting sentences. Preserve non-identifying facts,
+  negations and conversational evidence, and keep previously substituted values consistent when
+  revising an existing candidate. Do not change an already fictional value merely to change it
+  again, unless the user requests that or it corrects a demonstrated inconsistency.
 - Check substitutions in context for consistency, remaining identifying values, and accidental
   changes in meaning. Include relevant fields and metadata, not just visible narrative text.
   Report uncertainty honestly; do not describe pseudonymization as proven irreversible anonymity.
+- Check unapplied or ambiguous suggestions and residual numeric forms against the requested scope;
+  automated pattern checks and model responses alone do not prove contextual coverage. Keep
+  unresolved cases visible instead of silently counting them as complete.
 - Keep originals and any identity mapping out of outputs unless specifically required and
   authorized. Avoid disclosing original identifiers in logs, diagnostics, or examples. When an
   identifier cannot be replaced without changing meaning, surface the concrete limitation rather
