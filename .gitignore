@@ -181,6 +181,10 @@
 !/scripts/codex-desktop-sidebar-fix/
 !/scripts/codex-desktop-sidebar-fix/*.cjs
 
+!/scripts/codex-desktop-markdown-fix/
+!/scripts/codex-desktop-markdown-fix/patch.py
+!/scripts/codex-desktop-markdown-fix/preview.js
+
 /scripts/check_*_playwright.py
 !/scripts/install/
 !/scripts/install/**

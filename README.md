@@ -23,6 +23,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
     - [Codex VS Code empty-tab header patch](#codex-vs-code-empty-tab-header-patch)
     - [Codex Linux desktop sidebar patch](#codex-linux-desktop-sidebar-patch)
+    - [Codex Linux desktop Markdown preview patch](#codex-linux-desktop-markdown-preview-patch)
     - [Repository tests](#repository-tests)
       - [Shared skill tests](#shared-skill-tests)
     - [Update the repository with an isolated pull](#update-the-repository-with-an-isolated-pull)
@@ -1380,6 +1381,37 @@ rendering runtime, then check archive application, integrity, repeat application
 restoration in temporary files. They require a supported desktop installation and are separate
 from the portable repository CI gate; they do not launch or visually verify the desktop app.
 For another test installation, set `CODEX_DESKTOP_TEST_ASAR` to its archive path.
+
+
+### Codex Linux desktop Markdown preview patch
+
+[The Markdown preview patcher](scripts/codex-desktop-markdown-fix/patch.py) makes paragraphs
+flow to the width of the existing file tab. It preserves explicit Markdown line breaks and keeps
+editing and source view available. It changes the desktop app archive and leaves `.md` files intact.
+The upstream report is [openai/codex#29280](https://github.com/openai/codex/issues/29280).
+
+If a reinstall or update brings back the issue, reapply the patch and check the installed archive.
+
+```text
+sudo python3 ~/scripts/codex-desktop-markdown-fix/patch.py --apply
+python3 ~/scripts/codex-desktop-markdown-fix/patch.py --check
+```
+
+Confirm that the check reports `Markdown preview patch applied`, then exit and reopen the desktop
+app normally. Open a Markdown file with source lines that wrap within a paragraph and resize its
+tab to verify that the text reflows.
+
+The patcher uses Python 3 and Node.js. It defaults to `/usr/lib/chatgpt/resources/app.asar` and
+accepts `--app-asar FILE` for another installation. Applying or restoring requires write access to
+the archive directory and space for a temporary archive. The patcher verifies the supported build
+and bundle hash before replacing the archive. If an app update is unsupported, inspect the new
+bundle and adapt and validate the patcher before reapplying it.
+
+To restore the original preview, run the command below and reopen the desktop app normally.
+
+```text
+sudo python3 ~/scripts/codex-desktop-markdown-fix/patch.py --restore
+```
 
 
 ### Repository tests
