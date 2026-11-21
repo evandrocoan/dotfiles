@@ -1,6 +1,6 @@
 ---
 name: git-delivery
-description: Prepare or perform safe Git delivery while preserving local work and explicit authorization boundaries. Use when drafting or creating commits, pushing branches, creating or updating pull requests or GitLab merge requests, reviewing remote changes, working with repository issues, or investigating remote pipelines.
+description: Prepare or perform safe Git delivery while preserving local work and explicit authorization boundaries. Use when drafting or creating commits, pushing branches, creating or updating pull requests or GitLab merge requests, reviewing remote changes, resolving GitLab merge request discussions, working with repository issues, or investigating remote pipelines.
 ---
 
 # Git delivery
@@ -187,6 +187,13 @@ and the intended inline position. Report unverifiable publication as incomplete.
 Claim merge blocking only when the project's **All threads must be resolved**
 setting and current MR status confirm it. Comment publication does not authorize
 changing project settings.
+
+## Resolve GitLab merge request discussions
+
+For every authorized resolution, first post a reply in the same discussion explaining why it can
+be resolved. Describe the verified fix or the specific reason the concern does not apply. Leave the
+discussion open if any concern remains unresolved, any follow-up remains unanswered, or the reply
+cannot be posted.
 
 ## Prepare an issue
 
