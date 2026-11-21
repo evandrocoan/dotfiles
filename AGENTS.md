@@ -119,10 +119,9 @@ Keep exact native input/result identity, sufficient-answer holds and actual code
 Readable final statuses are admitted only from the exact native terminal final. Snapshot current
 question scope before establishing a new automatic hold; snapshot failure blocks that MR until
 recovery, without retaining capacity after proven termination. Human scope never expands.
-Passively collect authenticated normal tool outputs to filter only proven self-generated inventory
-deltas. Preserve external edits and same-account human notes; missing results remain eligible.
-Passive inventory retires only never-issued self-only automatic discussion work, retaining its
-original admissions.
+Admit automatic work from changes to the head or discussions read directly from GitLab,
+including reviewer comments and same-account human edits. Retain authenticated tool results as
+passive publication provenance, independent of automatic admission and pending work retirement.
 New input formats must not alter historical validators. Proven-unissued old preparations may be
 archived outside executed attempts; preserve successful reviewers and selective retries. Unknown
 execution cannot release capacity or be relaunched. Normal recovery of historical uncertain sends

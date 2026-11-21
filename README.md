@@ -1023,6 +1023,12 @@ Completion, timeout and human-answer pickup normally wait until the next 15-minu
 The TOML interval/window governs automatic inventory; existing work and recovery can proceed after
 22:00. A failed cycle leaves its saved state for the next trigger. An inactive service between
 triggers is normal; keep the timer enabled. No resident monitor or scan helper is required.
+
+The monitor compares each direct GitLab read of the current commit and discussions with the
+previous observation. A changed commit or discussion, including a new comment from either
+reviewer, queues work for the configured reviewers regardless of tool results. Pending changes
+for the same MR can share a review round.
+
 After all configured reviewers run, only reviewers that failed return to the end of the same
 queue, waiting at least the configured interval before another attempt. Successful reviewers do
 not repeat. This also covers earlier partial successes in the current queue; questions and
@@ -1062,10 +1068,9 @@ New launches use fresh instructions and normal GitLab tools. The readable final 
 `Estado da revisão: concluída`, `Estado da revisão: não concluída`, or
 `Estado da revisão: aguardando resposta`; code completion also states `Commit revisado:` and the
 actual full SHA. A new automatic question saves its current discussion scope before becoming a
-hold. A failed snapshot waits for recovery on that MR. Self-generated activity is filtered only
-from exact native tool results; same-account human edits remain observable. Existing issued reviews are collected through
-their original native reader; old proposals are not replayed as publications. Existing chats and
-human questions remain valid original sources, without editing their loaded instructions.
+hold. A failed snapshot waits for recovery on that MR. Existing issued reviews are collected
+through their original native reader; old proposals are not replayed as publications. Existing
+chats and human questions remain valid original sources, without editing their loaded instructions.
 
 Diagnostics and recovery by authenticated read-back:
 
