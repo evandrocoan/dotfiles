@@ -18,6 +18,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
       - [Codex session statistics](#codex-session-statistics)
       - [Automatic GitLab MR review](#automatic-gitlab-mr-review)
         - [Desktop alerts for monitor failures](#desktop-alerts-for-monitor-failures)
+    - [Build and install Codex from the fork](#build-and-install-codex-from-the-fork)
     - [Shared GitLab MCP](#shared-gitlab-mcp)
     - [Codex VS Code history patch](#codex-vs-code-history-patch)
     - [Codex VS Code first-run patch](#codex-vs-code-first-run-patch)
@@ -1172,6 +1173,89 @@ To remove only desktop alerts, disable and stop `codex-monitor-alert.timer`, sto
 `codex-monitor-alert.service`, remove its installed service/timer files from
 `~/.config/systemd/user/`, and reload the user manager. This does not
 stop the review monitor. Notification state may be removed separately after its checker stops.
+
+### Build and install Codex from the fork
+
+Use the [Codex fork](https://github.com/evandroforks/codex-server) and its `dev.Dockerfile` to
+build a complete CLI package. Run the commands below from the root of the **Codex clone**,
+at the reviewed commit you intend to install. If needed, obtain the clone with
+`git clone https://github.com/evandroforks/codex-server.git`, then enter its directory.
+When the desired commit exists only locally, publish it from that clone with
+`git push origin main` before using a fresh clone on another machine.
+
+For Linux x86_64, build the image and package with reusable Cargo caches. The explicit GNU
+target matches the Docker toolchain. The package version and directory identify the selected
+commit, and the Dockerfile verifies the Codex-built V8 artifacts used by the build.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+FORK_REVISION="$(git rev-parse --short=12 HEAD)"
+mkdir -p codex-rs/target/dev-cargo codex-rs/target/dev-build
+
+docker build -f dev.Dockerfile -t codex-server-dev:local .
+
+docker run --rm --init \
+  --mount "type=bind,src=${PWD},dst=/workspace,readonly" \
+  --mount "type=bind,src=${PWD}/codex-rs/target/dev-cargo,dst=/opt/cargo" \
+  --mount "type=bind,src=${PWD}/codex-rs/target/dev-build,dst=/opt/target" \
+  --entrypoint just \
+  codex-server-dev:local assemble-codex-package \
+  --target x86_64-unknown-linux-gnu \
+  --cargo-profile release \
+  --package-version "0.0.0-fork.r${FORK_REVISION}" \
+  --package-dir "/opt/target/package-${FORK_REVISION}"
+```
+
+The package appears under `codex-rs/target/dev-build/package-<revision>` in the Codex clone.
+The assembler refuses to overwrite a populated output directory. Inspect an existing output
+or choose a different package directory when rebuilding the same commit.
+
+Activate the package from a separate terminal in the same Codex clone and at the same commit.
+Finish active chats and reviews, close the GUI and CLI clients, and resolve any same-home
+VS Code client reported by the launcher checks. For automatic reviews, follow the
+[monitor maintenance procedure](#desktop-alerts-for-monitor-failures) to pause intake and
+restore its timers after maintenance. Use the same Codex home as the launcher.
+
+```bash
+codex-monitor --status
+codex-monitor --check
+```
+
+Resolve reported blockers before proceeding. The script first confirms that the current commit
+has a built package, so a missing build cannot leave the shared server stopped. It then stops
+the shared server through the launcher and invokes the new package's CLI to install and pin
+that complete package. Read and accept the installer's replacement confirmation before
+reopening the GUI.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+FORK_REVISION="$(git rev-parse --short=12 HEAD)"
+FORK_PACKAGE="${PWD}/codex-rs/target/dev-build/package-${FORK_REVISION}"
+
+if [[ ! -x "${FORK_PACKAGE}/bin/codex" ]]; then
+    printf 'Error: No package for commit %s at "%s". Build it first.\n' \
+        "${FORK_REVISION}" "${FORK_PACKAGE}" >&2
+    exit 1
+fi
+
+codex-monitor --stop
+"${FORK_PACKAGE}/bin/codex" app-server daemon update --from-cli
+codex-monitor --gui
+```
+
+Inspect `codex-monitor --status` and `codex-monitor --check` afterward. Confirm that the
+selected native executable belongs to the installed fork package. Source builds may report
+the workspace development version, so also check the commit-stamped package identity.
+Exercise typing and conversation switching, then verify that completed subagents which are
+not explicitly followed release their MCP runtimes after the idle-unload period.
+
+The native installer pins the local package. To return to official production updates, run
+`codex app-server daemon update` during a maintenance window, then reopen through the launcher
+and repeat the checks above.
 
 ### Shared GitLab MCP
 
