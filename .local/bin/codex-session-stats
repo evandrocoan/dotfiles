@@ -5330,16 +5330,8 @@ def mq_mcp_note_versions(threads):
     return mq_note_versions(normalized)
 
 
-def mq_normalize_notes(rows, own):
-    normalized = []
-    for row in rows:
-        seen = set()
-        while row is not None and monitor_digest(row) in own:
-            key = monitor_digest(row)
-            if key in seen:raise RuntimeError('cyclic self-output observation')
-            seen.add(key);row = own[key]
-        if row is not None:normalized.append(row)
-    return sorted(normalized,key=lambda r:(r['discussion'],r['id']))
+def mq_order_note_versions(rows):
+    return sorted(rows, key=lambda row: (row['discussion'], row['id']))
 
 
 def mq_native_gitlab_calls(config,queue,stage):
@@ -5484,7 +5476,6 @@ def mq_observe_outputs(config,queue,job,stage):
         saved = json.loads(json.dumps(job))
         next(s for s in saved['stages'] if s['id']==stage['id'])['output_cursor'] = cursor
         queue.put_mr(record);queue.save(saved)
-        mq_retire_self_activity(queue,record)
     stage['output_cursor'] = cursor
     return True
 
@@ -5497,25 +5488,6 @@ def mq_try_observe_outputs(config,queue,job,stage):
     except MonitorOutputObservationError as failure:
         mq_diagnostic(queue,'output_observation:'+stage['id'],failure)
         return False
-
-
-def mq_retire_self_activity(queue,record):
-    """Administrative retirement only; never touch issued work, code or human admission."""
-    own = record.get('own_outputs',{})
-    for job in queue.jobs('pending'):
-        members = [job,*[queue.job(i) for i in job.get('coalesced_jobs',[])]]
-        if ((job['repository_id'],job['iid'])!=(record['repository_id'],record['iid'])
-                or job['stages'] or job.get('coalescing_frozen') or job.get('rounds')
-                or job.get('pending_question') or job.get('batch') or job.get('prepared')
-                or job.get('wait_reason') or any(e.get('job_id')==job['id'] for e in queue.effects())
-                or record.get('hold') and record['hold']['job_id']==job['id']):continue
-        admissions = [queue.admission(m) for m in members]
-        if not all(a['kind']=='discussion' and a['source'].get('origin')=='automatic'
-                   and 'note_delta' in a['source'] for a in admissions):continue
-        if all(mq_normalize_notes(a['source']['note_delta']['before'],own)==
-               mq_normalize_notes(a['source']['note_delta']['after'],own) for a in admissions):
-            job.update(state='completed',outcome='self-only discussion activity; not reviewed',completed_at=mq_stamp())
-            queue.save(job)
 
 
 def mq_observe_direct_stages(config,queue):
@@ -5642,11 +5614,10 @@ def mq_inventory(config,queue):
                     config.setdefault('_checked_mr_states',{})[(project['id'],iid)] = 'opened'
                     record = queue.mr(project['id'],context['iid'])
                     signature,raw = mq_inventory_notes(queue,context)
-                    own = record.get('own_outputs',{})
                     before = record.get('observed_note_versions')
                     fresh_start = 'observed_notes' not in record
                     generation = record.get('observation_generation',0)+1
-                    note_changed = (mq_normalize_notes(before,own)!=mq_normalize_notes(raw,own)
+                    note_changed = (mq_order_note_versions(before)!=mq_order_note_versions(raw)
                         if before is not None else record.get('observed_notes')!=signature)
                     changed = record.get('observed_head')!=context['head'] or note_changed or fresh_start
                     with queue.atomic():
@@ -5664,7 +5635,6 @@ def mq_inventory(config,queue):
                             observed_note_versions=raw,observation_generation=generation if changed else generation-1,
                             title=context['mr']['title'],mr_state='opened',mr_state_checked_at=mq_stamp())
                         queue.put_mr(fresh)
-                        mq_retire_self_activity(queue,fresh)
                     mq_health_ok(config,f"inventory_error:{project['id']}:{iid}")
                 except (OSError,RuntimeError,ValueError) as failure:
                     mq_diagnostic(queue,f"inventory_error:{project['id']}:{iid}",failure)

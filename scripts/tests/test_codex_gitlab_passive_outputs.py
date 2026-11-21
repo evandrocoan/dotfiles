@@ -1,4 +1,4 @@
-"""Passive evidence must neither suppress unknown activity nor block native recovery."""
+"""Passive evidence must preserve GitLab inventory work and native recovery."""
 import copy
 import json
 from pathlib import Path
@@ -84,7 +84,7 @@ def test_exact_created_revision_is_idempotent_across_reopen(flow,tool,envelope):
     elif envelope=='structured':item['result']={'structuredContent':payload,'content':[]}
     pending=pending_delta(f,stage,note)
     assert f.m['mq_observe_outputs'](f.config,f.q,job,stage) is True
-    assert f.q.job(pending['id'])['outcome']=='self-only discussion activity; not reviewed'
+    assert f.q.job(pending['id'])['state']=='pending'
     row=f.m['mq_mcp_note_versions']([{'id':'actual-discussion','notes':[note]}])[0]
     assert f.q.mr(11,82)['own_outputs']=={f.m['monitor_digest'](row):None}
     reopened=f.m['MonitorQueue'](f.config)
@@ -93,6 +93,7 @@ def test_exact_created_revision_is_idempotent_across_reopen(flow,tool,envelope):
         f.m['mq_observe_outputs'](f.config,reopened,saved,saved['stages'][0])
         assert reopened.job(job['id'])==saved
         assert reopened.mr(11,82)['own_outputs']=={f.m['monitor_digest'](row):None}
+        assert reopened.job(pending['id'])['state']=='pending'
     finally:reopened.close()
 
 

@@ -258,7 +258,8 @@ def test_legacy_completion_still_requires_its_original_signal(flow):
     assert flow.m['mq_tool_result'](flow.q,job,stage,observed)[0] is None
 
 
-def test_inventory_race_retires_only_proved_self_activity(flow,monkeypatch):
+@pytest.mark.parametrize('receipt',['full-before','full-after','projected','missing'])
+def test_gitlab_inventory_admits_new_note_regardless_of_reviewer_output(flow,monkeypatch,receipt):
     f=flow
     class API:
         def __init__(self,*a):pass
@@ -269,21 +270,46 @@ def test_inventory_race_retires_only_proved_self_activity(flow,monkeypatch):
         record=f.q.mr(11,82);record.update(observed_head='a'*40,observed_notes=f.m['monitor_digest']([]),
             observed_note_versions=[]);f.q.put_mr(record)
     f.results['codex']=domain(actions=[{'kind':'finding','key':'one','body':'Real fixture concern'}])
-    job=automatic(f,reviewers=['codex']);f.step() # Send is visible; result collection has not happened.
-    f.m['mq_inventory'](f.config,f.q)
-    pending=next(j for j in f.q.jobs('pending') if j['kind']=='discussion')
+    job=automatic(f,reviewers=['codex']);f.step()
     active=f.q.job(job['id']);stage=active['stages'][0]
-    f.m['mq_observe_outputs'](f.m['mq_workspace_config'](f.config,active),f.q,active,stage)
-    assert f.q.job(pending['id'])['outcome']=='self-only discussion activity; not reviewed'
+    item=next(i for i in f.items[stage['turn_id']] if i.get('tool')=='create_merge_request_thread')
+    note=f.context['threads'][0]['notes'][0]
+    if receipt=='projected':
+        item['arguments']['jmespath']='{id:id,notes:notes[].{id:id}}'
+        item['result']={'content':[{'type':'text','text':json.dumps({
+            'id':f.context['threads'][0]['id'],'notes':[{'id':str(note['id'])}]})}]}
+    elif receipt=='missing':
+        item['result']=None
+    scoped=f.m['mq_workspace_config'](f.config,active)
+    if receipt!='full-after':
+        f.m['mq_observe_outputs'](scoped,f.q,active,stage)
+    f.m['mq_inventory'](f.config,f.q)
+    pending=f.q.jobs('pending')
+    assert len(pending)==1 and pending[0]['kind']=='discussion'
+    discussion=pending[0]
+    delta=discussion['source']['note_delta']
+    assert delta['before']==[] and [row['id'] for row in delta['after']]==[note['id']]
+    if receipt=='full-after':
+        f.m['mq_observe_outputs'](scoped,f.q,active,stage)
+    assert f.q.job(discussion['id'])['state']=='pending'
     f.m['mq_inventory'](f.config,f.q)
     assert len(f.q.jobs())==2
-    # A human edit under the same account remains eligible and never inherits tool provenance.
-    note=f.context['threads'][0]['notes'][0]
+    assert f.q.mr(11,82)['reviewed_head'] is None
+    f.results['codex']=domain()
+    f.drain()
+    assert f.launched==['codex','claude','codex']
+    assert f.q.job(discussion['id'])['outcome']=='reviewed'
+    # A human edit under the same account is a new inventory revision.
     note.update(body='Human edit by the same account',updated_at='2026-10-20T00:00:00Z')
     f.m['mq_inventory'](f.config,f.q)
     assert len(f.q.jobs('pending'))==1
     assert f.q.jobs('pending')[0]['kind']=='discussion'
-    assert f.q.mr(11,82)['reviewed_head'] is None
+    f.drain()
+    f.context['head']='b'*40
+    f.m['mq_inventory'](f.config,f.q)
+    pending=f.q.jobs('pending')
+    assert len(pending)==1 and pending[0]['kind']=='code'
+    assert pending[0]['head']=='b'*40 and pending[0]['reviewers']==['claude','codex']
 
 
 def test_mr78_partial_native_artifact_no_longer_requires_a_private_reader(flow):
@@ -308,7 +334,7 @@ def test_mr78_partial_native_artifact_no_longer_requires_a_private_reader(flow):
 
 
 @pytest.mark.parametrize('change',['source','server','repository','mr','error','missing_result'])
-def test_own_output_filter_requires_exact_native_target_and_success(flow,change):
+def test_own_output_proof_requires_exact_native_target_and_success(flow,change):
     f=flow;f.results['codex']=domain(actions=[{'kind':'finding','key':'one','body':'A real fixture issue'}])
     job=automatic(f,reviewers=['codex']);f.step();active=f.q.job(job['id']);stage=active['stages'][0]
     item=next(i for i in f.items[stage['turn_id']] if i.get('tool')=='create_merge_request_thread')
@@ -324,34 +350,6 @@ def test_own_output_filter_requires_exact_native_target_and_success(flow,change)
     else:f.m['mq_observe_outputs'](f.config,f.q,active,stage)
     assert not f.q.mr(11,82).get('own_outputs')
     assert len(f.context['threads'])==1 # A real fixture send exists, but is not presumed own activity.
-
-
-def test_mixed_self_external_event_and_issued_work_survive_late_observation(flow):
-    f=flow;own={'id':1,'discussion':'one','revision':'own','author_id':7,'resolved':False,
-        'updated_at':'2026-10-22T00:00:00Z','resolved_at':None}
-    external={**own,'id':2,'revision':'external'}
-    record=f.q.mr(11,82);record['own_outputs']={f.m['monitor_digest'](own):None}
-    def event(marker,rows):
-        return f.q.enqueue(11,82,source_key=marker,kind='discussion',head='a'*40,
-            source={'origin':'automatic','notes':marker,'note_delta':{'before':[],'after':rows}},context=f.context)
-    mixed=event('mixed',[own,external])
-    with f.q.atomic():f.q.put_mr(record);f.m['mq_retire_self_activity'](f.q,record)
-    assert f.q.job(mixed['id'])['state']=='pending'
-    running=f.q.reserve({11});f.q.finish(running,'fixture settled mixed')
-    issued=event('own',[own]);issued=f.q.reserve({11});stage=f.q.stage_start(issued,'claude','registered')
-    with f.q.atomic():f.m['mq_retire_self_activity'](f.q,record)
-    assert f.q.job(issued['id'])['stages'][0]['id']==stage['id']
-    assert f.q.job(issued['id'])['state']=='running'
-
-
-def test_own_resolution_delta_is_filtered_but_later_external_edit_is_not(flow):
-    before={'id':1,'discussion':'one','revision':'same','author_id':7,'resolved':False,
-        'updated_at':'2026-10-22T00:00:00Z','resolved_at':None}
-    after={**before,'resolved':True,'resolved_at':'2026-10-22T00:01:00Z'}
-    own={flow.m['monitor_digest'](after):before}
-    assert flow.m['mq_normalize_notes']([before],own)==flow.m['mq_normalize_notes']([after],own)
-    edited={**after,'revision':'human edit','updated_at':'2026-10-22T00:02:00Z'}
-    assert flow.m['mq_normalize_notes']([before],own)!=flow.m['mq_normalize_notes']([edited],own)
 
 
 def test_supplied_constraints_are_preserved_when_generated_head_line_is_removed(module):
