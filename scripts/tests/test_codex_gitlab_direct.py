@@ -125,6 +125,13 @@ def assert_review_scratch_instructions(text):
     assert 'Stop the commands and containers' not in text
 
 
+def assert_review_comment_instructions(text):
+    for label in ('[Corrigir antes do merge]', '[Corrigir em outra entrega]',
+                  '[Sugestão opcional]', '[Preciso de uma resposta para avaliar]'):
+        assert label in text
+    assert 'already existed before this MR' in text
+
+
 def test_codex_dispatch_receives_child_review_instructions(flow,monkeypatch):
     f=flow;request=f.m['monitor_native'];instructions=[]
     def native(c,method,params,**kw):
@@ -135,6 +142,7 @@ def test_codex_dispatch_receives_child_review_instructions(flow,monkeypatch):
     assert f.launched==['codex'] and len(instructions)==1
     assert_child_review_instructions(instructions[0])
     assert_review_scratch_instructions(instructions[0])
+    assert_review_comment_instructions(instructions[0])
     assert f.q.job(job['id'])['stages'][0]['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
 
 
@@ -169,16 +177,18 @@ def test_claude_dispatch_receives_child_review_instructions(flow):
     f=flow;job=automatic(f,reviewers=['claude']);f.step()
     command=next(c for c in f.service.commands if c[0]=='systemd-run')
     assert f.launched==['claude']
-    assert_child_review_instructions(command[command.index('--append-system-prompt')+1])
-    assert_review_scratch_instructions(command[command.index('--append-system-prompt')+1])
+    instructions=command[command.index('--append-system-prompt')+1]
+    assert_child_review_instructions(instructions)
+    assert_review_scratch_instructions(instructions)
+    assert_review_comment_instructions(instructions)
     assert f.q.job(job['id'])['stages'][0]['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
 
 
 def test_new_instructions_rotate_codex_chat_preserving_previous_round(flow,monkeypatch):
     f=flow
-    # Existing release-8 chats must rotate when the scratch policy is introduced.
+    # Chats from before priority labels must retain their original instructions.
     with monkeypatch.context() as previous_release:
-        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',8)
+        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',11)
         first=automatic(f,reviewers=['codex']);f.drain()
     original=f.q.job(first['id']);old_session=original['stages'][0]['session']
     old_turns=copy.deepcopy(f.turns[old_session]);old_items=copy.deepcopy(f.items)
@@ -187,7 +197,7 @@ def test_new_instructions_rotate_codex_chat_preserving_previous_round(flow,monke
     f.drain()
     record=f.q.mr(11,82);stage=f.q.job(next_job['id'])['stages'][0]
     assert stage['session']!=old_session and record['chats']['codex']==stage['session']
-    assert record['instruction_versions'][old_session]==8
+    assert record['instruction_versions'][old_session]==11
     assert stage['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
     assert f.q.job(first['id'])==original and f.turns[old_session]==old_turns
     assert {key:f.items[key] for key in old_items}==old_items
