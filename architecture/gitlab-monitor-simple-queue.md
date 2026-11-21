@@ -56,14 +56,10 @@ authenticated discussion snapshot before their anchored hold is established; sna
 blocks that MR until recovery without occupying capacity after proven termination. Human scope
 never expands from that snapshot.
 
-Passive collection of authenticated ordinary native tool results records self-created note revisions
-and proven resolution deltas solely for inventory filtering. Normalize raw before/after observations
-against the same evidence. Retire only never-issued automatic discussion events proved entirely
-self-generated, retaining their original admissions. The installed service returns text-only
-resolution success, so those unproved deltas stay eligible for an extra ordinary pass. Unknown
-output stays eligible; same-account human activity must not be ignored. This is not a durable send
-journal or an exactly-once guarantee. Normal recovery keeps uncertain historical effects as read-
-back-only fences; explicit operator MR abandonment is the scoped exception defined below.
+The [automatic GitLab inventory](#publications-and-passive-observation) admits code and discussion
+changes for the configured reviewers, including comments they publish directly. The GitLab snapshot
+drives admission independently of native tool results. Normal recovery keeps uncertain historical
+effects as read-back-only fences, subject to the explicit operator MR abandonment defined below.
 
 Retire proven-unissued old preparations transactionally outside executed attempts. Preserve
 successes, selective-retry bounds, original source lookup, questions and original collectors for
@@ -401,9 +397,9 @@ new actual code review completes. Return exactly one representative to the FIFO 
 current configured reviewers and create fresh chats. Resolve the live project's workspace once
 at that round's first launch, through the existing shared snapshot owner.
 
-Persist the authenticated inventory observation using the same note normalization as ordinary
-inventory. The identical snapshot cannot create another event; real later commits/comments remain
-eligible. A receipt keyed by the original job and exact reason makes repetition return the original
+Persist the authenticated head and discussion snapshot as the baseline for ordinary inventory.
+The identical snapshot cannot create another event. Later changes remain eligible for admission.
+A receipt keyed by the original job and exact reason makes repetition return the original
 result without absorbing later arrivals, including after interruption or completion. A conflicting
 reason rejects. Per-MR transaction rollback preserves all prior state. Status exposes the receipt,
 representative, retired jobs, target head, reason and previous states of abandoned public effects.
@@ -420,18 +416,21 @@ human source/scope and current open state. Do not describe instructions as those
 Missing diff bodies do not block admission. The model chooses local Git and verifies exact
 base/start/head objects, without monitor checkout mappings or a per-file publication proxy.
 
-The collector passively authenticates ordinary GitLab calls/results against original native input,
-server, repository/MR and stage. Persist self-created note revisions and proven resolution deltas
-with an idempotent cursor, not send intentions or body markers. Inventory stores minimal raw
-before/after revisions and normalizes both against the same proven outputs. Observe before inventory
-and subsequent dispatch. Late evidence may retire only never-issued automatic discussion work
-whose every contributing delta is self-only, preserving admissions and FIFO lineage. External edits,
-same-account human activity, unknown revisions and missing results remain eligible. Observation
-cannot resend or authorize a write and does not guarantee duplicate-free convergence.
+On each automatic inventory pass, the monitor reads the open MR's head and discussions directly
+from GitLab. It compares the head and the versions of non-system notes with the saved observation.
+On an established baseline, a changed head admits code work and a discussion change at the same
+head admits discussion work. New comments from either reviewer are eligible alongside human
+comments and edits. A comment published in one round can therefore trigger a later round for all
+configured reviewers. Queue admission and the updated observation are saved atomically. Repeating
+the same snapshot creates no new work, and pending events follow the existing FIFO grouping rules.
 
-Historical confirmed receipts still filter their original notes, and uncertain old effects retain
-read-back-only reconciliation unless explicitly abandoned by the operator control. No direct result
-replays an old public action.
+The passive collector authenticates ordinary GitLab calls and results against the native input,
+server, repository/MR and stage. It records proven note creations with an idempotent cursor for
+provenance. Admission and pending work follow the GitLab snapshot whether a tool result is complete,
+projected with `jmespath`, or missing. Passive observation grants no authority to write or resend.
+
+The historical public-effect journal still excludes matching notes from inventory. Uncertain old
+effects retain read-back-only reconciliation unless explicitly abandoned by the operator control.
 
 ## Instructions and scheduling
 
@@ -593,7 +592,7 @@ input format; earlier direct-route formats retain their original readers and can
 | Consumer-owned review scratch | `mq_allocate_scratch`, frozen `message-v5` input, `mq_cleanup_scratch` and native executor evidence | `test_codex_gitlab_print.py`: both providers, original directory identity, question/restart/history retention, manual Claude frontier, bounded partial deletion, explicit rejection vs unknown delivery and Docker uncertainty; `test_codex_gitlab_workspace_native.py`: installed native terminal inventory with a real background command; captured permission-denial artifact and disabled-deletion negative control, not a complete production-session replay |
 | Exact native/result identity | Original native source, versioned input and terminal result collector | `test_codex_gitlab_direct_native.py`: installed clients, real HTTP MCP and local model fixtures, scoped positive/negative permissions and exact output provenance |
 | Native human conversations and held reviews | Targeted `mq_intake`, original native collectors and `mq_effective_stage` | `test_codex_gitlab_direct.py`: no general producer/classifier, causal continuations, original finals, failures/retries, checkpoints, source denials and transaction recovery; installed-client cold-resume probes; historical tools holds/fences |
-| Direct publications and observation | Native GitLab tools, passive collector and raw inventory deltas | `test_codex_gitlab_direct.py`: self-output race, human edits, version/hold/transition boundaries and honest checkpoints; legacy recovery tests retain original journals |
+| Automatic GitLab review trigger | `mq_context` and `mq_inventory`, with separate passive provenance | `test_codex_gitlab_direct.py`: reviewer comments with early, late, projected or missing tool results, repeated snapshots, same-account edits and a changed head. `test_codex_gitlab_passive_outputs.py`: proof recorded without retiring pending work. |
 | Scheduling and removal | Bounded tick, worker inventory and current config gates | Successive cycles, native oneshot lifetime/restart, slow HTTP/history vs sufficient answers, removal after send |
 | Shared native lifetime and GUI tools | `scripts/codex_monitor_launcher.py`, lazy standalone CLI entry points and desktop launcher | `test_codex_monitor_launcher.py`, `test_codex_monitor_bootstrap.py`, `test_codex_monitor_handshake.py`, `test_codex_monitor_app_tools.py`; isolated installed native/GUI/CLI proofs with retained threads and in-flight native/non-app MCP work |
 | Replacement admission and observational diagnostics | Guarded launcher publication and `scripts/codex_monitor_diagnostics.py`; ordinary RPCs remain generation-bound | `test_codex_monitor_launcher.py`: real Unix peer/protocol replacement, registration denials, lock contention, bounded notification stream, issued-request loss without replay and read-only diagnostics; sanitized `codex-monitor-recovery.json` is an artifact replay, not a complete session replay; app-tool tests protect relay handoff and generation cleanup |
