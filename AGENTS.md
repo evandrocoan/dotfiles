@@ -170,11 +170,13 @@ never write queue/native state, drive reviews, clear uncertain effects, answer h
 execution. Recovery notices require new matching evidence; unrelated success is not recovery.
 
 The consumer owns registered review scratch directories and their cleanup. Models receive only
-the temporary path. Use the original native execution and thread-owned terminal evidence plus
-Docker mount inventory, never a scan of unrelated desktop processes. Questions and incomplete
-execution evidence retain scratch as an independent obligation through restart and history
-rotation; a cleanup failure must not fail or repeat a review. Historical inputs and unregistered
-directories are not adopted by this lifecycle. See the simple queue record for its scope.
+the temporary path. Codex cleanup uses the authenticated terminal turn and frozen original input
+without inspecting live terminals. Claude retains its original execution and transcript evidence.
+Check the registered identity and Docker and local mounts. Existing noninteractive sudo applies
+only to deleting the revalidated directory after an ordinary removal permission error. Questions
+and incomplete execution evidence retain scratch through restart and history rotation, and cleanup
+failure never fails or repeats a review. Unregistered directories stay outside the lifecycle.
+See the simple queue record for its scope.
 
 ### Systemd user services
 

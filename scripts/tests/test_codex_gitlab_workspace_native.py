@@ -209,7 +209,7 @@ class Responses(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
 
 
-def test_native_background_inventory_proves_review_terminal_use(native_workspace,monkeypatch):
+def test_native_settlement_proves_review_end_without_terminal_inventory(native_workspace,monkeypatch):
     m,c,roots,main,script,expected=native_workspace
     binary=os.environ.get('CODEX_MONITOR_NATIVE_CODEX') or shutil.which('codex');assert binary
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Responses)
@@ -235,20 +235,16 @@ def test_native_background_inventory_proves_review_terminal_use(native_workspace
         turn=native.rpc('thread/turns/list',{'threadId':identifier,'itemsView':'notLoaded'})['data'][0]
         assert turn['status']=='completed'
         stage={'reviewer':'codex','session':identifier,'turn_id':turn['id'],
-            'delivery':'accepted','input':request,'id':'fixture-stage'}
-        monkeypatch.setitem(m,'monitor_native',lambda config,method,params,**kw:native.rpc(method,params))
+            'delivery':'accepted','input':request,'id':'fixture-stage','state':'succeeded','scratch':{}}
+        def read_history(config,method,params,**kwargs):
+            assert method in {'thread/turns/list','thread/items/list'}
+            return native.rpc(method,params)
+        monkeypatch.setitem(m,'monitor_native',read_history)
         busy=native.rpc('thread/backgroundTerminals/list',{'threadId':identifier})
         assert len(busy['data'])==1 and busy['data'][0]['cwd']==c['cwd']
-        with pytest.raises(RuntimeError,match='running background terminals'):
-            m['mq_scratch_native_stopped'](c,stage)
-        stopped=native.rpc('thread/backgroundTerminals/terminate',{
-            'threadId':identifier,'processId':busy['data'][0]['processId']})
-        assert stopped=={'terminated':True}
-        assert native.rpc('thread/backgroundTerminals/list',{'threadId':identifier})['data']==[]
-        assert m['mq_scratch_native_stopped'](c,stage) is None
-        if Path(f'/proc/{pid}/stat').exists():
-            fields=Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()
-            assert fields[19]!=birth or fields[0] in {'Z','X'}
+        proof=m['mq_scratch_native_stopped'](c,stage)
+        assert proof['session']==identifier and proof['turn_id']==turn['id'] and proof['status']=='completed'
+        assert proof['source_id']
     finally:
         if identifier:
             native.rpc('thread/backgroundTerminals/clean',{'threadId':identifier})

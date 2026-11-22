@@ -731,13 +731,14 @@ uncertain coverage, changed basis, rewritten history, or an explicit restart cal
 review. Both reviewers still read complete discussions and review applicable child MRs.
 
 New review stages receive a dedicated temporary directory under `/tmp/codex-monitor`.
-The consumer removes only its registered directory after checking the native execution and
-Docker bind mounts. Cleanup is separate from the review result and is retried on later ticks;
-`status` exposes its path, state and pending reason. Human questions preserve the directory.
-Unloaded Codex chats have no usable terminal inventory, and manually resumed Claude reviews
-have no registered continuation process group, so these cases remain pending. Existing
-unregistered `.review-*` folders require a separate operator inspection. The consumer never
-scans unrelated desktop processes or asks a reviewer to manage cleanup.
+After confirming that the original review ended, the consumer checks its registered directory,
+Docker bind mounts and local mounts. Closed or unloaded Codex chats stay eligible once the
+original turn is authenticated. Human questions and manually resumed Claude executions with
+unproven resources retain the directory. On a removal permission error, the consumer repeats
+the directory and mount checks and uses existing noninteractive `sudo` for that deletion.
+`status` reports the path, cleanup state and pending reason. Blocked cleanup is retried on later
+ticks independently of the review result. Unregistered folders require separate operator
+inspection.
 
 `status` includes each job's `last_error`, current stages and previous `rounds`. Claude stages
 include their native `name`, `session`, saved result or error, and a copyable `resume_command`

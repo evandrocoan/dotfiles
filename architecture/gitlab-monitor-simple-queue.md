@@ -104,20 +104,25 @@ validation remain unchanged; direct publication has the explicit limits in
 **Review scratch ownership:** New automatic review stages receive a unique scratch
 directory allocated and registered by the consumer under `/tmp/codex-monitor`. Models receive the
 ready path; the consumer owns cleanup independently of review success, with existing tool
-permissions unchanged. It may delete only the registered original directory after authenticated
-native termination and inactive review-owned native execution resources, with no Docker bind
-mount referencing the directory. This does not enumerate unrelated desktop processes. Outstanding
-questions, uncertain execution, live resource users, and incomplete evidence retain the directory.
-An unloaded Codex thread has no usable terminal inventory and remains pending; any manual Claude
-continuation outside the original registered execution also remains pending. The current Claude
-transcript must contain only the authenticated original human input, excluding native metadata
-and tool results. Deletion checks the cycle budget between entries and resumes the original
-partially emptied directory on later ticks.
+permissions unchanged. The exact registered original directory becomes eligible after authenticated
+native termination or proven non-issue. For Codex, settlement binds the terminal turn to the
+frozen input and its native source. Older successful stages carry those anchors. Ambiguous older
+failures require a read of the exact historical turn and input. Cleanup never loads a conversation
+or consults its terminal inventory. Claude retains exact process termination and transcript
+authentication, including the refusal for a manual continuation outside that execution.
+
+An outstanding question, uncertain execution, directory replacement, incomplete Docker inventory,
+or a Docker bind or local mount reference retains the directory. The consumer checks mounts before
+deletion and never enumerates unrelated desktop processes. If deletion itself encounters a
+permission error, the consumer rechecks the registered identity and mounts. It may then use
+existing noninteractive `sudo` for a bounded deletion of that exact directory. The deletion
+handler revalidates the owner, directory identities and mount boundaries by descriptor. Traversal
+checks the cycle budget between entries and resumes the same directory after a partial deletion.
+
 Cleanup obligations survive restart, archived rounds and history rotation and remain visible
 separately from review results. Historical native inputs retain their original bytes and
-instructions; unregistered directories are never adopted. This is application-level cleanup for
-trusted local execution, not an OS security boundary. The workspace rule above remains in force;
-historical stages continue using their original instructions.
+instructions. Unregistered directories stay outside this lifecycle. This is application-level
+cleanup for trusted local execution, not an OS security boundary.
 
 Persist canonical ordered roots, primary directory, native project identity and actual Git
 metadata paths before the first launch/input. A restart or later reviewer uses that same snapshot.
@@ -592,7 +597,7 @@ input format; earlier direct-route formats retain their original readers and can
 | Selective reviewer retry | `MonitorQueue` attempt bounds, transactional tail move and worker settlement | `test_codex_gitlab_retries.py`: both orders, interval/FIFO/restart, partial-success backfill, native questions, reset interruption, old-call denial, receipt reuse and checkpoint guards |
 | Individual incremental coverage | `MonitorQueue.finish`, MR JSON, `mq_review_scope` and versioned native input | `test_codex_gitlab_incremental.py`: independent credit, partial failures, saved inputs, continuation, complete fallback/restart, coalescing and retention; historical message fixtures and installed-client local-provider probes; no recorded production session or model-quality claim |
 | Finite Claude execution | Transient service, receipt and stream collector | `test_codex_gitlab_print.py` and installed-client fixtures: native identities, split finals, lost acknowledgment, live descendants, timeout and resume |
-| Consumer-owned review scratch | `mq_allocate_scratch`, frozen `message-v5` input, `mq_cleanup_scratch` and native executor evidence | `test_codex_gitlab_print.py`: both providers, original directory identity, question/restart/history retention, manual Claude frontier, bounded partial deletion, explicit rejection vs unknown delivery and Docker uncertainty; `test_codex_gitlab_workspace_native.py`: installed native terminal inventory with a real background command; captured permission-denial artifact and disabled-deletion negative control, not a complete production-session replay |
+| Consumer-owned review scratch | `mq_allocate_scratch`, frozen `message-v5` input, `mq_cleanup_scratch` and `codex_monitor_scratch_remove.py` | `test_codex_gitlab_print.py`: exact Codex settlement, historical source mismatch, manual Claude frontier, holds, registered inode, Docker binds and aliases, same-device mount denial, scoped elevation and partial deletion; `test_codex_gitlab_workspace_native.py`: installed Codex proves the exact terminal turn with a fixture background command still running |
 | Exact native/result identity | Original native source, versioned input and terminal result collector | `test_codex_gitlab_direct_native.py`: installed clients, real HTTP MCP and local model fixtures, scoped positive/negative permissions and exact output provenance |
 | Native human conversations and held reviews | Targeted `mq_intake`, original native collectors and `mq_effective_stage` | `test_codex_gitlab_direct.py`: no general producer/classifier, causal continuations, original finals, failures/retries, checkpoints, source denials and transaction recovery; installed-client cold-resume probes; historical tools holds/fences |
 | Automatic GitLab review trigger | `mq_context` and `mq_inventory`, with separate passive provenance | `test_codex_gitlab_direct.py`: reviewer comments with early, late, projected or missing tool results, repeated snapshots, same-account edits and a changed head. `test_codex_gitlab_passive_outputs.py`: proof recorded without retiring pending work. |

@@ -264,28 +264,93 @@ def test_held_continuation_cleans_only_after_resources_stop(flow,monkeypatch,rev
     assert f.launched==[reviewer]
 
 
-@pytest.mark.parametrize('case',['busy','unloaded','api-error','malformed','cursor-loop'])
-def test_codex_native_resource_uncertainty_preserves_scratch(flow,monkeypatch,case):
+def test_settled_codex_scratch_does_not_require_a_loaded_conversation(flow,monkeypatch):
     f=flow;job=enqueue(f)
     with f.q.atomic():job['reviewers']=['codex'];f.q.save(job)
     f.step();f.step();stage=f.q.job(job['id'])['stages'][0];path=Path(stage['scratch']['path'])
+    assert stage['scratch']['native_terminal']['status']=='completed'
+    def unavailable(*args,**kwargs):
+        raise AssertionError('settled cleanup must not query the live conversation')
+    monkeypatch.setitem(f.m,'monitor_native',unavailable)
+    f.m['mq_cleanup_scratch'](f.config,f.q)
+    assert not path.exists()
+    assert f.q.job(job['id'])['stages'][0]['scratch']['state']=='removed'
+
+
+@pytest.mark.parametrize('mismatch',[False,True])
+def test_legacy_failed_codex_cleanup_authenticates_the_original_turn(flow,monkeypatch,mismatch):
+    f=flow;job=enqueue(f)
+    with f.q.atomic():job['reviewers']=['codex'];f.q.save(job)
+    f.step();f.step()
+    saved=f.q.job(job['id']);stage=saved['stages'][0];path=Path(stage['scratch']['path'])
+    stage.update(state='failed',result=None,error={'message':'legacy failure'})
+    stage['scratch'].pop('native_terminal')
+    with f.q.atomic():f.q.save(saved)
     original=f.m['monitor_native']
     def native(c,method,params,**kwargs):
-        if method=='thread/read' and case=='unloaded':
-            value=original(c,method,params,**kwargs);value['thread']['status']={'type':'notLoaded'};return value
-        if method=='thread/backgroundTerminals/list':
-            if case=='api-error':raise RuntimeError('native terminal inventory unavailable')
-            if case=='busy':return {'data':[{'processId':'owned-command'}],'nextCursor':None}
-            if case=='malformed':return {'data':None}
-            if case=='cursor-loop':return {'data':[],'nextCursor':'repeated'}
-            raise AssertionError('unloaded thread must not be queried for terminal inventory')
-        return original(c,method,params,**kwargs)
+        assert method in {'thread/turns/list','thread/items/list'}
+        value=copy.deepcopy(original(c,method,params,**kwargs))
+        if method=='thread/items/list' and mismatch:
+            user=next(row['item'] for row in value['data'] if row['item']['type']=='userMessage')
+            user['content'][0]['text']='different input'
+        return value
     monkeypatch.setitem(f.m,'monitor_native',native)
-    f.drain();saved=f.q.job(job['id'])
-    assert saved['state']=='completed' and saved['stages'][0]['state']=='succeeded'
-    assert path.is_dir() and saved['stages'][0]['scratch']['state']=='pending'
-    assert saved['stages'][0]['scratch']['reason']
-    assert f.launched==['codex']
+    f.m['mq_cleanup_scratch'](f.config,f.q)
+    scratch=f.q.job(job['id'])['stages'][0]['scratch']
+    assert path.exists()==mismatch
+    assert scratch['state']==('pending' if mismatch else 'removed')
+    assert ('native_terminal' in scratch)==(not mismatch)
+
+
+@pytest.mark.parametrize('status',['completed','failed'])
+def test_missing_codex_source_id_preserves_scratch_without_blocking_the_next_reviewer(flow,monkeypatch,status):
+    f=flow;job=enqueue(f)
+    with f.q.atomic():job['reviewers']=['codex','claude'];f.q.save(job)
+    f.step()
+    original=f.m['monitor_native']
+    def native(c,method,params,**kwargs):
+        value=copy.deepcopy(original(c,method,params,**kwargs))
+        if method=='thread/turns/list':
+            for turn in value['data']:turn['status']=status
+        if method=='thread/items/list':
+            user=next(row['item'] for row in value['data'] if row['item']['type']=='userMessage')
+            user.pop('id')
+        return value
+    monkeypatch.setitem(f.m,'monitor_native',native)
+    f.drain()
+    saved=f.q.job(job['id']);codex,claude=saved['stages']
+    scratch=codex['scratch']
+    assert codex['state']=='failed' and claude['state']=='succeeded'
+    assert 'native_terminal' not in scratch and scratch['state']=='pending'
+    assert Path(scratch['path']).is_dir() and f.launched==['codex','claude']
+
+
+def test_codex_timeout_preserves_the_interrupted_turn_proof_for_cleanup(flow,monkeypatch):
+    f=flow;job=enqueue(f)
+    with f.q.atomic():job['reviewers']=['codex'];f.q.save(job)
+    f.step()
+    saved=f.q.job(job['id']);stage=saved['stages'][0];path=Path(stage['scratch']['path'])
+    with f.q.atomic():stage['review_deadline']=0;f.q.save(saved)
+    interrupts=[]
+    original=f.m['monitor_native']
+    def native(c,method,params,**kwargs):
+        if method=='turn/interrupt':
+            interrupts.append(params['turnId'])
+            return {}
+        value=copy.deepcopy(original(c,method,params,**kwargs))
+        if method=='thread/turns/list':
+            for turn in value['data']:turn['status']='interrupted' if interrupts else 'inProgress'
+        return value
+    monkeypatch.setitem(f.m,'monitor_native',native)
+    f.step();saved=f.q.job(job['id'])['stages'][0]
+    assert interrupts==[stage['turn_id']] and saved['state']=='failed'
+    assert saved['error']['message'].startswith('review timed out')
+    assert saved['scratch']['native_terminal']['status']=='interrupted'
+    def offline(*args,**kwargs):raise AssertionError('cleanup attempted a native read after proven interruption')
+    monkeypatch.setitem(f.m,'monitor_native',offline)
+    f.m['mq_cleanup_scratch'](f.config,f.q)
+    assert not path.exists()
+    assert f.q.job(job['id'])['stages'][0]['scratch']['state']=='removed'
 
 
 @pytest.mark.parametrize('change',['missing','replacement'])
@@ -301,17 +366,61 @@ def test_frozen_preparation_revalidates_ready_scratch_before_launch(flow,monkeyp
     if change=='replacement':assert (path/'keep').read_text()=='user replacement'
 
 
-def test_native_empty_inventory_accepts_omitted_optional_cursor(flow,monkeypatch):
-    f=flow;original=f.m['monitor_native']
-    def native(c,method,params,**kwargs):
-        if method=='thread/backgroundTerminals/list':return {'data':[]}
-        return original(c,method,params,**kwargs)
-    monkeypatch.setitem(f.m,'monitor_native',native)
-    job=enqueue(f)
-    with f.q.atomic():job['reviewers']=['codex'];f.q.save(job)
-    f.drain();stage=f.q.job(job['id'])['stages'][0]
-    assert stage['scratch']['state']=='removed' and not Path(stage['scratch']['path']).exists()
-    assert f.launched==['codex']
+@pytest.mark.parametrize('blocked_check',[0,1,2])
+def test_elevation_is_only_for_a_revalidated_permission_failure(flow,monkeypatch,blocked_check):
+    import errno
+    import os
+    import subprocess
+    f=flow;job=enqueue(f);job=f.q.reserve({11});f.m['mq_workspace'](f.config,f.q,job)
+    stage=f.q.stage_start(job,'claude','');f.m['mq_allocate_scratch'](f.q,job,stage)
+    path=Path(stage['scratch']['path']);child=path/'restricted';child.mkdir()
+    restricted=child.stat().st_ino
+    f.q.stage_end(job,stage['id'],error={'message':'fixture unissued','not_started':True},terminal=True)
+    scan=os.scandir
+    def deny_child(fd):
+        if isinstance(fd,int) and os.fstat(fd).st_ino==restricted:
+            raise PermissionError(errno.EACCES,'fixture restricted child')
+        return scan(fd)
+    monkeypatch.setattr(os,'scandir',deny_child)
+    validations=[]
+    def resources(config,target):
+        validations.append(target)
+        if len(validations)==blocked_check:
+            raise PermissionError(errno.EACCES,'fixture Docker inventory denied')
+    monkeypatch.setitem(f.m,'mq_scratch_resources',resources)
+    calls=[]
+    def sudo(args,**kwargs):
+        calls.append(args)
+        assert len(args)==7 and args[:6]==['/usr/bin/sudo','-n','--','/usr/bin/python3','-I','-']
+        assert json.loads(args[6])[:4]==[str(path.parent),path.name,
+                                        stage['scratch']['base_identity'],stage['scratch']['identity']]
+        assert 'def remove_scratch(' in kwargs['input']
+        child.rmdir();path.rmdir()
+        return subprocess.CompletedProcess(args,0,'','')
+    monkeypatch.setattr(subprocess,'run',sudo)
+    f.m['mq_cleanup_scratch'](f.config,f.q)
+    assert validations==[path]*(1 if blocked_check==1 else 2)
+    assert len(calls)==int(blocked_check==0)
+    scratch=f.q.job(job['id'])['stages'][0]['scratch']
+    assert path.exists()==bool(blocked_check)
+    assert scratch['state']==('pending' if blocked_check else 'removed')
+
+
+def test_deletion_refuses_a_child_mount_on_the_same_device(tmp_path,monkeypatch):
+    import os
+    import runpy
+    helper=Path(__file__).resolve().parents[1]/'codex_monitor_scratch_remove.py'
+    remove=runpy.run_path(str(helper))['remove_scratch']
+    base=tmp_path/'scratch';base.mkdir(mode=0o700)
+    path=base/'review';path.mkdir(mode=0o700)
+    child=path/'mount';child.mkdir();(child/'data').write_text('mounted content')
+    child_inode=child.stat().st_ino
+    monkeypatch.setitem(remove.__globals__,'mount_id',
+        lambda fd:2 if os.fstat(fd).st_ino==child_inode else 1)
+    with pytest.raises(RuntimeError,match='mounted filesystem'):
+        remove(base,path.name,[base.stat().st_dev,base.stat().st_ino],
+            [path.stat().st_dev,path.stat().st_ino],os.getuid(),lambda:None)
+    assert (child/'data').read_text()=='mounted content'
 
 
 def test_retired_question_scratch_is_eligible_after_operator_restart(flow):
@@ -360,24 +469,51 @@ def test_unknown_delivery_and_live_execution_never_remove_scratch(flow,monkeypat
 
 
 
-@pytest.mark.parametrize('relation',['same','ancestor','descendant'])
+@pytest.mark.parametrize('relation',['same','ancestor','descendant','symlink'])
 def test_docker_mount_probe_blocks_all_local_contexts(module,tmp_path,monkeypatch,relation):
     import subprocess
     m=module['mq_step'].__globals__;path=tmp_path/'review';path.mkdir()
     source=path if relation=='same' else path.parent if relation=='ancestor' else path/'data'
+    if relation=='symlink':
+        source.mkdir()
+        alias=tmp_path/'alias';alias.symlink_to(source,target_is_directory=True)
+        source=alias
     calls=[]
     def run(args,**kwargs):
         calls.append(args)
         if 'context' in args:output='\n'.join(json.dumps({'DockerEndpoint':p}) for p in
             ('unix:///first.sock','unix:///second.sock'))
         elif 'ps' in args:output='a'*12 if 'unix:///second.sock' in args else ''
-        else:output=json.dumps([{'Type':'bind','Source':str(source)}])
+        else:output=json.dumps({'id':'a'*64,'mounts':[{'Type':'bind','Source':str(source)}]})
         return subprocess.CompletedProcess(args,0,output,'')
     monkeypatch.setattr('shutil.which',lambda name:'/fixture/docker')
     monkeypatch.delenv('DOCKER_HOST',raising=False)
     monkeypatch.setattr(subprocess,'run',run)
     with pytest.raises(RuntimeError,match='referenced by Docker'):m['mq_scratch_docker']({'native_timeout':5},path)
     assert any('unix:///second.sock' in c and 'inspect' in c for c in calls)
+
+
+@pytest.mark.parametrize('mounts',[{},'',[{}]])
+def test_malformed_docker_mount_inventory_retains_scratch(flow,monkeypatch,mounts):
+    import subprocess
+    f=flow;job=enqueue(f)
+    with f.q.atomic():job['reviewers']=['codex'];f.q.save(job)
+    f.step();f.step()
+    stage=f.q.job(job['id'])['stages'][0];path=Path(stage['scratch']['path'])
+    assert stage['state']=='succeeded'
+    monkeypatch.setitem(f.m,'mq_scratch_resources',f.m['mq_scratch_docker'])
+    monkeypatch.setattr('shutil.which',lambda name:'/fixture/docker')
+    monkeypatch.delenv('DOCKER_HOST',raising=False)
+    def run(args,**kwargs):
+        if 'context' in args:output=json.dumps({'DockerEndpoint':'unix:///fixture.sock'})
+        elif 'ps' in args:output='a'*12
+        else:output=json.dumps({'id':'a'*64,'mounts':mounts})
+        return subprocess.CompletedProcess(args,0,output,'')
+    monkeypatch.setattr(subprocess,'run',run)
+    f.m['mq_cleanup_scratch'](f.config,f.q)
+    scratch=f.q.job(job['id'])['stages'][0]['scratch']
+    assert path.is_dir() and scratch['state']=='pending'
+    assert scratch['reason']=='Docker mount inventory is incomplete'
 
 
 @pytest.mark.parametrize('failure',['unavailable','remote','query'])
