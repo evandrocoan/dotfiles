@@ -484,6 +484,9 @@ execution. Matching successful observations are required for recovery notices; a
 service exit or an unrelated operation cannot clear an operational failure. Notification delivery
 and reminder timing have their own private state and cannot block review progress. An ongoing
 confirmed failure repeats at the checker's reminder interval from its last accepted delivery.
+The consumer exports overdue registered scratch obligations, including those for completed
+reviews, as an alert independent of review success. Active executions and human holds are
+excluded.
 The consumer also detects consecutive failed native executions of the same work and reviewer.
 Only distinct accepted native execution identities count, scoped to unchanged dispatched context
 and instruction version. Dispatch bookkeeping cannot create a new context. Accepted results end

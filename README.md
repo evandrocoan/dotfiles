@@ -33,6 +33,7 @@ To debug any ShellScript, just add `set -x` after the shell bang: https://stacko
     - [Hide the Xfce unread notification badge](#hide-the-xfce-unread-notification-badge)
     - [Vim style cheat](#vim-style-cheat)
     - [Historical performance monitoring](#historical-performance-monitoring)
+      - [Desktop disk-space notifications](#desktop-disk-space-notifications)
       - [Host swap and thrashing notifications](#host-swap-and-thrashing-notifications)
       - [Install or update the collectors](#install-or-update-the-collectors)
       - [Apply the monitoring configuration](#apply-the-monitoring-configuration)
@@ -1136,6 +1137,10 @@ observable even when the cycle's process exits successfully. Old stored diagnost
 produce warnings. Idle time, normal retry backoff, a valid human hold and a review within its
 deadline are normal conditions.
 
+The checker also warns when registered review directories have been pending cleanup for at
+least an hour. The warning includes completed reviews and points to the cleanup reasons in
+the queue status. Active reviews and directories held for a human answer are excluded.
+
 Repeated failed executions of the same review generate a suspected-loop alert with the MR,
 reviewer, commit, attempt count, elapsed time and recent errors. The detector counts distinct
 native executions with unchanged input and resets when accepted results or new context appear.
@@ -1923,6 +1928,22 @@ processes from delay rankings while preserving the raw snapshots. Boot enablemen
 it is not a verified fix for anomalous kernel counters.
 History begins when recording starts; very short memory spikes between samples can still be missed.
 
+#### Desktop disk-space notifications
+
+The Netdata disk alert uses the local agent's `disk_space_usage` alarms for `/`, `/home`, and
+`/myfiles`. The user timer checks once a minute and delivers warnings and critical alarms
+through the desktop notification service. Netdata supplies the thresholds. The desktop
+notifier sends a new alert on a severity change and repeats an active alert hourly.
+Reminder state lives in the user's runtime directory. The same service forwards
+[SMART warnings](#check-the-nvme-ssd-health) through a separate check.
+
+Install [the service](scripts/install/systemd/user/netdata-disk-alert.service) and
+[the timer](scripts/install/systemd/user/netdata-disk-alert.timer) under
+`~/.config/systemd/user/`. Run `systemctl --user daemon-reload` and
+`systemctl --user enable --now netdata-disk-alert.timer`. Inspect delivery with
+`journalctl --user -u netdata-disk-alert.service -n 20 --no-pager`.
+To turn off desktop delivery, run `systemctl --user disable --now netdata-disk-alert.timer`.
+
 <a id="netdata-memory-notifications"></a>
 
 #### Host swap and thrashing notifications
@@ -2371,8 +2392,13 @@ sudo apt-get install --no-install-recommends nvme-cli smartmontools
 ```
 
 Installing `smartmontools` enables `smartmontools.service` (alias `smartd.service`), which polls
-SMART periodically and logs to the journal under the `smartmontools` unit name. Inspect the device
-with:
+SMART periodically and logs to the journal under the `smartmontools` unit name.
+The [desktop storage alert service](#desktop-disk-space-notifications) forwards critical `smartd`
+journal entries for NVMe devices to the desktop. It reads Netdata and SMART independently
+and keeps a journal cursor in private runtime state so it can retry a failed send and avoid
+repeating an accepted notification. Check delivery in the `netdata-disk-alert.service` user journal.
+
+Inspect the device with:
 
 ```bash
 #!/usr/bin/env bash

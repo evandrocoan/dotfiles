@@ -1,0 +1,11 @@
+[Unit]
+Description=Check local Netdata disk-space alarms and SMART NVMe warnings every minute
+
+[Timer]
+OnStartupSec=30s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=netdata-disk-alert.service
+
+[Install]
+WantedBy=timers.target

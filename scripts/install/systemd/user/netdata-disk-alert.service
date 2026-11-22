@@ -1,0 +1,14 @@
+[Unit]
+Description=Deliver Netdata disk-space and SMART NVMe alerts to the desktop
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I %h/scripts/performance-monitoring/storage_alert.py %t/netdata-disk-alert/state.json
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
+RuntimeDirectory=netdata-disk-alert
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
+TimeoutStartSec=30s

@@ -3046,6 +3046,8 @@ class MonitorQueue:
             if (result is None) == (error is None):
                 raise RuntimeError('stage requires exactly one result or failure')
             stage.update(state='succeeded' if result is not None else 'failed', result=result, error=error)
+            if stage.get('scratch'):
+                stage['scratch']['pending_since'] = mq_stamp()
             self.save(job)
             if stage.get('summary'):
                 mq_queue_unread(self,stage,stage.get('anchor'),stage.get('turn_id'))
@@ -6018,17 +6020,46 @@ def mq_remove_scratch(config,stage):
         os.close(base_fd)
 
 
-def mq_cleanup_scratch(config,queue):
-    """Bounded maintenance in the existing consumer; cleanup never changes review outcomes."""
-    candidates = []
-    for job in queue.jobs():
-        scopes = [(job,job.get('workspace')),*[(r,r.get('workspace')) for r in job.get('rounds',[])]]
-        for scope,workspace in scopes:
+def mq_scratch_candidates(jobs):
+    for job in jobs:
+        for scope in (job,*job.get('rounds',[])):
             for stage in [*scope.get('stages',[]),*scope.get('retired_preparations',[])]:
                 scratch = stage.get('scratch')
                 if scratch and scratch.get('state')!='removed' and (stage['state']!='running'
                         or stage in scope.get('retired_preparations',[])):
-                    candidates.append((scratch.get('checked_at',0),job,stage,workspace,scope))
+                    yield job,stage,scope
+
+
+def mq_scratch_held(queue,scope,stage,record):
+    effective = mq_effective_stage(stage)
+    retirement = scope.get('retirement')
+    retired = (isinstance(retirement,dict) and retirement in record.get('retired_questions',[])
+        and retirement.get('question',{}).get('stage_id')==stage['id']
+        and retirement.get('restart',{}).get('restarted') is True)
+    receipt = scope.get('operator_retirement')
+    if (isinstance(receipt,dict) and receipt.get('restarted') is True
+            and queue.meta('operator_mr_restart:'+str(receipt.get('job')))==receipt):
+        retired = True
+    question = not retired and (effective.get('result') or {}).get('outcome')=='question'
+    return question or any(scope.get(k) for k in ('pending_question','question_scope_pending')) or any(
+        h.get('stage_id')==stage['id'] for h in [record.get('hold') or {},*record.get('held_questions',[])])
+
+
+def mq_scratch_pending_since(stage,scope):
+    scratch = stage['scratch']
+    if scratch.get('pending_since') is not None:
+        return scratch['pending_since']
+    # Older records lack the start of cleanup. A completed round or an earlier
+    # failed attempt proves that cleanup was already due at that time.
+    attempted = scratch.get('checked_at') if scratch.get('state')=='pending' else None
+    finished = scope.get('completed_at') or stage.get('retired_at')
+    return min((value for value in (attempted,finished) if value is not None),default=None)
+
+
+def mq_cleanup_scratch(config,queue):
+    """Bounded maintenance in the existing consumer; cleanup never changes review outcomes."""
+    candidates = sorted(mq_scratch_candidates(queue.jobs()),
+        key=lambda candidate:candidate[1]['scratch'].get('checked_at',0))
     checked = config.setdefault('_scratch_checked',set()) if '_cycle_deadline' in config else set()
     attempted = 0
     cleanup_config = dict(config)
@@ -6038,28 +6069,17 @@ def mq_cleanup_scratch(config,queue):
         cleanup_config['_cycle_deadline'] = now+min(3,max(0,config['_cycle_deadline']-now)/8)
         cleanup_config['_io_guard'] = lambda:mq_budget(cleanup_config)
         cleanup_config['_native_guard'] = lambda:mq_budget(cleanup_config)
-    for _,job,stage,workspace,scope in sorted(candidates,key=lambda value:value[0]):
+    for job,stage,scope in candidates:
         if stage['id'] in checked:continue
         mq_budget(config)
         checked.add(stage['id']);attempted+=1
         state,reason = 'pending',None
-        effective = mq_effective_stage(stage)
         record = queue.mr(job['repository_id'],job['iid'])
-        retirement = scope.get('retirement')
-        retired = (isinstance(retirement,dict) and retirement in record.get('retired_questions',[])
-            and retirement.get('question',{}).get('stage_id')==stage['id']
-            and retirement.get('restart',{}).get('restarted') is True)
-        receipt = scope.get('operator_retirement')
-        if (isinstance(receipt,dict) and receipt.get('restarted') is True
-                and queue.meta('operator_mr_restart:'+str(receipt.get('job')))==receipt):
-            retired = True
-        question = not retired and (effective.get('result') or {}).get('outcome')=='question'
-        if question or any(scope.get(k) for k in ('pending_question','question_scope_pending')) or any(
-                h.get('stage_id')==stage['id'] for h in [record.get('hold') or {},*record.get('held_questions',[])]):
+        if mq_scratch_held(queue,scope,stage,record):
             state,reason = 'held','review is awaiting a human answer or question snapshot'
         else:
             try:
-                scoped = mq_workspace_config(cleanup_config,{**job,'workspace':workspace,'stages':[stage]})
+                scoped = mq_workspace_config(cleanup_config,{**job,'workspace':scope.get('workspace'),'stages':[stage]})
                 mq_verify_input(queue,stage) if stage.get('input') else None
                 if stage.get('input_format')=='message-v5' and mq_input_context(queue,stage).get('scratch_path')!=stage['scratch']['path']:
                     raise RuntimeError('scratch path differs from its frozen task')
@@ -6072,7 +6092,13 @@ def mq_cleanup_scratch(config,queue):
                 reason = str(error)[:1000]
         with queue.atomic():
             if queue.job(job['id'])!=job:continue
-            stage['scratch'].update(state=state,reason=reason,checked_at=mq_stamp())
+            observed_at = mq_stamp()
+            pending_since = mq_scratch_pending_since(stage,scope)
+            stage['scratch'].update(state=state,reason=reason,checked_at=observed_at)
+            if state=='pending':
+                stage['scratch']['pending_since'] = observed_at if pending_since is None else pending_since
+            elif state=='held':
+                stage['scratch'].pop('pending_since',None)
             queue.save(job)
         if attempted>=2:break
 
@@ -6952,6 +6978,24 @@ def mq_health_ok(config,key):
     mq_health_signal(config,'diagnostic:'+key)
 
 
+def mq_health_scratch(config,queue,jobs,records):
+    cutoff = mq_stamp()-3600
+    stalled = 0
+    for job,stage,scope in mq_scratch_candidates(jobs):
+        pending_since = mq_scratch_pending_since(stage,scope)
+        if pending_since is None or pending_since>cutoff:
+            continue
+        record = records.get((job['repository_id'],job['iid']),{})
+        if not mq_scratch_held(queue,scope,stage,record):
+            stalled += 1
+    if stalled:
+        mq_health_signal(config,'cleanup:scratch',error=True,kind='Review cleanup stalled',
+            message=f'{stalled} review directories under /tmp/codex-monitor have been pending cleanup '
+                    'for at least an hour. Check the cleanup reasons in the queue status.')
+    else:
+        mq_health_signal(config,'cleanup:scratch',message='No overdue review directories remain in the queue.')
+
+
 def mq_health_retire_scope(config,repository,iid):
     """Only a validated queue retirement proves that an MR observation left scope."""
     try:
@@ -6995,6 +7039,7 @@ def mq_health_publish(config,queue,phase):
         health = config.get('_health')
         if health is None:return
         jobs = queue.jobs()
+        records = {(r['repository_id'],r['iid']):r for r in queue.mrs()}
         scoped = {j['id']:j for j in jobs
                   if j['repository_id'] in {p['id'] for p in mq_repositories(config)}}
         current = {key:job for key,job in scoped.items() if job['state']!='completed'}
@@ -7003,6 +7048,7 @@ def mq_health_publish(config,queue,phase):
         elif phase=='finished':
             mq_health_signal(config,'cycle',message='A new cycle finished normally; operation failures remain separate.')
         if phase!='running':
+            mq_health_scratch(config,queue,jobs,records)
             for job in scoped.values():
                 latest = {}
                 for stage in job['stages']:
@@ -7046,7 +7092,7 @@ def mq_health_publish(config,queue,phase):
                 value.update(status='retired',message='The job left active scope without review credit.')
         # Operational scope expires on validated closure, independently of history retention.
         configured = {p['id'] for p in mq_repositories(config)}
-        for record in queue.mrs():
+        for record in records.values():
             closed = config.get('_checked_mr_states',{}).get((record['repository_id'],record['iid'])) in {'closed','merged'}
             if ((closed or record['repository_id'] not in configured)
                     and mq_forget_mr(queue,record,check_only=True)):
@@ -7064,7 +7110,7 @@ def mq_health_publish(config,queue,phase):
             'interval_seconds':config['interval_minutes']*60,'checks':checks,
             'summary':{'pending':sum(j['state']=='pending' for j in current.values()),
                 'running':sum(j['state']=='running' for j in current.values()),
-                'holds':sum(bool(r.get('hold')) for r in queue.mrs())}}
+                'holds':sum(bool(r.get('hold')) for r in records.values())}}
         raw = json.dumps(document,ensure_ascii=False,allow_nan=False).encode()
         if len(raw)>1024*1024:raise RuntimeError('health snapshot exceeds byte bound')
         monitor_private(queue.path.parent,directory=True)
