@@ -4323,8 +4323,9 @@ def mq_claude_accept(config, queue, job, stage):
         record.setdefault('claude_contexts',{})[native['sessionId']] = config['cwd']
         record['chats']['claude'] = native['sessionId']
         if stage.get('protocol') in {'tools','direct'}:
-            record.setdefault('instruction_versions',{})[native['sessionId']] = (
-                MQ_INSTRUCTIONS_VERSION if stage['protocol']=='direct' else 5)
+            version = stage.get('instructions_version') if stage['protocol']=='direct' else 5
+            if version is not None:
+                record.setdefault('instruction_versions',{})[native['sessionId']] = version
         queue.put_mr(record)
         queue.save(job)
     return native

@@ -11,6 +11,47 @@ from test_codex_gitlab_queue import flow, module, domain, rendered
 from test_codex_gitlab_periodic import enqueue, quiet_scan
 
 
+def test_claude_reobservation_keeps_version_saved_at_launch(flow,monkeypatch):
+    f=flow;job=enqueue(f)
+    with monkeypatch.context() as previous_release:
+        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',13)
+        assert f.step()
+    stage=f.q.job(job['id'])['stages'][0];session=stage['session']
+    assert stage['instructions_version']==13
+    assert f.q.mr(11,82)['instruction_versions'][session]==13
+
+    monkeypatch.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',14)
+    assert f.step()
+
+    observed=f.q.job(job['id'])['stages'][0]
+    assert (observed['session'],observed['state'],observed['instructions_version'])==(session,'succeeded',13)
+    assert f.q.mr(11,82)['instruction_versions'][session]==13
+    assert f.launched==['claude']
+
+
+@pytest.mark.parametrize('has_registered_version',[True,False])
+def test_claude_reobservation_preserves_legacy_version_record(flow,monkeypatch,has_registered_version):
+    f=flow;job=enqueue(f)
+    with monkeypatch.context() as previous_release:
+        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',13)
+        assert f.step()
+    saved=f.q.job(job['id']);stage=saved['stages'][0];session=stage['session']
+    record=f.q.mr(11,82)
+    versions={session:13} if has_registered_version else {}
+    with f.q.atomic():
+        del stage['instructions_version']
+        record['instruction_versions']=versions.copy()
+        f.q.put_mr(record)
+        f.q.save(saved)
+
+    monkeypatch.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',14)
+    assert f.step()
+
+    assert f.q.job(job['id'])['stages'][0]['state']=='succeeded'
+    assert f.q.mr(11,82)['instruction_versions']==versions
+    assert f.launched==['claude']
+
+
 @pytest.mark.parametrize('reviewer',['claude','codex'])
 def test_monitor_allocates_passes_and_removes_registered_stage_scratch(flow,reviewer):
     f=flow;job=enqueue(f)
