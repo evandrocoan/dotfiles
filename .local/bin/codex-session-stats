@@ -2704,7 +2704,8 @@ def main() -> int:
 MQ_SCHEMA = 1
 MQ_REVIEWERS = {'claude', 'codex'}
 MQ_PERMISSION_PROFILE = 'codex-session-stats-gitlab-review'
-MQ_INSTRUCTIONS_VERSION = 13
+# Bump when mq_instructions or the embedded gitlab-mr-review skill changes.
+MQ_INSTRUCTIONS_VERSION = 14
 MQ_SCRATCH_BASE = Path('/tmp/codex-monitor')
 MQ_COMPACT_ASSESSMENT_VERSION = 3
 
@@ -3369,20 +3370,9 @@ Publish actionable findings inline when possible. Reuse a thread only for the sa
 different defects on the same line stay separate. Supplement other people's findings when useful.
 '''
     if not historical_intake:
-        text += '''Start each published automatic-review finding and substantive reply with exactly one
-of these Markdown prefixes. Keep both brackets inside the bold formatting, as shown.
-**[Corrigir antes do merge]** A demonstrated problem or unmet requirement needs action in this MR.
-Explain what fails, under which conditions, and what needs to be corrected.
-**[Corrigir em outra entrega]** A demonstrated problem warrants follow-up. Explain why this MR can proceed.
-**[Sugestão opcional]** Suggest an improvement the author can choose to make and explain its benefit.
-**[Preciso de uma resposta para avaliar]** Ask for the specific missing information and say which
-review decision depends on it. Report other unverified concerns as gaps in the final summary.
-Support findings with evidence from code, a test, or a reproduction. When verified on the MR base,
-say in the opening sentence that the problem already existed before this MR and cite the evidence.
-Explain separately any new exposure or impact caused by the changes. State when the origin is uncertain.
-Add evidence or revise your assessment in the same discussion. If the priority changes, use the
-new label and explain what changed your assessment.
-'''
+        skill_path = Path(__file__).resolve().parents[2] / '.claude/skills/gitlab-mr-review/SKILL.md'
+        review_skill = skill_path.read_text(encoding='utf-8').strip()
+        text += '\nApply the following shared review skill:\n\n' + review_skill + '\n\n'
     text += '''Before resolving, read every note and human follow-up, explain the verified fix or why the concern
 is invalid, and resolve only if no valid concern or unanswered question remains. This applies to
 both reviewers' findings and other bots. Disagreement alone is not grounds to close a discussion.

@@ -126,6 +126,8 @@ def assert_review_scratch_instructions(text):
 
 
 def assert_review_comment_instructions(text):
+    skill_path=Path(__file__).resolve().parents[2]/'.claude/skills/gitlab-mr-review/SKILL.md'
+    assert text.count(skill_path.read_text(encoding='utf-8').strip())==1
     for label in ('Corrigir antes do merge', 'Corrigir em outra entrega',
                   'Sugestão opcional', 'Preciso de uma resposta para avaliar'):
         assert f'\n**[{label}]** ' in text
@@ -186,9 +188,9 @@ def test_claude_dispatch_receives_child_review_instructions(flow):
 
 def test_new_instructions_rotate_codex_chat_preserving_previous_round(flow,monkeypatch):
     f=flow
-    # Chats with the plain-text labels retain their original instructions.
+    # Earlier chats retain their original publication instructions.
     with monkeypatch.context() as previous_release:
-        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',12)
+        previous_release.setitem(f.m,'MQ_INSTRUCTIONS_VERSION',13)
         first=automatic(f,reviewers=['codex']);f.drain()
     original=f.q.job(first['id']);old_session=original['stages'][0]['session']
     old_turns=copy.deepcopy(f.turns[old_session]);old_items=copy.deepcopy(f.items)
@@ -197,7 +199,7 @@ def test_new_instructions_rotate_codex_chat_preserving_previous_round(flow,monke
     f.drain()
     record=f.q.mr(11,82);stage=f.q.job(next_job['id'])['stages'][0]
     assert stage['session']!=old_session and record['chats']['codex']==stage['session']
-    assert record['instruction_versions'][old_session]==12
+    assert record['instruction_versions'][old_session]==13
     assert stage['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
     assert f.q.job(first['id'])==original and f.turns[old_session]==old_turns
     assert {key:f.items[key] for key in old_items}==old_items

@@ -475,6 +475,8 @@ of choosing one silently.
 - `git-delivery`: Create or inspect branches, commits, pushes, issues, pull requests,
   GitLab merge requests, reviews, or pipelines, while preserving authorization and
   existing work.
+- `gitlab-mr-review`: Review GitLab merge requests and decide which findings warrant
+  publication or must be addressed before merge.
 - `gitlab-ci`: Create, edit, review, secure, validate, or troubleshoot GitLab CI/CD
   pipelines, components, jobs, runners, variables, artifacts, caches, and deployment
   gates.
