@@ -7,6 +7,9 @@ import pytest
 from test_codex_gitlab_queue import module, flow, domain, human_turn, assessment
 
 
+REVIEW_SKILL = Path(__file__).resolve().parents[2] / '.claude/skills/gitlab-mr-review/SKILL.md'
+
+
 def automatic(f,reviewers=None):
     return f.q.enqueue(11,82,source_key='direct-code',kind='code',head='a'*40,
         source={'origin':'automatic','head':'a'*40},context=copy.deepcopy(f.context),reviewers=reviewers)
@@ -126,8 +129,7 @@ def assert_review_scratch_instructions(text):
 
 
 def assert_review_comment_instructions(text):
-    skill_path=Path(__file__).resolve().parents[2]/'.claude/skills/gitlab-mr-review/SKILL.md'
-    assert text.count(skill_path.read_text(encoding='utf-8').strip())==1
+    assert text.count(REVIEW_SKILL.read_text(encoding='utf-8').strip())==1
     for label in ('Corrigir antes do merge', 'Corrigir em outra entrega',
                   'Sugestão opcional', 'Preciso de uma resposta para avaliar'):
         assert f'\n**[{label}]** ' in text
@@ -184,6 +186,38 @@ def test_claude_dispatch_receives_child_review_instructions(flow):
     assert_review_scratch_instructions(instructions)
     assert_review_comment_instructions(instructions)
     assert f.q.job(job['id'])['stages'][0]['instructions_version']==f.m['MQ_INSTRUCTIONS_VERSION']
+
+
+@pytest.mark.parametrize('reviewer',['codex','claude'])
+@pytest.mark.parametrize('content,diagnostic',[(b' \t\n','is empty'),(b'\xff','is not valid UTF-8')],
+    ids=['empty','invalid-utf8'])
+def test_invalid_review_skill_fails_before_dispatch_and_releases_fifo(flow,monkeypatch,tmp_path,
+        reviewer,content,diagnostic):
+    f=flow
+    invalid_skill=tmp_path/'SKILL.md'
+    invalid_skill.write_bytes(content)
+    read_text=Path.read_text
+
+    def read_skill(path,*args,**kwargs):
+        return read_text(invalid_skill if path==REVIEW_SKILL else path,*args,**kwargs)
+
+    job=automatic(f,reviewers=[reviewer])
+    following=f.q.enqueue(11,83,source_key='following-mr',kind='code',head='a'*40,
+        source={'origin':'automatic','head':'a'*40},context=copy.deepcopy(f.context),reviewers=[reviewer])
+    with monkeypatch.context() as invalid:
+        invalid.setattr(Path,'read_text',read_skill)
+        assert f.step()
+
+    failed=f.q.job(job['id'])['stages'][0]
+    assert failed['state']=='failed'
+    assert failed['error']=={'message':f'Review skill {REVIEW_SKILL} {diagnostic}','not_started':True}
+    assert f.launched==[]
+
+    f.drain()
+    retry=f.q.job(job['id'])
+    assert (retry['state'],retry['wait_reason'])==('pending','reviewer_retry')
+    assert f.q.job(following['id'])['outcome']=='reviewed'
+    assert f.launched==[reviewer]
 
 
 def test_new_instructions_rotate_codex_chat_preserving_previous_round(flow,monkeypatch):

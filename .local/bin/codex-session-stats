@@ -3371,7 +3371,12 @@ different defects on the same line stay separate. Supplement other people's find
 '''
     if not historical_intake:
         skill_path = Path(__file__).resolve().parents[2] / '.claude/skills/gitlab-mr-review/SKILL.md'
-        review_skill = skill_path.read_text(encoding='utf-8').strip()
+        try:
+            review_skill = skill_path.read_text(encoding='utf-8').strip()
+        except UnicodeDecodeError as failure:
+            raise RuntimeError(f'Review skill {skill_path} is not valid UTF-8') from failure
+        if not review_skill:
+            raise RuntimeError(f'Review skill {skill_path} is empty')
         text += '\nApply the following shared review skill:\n\n' + review_skill + '\n\n'
     text += '''Before resolving, read every note and human follow-up, explain the verified fix or why the concern
 is invalid, and resolve only if no valid concern or unanswered question remains. This applies to
